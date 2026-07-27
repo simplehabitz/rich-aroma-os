@@ -35,8 +35,9 @@ module.exports = async function handler(req, res) {
                     notes: `[PAID] Stripe Session: ${session.id}` 
                 }).eq('id', orderId).select().single();
 
-                // Decrement inventory stock if limits are set
-                if (updatedOrder && updatedOrder.selections && updatedOrder.selections.cart) {
+                // Decrement inventory stock if limits are set (Only for Honors Grab checkouts, not Pre-Orders)
+                const isPreorder = updatedOrder && updatedOrder.selections && updatedOrder.selections.preorder_date;
+                if (updatedOrder && updatedOrder.selections && updatedOrder.selections.cart && !isPreorder) {
                     const cartItems = updatedOrder.selections.cart;
                     const productIds = cartItems.map(item => item.product_id).filter(id => id && id !== 'catering_event_pack');
                     if (productIds.length > 0) {
@@ -126,8 +127,9 @@ module.exports = async function handler(req, res) {
                         notes: `[RECURRING] Week of ${new Date().toLocaleDateString()}\nStripe Invoice: ${invoice.id}`
                     }).select().single();
 
-                    // Decrement inventory stock if limits are set
-                    if (newOrder && newOrder.selections && newOrder.selections.cart) {
+                    // Decrement inventory stock if limits are set (Only for Honors Grab checkouts, not Pre-Orders)
+                    const isPreorder = newOrder && newOrder.selections && newOrder.selections.preorder_date;
+                    if (newOrder && newOrder.selections && newOrder.selections.cart && !isPreorder) {
                         const cartItems = newOrder.selections.cart;
                         const productIds = cartItems.map(item => item.product_id).filter(id => id && id !== 'catering_event_pack');
                         if (productIds.length > 0) {

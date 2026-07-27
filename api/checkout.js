@@ -56,8 +56,8 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        // Validate inventory stock limits
-        if (productsData) {
+        // Validate inventory stock limits (Only for Honors Grab checkouts, not Pre-Orders)
+        if (productsData && !preorder_date) {
             for (const item of items) {
                 if (item.product_id === 'catering_event_pack') continue;
                 const dbProd = productsData.find(p => p.id === item.product_id);

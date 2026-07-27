@@ -650,6 +650,7 @@
 
             updateHubTracker();
             updatePricing();
+            renderProducts();
         }
 
         function updatePreorderHelperText() {
@@ -742,7 +743,8 @@
 
             let cardsHtml = singlePacks.map(p => {
                 const icon = 'fa-mug-hot';
-                const isSoldOut = p.inventory_limit !== null && p.inventory_limit <= 0;
+                const isGrabMode = orderMode === 'grab';
+                const isSoldOut = isGrabMode && p.inventory_limit !== null && p.inventory_limit <= 0;
                 return `
                 <div id="prod-${p.id}" onclick="${isSoldOut ? `showToast('${p.name} is currently sold out!', 'error')` : `selectProduct('${p.id}')`}" class="bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group ${isSoldOut ? 'opacity-60 grayscale' : ''}">
                      <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden relative">
