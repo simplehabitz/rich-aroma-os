@@ -91,6 +91,57 @@ module.exports = async (req, res) => {
             if (error || !seller) return res.status(404).json({ error: 'Invalid or inactive promo code' });
             return res.json({ success: true, seller_name: seller.name, discount_percent: 5 });
         }
+ 
+        // 3b. GET DIGITAL STAMPS
+        if (req.method === 'GET' && action === 'get_stamps') {
+            const { phone } = req.query;
+            if (!phone) return res.status(400).json({ error: 'Phone parameter is required' });
+            
+            // Clean up phone string to match format if needed
+            const cleanPhone = phone.replace(/\D/g, '');
+            
+            const { data: pastOrders, error } = await supabase
+                .from('cali_orders')
+                .select('selections')
+                .eq('customer_phone', phone)
+                .in('status', ['paid', 'confirmed', 'delivered']);
+                
+            if (error) throw error;
+            
+            let totalBottles = 0;
+            let totalFreeRedeemed = 0;
+            
+            if (pastOrders) {
+                for (const order of pastOrders) {
+                    const cart = order.selections?.cart || [];
+                    const freeInOrder = parseInt(order.selections?.free_bottles_redeemed || 0);
+                    totalFreeRedeemed += freeInOrder;
+                    
+                    for (const item of cart) {
+                        if (item.product_id === 'catering_event_pack') continue;
+                        if (typeof item.bottles === 'number') {
+                            totalBottles += item.bottles;
+                        } else {
+                            const qty = parseInt(item.qty || 1);
+                            const selectionsCount = Array.isArray(item.selections) ? item.selections.length : 1;
+                            totalBottles += selectionsCount * qty;
+                        }
+                    }
+                }
+            }
+            
+            const paidBottles = totalBottles - totalFreeRedeemed;
+            const currentStamps = paidBottles % 9;
+            const earnedFree = Math.floor(paidBottles / 9) - totalFreeRedeemed;
+            
+            return res.json({
+                total_bottles: totalBottles,
+                total_free_redeemed: totalFreeRedeemed,
+                paid_bottles: paidBottles >= 0 ? paidBottles : 0,
+                stamps: currentStamps >= 0 ? currentStamps : 0,
+                earned_free: earnedFree >= 0 ? earnedFree : 0
+            });
+        }
 
         // 4. ADMIN CHECK
         const auth = req.headers.authorization;
@@ -261,14 +312,186 @@ module.exports = async (req, res) => {
         if (req.method === 'POST' && action === 'create_self_checkout_order') {
             const { customer_name, customer_phone, location_id, total, selections, notes } = req.body;
             
+            const items = selections?.cart || [];
+            const is_subscription = !!selections?.is_subscription;
+            const promo_code = selections?.promo || null;
+
+            // 1. Calculate discount percent
+            let discountPercent = is_subscription ? 10 : 0;
+            let sellerInfo = null;
+            if (promo_code && !is_subscription) {
+                const { data: seller } = await supabase
+                    .from('customers')
+                    .select('id, name, referral_code')
+                    .eq('referral_code', promo_code.toUpperCase())
+                    .contains('tags', ['cali_seller'])
+                    .single();
+                
+                if (seller) {
+                    discountPercent = 5;
+                    sellerInfo = seller;
+                }
+            }
+
+            // 2. Count bottles
+            let calculatedTotalBottles = 0;
+            for (const item of items) {
+                if (item.product_id === 'catering_event_pack') continue;
+                const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                calculatedTotalBottles += (count * parseInt(item.qty || 1));
+            }
+
+            let volumeDiscount = 0;
+            if (calculatedTotalBottles >= 5) {
+                volumeDiscount = 1.50;
+            } else if (calculatedTotalBottles >= 3) {
+                volumeDiscount = 1.00;
+            }
+
+            // Fetch products to validate base prices
+            const { data: productsData } = await supabase.from('cali_products').select('id, price, name');
+            const priceMap = {};
+            if (productsData) {
+                for (const p of productsData) {
+                    priceMap[p.id] = parseFloat(p.price);
+                }
+            }
+
+            const cateringPricing = {
+                25: 115.00,
+                50: 220.00,
+                75: 315.00,
+                100: 400.00,
+                150: 570.00,
+                200: 720.00,
+                250: 875.00,
+                500: 1600.00
+            };
+
+            // 3. Calculate stamps
+            let totalPaidPast = 0;
+            let totalFreePast = 0;
+            let stampsBefore = 0;
+            let stampsAfter = 0;
+            let freeRedeemedInCurrent = 0;
+            let stampSavings = 0;
+
+            if (customer_phone) {
+                const { data: pastOrders } = await supabase
+                    .from('cali_orders')
+                    .select('selections')
+                    .eq('customer_phone', customer_phone)
+                    .in('status', ['paid', 'confirmed', 'delivered']);
+
+                if (pastOrders) {
+                    for (const order of pastOrders) {
+                        const pCart = order.selections?.cart || [];
+                        const freeInOrder = parseInt(order.selections?.free_bottles_redeemed || 0);
+                        totalFreePast += freeInOrder;
+
+                        for (const item of pCart) {
+                            if (item.product_id === 'catering_event_pack') continue;
+                            if (typeof item.bottles === 'number') {
+                                totalPaidPast += item.bottles;
+                            } else {
+                                const qty = parseInt(item.qty || 1);
+                                const selectionsCount = Array.isArray(item.selections) ? item.selections.length : 1;
+                                totalPaidPast += selectionsCount * qty;
+                            }
+                        }
+                    }
+                }
+                totalPaidPast = Math.max(0, totalPaidPast - totalFreePast);
+                stampsBefore = totalPaidPast % 9;
+
+                for (let f = 0; f <= calculatedTotalBottles; f++) {
+                    let currentPaid = calculatedTotalBottles - f;
+                    let hypotheticalTotalPaid = totalPaidPast + currentPaid;
+                    let expectedTotalFree = Math.floor(hypotheticalTotalPaid / 9);
+                    let calculatedFree = expectedTotalFree - totalFreePast;
+                    
+                    if (calculatedFree >= f) {
+                        freeRedeemedInCurrent = f;
+                    }
+                }
+                const currentPaid = calculatedTotalBottles - freeRedeemedInCurrent;
+                stampsAfter = (totalPaidPast + currentPaid) % 9;
+            }
+
+            // Identify cheapest bottles to make free
+            let flatBottles = [];
+            for (const item of items) {
+                if (item.product_id === 'catering_event_pack') continue;
+                
+                let basePrice = 6.00;
+                if (priceMap[item.product_id] !== undefined) {
+                    basePrice = priceMap[item.product_id];
+                } else if (item.name && (item.name.toLowerCase().includes('black') || item.name.toLowerCase().includes('americano'))) {
+                    basePrice = 5.00;
+                }
+                
+                let surcharge = 0;
+                let hasOatMilk = false;
+                if (item.selections && Array.isArray(item.selections)) {
+                    hasOatMilk = item.selections.some(s => s.milk === 'Oat Milk');
+                } else {
+                    hasOatMilk = item.milk === 'Oat Milk';
+                }
+                if (hasOatMilk) surcharge = 1.00;
+
+                const unitPrice = basePrice + surcharge - volumeDiscount;
+                for (let q = 0; q < parseInt(item.qty); q++) {
+                    flatBottles.push(unitPrice);
+                }
+            }
+
+            flatBottles.sort((a, b) => a - b);
+            for (let idx = 0; idx < Math.min(freeRedeemedInCurrent, flatBottles.length); idx++) {
+                stampSavings += flatBottles[idx];
+            }
+
+            let stampSavingsDiscounted = stampSavings;
+            if (discountPercent > 0) {
+                stampSavingsDiscounted = stampSavings * (1 - (discountPercent / 100));
+            }
+
+            // Calculate base total
+            let baseTotal = 0;
+            for (const price of flatBottles) {
+                let finalPrice = price;
+                if (discountPercent > 0) {
+                    finalPrice = price * (1 - (discountPercent / 100));
+                }
+                baseTotal += finalPrice;
+            }
+            // Add catering packs
+            for (const item of items) {
+                if (item.product_id === 'catering_event_pack') {
+                    const cateringSize = item.selections ? item.selections.length : 25;
+                    const basePrice = cateringPricing[cateringSize] || 115.00;
+                    baseTotal += basePrice * parseInt(item.qty);
+                }
+            }
+
+            const calculatedTotal = Math.max(0, baseTotal - stampSavingsDiscounted);
+
+            const updatedSelections = {
+                ...selections,
+                free_bottles_redeemed: freeRedeemedInCurrent,
+                stamps_before: stampsBefore,
+                stamps_after: stampsAfter
+            };
+
+            const updatedNotes = (notes || '[SELF-CHECKOUT ORDER]') + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}`;
+            
             const { data, error } = await supabase.from('cali_orders').insert({
                 customer_name: customer_name || 'Guest',
                 customer_phone: customer_phone || '',
                 location_id: location_id === 'home' ? null : location_id,
-                total: parseFloat(total || 0),
+                total: calculatedTotal,
                 status: 'pending',
-                selections: selections || {},
-                notes: notes || '[SELF-CHECKOUT ORDER]'
+                selections: updatedSelections,
+                notes: updatedNotes
             }).select().single();
 
             if (error) throw error;

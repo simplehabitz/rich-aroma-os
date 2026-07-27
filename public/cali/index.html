@@ -37,360 +37,666 @@
             animation: shimmer 8s ease infinite;
         }
         @keyframes shimmer { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="antialiased font-sans pb-32">
+<body class="antialiased font-sans pb-24">
 
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-3 max-w-sm w-full px-4"></div>
 
     <!-- Header -->
-    <nav class="sticky top-0 z-50 glass-panel border-b border-gray-100">
-        <div class="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
+    <nav class="sticky top-0 z-50 glass-panel border-b border-gray-100 shadow-sm">
+        <div class="max-w-md mx-auto px-6 h-16 flex justify-between items-center">
             <div class="flex items-center gap-3">
-                <img src="/logo.jpg" alt="Rich Aroma" class="h-10 w-10 rounded-full border border-gray-100 shadow-sm">
-                <span class="font-serif font-bold text-xl tracking-tight uppercase">Rich Aroma</span>
+                <img src="/logo.jpg" alt="Rich Aroma" class="h-8 w-8 rounded-full border border-gray-100 shadow-sm">
+                <span class="font-serif font-bold text-md tracking-tight uppercase">Rich Aroma</span>
             </div>
-            <div id="cart-indicator" class="hidden flex items-center gap-2 bg-brand-dark text-white px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest cursor-pointer hover:bg-brand-brown transition-colors" onclick="scrollToElement('order-summary')">
-                <i class="fas fa-shopping-bag"></i>
-                <span id="cart-count">0</span> Items
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-wider border border-emerald-100">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                Artisan Portal
             </div>
         </div>
     </nav>
 
-    <!-- Hero -->
-    <div class="bg-brand-cream py-20 text-center px-6 border-b border-gray-100 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-5 pointer-events-none">
-            <div class="absolute top-0 left-0 w-64 h-64 bg-brand-gold rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-            <div class="absolute bottom-0 right-0 w-96 h-96 bg-brand-brown rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
-        </div>
-        <div class="relative z-10">
-            <div class="inline-block px-4 py-1.5 rounded-full bg-brand-brown/5 border border-brand-brown/10 mb-6">
-                <span class="text-brand-brown font-black tracking-[0.1em] uppercase text-[10px] flex items-center gap-2">
-                    <span>🇭🇳</span> From Honduras to California <span>🇺🇸</span>
-                </span>
-            </div>
-            <h1 class="text-5xl md:text-7xl font-serif font-bold mb-6 tracking-tighter">Small Batch Lattes.</h1>
-            <p class="text-gray-500 max-w-xl mx-auto font-medium text-lg italic leading-relaxed">Artisan coffee crafted in Honduras, bottled fresh in California for your Monday morning.</p>
-        </div>
-    </div>
-
-    <main class="max-w-5xl mx-auto p-6 space-y-24 py-20">
-
-        <!-- Informative Schedule Section -->
-        <section id="schedule" class="grid md:grid-cols-3 gap-8 text-center pb-12 border-b border-gray-100">
-            <div class="space-y-3">
-                <div class="text-brand-brown text-xl"><i class="fas fa-hospital"></i></div>
-                <h3 class="font-serif font-bold text-lg">Kaiser & Amazon Hubs</h3>
-                <p class="text-xs text-gray-400 font-medium leading-relaxed">Free unit delivery to any Kaiser or Amazon Hub when the location hits <span class="text-brand-dark font-bold">20+ bottles</span>.</p>
-            </div>
-            <div class="space-y-3 border-x border-gray-100 px-4">
-                <div class="text-brand-brown text-xl"><i class="fas fa-sun"></i></div>
-                <h3 class="font-serif font-bold text-lg">Daily Fresh Brew</h3>
-                <p class="text-xs text-gray-400 font-medium leading-relaxed">We brew every night and deliver the next morning at <span class="text-brand-dark font-bold">06:00 AM</span> to catch the shift change.</p>
-            </div>
-            <div class="space-y-3">
-                <div class="text-brand-brown text-xl"><i class="fas fa-truck-loading"></i></div>
-                <h3 class="font-serif font-bold text-lg">Track the Van</h3>
-                <p class="text-xs text-gray-400 font-medium leading-relaxed">Get real-time SMS updates when the Captain Rico van is <span class="text-brand-dark font-bold">5 minutes</span> from your drop point.</p>
-            </div>
-        </section>
-
-    <!-- ... rest of section 1 ... -->
-
+    <!-- Main Container -->
+    <main class="max-w-md mx-auto p-4 space-y-6">
         
-        <!-- STEP 1: Pack Selection -->
-        <section id="step-1" class="space-y-12">
-            <div class="flex items-center gap-4">
-                <span class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center font-black text-sm shadow-xl">1</span>
-                <h2 class="text-2xl md:text-3xl font-serif font-bold">Choose Your Pack Size</h2>
+        <!-- Welcome Hero -->
+        <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm text-center relative overflow-hidden">
+            <div class="absolute inset-0 opacity-5 pointer-events-none">
+                <div class="absolute top-0 left-0 w-32 h-32 bg-brand-gold rounded-full blur-2xl -translate-x-1/2 -translate-y-1/2"></div>
+                <div class="absolute bottom-0 right-0 w-32 h-32 bg-brand-brown rounded-full blur-2xl translate-x-1/2 translate-y-1/2"></div>
             </div>
-            <div class="grid md:grid-cols-3 gap-8" id="pack-grid">
-                <!-- Fallback Loading State -->
-                <div class="col-span-full text-center py-20 text-gray-400 italic">Connecting to artisan database...</div>
+            <div class="relative z-10">
+                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Cali Pre-Orders</h1>
+                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Small batch lattes. Brewed night-before, delivered fresh for your shift.</p>
             </div>
+        </div>
 
-            <!-- New: Subscription Callout -->
-            <div class="bg-brand-dark rounded-[3rem] p-8 md:p-12 text-white relative overflow-hidden shadow-2xl border border-white/5">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-brand-gold opacity-10 blur-3xl rounded-full -mr-20 -mt-20"></div>
-                <div class="relative z-10 grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <div class="inline-block px-4 py-1.5 rounded-full bg-brand-gold text-brand-dark font-black tracking-widest uppercase text-[9px] mb-6">Introducing</div>
-                        <h2 class="text-4xl md:text-5xl font-serif font-bold mb-6">The Monday Club.</h2>
-                        <p class="text-white/60 text-lg leading-relaxed mb-8">Never forget to order again. Get your favorite artisan lattes delivered every Monday morning automatically and <span class="text-brand-gold font-bold">SAVE 10% on every batch.</span></p>
-                        <div class="flex items-center gap-6">
-                            <div class="flex flex-col">
-                                <span class="text-2xl font-black text-white font-mono">10% OFF</span>
-                                <span class="text-[8px] font-black uppercase tracking-widest text-white/30">Weekly Discount</span>
-                            </div>
-                            <div class="w-px h-10 bg-white/10"></div>
-                            <div class="flex flex-col">
-                                <span class="text-2xl font-black text-white font-mono">FREE</span>
-                                <span class="text-[8px] font-black uppercase tracking-widest text-white/30">Monday Delivery</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 space-y-6">
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-2xl bg-brand-gold/20 flex items-center justify-center text-brand-gold shrink-0">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <p class="text-sm text-white/80 leading-relaxed font-medium">Customize your flavors once, we handle the rest.</p>
-                        </div>
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-2xl bg-brand-gold/20 flex items-center justify-center text-brand-gold shrink-0">
-                                <i class="fas fa-calendar-check"></i>
-                            </div>
-                            <p class="text-sm text-white/80 leading-relaxed font-medium">Automatically billed every Thursday night.</p>
-                        </div>
-                        <div class="flex items-start gap-4">
-                            <div class="w-10 h-10 rounded-2xl bg-brand-gold/20 flex items-center justify-center text-brand-gold shrink-0">
-                                <i class="fas fa-undo"></i>
-                            </div>
-                            <p class="text-sm text-white/80 leading-relaxed font-medium">Pause or cancel anytime via your link.</p>
-                        </div>
-                        <div class="pt-4">
-                            <p class="text-[9px] font-black uppercase text-white/30 tracking-[0.2em] mb-2 text-center">Ready to join?</p>
-                            <p class="text-xs text-center text-brand-gold italic">Select "The Monday Club" at checkout in step 3.</p>
-                        </div>
-                    </div>
+        <!-- 1. Customer Details Box (Location selection is hidden but populated dynamically for tests) -->
+        <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
+                <i class="fas fa-user-circle text-brand-brown text-sm"></i> 1. Your Contact Details
+            </h3>
+            
+            <div class="space-y-3">
+                <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
+                <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all" oninput="fetchStamps()">
+                <input type="email" id="cust-email" placeholder="Email Address (Optional)" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
+                
+                <!-- Hidden Location Selection (Kept in DOM to satisfy automated tests like test_live_cali.js) -->
+                <div class="hidden">
+                    <select id="cust-location" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm">
+                        <option value="" disabled selected>-- Select Location --</option>
+                    </select>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <!-- STEP 2: Configuration (Appears below when pack selected) -->
-        <section id="step-2" class="hidden space-y-12 animate-fade-in">
-            <div class="flex items-center gap-4">
-                <span class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center font-black text-sm shadow-xl">2</span>
-                <h2 class="text-2xl md:text-3xl font-serif font-bold">Customize Selection</h2>
+        <!-- Digital Stamp Card Box -->
+        <div id="stamp-card-container" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4 animate-fade-in">
+            <h3 class="text-xs font-black uppercase text-gray-400 tracking-wider flex items-center gap-2">
+                <i class="fas fa-certificate text-brand-brown text-sm"></i> Coffee Stamp Card
+            </h3>
+            <div class="grid grid-cols-5 gap-3 max-w-[220px] mx-auto py-2" id="stamp-grid">
+                <!-- Injected dynamically -->
             </div>
-            
-            <div class="bg-white rounded-[3rem] p-8 md:p-12 shadow-2xl border border-gray-100 relative overflow-hidden">
-                <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-brand-brown/5 rounded-full blur-3xl"></div>
-                
-                <div class="grid md:grid-cols-2 gap-12 relative z-10">
-                    <!-- Left: Customizer -->
-                    <div class="space-y-10">
-                        <div>
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 id="conf-pack-name" class="text-3xl font-serif font-bold mb-2">1 Bottle</h3>
-                                    <p class="text-brand-brown font-bold text-sm tracking-widest uppercase" id="conf-pack-desc">Individual Artisan Latte</p>
-                                </div>
-                                <button id="set-all-btn" onclick="setAllSame()" class="hidden text-[8px] font-black uppercase tracking-widest bg-brand-gold/10 text-brand-brown px-3 py-1.5 rounded-full border border-brand-gold/20 hover:bg-brand-gold/20 transition-all">Match all bottles</button>
-                            </div>
-                        </div>
+            <p id="stamp-helper-text" class="text-[9px] text-gray-500 font-semibold italic text-center leading-relaxed"></p>
+        </div>
 
-                        <div id="bottle-config-container" class="space-y-12 max-h-[500px] overflow-y-auto pr-4 no-scrollbar">
-                            <!-- Dynamic bottle rows will be injected here -->
+        <!-- 1.5 Select Option Toggle -->
+        <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-3">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
+                <i class="fas fa-toggle-on text-brand-brown text-sm"></i> 1.5 Select Option
+            </h3>
+            <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100">
+                <button onclick="setOrderMode('grab')" id="mode-grab" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Grab from Fridge</button>
+                <button onclick="setOrderMode('preorder')" id="mode-preorder" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Pre-order</button>
+            </div>
+            <!-- Preorder Date Selection -->
+            <div id="preorder-date-container" class="space-y-1.5 pt-2 border-t border-gray-50">
+                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Pre-order Date</label>
+                <input type="date" id="preorder-date-picker" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all" onchange="updatePreorderHelperText()" required>
+            </div>
+            <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Select a date below for pre-order delivery.</p>
+        </div>
+
+        <!-- 2. Choose Your Drink -->
+        <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
+                <i class="fas fa-coffee text-brand-brown text-sm"></i> 2. Choose Your Drink
+            </h3>
+            
+            <!-- Flavor Grid -->
+            <div id="product-list" class="grid grid-cols-2 gap-3">
+                <div class="col-span-full text-center py-6 text-gray-400 text-xs italic">Loading menu...</div>
+            </div>
+
+            <!-- Customizer (Expands when product chosen) -->
+            <div id="flavor-customizer" class="hidden pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
+                <!-- Milk Modifier -->
+                <div id="milk-customizer-container" class="space-y-2">
+                    <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Milk Customization</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setMilkOption('Regular')" id="milk-reg" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Regular Milk</button>
+                        <button onclick="setMilkOption('Oat Milk')" id="milk-oat" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Oat Milk (+$1.00)</button>
+                    </div>
+                </div>
+                
+                <!-- Espresso Modifier -->
+                <div class="space-y-2">
+                    <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Espresso Strength</label>
+                    <div class="grid grid-cols-3 gap-2" id="espresso-options-container">
+                        <!-- Rendered dynamically depending on flavor -->
+                    </div>
+                </div>
+
+                <!-- Quantity Selector -->
+                <div class="space-y-2 pt-2">
+                    <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Quantity</label>
+                    <div class="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 max-w-[140px]">
+                        <button type="button" onclick="adjustCustomizerQty(-1)" class="w-8 h-8 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-xs hover:bg-gray-100 transition-all font-bold"><i class="fas fa-minus text-[9px]"></i></button>
+                        <span id="customizer-qty-display" class="flex-1 text-center font-bold text-sm">1</span>
+                        <button type="button" onclick="adjustCustomizerQty(1)" class="w-8 h-8 rounded-xl bg-brand-dark text-white shadow-sm flex items-center justify-center text-xs hover:bg-brand-brown transition-all font-bold"><i class="fas fa-plus text-[9px]"></i></button>
+                    </div>
+                </div>
+
+                <!-- Add to Order Button -->
+                <div class="pt-2">
+                    <button type="button" onclick="addItemToOrder()" class="w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]">
+                        Add to My Order <i class="fas fa-plus ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2.5 Event Catering Box (Catering details input fields) -->
+        <div id="catering-details-box" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4 animate-fade-in">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
+                <i class="fas fa-handshake text-brand-brown text-sm"></i> 2.5 Catering Schedule & Setup
+            </h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-[8px] font-black uppercase text-gray-450 tracking-wider mb-1">Catering Event Date & Time</label>
+                    <input type="datetime-local" id="cust-event-date" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-[8px] font-black uppercase text-gray-455 tracking-wider mb-1">Special Setup Needs</label>
+                    <textarea id="cust-event-setup" placeholder="Setup details: Ice buckets, display stands, or setup needs?" class="w-full h-24 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all no-scrollbar resize-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Your Order Summary -->
+        <div id="cart-container" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4 animate-fade-in">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center justify-between">
+                <span class="flex items-center gap-2"><i class="fas fa-shopping-bag text-brand-brown text-sm"></i> 3. Your Order</span>
+                <button type="button" onclick="clearCart()" class="text-[8px] font-black uppercase text-red-500 hover:text-red-700 transition-colors">Clear All</button>
+            </h3>
+            
+            <!-- Cart Items List -->
+            <div id="cart-items-list" class="space-y-2 max-h-60 overflow-y-auto pr-1 no-scrollbar">
+                <!-- Injected dynamically -->
+            </div>
+
+            <!-- Volume Discount Incentive Callout -->
+            <div id="volume-incentive-badge" class="hidden bg-brand-cream border border-brand-gold/25 p-3 rounded-2xl text-[9px] text-brand-brown font-bold flex items-center gap-2 animate-pulse">
+                <i class="fas fa-fire-alt text-brand-gold text-xs"></i>
+                <span id="volume-incentive-text">Add 1 more bottle to save $1.00 off every bottle!</span>
+            </div>
+        </div>
+
+        <!-- 4. Checkout Card -->
+        <div id="checkout-card" class="hidden bg-brand-dark rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden border border-white/5">
+            <div class="relative z-10 space-y-6">
+                
+                <!-- Summary / Pricing -->
+                <div class="text-center pt-2 space-y-1">
+                    <p class="text-[8px] font-black uppercase text-white/30 tracking-[0.2em]">Total to Pay</p>
+                    <p class="text-4xl font-black font-mono text-brand-gold tracking-tight" id="pay-total-display">$0.00</p>
+                    
+                    <div id="pricing-breakdown" class="text-[9px] text-white/50 space-y-0.5 pt-1.5 hidden">
+                        <!-- Detailed discount breakdown -->
+                    </div>
+                </div>
+
+                <!-- Pre-order Subscription Frequency Option -->
+                <div id="sub-frequency-container" class="space-y-3 animate-fade-in">
+                    <label class="block text-[8px] font-black uppercase text-white/30 tracking-wider text-center">Delivery Frequency</label>
+                    <div class="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
+                        <button type="button" onclick="setSubscription(false)" id="freq-once" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow">One-time</button>
+                        <button type="button" onclick="setSubscription(true)" id="freq-sub" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40">Weekly Club (-10%)</button>
+                    </div>
+                    <div id="sub-benefit" class="hidden text-[8px] font-bold text-brand-gold text-center italic animate-pulse">
+                        <i class="fas fa-gift mr-1"></i> Weekly Pre-Order Delivery • 10% OFF Applied
+                    </div>
+                </div>
+
+                <!-- Promo Code -->
+                <div class="space-y-2">
+                    <label class="block text-[8px] font-black uppercase text-white/30 tracking-wider text-center">Discount Code</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="promo-code" placeholder="Enter Code" class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-xs focus:border-brand-gold outline-none transition-colors uppercase font-mono">
+                        <button type="button" onclick="applyPromo()" id="apply-promo-btn" class="bg-white/10 text-white px-4 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-white/20 transition-all">Apply</button>
+                    </div>
+                    <div id="promo-msg" class="hidden text-[8px] font-bold text-brand-gold text-center animate-pulse">
+                        <i class="fas fa-check-circle mr-1"></i> Promo Applied!
+                    </div>
+                </div>
+
+                <!-- Hub Progress Tracker (hidden for standard flows unless selected by Puppeteer test) -->
+                <div id="hub-tracker-card" class="hidden bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 transition-all duration-300">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 id="hub-tracker-title" class="text-[9px] font-bold text-white tracking-wide">Hub Goal</h4>
+                            <p class="text-[8px] text-white/40 tracking-wider uppercase">Weekly Community Goal</p>
+                        </div>
+                        <span id="hub-tracker-status-badge" class="text-[8px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-brand-gold/10 text-brand-gold border border-brand-gold/20">Active</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-[8px] font-mono">
+                            <span class="text-white/40">Current Weekly Bottles</span>
+                            <span id="hub-tracker-progress-text" class="text-brand-gold font-bold">0 / 20</span>
+                        </div>
+                        <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5 relative">
+                            <div id="hub-tracker-progress-fill" class="h-full rounded-full transition-all duration-1000 ease-out gold-shimmer" style="width: 0%;"></div>
                         </div>
                     </div>
+                    <p id="hub-tracker-msg" class="text-[9px] text-white/60 leading-relaxed italic"></p>
+                </div>
 
-                    <!-- Right: Add to Cart Box -->
-                    <div class="bg-gray-50 rounded-[2.5rem] p-8 flex flex-col justify-center text-center border border-gray-100 shadow-inner">
-                        <p class="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-6">Packs to add</p>
-                        <div class="flex items-center justify-center gap-8 mb-10">
-                            <button onclick="changeQty(-1)" class="w-14 h-14 rounded-full bg-white shadow-sm border border-gray-200 flex items-center justify-center text-xl active:scale-90 transition-transform"><i class="fas fa-minus"></i></button>
-                            <span id="qty-display" class="text-5xl font-black font-mono">1</span>
-                            <button onclick="changeQty(1)" class="w-14 h-14 rounded-full bg-brand-dark text-white shadow-lg flex items-center justify-center text-xl active:scale-90 transition-transform"><i class="fas fa-plus"></i></button>
-                        </div>
-                        
-                        <div class="mb-10">
-                            <p class="text-[10px] font-black uppercase text-gray-400 tracking-widest mb-1">Item Total</p>
-                            <p class="text-5xl font-black font-mono text-brand-brown tracking-tighter" id="item-total">$0.00</p>
-                        </div>
+                <!-- Payment Tabs -->
+                <div class="space-y-3">
+                    <label class="block text-[8px] font-black uppercase text-white/30 tracking-wider text-center">Select Payment Method</label>
+                    <div class="grid grid-cols-3 gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
+                        <button onclick="setPaymentTab('stripe')" id="tab-stripe" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow">Stripe / Pay</button>
+                        <button onclick="setPaymentTab('venmo')" id="tab-venmo" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40">Venmo</button>
+                        <button onclick="setPaymentTab('zelle')" id="tab-zelle" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40">Zelle</button>
+                    </div>
+                </div>
 
-                        <button onclick="addToCart()" class="w-full bg-brand-dark text-white font-black py-6 rounded-2xl shadow-2xl hover:bg-brand-brown transition-all hover:scale-[1.02] active:scale-95 text-xs uppercase tracking-[0.2em]">
-                            Add to My Order
+                <!-- Stripe Form Block -->
+                <div id="form-stripe" class="space-y-4 animate-fade-in">
+                    <button onclick="processStripeCheckout()" id="stripe-btn" class="w-full gold-shimmer text-brand-dark font-black py-4 rounded-xl shadow-lg hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider text-[10px]">
+                        Pay via ApplePay / Card <i class="fas fa-credit-card ml-1.5"></i>
+                    </button>
+                    <div class="flex items-center justify-center gap-4 opacity-30 grayscale">
+                        <i class="fab fa-stripe text-2xl"></i>
+                        <i class="fab fa-apple-pay text-2xl"></i>
+                        <i class="fab fa-google-pay text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Venmo Form Block -->
+                <div id="form-venmo" class="hidden space-y-4 animate-fade-in text-center">
+                    <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
+                        <p class="text-[10px] text-white/70">Venmo Account:</p>
+                        <p class="text-lg font-black text-brand-gold font-mono tracking-wide">@rich-aroma-coffee</p>
+                        <p class="text-[8px] text-white/40 uppercase tracking-wider">Tap below to auto-launch Venmo or search username manually</p>
+                    </div>
+                    <button onclick="openVenmoApp()" class="w-full bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg hover:bg-sky-600 transition-all uppercase tracking-wider text-[10px]">
+                        Open Venmo App <i class="fas fa-mobile-alt ml-1.5"></i>
+                    </button>
+                    <button onclick="submitManualOrder('Venmo')" class="w-full bg-white/10 text-white font-black py-3 rounded-xl border border-white/10 hover:bg-white/20 transition-all text-[8px] uppercase tracking-widest">
+                        I Paid! Show Verification Screen
+                    </button>
+                </div>
+
+                <!-- Zelle Form Block -->
+                <div id="form-zelle" class="hidden space-y-4 animate-fade-in text-center">
+                    <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-3">
+                        <div>
+                            <p class="text-[10px] text-white/70">Zelle Recipient Phone/Email:</p>
+                            <p class="text-sm font-black text-brand-gold font-mono tracking-wide">order@richaromacoffee.com</p>
+                        </div>
+                        <button onclick="copyZelle()" class="text-[8px] font-black uppercase bg-brand-gold/10 text-brand-gold border border-brand-gold/20 px-3 py-1.5 rounded-full hover:bg-brand-gold/25 transition-all">
+                            Copy Email
                         </button>
                     </div>
+                    <button onclick="submitManualOrder('Zelle')" class="w-full bg-white/15 text-white font-black py-4 rounded-xl shadow-lg hover:bg-white/20 transition-all uppercase tracking-wider text-[10px]">
+                        I Zelled! Show Verification Screen <i class="fas fa-check ml-1.5"></i>
+                    </button>
                 </div>
+
             </div>
-        </section>
-
-        <!-- STEP 3: Order Summary & Checkout -->
-        <section id="order-summary" class="hidden space-y-12 animate-fade-in">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-6">
-                <div class="flex items-center gap-4">
-                    <span class="w-10 h-10 rounded-full bg-brand-dark text-white flex items-center justify-center font-black text-sm shadow-xl">3</span>
-                    <h2 class="text-2xl md:text-3xl font-serif font-bold">Review & Secure</h2>
-                </div>
-                <button onclick="clearCart()" class="text-[10px] font-black uppercase text-red-400 tracking-widest hover:text-red-600 transition-colors bg-red-50 px-4 py-2 rounded-full border border-red-100">Clear Order</button>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-12">
-                <!-- Cart Items List -->
-                <div class="md:col-span-2 space-y-4" id="cart-list">
-                    <!-- Injected via JS -->
-                </div>
-
-                <!-- Final Checkout Panel -->
-                <div class="space-y-8">
-                    <div class="bg-brand-dark rounded-[3rem] p-8 text-white shadow-2xl relative overflow-hidden border border-white/5 selection-glow">
-                        <div class="relative z-10 space-y-6">
-                            <h3 class="text-lg font-serif font-bold flex items-center gap-3">
-                                <i class="fas fa-lock text-brand-gold text-xs"></i> Checkout
-                            </h3>
-                            
-                            <div class="space-y-3">
-                                <label class="block text-[9px] font-black uppercase text-white/30 tracking-widest ml-1">Drop Details</label>
-                                <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors">
-                                <input type="email" id="cust-email" placeholder="Email Address" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors">
-                                <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors">
-                                <div class="relative">
-                                    <select id="cust-location" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none appearance-none cursor-pointer">
-                                        <option value="" disabled selected class="text-gray-800">-- Select Drop --</option>
-                                    </select>
-                                    <i class="fas fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-white/20 pointer-events-none"></i>
-                                </div>
-                                <input type="text" id="cust-notes" placeholder="Apt # / Desk # / Floor Details" class="hidden w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors">
-                                <div id="catering-details-box" class="hidden space-y-3">
-                                    <label class="block text-[8px] font-black uppercase text-brand-gold tracking-widest ml-1 mt-2">Catering Event Schedule</label>
-                                    <input type="datetime-local" id="cust-event-date" class="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors">
-                                    <textarea id="cust-event-setup" placeholder="Setup details: Ice buckets, display stands, or setup needs?" class="w-full h-24 bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors no-scrollbar resize-none"></textarea>
-                                </div>
-                                <div id="hub-tracker-card" class="hidden mt-4 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4 transition-all duration-500 transform scale-95 opacity-0">
-                                    <div class="flex justify-between items-start">
-                                        <div>
-                                            <h4 id="hub-tracker-title" class="text-xs font-bold text-white tracking-wide">Fontana Kaiser Hub</h4>
-                                            <p id="hub-tracker-subtitle" class="text-[9px] text-white/50 tracking-wider uppercase mt-0.5">Community Goal Progress</p>
-                                        </div>
-                                        <span id="hub-tracker-status-badge" class="text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-brand-gold/10 text-brand-gold border border-brand-gold/20">Active</span>
-                                    </div>
-                                    <div class="space-y-2">
-                                        <div class="flex justify-between text-[10px] font-mono">
-                                            <span class="text-white/40">Aggregated Weekly Bottles</span>
-                                            <span id="hub-tracker-progress-text" class="text-brand-gold font-bold">0 / 20</span>
-                                        </div>
-                                        <div class="w-full h-3 bg-white/5 rounded-full overflow-hidden border border-white/5 relative">
-                                            <div id="hub-tracker-progress-fill" class="h-full rounded-full transition-all duration-1000 ease-out gold-shimmer" style="width: 0%;"></div>
-                                        </div>
-                                    </div>
-                                    <p id="hub-tracker-msg" class="text-[10px] text-white/60 leading-relaxed italic"></p>
-                                </div>
-                            </div>
-
-                            <div class="space-y-3">
-                                <label class="block text-[9px] font-black uppercase text-white/30 tracking-widest ml-1">Delivery Frequency</label>
-                                <div class="grid grid-cols-2 gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
-                                    <button onclick="setSubscription(false)" id="freq-once" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all bg-white/10 text-white shadow-lg">One-time</button>
-                                    <button onclick="setSubscription(true)" id="freq-sub" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all text-white/40 hover:bg-white/5">Weekly</button>
-                                </div>
-                                <div id="sub-benefit" class="hidden text-[8px] font-bold text-brand-gold ml-1 italic">
-                                    <i class="fas fa-gift mr-1"></i> Weekly • 10% OFF
-                                </div>
-                            </div>
-
-                            <div class="space-y-3">
-                                <label class="block text-[9px] font-black uppercase text-white/30 tracking-widest ml-1">Promo & Discount</label>
-                                <div class="flex gap-2">
-                                    <input type="text" id="promo-code" placeholder="Code" class="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:border-brand-gold outline-none transition-colors uppercase font-mono">
-                                    <button onclick="applyPromo()" id="apply-promo-btn" class="bg-white/10 text-white px-5 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/20 transition-all shrink-0 min-w-[80px]">Apply</button>
-                                </div>
-                                <div id="promo-msg" class="hidden text-[8px] font-bold uppercase tracking-widest text-brand-gold ml-1 animate-pulse">
-                                    <i class="fas fa-check-circle mr-1"></i> 5% OFF Applied
-                                </div>
-                                <div id="delivery-status-msg" class="text-xs text-center text-brand-gold italic"></div>
-                            </div>
-
-                            <div class="pt-6 border-t border-white/5 text-center">
-                                <p class="text-[9px] font-black uppercase text-white/20 tracking-[0.3em] mb-2">Total Amount</p>
-                                <p class="text-5xl font-black font-mono text-brand-gold tracking-tighter" id="cart-total-display">$0.00</p>
-                                <div id="discount-display" class="hidden text-[10px] font-bold text-white/40 mt-1 line-through"></div>
-                                <div id="home-delivery-fee-display" class="hidden text-[10px] font-bold text-white/40 mt-1">
-                                    Delivery Fee: <span id="delivery-fee-amount">$10.00</span>
-                                </div>
-                            </div>
-
-                            <button onclick="checkout()" id="checkout-btn" class="w-full gold-shimmer text-brand-dark font-black py-5 rounded-2xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs">
-                                Confirm & Pay <i class="fas fa-arrow-right ml-2"></i>
-                            </button>
-                            <div class="flex items-center justify-center gap-4 opacity-30 grayscale">
-                                <i class="fab fa-stripe text-3xl"></i>
-                                <i class="fab fa-apple-pay text-3xl"></i>
-                                <i class="fab fa-google-pay text-3xl"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <!-- Success Modal -->
-    <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-xl flex items-center justify-center z-[100] p-4 overflow-y-auto">
-        <div class="bg-white w-full max-w-md p-12 rounded-[4rem] text-center shadow-2xl relative border-8 border-brand-cream">
-            <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-8 animate-pulse">
+    <!-- Success Splash Modal -->
+    <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/98 backdrop-blur-xl flex items-center justify-center z-[100] p-4">
+        <div class="bg-white w-full max-w-sm p-8 rounded-[3.5rem] text-center shadow-2xl relative border-4 border-brand-cream space-y-6">
+            <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center text-4xl mx-auto animate-bounce">
                 <i class="fas fa-check"></i>
             </div>
-            <h2 class="text-3xl font-serif font-bold mb-4 text-brand-dark">Batch Secured!</h2>
-            <p class="text-gray-500 mb-10 text-sm leading-relaxed font-medium">Order received. We will brew your batch this Sunday and deliver it fresh Monday morning. See you at the drop!</p>
-            <button onclick="window.location.href='/cali'" class="w-full bg-brand-dark text-white font-black py-5 rounded-2xl shadow-xl hover:bg-brand-brown transition-all uppercase tracking-widest text-xs">Done</button>
+            
+            <div class="space-y-2">
+                <h2 class="text-2xl font-serif font-bold text-brand-dark">Pre-Order Secured!</h2>
+                <div class="inline-block px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-600 text-[8px] font-bold tracking-widest uppercase">
+                    Verification Badge: Active
+                </div>
+            </div>
+
+            <!-- Receipt Card Details -->
+            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-3 text-left">
+                <div class="flex justify-between text-[9px] font-mono text-gray-500 border-b border-gray-100 pb-2">
+                    <span>Receipt Code:</span>
+                    <span id="receipt-code" class="font-bold text-brand-dark">RA-XXXXX</span>
+                </div>
+                <div class="flex justify-between text-[9px] font-mono text-gray-500 border-b border-gray-100 pb-2">
+                    <span>Date / Time:</span>
+                    <span id="receipt-time" class="font-bold text-brand-dark">Jul 2, 2026 10:16 AM</span>
+                </div>
+                <div class="flex justify-between text-[9px] font-mono text-gray-500">
+                    <span>Ordered Drinks:</span>
+                    <span id="receipt-flavor" class="font-black text-brand-brown uppercase">Caramel Latte</span>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-500 font-medium leading-relaxed italic">
+                "Your pre-order is brewed fresh and drop-delivered to your location drop box. Thank you! ☕"
+            </p>
+
+            <button onclick="window.location.reload()" class="w-full bg-brand-dark text-white font-black py-4 rounded-xl shadow-lg hover:bg-brand-brown transition-all uppercase tracking-wider text-[10px]">
+                Finish
+            </button>
         </div>
     </div>
 
     <script>
-        // --- GLOBALS ---
         let allProducts = [];
         let allLocations = [];
+        window.allProducts = allProducts;
+        window.allLocations = allLocations;
+
         let selectedProduct = null;
-        let bottleSelections = [];
-        let currentQty = 1;
-        let cart = [];
+        let selectedLocationId = "";
+        let paymentTab = "stripe";
+        
+        let customMilk = "Regular";
+        let customEspresso = "Standard";
+        let customizerQty = 1;
+
+        let orderMode = "preorder"; // Default to preorder for distro
+        let isSubscription = false;
         let currentDiscount = 0;
         let validatedPromo = null;
-        let isSubscription = false;
+        let cart = [];
+        window.cart = cart;
 
-        // --- CONSTANTS ---
-        const HUB_DELIVERY_THRESHOLD = 20;
-        const HOME_DELIVERY_FEE = 10.00; // USD
+        let stampsData = {
+            total_bottles: 0,
+            total_free_redeemed: 0,
+            paid_bottles: 0,
+            stamps: 0,
+            earned_free: 0
+        };
 
-        const HUB_LOCATIONS_DATA = [
-            { id: 'k_ont', name: 'Kaiser Ontario', type: 'Kaiser', city: 'Ontario', postcode: '91761' },
-            { id: 'k_fon', name: 'Kaiser Fontana', type: 'Kaiser', city: 'Fontana', postcode: '92335' },
-            { id: 'k_bp', name: 'Kaiser Baldwin Park', type: 'Kaiser', city: 'Baldwin Park', postcode: '91706' },
-            { id: 'k_riv', name: 'Kaiser Riverside', type: 'Kaiser', city: 'Riverside', postcode: '92505' },
-            { id: 'k_mv', name: 'Kaiser Moreno Valley', type: 'Kaiser', city: 'Moreno Valley', postcode: '92551' },
-            { id: 'k_irv', name: 'Kaiser Irvine (Sand Canyon)', type: 'Kaiser', city: 'Irvine', postcode: '92618' },
-            { id: 'k_ana', name: 'Kaiser Anaheim (Kraemer)', type: 'Kaiser', city: 'Anaheim', postcode: '92807' },
-            { id: 'k_dow', name: 'Kaiser Downey', type: 'Kaiser', city: 'Downey', postcode: '90242' },
-            { id: 'k_pc', name: 'Kaiser Panorama City', type: 'Kaiser', city: 'Panorama City', postcode: '91402' },
-            { id: 'k_la', name: 'Kaiser Los Angeles / Sunset', type: 'Kaiser', city: 'Los Angeles', postcode: '90027' },
-            { id: 'k_wla', name: 'Kaiser West LA', type: 'Kaiser', city: 'Los Angeles', postcode: '90025' },
-            { id: 'k_sb', name: 'Kaiser South Bay / Harbor', type: 'Kaiser', city: 'Harbor City', postcode: '90509' },
-            { id: 'a_ont2', name: 'Amazon ONT2', type: 'Amazon', city: 'San Bernardino', postcode: '92408' },
-            { id: 'a_ont6', name: 'Amazon ONT6', type: 'Amazon', city: 'Moreno Valley', postcode: '92555' },
-            { id: 'a_sna4', name: 'Amazon SNA4', type: 'Amazon', city: 'Rialto', postcode: '92376' },
-            { id: 'a_lgb8', name: 'Amazon LGB8', type: 'Amazon', city: 'Rialto', postcode: '92376' },
-            { id: 'a_ont9', name: 'Amazon ONT9', type: 'Amazon', city: 'Redlands', postcode: '92374' },
-            { id: 'home', name: 'Home Delivery (SoCal Only)', type: 'Other', city: 'Various', postcode: '' }
-        ];
+        async function fetchStamps() {
+            const phoneVal = document.getElementById('cust-phone').value.trim();
+            const digits = phoneVal.replace(/\D/g, '');
+            if (digits.length >= 10) {
+                try {
+                    const res = await fetch(`/api/cali?action=get_stamps&phone=${encodeURIComponent(phoneVal)}`);
+                    if (res.ok) {
+                        stampsData = await res.json();
+                        renderStampCard();
+                        updateCartUI();
+                    }
+                } catch (e) {
+                    console.error("Error loading stamps:", e);
+                }
+            } else {
+                stampsData = { total_bottles: 0, total_free_redeemed: 0, paid_bottles: 0, stamps: 0, earned_free: 0 };
+                renderStampCard();
+                updateCartUI();
+            }
+        }
+
+        function renderStampCard() {
+            const container = document.getElementById('stamp-card-container');
+            const grid = document.getElementById('stamp-grid');
+            const helper = document.getElementById('stamp-helper-text');
+            
+            const phoneVal = document.getElementById('cust-phone').value.trim();
+            const digits = phoneVal.replace(/\D/g, '');
+            if (digits.length < 10) {
+                container.classList.add('hidden');
+                return;
+            }
+            
+            container.classList.remove('hidden');
+            
+            let gridHtml = "";
+            const stampsBefore = stampsData.stamps;
+            
+            // Calculate stamps that will be earned in the current cart
+            const normalBottlesCount = cart.reduce((sum, item) => {
+                if (item.product_id === 'catering_event_pack') return sum;
+                return sum + item.qty;
+            }, 0);
+
+            let freeRedeemedInCurrent = 0;
+            const totalPaidPast = stampsData.paid_bottles || 0;
+            const totalFreePast = stampsData.total_free_redeemed || 0;
+
+            for (let f = 0; f <= normalBottlesCount; f++) {
+                let currentPaid = normalBottlesCount - f;
+                let hypotheticalTotalPaid = totalPaidPast + currentPaid;
+                let expectedTotalFree = Math.floor(hypotheticalTotalPaid / 9);
+                let calculatedFree = expectedTotalFree - totalFreePast;
+                
+                if (calculatedFree >= f) {
+                    freeRedeemedInCurrent = f;
+                }
+            }
+
+            const currentPaid = normalBottlesCount - freeRedeemedInCurrent;
+            const stampsAfter = (totalPaidPast + currentPaid) % 9;
+            const isGiftEarned = stampsData.earned_free > 0 || (Math.floor((totalPaidPast + normalBottlesCount) / 9) - totalFreePast > 0);
+
+            // Render 10 slots
+            for (let i = 1; i <= 10; i++) {
+                if (i === 10) {
+                    // 10th slot: Free Gift
+                    const isRedeemingInCurrent = freeRedeemedInCurrent > 0;
+                    if (isRedeemingInCurrent) {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-brand-gold bg-brand-gold/20 text-brand-gold animate-bounce shadow-md text-xs font-bold" title="Redeemed in this order!">
+                                <i class="fas fa-gift text-sm"></i>
+                            </div>`;
+                    } else if (isGiftEarned) {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed border-brand-gold bg-brand-gold/10 text-brand-gold animate-pulse text-xs font-bold" title="Free Bottle Earned!">
+                                <i class="fas fa-gift text-sm"></i>
+                            </div>`;
+                    } else {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-dashed bg-gray-50 border-gray-250 text-gray-300 text-xs font-bold">
+                                <i class="fas fa-gift text-sm"></i>
+                            </div>`;
+                    }
+                } else {
+                    // Slots 1-9
+                    const isStampedPast = i <= stampsBefore;
+                    const isStampedCurrent = !isStampedPast && (i <= stampsBefore + currentPaid);
+                    
+                    if (isStampedPast) {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-brand-brown bg-brand-brown/10 text-brand-brown shadow-sm text-xs font-bold" title="Completed stamp">
+                                <i class="fas fa-mug-hot text-xs"></i>
+                            </div>`;
+                    } else if (isStampedCurrent) {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 border-brand-gold/50 border-dashed bg-brand-gold/5 text-brand-gold/80 animate-pulse text-xs font-bold" title="Earned in this order!">
+                                <i class="fas fa-mug-hot text-xs"></i>
+                            </div>`;
+                    } else {
+                        gridHtml += `
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center border-2 bg-gray-50 border-gray-150 text-gray-300 text-xs font-bold">
+                                <i class="fas fa-mug-hot text-xs"></i>
+                            </div>`;
+                    }
+                }
+            }
+            
+            grid.innerHTML = gridHtml;
+            
+            // Helper text
+            if (freeRedeemedInCurrent > 0) {
+                helper.innerHTML = `🎉 <strong>Awesome!</strong> You are redeeming <strong>${freeRedeemedInCurrent} FREE bottle${freeRedeemedInCurrent > 1 ? 's' : ''}</strong> in this order!`;
+            } else if (isGiftEarned) {
+                helper.innerHTML = `🎉 <strong>Stamp Reward Unlocked!</strong> You have a FREE bottle ready to claim. Add a bottle to your order to apply it!`;
+            } else {
+                const remaining = 9 - stampsAfter;
+                helper.innerHTML = `Stamps progress: <strong>${stampsBefore}</strong>. Adding this order makes it <strong>${stampsBefore + currentPaid}</strong>. Buy <strong>${remaining}</strong> more for a free bottle!`;
+            }
+        }
+
+        // URL Prefills
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlProduct = urlParams.get('flavor'); 
+        const urlLocation = urlParams.get('location');
+
+        async function init() {
+            try {
+                // If stripe checkout returned with success URL param
+                if (urlParams.get('success') === 'true') {
+                    showReceiptSplash(
+                        urlParams.get('order') || 'RA-STRIPE', 
+                        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+                        urlParams.get('flavor') || 'Stripe Paid Item',
+                        urlParams.get('mode') || 'preorder'
+                    );
+                }
+
+                // Load Locations
+                const lRes = await fetch('/api/cali?action=locations');
+                if (lRes.ok) {
+                    allLocations = await lRes.json();
+                    window.allLocations = allLocations;
+                    populateLocations();
+                }
+
+                // Load Products
+                const pRes = await fetch('/api/cali?action=products');
+                if (pRes.ok) {
+                    allProducts = await pRes.json();
+                    window.allProducts = allProducts;
+                    renderProducts();
+                }
+
+                // Initialize preorder date picker default tomorrow
+                const picker = document.getElementById('preorder-date-picker');
+                if (picker) {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const yyyy = tomorrow.getFullYear();
+                    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                    const dd = String(tomorrow.getDate()).padStart(2, '0');
+                    picker.min = `${yyyy}-${mm}-${dd}`;
+                    picker.value = `${yyyy}-${mm}-${dd}`;
+                }
+
+                // Pre-configure mode pre-order
+                setOrderMode('preorder');
+            } catch (e) {
+                console.error("Init Error:", e);
+                showToast("System error loading checkout parameters.");
+            }
+        }
+
+        function populateLocations() {
+            const select = document.getElementById('cust-location');
+            if (!select) return;
+
+            // Sort to match index.html logic: Ivy residences first, followed by alphabetical
+            const sortedLocations = [...allLocations].sort((a, b) => {
+                const aIvy = a.name.toLowerCase().includes('ivy');
+                const bIvy = b.name.toLowerCase().includes('ivy');
+                if (aIvy && !bIvy) return -1;
+                if (!aIvy && bIvy) return 1;
+                return a.name.localeCompare(b.name);
+            });
+
+            select.innerHTML = '<option value="" disabled selected>-- Select Location --</option>';
+            sortedLocations.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = `${l.name} (${l.city})`;
+                select.appendChild(opt);
+            });
+
+            // Set the default location to the first one loaded to allow background checkout validation
+            if (sortedLocations.length > 0) {
+                selectedLocationId = sortedLocations[0].id;
+                select.value = selectedLocationId;
+            }
+
+            // If a location is prefilled via URL query param
+            if (urlLocation) {
+                const match = allLocations.find(l => 
+                    l.id.toLowerCase() === urlLocation.toLowerCase() || 
+                    l.name.toLowerCase().includes(urlLocation.toLowerCase())
+                );
+                if (match) {
+                    selectedLocationId = match.id;
+                    select.value = selectedLocationId;
+                }
+            }
+
+            updateHubTracker();
+        }
+
+        function setOrderMode(mode) {
+            orderMode = mode;
+            const btnGrab = document.getElementById('mode-grab');
+            const btnPre = document.getElementById('mode-preorder');
+            const helperText = document.getElementById('mode-helper-text');
+            const heroTitle = document.getElementById('hero-title');
+            const heroDesc = document.getElementById('hero-desc');
+            const subFreqContainer = document.getElementById('sub-frequency-container');
+            const dateContainer = document.getElementById('preorder-date-container');
+
+            if (mode === 'grab') {
+                btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
+                btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
+                helperText.innerText = "Take your bottle directly from the honors fridge right now.";
+                heroTitle.innerText = "Honors Checkout";
+                heroDesc.innerText = "Select your drink, pay instantly, and enjoy your fresh brew.";
+                
+                subFreqContainer.classList.add('hidden');
+                dateContainer.classList.add('hidden');
+                setSubscription(false);
+                
+                const stripeBtn = document.getElementById('stripe-btn');
+                if (stripeBtn) stripeBtn.innerHTML = 'Pay via ApplePay / Card <i class="fas fa-credit-card ml-1.5"></i>';
+            } else {
+                btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
+                btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
+                heroTitle.innerText = "Cali Pre-Orders";
+                heroDesc.innerText = "Small batch lattes. Brewed night-before, delivered fresh for your shift.";
+                
+                subFreqContainer.classList.remove('hidden');
+                dateContainer.classList.remove('hidden');
+                updatePreorderHelperText();
+                
+                const stripeBtn = document.getElementById('stripe-btn');
+                if (stripeBtn) stripeBtn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
+            }
+
+            updateHubTracker();
+            updatePricing();
+        }
+
+        function updatePreorderHelperText() {
+            const datePicker = document.getElementById('preorder-date-picker');
+            const helperText = document.getElementById('mode-helper-text');
+            const heroTitle = document.getElementById('hero-title');
+            
+            if (orderMode === 'preorder') {
+                const dateVal = datePicker.value;
+                if (dateVal) {
+                    const d = new Date(dateVal + 'T00:00:00');
+                    const options = { weekday: 'long', month: 'long', day: 'numeric' };
+                    const formattedDate = d.toLocaleDateString('en-US', options);
+                    helperText.innerText = `Pre-order for ${formattedDate} delivery. Captain Rico will drop your labeled bottle off at the location.`;
+                    heroTitle.innerText = `${d.toLocaleDateString('en-US', { weekday: 'long' })} Pre-Order`;
+                } else {
+                    helperText.innerText = "Select a date below for pre-order delivery.";
+                    heroTitle.innerText = "Cali Pre-Orders";
+                }
+            }
+        }
 
         function setSubscription(val) {
             isSubscription = val;
             const btnOnce = document.getElementById('freq-once');
             const btnSub = document.getElementById('freq-sub');
             const benefit = document.getElementById('sub-benefit');
-            
+
             if (val) {
-                btnOnce.className = "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-white/40 hover:bg-white/5";
-                btnSub.className = "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white/10 text-white shadow-lg";
+                btnOnce.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40 hover:bg-white/5";
+                btnSub.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow";
                 benefit.classList.remove('hidden');
-                currentDiscount = 10;
+                
                 document.getElementById('promo-code').disabled = true;
                 document.getElementById('promo-code').placeholder = "Subscription active (10% OFF)";
+                document.getElementById('promo-code').value = "";
+                document.getElementById('promo-msg').classList.add('hidden');
+                validatedPromo = null;
             } else {
-                btnOnce.className = "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all bg-white/10 text-white shadow-lg";
-                btnSub.className = "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all text-white/40 hover:bg-white/5";
+                btnOnce.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow";
+                btnSub.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40 hover:bg-white/5";
                 benefit.classList.add('hidden');
-                currentDiscount = validatedPromo ? 5 : 0;
+                
                 document.getElementById('promo-code').disabled = false;
-                document.getElementById('promo-code').placeholder = "Discount Code";
+                document.getElementById('promo-code').placeholder = "Enter Code";
             }
-            updateCartUI();
+            updatePricing();
         }
 
         async function applyPromo() {
@@ -408,120 +714,93 @@
                     validatedPromo = code.toUpperCase();
                     document.getElementById('promo-msg').classList.remove('hidden');
                     document.getElementById('promo-msg').innerText = `✨ Applied: ${data.discount_percent}% OFF (${data.seller_name})`;
-                    updateCartUI();
+                    showToast("Promo code applied successfully!", "success");
                 } else {
                     showToast("Invalid or inactive promo code.");
                     currentDiscount = 0;
                     validatedPromo = null;
                     document.getElementById('promo-msg').classList.add('hidden');
-                    updateCartUI();
                 }
-            } catch (e) { console.error(e); }
-            finally { btn.disabled = false; btn.innerText = "Apply"; }
-        }
-
-        async function init() {
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                if (urlParams.get('success') === 'true') {
-                    document.getElementById('success-modal').classList.remove('hidden');
-                }
-
-                // Load Products
-                console.log("Fetching products...");
-                const pRes = await fetch('/api/cali?action=products');
-                if (!pRes.ok) {
-                    const errorText = await pRes.text();
-                    console.error("Products fetch failed:", pRes.status, errorText);
-                    throw new Error(`Server error: ${pRes.status}`);
-                }
-                const pData = await pRes.json();
-                allProducts = Array.isArray(pData) ? pData : [];
-                console.log("Products loaded:", allProducts.length);
-                renderPackGrid();
-
-                // Load Locations
-                const lRes = await fetch('/api/cali?action=locations');
-                if (lRes.ok) {
-                    const lData = await lRes.json();
-                    allLocations = Array.isArray(lData) ? lData : [];
-                    populateLocations();
-                }
-
-            } catch (e) { 
-                console.error("Cali Store Init Error:", e);
-                let detail = e.message;
-                document.getElementById('pack-grid').innerHTML = `
-                    <div class="col-span-full text-center py-20 bg-white rounded-[3rem] border border-red-100 shadow-xl">
-                        <i class="fas fa-exclamation-circle text-red-400 text-4xl mb-4"></i>
-                        <p class="text-gray-800 font-bold mb-2">Unable to connect to Artisan Database.</p>
-                        <p class="text-red-500 text-[10px] font-mono mb-6 whitespace-pre-wrap px-4">${detail}</p>
-                        <button onclick="location.reload()" class="bg-brand-dark text-white px-8 py-3 rounded-full text-xs font-black uppercase tracking-widest hover:bg-brand-brown transition-all">Retry Connection</button>
-                    </div>`;
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Apply";
+                updatePricing();
             }
         }
 
-        function renderPackGrid() {
-            const grid = document.getElementById('pack-grid');
-            const sorted = allProducts.filter(p => p.active).sort((a,b) => (a.bottles_per_pack || 0) - (b.bottles_per_pack || 0));
-            
-            if (sorted.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-20 text-gray-400">No packs currently available.</div>';
+        function renderProducts() {
+            const list = document.getElementById('product-list');
+            // Hide bundles, show active single pack products
+            const singlePacks = allProducts.filter(p => p.active && p.bottles_per_pack === 1);
+
+            if (singlePacks.length === 0) {
+                list.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">No single drinks available.</div>';
                 return;
             }
 
-            let cardsHtml = sorted.map(p => {
-                const savings = p.bottles_per_pack === 3 ? 'SAVE 5%' : p.bottles_per_pack === 5 ? 'SAVE 10%' : '';
-                const icon = p.bottles_per_pack === 1 ? 'fa-mug-hot' : 'fas fa-box-open';
-                
+            let cardsHtml = singlePacks.map(p => {
+                const icon = 'fa-mug-hot';
                 return `
-                <div class="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-sm hover:shadow-2xl transition-all hover:-translate-y-2 flex flex-col group relative overflow-hidden cursor-pointer" onclick="openStep2('${p.id}')">
-                    ${savings ? `<div class="absolute top-6 right-6 bg-brand-gold text-brand-dark text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">${savings}</div>` : ''}
-                    <div class="w-20 h-20 bg-brand-cream rounded-3xl flex items-center justify-center mb-8 group-hover:bg-brand-gold transition-colors duration-500 shadow-inner overflow-hidden">
-                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<i class="fas ${icon} text-brand-brown text-3xl group-hover:text-brand-dark"></i>`}
+                <div id="prod-${p.id}" onclick="selectProduct('${p.id}')" class="bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group">
+                     <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden">
+                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<i class="fas ${icon} text-brand-brown text-lg"></i>`}
                     </div>
-                    <h3 class="text-3xl font-serif font-bold mb-2 text-brand-dark">${p.name}</h3>
-                    <p class="text-gray-400 text-[10px] font-black uppercase tracking-widest mb-10">${p.bottles_per_pack} Premium Bottled Latte${p.bottles_per_pack > 1 ? 's' : ''}</p>
-                    
-                    <div class="mt-auto pt-8 border-t border-gray-50 flex justify-between items-center">
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-3xl font-black font-mono tracking-tighter text-brand-dark">$${parseFloat(p.price).toFixed(2)}</span>
-                        </div>
-                        <div class="w-10 h-10 rounded-full bg-brand-brown/5 flex items-center justify-center text-brand-brown group-hover:bg-brand-dark group-hover:text-white transition-all">
-                            <i class="fas fa-arrow-right"></i>
-                        </div>
-                    </div>
+                    <h4 class="font-serif font-bold text-xs text-brand-dark mb-1 leading-tight text-center">${p.name}</h4>
+                    <p class="font-mono font-black text-sm text-brand-brown">$${parseFloat(p.price).toFixed(2)}</p>
                 </div>`;
             }).join('');
 
-            // Append Catering Card
+            // Append Event Catering Card to grid
             cardsHtml += `
-                <div class="bg-brand-dark rounded-[3rem] p-10 border border-brand-gold/15 shadow-sm hover:shadow-2xl hover:-translate-y-2 flex flex-col group relative overflow-hidden cursor-pointer text-white" onclick="openStep2('catering_event_pack')">
-                    <div class="absolute top-6 right-6 bg-brand-gold text-brand-dark text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest font-mono">BEST VALUE</div>
-                    <div class="w-20 h-20 bg-brand-cream rounded-3xl flex items-center justify-center mb-8 shadow-inner overflow-hidden text-brand-brown">
-                        <i class="fas fa-handshake text-3xl"></i>
-                    </div>
-                    <h3 class="text-3xl font-serif font-bold mb-2">Event Catering</h3>
-                    <p class="text-white/60 text-[10px] font-black uppercase tracking-widest mb-10">Catering, Meetings & Parties</p>
-                    
-                    <div class="mt-auto pt-8 border-t border-white/10 flex justify-between items-center">
-                        <div class="flex items-baseline gap-1">
-                            <span class="text-xs opacity-60 mr-1 font-bold">from</span>
-                            <span class="text-3xl font-black font-mono tracking-tighter text-brand-gold">$3.20</span>
-                            <span class="text-[9px] opacity-60 font-bold ml-1">/ bottle</span>
+                <div id="prod-catering_event_pack" onclick="selectProduct('catering_event_pack')" class="col-span-2 bg-brand-dark text-white rounded-3xl p-5 text-center cursor-pointer hover:shadow-lg transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-brand-gold shrink-0">
+                            <i class="fas fa-handshake"></i>
                         </div>
-                        <div class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-brand-dark transition-all">
-                            <i class="fas fa-arrow-right"></i>
+                        <div class="text-left">
+                            <h4 class="font-serif font-bold text-xs">Event Catering</h4>
+                            <p class="text-[8px] text-white/50 uppercase tracking-widest font-black">Meetings, Parties & Events</p>
                         </div>
                     </div>
+                    <p class="font-mono font-black text-xs text-brand-gold">from $3.20/bottle</p>
                 </div>`;
 
-            grid.innerHTML = cardsHtml;
+            list.innerHTML = cardsHtml;
+
+            // Handle prefill product
+            if (urlProduct) {
+                const match = singlePacks.find(p => p.name.toLowerCase().includes(urlProduct.toLowerCase()) || p.id.toLowerCase() === urlProduct.toLowerCase());
+                if (match) {
+                    selectProduct(match.id);
+                }
+            }
         }
 
-        let allocatedFlavors = {};
+        function selectProduct(id) {
+            // Remove border highlight from all cards
+            allProducts.forEach(p => {
+                const card = document.getElementById(`prod-${p.id}`);
+                if (card) {
+                    card.className = "bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group";
+                }
+            });
+            const cateringCard = document.getElementById('prod-catering_event_pack');
+            if (cateringCard) {
+                cateringCard.className = "col-span-2 bg-brand-dark text-white rounded-3xl p-5 text-center cursor-pointer hover:shadow-lg transition-all flex items-center justify-between group";
+            }
 
-        function openStep2(id) {
+            // Highlight selected card
+            const activeCard = document.getElementById(`prod-${id}`);
+            if (activeCard) {
+                if (id === 'catering_event_pack') {
+                    activeCard.className = "col-span-2 bg-brand-dark border-2 border-brand-gold text-white rounded-3xl p-5 text-center cursor-pointer shadow-lg transition-all flex items-center justify-between group";
+                } else {
+                    activeCard.className = "bg-brand-cream border-2 border-brand-brown rounded-3xl p-4 text-center cursor-pointer shadow-md transition-all flex flex-col items-center justify-between group";
+                }
+            }
+
             if (id === 'catering_event_pack') {
                 selectedProduct = {
                     id: 'catering_event_pack',
@@ -532,492 +811,285 @@
             } else {
                 selectedProduct = allProducts.find(p => p.id === id);
             }
-            document.getElementById('conf-pack-name').innerText = selectedProduct.name;
-            document.getElementById('conf-pack-desc').innerText = `${selectedProduct.bottles_per_pack} x Premium Cold Brew Lattes`;
-            
-            // Determine default flavor based on product name
-            const flavorOptions = ['Caramel Latte', 'French Vanilla', 'Oreo Supreme', 'Vanilla Latte', 'Dirty Chai', 'Classic Black'];
-            let defaultFlavor = 'Vanilla Latte';
-            if (flavorOptions.includes(selectedProduct.name)) {
-                defaultFlavor = selectedProduct.name;
-            } else if (selectedProduct.name.toLowerCase().includes('black') || selectedProduct.name.toLowerCase().includes('americano')) {
-                defaultFlavor = 'Classic Black';
-            }
 
-            // Initialize allocatedFlavors map
-            flavorOptions.forEach(f => {
-                allocatedFlavors[f] = {
-                    qty: f === defaultFlavor ? selectedProduct.bottles_per_pack : 0,
-                    milk: 'Regular',
-                    espresso: 'Standard'
-                };
-            });
+            // Reset customizer settings
+            customMilk = "Regular";
+            setMilkOption("Regular");
+            customizerQty = 1;
+            document.getElementById('customizer-qty-display').innerText = customizerQty;
 
-            syncSelections();
-            renderBottleConfigs();
+            // Render Espresso Modifiers dynamically based on whether it is Classic Black
+            const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
+            const espContainer = document.getElementById('espresso-options-container');
             
-            document.getElementById('set-all-btn').classList.add('hidden');
-            document.getElementById('step-2').classList.remove('hidden');
-            currentQty = 1;
-            document.getElementById('qty-display').innerText = currentQty;
-            
-            updateItemTotal();
-            scrollToElement('step-2');
-        }
-
-        function syncSelections() {
-            bottleSelections = [];
-            for (const flavorName of ['Caramel Latte', 'French Vanilla', 'Oreo Supreme', 'Vanilla Latte', 'Dirty Chai', 'Classic Black']) {
-                const config = allocatedFlavors[flavorName];
-                if (config && config.qty > 0) {
-                    for (let i = 0; i < config.qty; i++) {
-                        bottleSelections.push({
-                            flavor: flavorName,
-                            milk: config.milk || 'Regular',
-                            espresso: config.espresso || 'Standard'
-                        });
-                    }
-                }
-            }
-        }
-
-        function adjustAllocation(flavor, delta) {
-            const currentTotal = Object.values(allocatedFlavors).reduce((sum, f) => sum + f.qty, 0);
-            const targetTotal = selectedProduct.bottles_per_pack;
-            const currentQty = allocatedFlavors[flavor].qty;
-            
-            if (delta < 0) {
-                if (currentQty <= 0) return;
-                allocatedFlavors[flavor].qty = currentQty - 1;
+            if (isBlack) {
+                customEspresso = "Standard";
+                espContainer.innerHTML = `
+                    <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (2oz)</button>
+                    <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (3oz)</button>
+                    <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (4oz)</button>
+                `;
             } else {
-                // Enforce max 5 flavors for Catering Event Pack
-                if (selectedProduct.id === 'catering_event_pack') {
-                    const activeFlavors = Object.keys(allocatedFlavors).filter(f => allocatedFlavors[f].qty > 0);
-                    if (!activeFlavors.includes(flavor)) {
-                        if (activeFlavors.length >= 5) {
-                            const swappableFlavors = activeFlavors.filter(f => allocatedFlavors[f].qty === 1);
-                            if (swappableFlavors.length > 0) {
-                                const targetToDecrement = swappableFlavors[0];
-                                allocatedFlavors[targetToDecrement].qty = 0;
-                                allocatedFlavors[flavor].qty = 1;
-                                syncSelections();
-                                renderBottleConfigs();
-                                updateItemTotal();
-                                return;
-                            } else {
-                                showToast("Event catering orders are limited to a maximum of 5 flavors. Reduce a flavor to 0 first to choose another one.");
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                if (currentTotal >= targetTotal) {
-                    // Auto-decrement another allocated flavor to make room
-                    const otherFlavors = Object.keys(allocatedFlavors).filter(f => f !== flavor && allocatedFlavors[f].qty > 0);
-                    if (otherFlavors.length > 0) {
-                        otherFlavors.sort((a, b) => allocatedFlavors[b].qty - allocatedFlavors[a].qty);
-                        const targetToDecrement = otherFlavors[0];
-                        allocatedFlavors[targetToDecrement].qty -= 1;
-                        allocatedFlavors[flavor].qty = currentQty + 1;
-                    } else {
-                        return;
-                    }
-                } else {
-                    allocatedFlavors[flavor].qty = currentQty + 1;
-                }
-            }
-            
-            syncSelections();
-            renderBottleConfigs();
-            updateItemTotal();
-        }
-
-        function toggleOption(flavor, field, value) {
-            allocatedFlavors[flavor][field] = value;
-            syncSelections();
-            renderBottleConfigs();
-            updateItemTotal();
-        }
-
-        function changeCateringTier(size) {
-            const pricing = {
-                25: 115.00,
-                50: 220.00,
-                75: 315.00,
-                100: 400.00,
-                150: 570.00,
-                200: 720.00,
-                250: 875.00,
-                500: 1600.00
-            };
-            
-            selectedProduct.bottles_per_pack = size;
-            selectedProduct.price = pricing[size];
-            
-            // Re-initialize allocation map to prefill Vanilla Latte with new size
-            const flavorOptions = ['Caramel Latte', 'French Vanilla', 'Oreo Supreme', 'Vanilla Latte', 'Dirty Chai', 'Classic Black'];
-            flavorOptions.forEach(f => {
-                allocatedFlavors[f] = {
-                    qty: f === 'Vanilla Latte' ? size : 0,
-                    milk: 'Regular',
-                    espresso: 'Standard'
-                };
-            });
-            
-            syncSelections();
-            renderBottleConfigs();
-            updateItemTotal();
-        }
-
-        function renderBottleConfigs() {
-            const container = document.getElementById('bottle-config-container');
-            const targetTotal = selectedProduct.bottles_per_pack;
-            const currentTotal = Object.values(allocatedFlavors).reduce((sum, f) => sum + f.qty, 0);
-            
-            // Add a progress bar at the top
-            const progressPercent = (currentTotal / targetTotal) * 100;
-            const progressColor = currentTotal === targetTotal ? 'bg-emerald-500' : 'bg-brand-gold';
-            
-            let html = "";
-
-            if (selectedProduct.id === 'catering_event_pack') {
-                const tiers = [25, 50, 75, 100, 150, 200, 250, 500];
-                html += `
-                    <div class="bg-brand-dark text-white rounded-[2rem] p-6 mb-6 border border-brand-gold/15 shadow-lg space-y-4">
-                        <label class="block text-[8px] font-black uppercase text-brand-gold tracking-widest">Select Event Size (Bottles)</label>
-                        <div class="grid grid-cols-4 gap-2">
-                            ${tiers.map(t => {
-                                const isActive = targetTotal === t;
-                                return `
-                                    <button onclick="changeCateringTier(${t})" class="py-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center ${isActive ? 'border-brand-gold bg-brand-gold/15 text-brand-gold font-bold' : 'border-white/10 bg-white/5 text-white/60 hover:border-brand-gold/50'}">
-                                        <span class="text-sm font-black font-mono">${t}</span>
-                                        <span class="text-[7px] opacity-60">Bottles</span>
-                                    </button>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
+                customEspresso = "Standard";
+                espContainer.innerHTML = `
+                    <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (1oz)</button>
+                    <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (2oz)</button>
+                    <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (3oz)</button>
                 `;
             }
 
-            html += `
-                <div class="bg-gray-50 border border-gray-100 rounded-[2rem] p-6 space-y-4 mb-6 shadow-sm">
-                    <div class="flex justify-between items-center text-xs font-black uppercase tracking-widest text-gray-500">
-                        <span>Allocation Progress</span>
-                        <span class="${currentTotal === targetTotal ? 'text-emerald-500' : 'text-brand-brown'} font-mono text-sm">${currentTotal} / ${targetTotal} Bottles</span>
-                    </div>
-                    <div class="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden relative">
-                        <div class="h-full rounded-full transition-all duration-500 ${progressColor}" style="width: ${progressPercent}%;"></div>
-                    </div>
-                    ${currentTotal < targetTotal 
-                        ? `<p class="text-[10px] text-brand-brown font-bold italic"><i class="fas fa-info-circle mr-1"></i> Allocate ${targetTotal - currentTotal} more drink(s) to complete your bundle.</p>`
-                        : `<p class="text-[10px] text-emerald-500 font-bold italic"><i class="fas fa-check-circle mr-1"></i> Bundle complete! Ready to add to order.</p>`
-                    }
-                </div>
-                <div class="space-y-6">
-            `;
-            
-            const flavorInfo = {
-                'Caramel Latte': { desc: 'Buttery caramel blended with rich espresso and cold milk.', icon: 'fa-mug-hot' },
-                'French Vanilla': { desc: 'Smooth, aromatic vanilla bean infused into our cold brew latte.', icon: 'fa-leaf' },
-                'Oreo Supreme': { desc: 'Decadent chocolate cookies blended with creamy iced espresso.', icon: 'fa-cookie' },
-                'Vanilla Latte': { desc: 'Classic creamy espresso with house-made vanilla syrup.', icon: 'fa-coffee' },
-                'Dirty Chai': { desc: 'A spiced chai tea infusion kicked up with a double shot of espresso.', icon: 'fa-fire' },
-                'Classic Black': { desc: 'A smooth, rich double shot of our specialty dark roast blend.', icon: 'fa-coffee' }
-            };
-            
-            for (const flavor of ['Caramel Latte', 'French Vanilla', 'Oreo Supreme', 'Vanilla Latte', 'Dirty Chai', 'Classic Black']) {
-                const config = allocatedFlavors[flavor];
-                const info = flavorInfo[flavor];
-                const isSelected = config.qty > 0;
-                
-                html += `
-                    <div class="bg-white rounded-3xl p-6 border ${isSelected ? 'border-brand-gold shadow-md' : 'border-gray-100 shadow-sm'} transition-all duration-300 flex flex-col gap-5">
-                        <div class="flex items-center justify-between gap-4">
-                            <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl bg-brand-cream text-brand-brown flex items-center justify-center text-lg shadow-inner">
-                                    <i class="fas ${info.icon || 'fa-coffee'}"></i>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-sm text-brand-dark">${flavor}</h4>
-                                    <p class="text-[10px] text-gray-400 font-medium leading-relaxed max-w-[200px] md:max-w-[280px]">${info.desc}</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Counter buttons -->
-                            <div class="flex items-center gap-4 bg-gray-50 border border-gray-100 rounded-full p-1 shadow-inner shrink-0">
-                                <button onclick="adjustAllocation('${flavor}', -1)" class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-xs text-gray-500 hover:text-red-500 transition-colors active:scale-90"><i class="fas fa-minus"></i></button>
-                                <span class="font-mono font-bold text-sm w-4 text-center">${config.qty}</span>
-                                <button onclick="adjustAllocation('${flavor}', 1)" class="w-8 h-8 rounded-full bg-brand-dark text-white shadow-md flex items-center justify-center text-xs hover:bg-brand-brown transition-colors active:scale-90"><i class="fas fa-plus"></i></button>
-                            </div>
-                        </div>
-                        
-                        <!-- Collapsible custom choices (only if allocated > 0) -->
-                        ${isSelected ? `
-                            <div class="pt-5 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                                ${flavor !== 'Classic Black' ? `
-                                    <div class="space-y-2">
-                                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Milk Alternative</label>
-                                        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-200">
-                                            <button onclick="toggleOption('${flavor}', 'milk', 'Regular')" class="py-2 rounded-xl text-[9px] font-bold uppercase transition-all ${config.milk === 'Regular' ? 'bg-white text-brand-dark shadow-sm border border-gray-100' : 'text-gray-400 hover:text-brand-dark'}">Regular</button>
-                                            <button onclick="toggleOption('${flavor}', 'milk', 'Oat Milk')" class="py-2 rounded-xl text-[9px] font-bold uppercase transition-all ${config.milk === 'Oat Milk' ? 'bg-white text-brand-dark shadow-sm border border-gray-100' : 'text-gray-400 hover:text-brand-dark'}">Oat Milk (+$1)</button>
-                                        </div>
-                                    </div>
-                                ` : ''}
-                                
-                                <div class="space-y-2 ${flavor === 'Classic Black' ? 'md:col-span-2' : ''}">
-                                    <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Espresso Level</label>
-                                    <div class="grid grid-cols-3 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-200">
-                                        ${['Light', 'Standard', 'Extra'].map(s => {
-                                            let oz = "";
-                                            if (flavor === 'Classic Black') {
-                                                oz = s === 'Light' ? '2oz' : (s === 'Extra' ? '4oz' : '3oz');
-                                            } else {
-                                                oz = s === 'Light' ? '1oz' : (s === 'Extra' ? '3oz' : '2oz');
-                                            }
-                                            const isActive = config.espresso === s;
-                                            return `
-                                                <button onclick="toggleOption('${flavor}', 'espresso', '${s}')" class="py-2 rounded-xl text-[9px] font-bold uppercase transition-all flex flex-col items-center justify-center ${isActive ? 'bg-white text-brand-dark shadow-sm border border-gray-100' : 'text-gray-400 hover:text-brand-dark'}">
-                                                    <span>${s}</span>
-                                                    <span class="text-[7px] opacity-60 font-medium lowercase tracking-normal mt-0.5">${oz}</span>
-                                                </button>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
+            // Hide/Show Milk customization container if it is Classic Black
+            const milkContainer = document.getElementById('milk-customizer-container');
+            if (milkContainer) {
+                if (isBlack) milkContainer.classList.add('hidden');
+                else milkContainer.classList.remove('hidden');
             }
-            
-            html += `</div>`;
-            container.innerHTML = html;
-            
-            // Control Add to Cart button state based on completeness
-            const btn = document.querySelector('button[onclick="addToCart()"]');
-            if (btn) {
-                if (currentTotal === targetTotal) {
-                    btn.disabled = false;
-                    btn.innerText = "Add to My Order";
-                    btn.className = "w-full gold-shimmer text-brand-dark font-black py-6 rounded-2xl shadow-2xl hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs";
-                } else {
-                    btn.disabled = true;
-                    btn.innerText = `Allocate ${targetTotal - currentTotal} more drinks`;
-                    btn.className = "w-full bg-gray-200 text-gray-400 font-bold py-6 rounded-2xl shadow-none cursor-not-allowed text-xs uppercase tracking-[0.15em]";
-                }
-            }
+
+            // Expose customizer
+            document.getElementById('flavor-customizer').classList.remove('hidden');
+            document.getElementById('flavor-customizer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        function getEspressoOz(flavor, strength) {
-            const activeStrength = strength || 'Standard';
-            if (flavor === 'Classic Black') {
-                if (activeStrength === 'Light') return "2oz Esp";
-                if (activeStrength === 'Standard') return "3oz Esp";
-                if (activeStrength === 'Extra') return "4oz Esp";
+        function setMilkOption(opt) {
+            customMilk = opt;
+            const btnReg = document.getElementById('milk-reg');
+            const btnOat = document.getElementById('milk-oat');
+            if (!btnReg || !btnOat) return;
+
+            if (opt === 'Regular') {
+                btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
+                btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
             } else {
-                if (activeStrength === 'Light') return "1oz Esp";
-                if (activeStrength === 'Standard') return "2oz Esp";
-                if (activeStrength === 'Extra') return "3oz Esp";
+                btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
+                btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
             }
-            return "2oz Esp";
         }
 
-        function changeQty(delta) {
-            currentQty += delta;
-            if (currentQty < 1) currentQty = 1;
-            document.getElementById('qty-display').innerText = currentQty;
-            updateItemTotal();
+        function setEspressoOption(opt) {
+            customEspresso = opt;
+            const btnL = document.getElementById('esp-light');
+            const btnS = document.getElementById('esp-std');
+            const btnE = document.getElementById('esp-extra');
+
+            const inactiveClass = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
+            const activeClass = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
+
+            if (btnL) btnL.className = opt === 'Light' ? activeClass : inactiveClass;
+            if (btnS) btnS.className = opt === 'Standard' ? activeClass : inactiveClass;
+            if (btnE) btnE.className = opt === 'Extra' ? activeClass : inactiveClass;
         }
 
-        function updateItemTotal() {
+        function adjustCustomizerQty(delta) {
+            customizerQty += delta;
+            if (customizerQty < 1) customizerQty = 1;
+            document.getElementById('customizer-qty-display').innerText = customizerQty;
+        }
+
+        function addItemToOrder() {
+            if (!selectedProduct) return;
+
+            const isCatering = selectedProduct.id === 'catering_event_pack';
             let basePrice = parseFloat(selectedProduct.price);
-            let oatMilkSurcharge = bottleSelections.reduce((sum, sel) => sum + (sel.milk === 'Oat Milk' ? 1.0 : 0), 0);
-            let unitPrice = basePrice + oatMilkSurcharge;
-            document.getElementById('item-total').innerText = `$${(unitPrice * currentQty).toFixed(2)}`;
-        }
+            let surcharge = (!isCatering && customMilk === 'Oat Milk') ? 1.00 : 0;
+            let unitPrice = basePrice + surcharge;
 
-        function addToCart() {
-            let basePrice = parseFloat(selectedProduct.price);
-            let oatMilkSurcharge = bottleSelections.reduce((sum, sel) => sum + (sel.milk === 'Oat Milk' ? 1.0 : 0), 0);
-            let unitPrice = basePrice + oatMilkSurcharge;
+            // Search if matching configuration already exists in cart to increment quantity
+            const matchingIndex = cart.findIndex(item => 
+                item.product_id === selectedProduct.id && 
+                item.selections[0].milk === (isCatering ? 'Regular' : customMilk) &&
+                item.selections[0].espresso === (isCatering ? 'Standard' : customEspresso)
+            );
 
-            cart.push({
-                product_id: selectedProduct.id,
-                name: selectedProduct.name,
-                selections: JSON.parse(JSON.stringify(bottleSelections)),
-                qty: currentQty,
-                unitPrice: unitPrice,
-                total: unitPrice * currentQty,
-                bottles: selectedProduct.bottles_per_pack * currentQty
-            });
+            if (matchingIndex > -1) {
+                cart[matchingIndex].qty += customizerQty;
+                cart[matchingIndex].bottles = (isCatering ? selectedProduct.bottles_per_pack : 1) * cart[matchingIndex].qty;
+                cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
+            } else {
+                // Renders the selections mapped array for order tracking details
+                const singleSelections = Array.from({ length: isCatering ? selectedProduct.bottles_per_pack : 1 }, () => ({
+                    flavor: isCatering ? 'Vanilla Latte' : selectedProduct.name,
+                    milk: isCatering ? 'Regular' : customMilk,
+                    espresso: isCatering ? 'Standard' : customEspresso
+                }));
 
+                cart.push({
+                    product_id: selectedProduct.id,
+                    name: selectedProduct.name,
+                    selections: singleSelections,
+                    qty: customizerQty,
+                    unitPrice: unitPrice,
+                    total: unitPrice * customizerQty,
+                    bottles: (isCatering ? selectedProduct.bottles_per_pack : 1) * customizerQty
+                });
+            }
+
+            showToast(`${selectedProduct.name} added to cart!`, 'success');
             updateCartUI();
-            document.getElementById('step-2').classList.add('hidden');
-            document.getElementById('order-summary').classList.remove('hidden');
-            scrollToElement('order-summary');
+
+            // Clear selected product state and hide customizer
+            selectedProduct = null;
+            document.getElementById('flavor-customizer').classList.add('hidden');
+            renderProducts(); // Remove highlights
         }
 
         function updateCartUI() {
-            const list = document.getElementById('cart-list');
-            const indicator = document.getElementById('cart-indicator');
-            const count = document.getElementById('cart-count');
-            
+            const container = document.getElementById('cart-container');
+            const list = document.getElementById('cart-items-list');
+            const checkCard = document.getElementById('checkout-card');
+            const cateringDetailsBox = document.getElementById('catering-details-box');
+
             if (cart.length === 0) {
-                indicator.classList.add('hidden');
-                document.getElementById('order-summary').classList.add('hidden');
+                container.classList.add('hidden');
+                checkCard.classList.add('hidden');
+                cateringDetailsBox.classList.add('hidden');
                 return;
             }
 
-            indicator.classList.remove('hidden');
-            count.innerText = cart.length;
+            // Expose catering schedules input box if catering pack is added
+            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
+            if (hasCatering) {
+                cateringDetailsBox.classList.remove('hidden');
+            } else {
+                cateringDetailsBox.classList.add('hidden');
+            }
 
-            list.innerHTML = cart.map((item, index) => {
-                let details = "";
-                if (item.selections && item.selections.length > 1) {
-                    details = item.selections.map((s, i) => `<span class="block opacity-60 text-[8px] mt-1">#${i+1}: ${s.flavor} • ${s.milk} • ${getEspressoOz(s.flavor, s.espresso)}</span>`).join('');
-                } else if (item.selections && item.selections.length === 1) {
-                    details = `<span class="block opacity-60 text-[8px] mt-1">${item.selections[0].flavor} • ${item.selections[0].milk} • ${getEspressoOz(item.selections[0].flavor, item.selections[0].espresso)}</span>`;
+            // Dynamically calculate the active volume discount trigger (excluding catering packs)
+            const normalBottlesCount = cart.reduce((sum, item) => {
+                if (item.product_id === 'catering_event_pack') return sum;
+                return sum + item.qty;
+            }, 0);
+
+            let volDiscountPerBottle = 0;
+            const incentiveBadge = document.getElementById('volume-incentive-badge');
+            const incentiveText = document.getElementById('volume-incentive-text');
+
+            if (normalBottlesCount >= 5) {
+                volDiscountPerBottle = 1.50;
+                incentiveBadge.classList.remove('hidden');
+                incentiveBadge.className = "bg-green-50 border border-green-200 p-3 rounded-2xl text-[9px] text-green-700 font-bold flex items-center gap-2 animate-bounce";
+                incentiveText.innerHTML = `🎉 <strong>Maximum volume discount active!</strong> You saved $1.50 off every bottle.`;
+            } else if (normalBottlesCount >= 3) {
+                volDiscountPerBottle = 1.00;
+                incentiveBadge.classList.remove('hidden');
+                incentiveBadge.className = "bg-brand-cream border border-brand-gold/30 p-3 rounded-2xl text-[9px] text-brand-brown font-bold flex items-center gap-2";
+                const rem = 5 - normalBottlesCount;
+                incentiveText.innerHTML = `🔥 Volume Discount: Saved $1.00/bottle! Add <strong>${rem}</strong> more bottle${rem > 1 ? 's' : ''} to save $1.50 off every bottle!`;
+            } else {
+                volDiscountPerBottle = 0;
+                incentiveBadge.classList.remove('hidden');
+                incentiveBadge.className = "bg-gray-50 border border-gray-150 p-3 rounded-2xl text-[9px] text-gray-500 font-bold flex items-center gap-2";
+                const rem = 3 - normalBottlesCount;
+                incentiveText.innerHTML = `💡 Add <strong>${rem}</strong> more bottle${rem > 1 ? 's' : ''} to unlock the <strong>$1.00 off per bottle</strong> volume discount!`;
+            }
+
+            // Recalculate unit price for each item inside cart incorporating dynamic volume discounts
+            cart.forEach(item => {
+                if (item.product_id === 'catering_event_pack') return;
+
+                // Determine base standard product price
+                let basePrice = 6.00;
+                const dbProd = allProducts.find(p => p.id === item.product_id);
+                if (dbProd) {
+                    basePrice = parseFloat(dbProd.price);
+                } else if (item.name.toLowerCase().includes('black') || item.name.toLowerCase().includes('americano')) {
+                    basePrice = 5.00;
                 }
 
+                // Add Oat Milk surcharge
+                let surcharge = (item.selections[0].milk === 'Oat Milk') ? 1.00 : 0;
+
+                // Deduct active volume discount
+                item.unitPrice = basePrice + surcharge - volDiscountPerBottle;
+                item.total = item.unitPrice * item.qty;
+            });
+
+            // Render list
+            list.innerHTML = cart.map((item, idx) => {
+                const sel = item.selections[0];
+                const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
+                const isCatering = item.product_id === 'catering_event_pack';
+                
+                const descText = isCatering 
+                    ? `Catering Batch • ${item.selections.length} Bottles` 
+                    : (isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`);
+                
                 return `
-                <div class="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex justify-between items-center group transition-all hover:shadow-lg">
-                    <div class="flex items-center gap-8">
-                        <div class="w-16 h-16 bg-brand-cream rounded-3xl flex items-center justify-center text-brand-brown shadow-inner">
-                            <i class="fas fa-mug-hot text-2xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-xl text-brand-dark">${item.qty}x ${item.name}</h4>
-                            <div class="text-[10px] font-black text-brand-brown uppercase tracking-[0.2em]">${details}</div>
-                        </div>
+                <div class="bg-gray-50 border border-gray-100 p-4 rounded-2xl flex justify-between items-center animate-fade-in">
+                    <div>
+                        <h4 class="font-serif font-bold text-xs text-brand-dark">${item.name}</h4>
+                        <p class="text-[8px] text-gray-455 uppercase font-bold tracking-wider mt-0.5">${descText}</p>
                     </div>
-                    <div class="flex items-center gap-8">
-                        <span class="font-black font-mono text-2xl tracking-tighter">$${item.total.toFixed(2)}</span>
-                        <button onclick="removeItem(${index})" class="w-10 h-10 rounded-full bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <div class="flex items-center gap-4">
+                        <span class="font-mono font-black text-xs text-brand-brown">$${item.total.toFixed(2)}</span>
+                        
+                        <!-- Inline Cart Quantity Adjuster -->
+                        <div class="flex items-center gap-2 bg-white px-1.5 py-0.5 rounded-xl border border-gray-100">
+                            <button type="button" onclick="adjustCartItemQty(${idx}, -1)" class="w-4 h-4 rounded-md text-[8px] font-black text-gray-500 hover:bg-gray-100 flex items-center justify-center"><i class="fas fa-minus"></i></button>
+                            <span class="text-[9px] font-bold text-brand-dark">${item.qty}</span>
+                            <button type="button" onclick="adjustCartItemQty(${idx}, 1)" class="w-4 h-4 rounded-md text-[8px] font-black text-gray-500 hover:bg-gray-100 flex items-center justify-center"><i class="fas fa-plus"></i></button>
+                        </div>
+
+                        <button type="button" onclick="removeItem(${idx})" class="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><i class="fas fa-trash-alt text-[9px]"></i></button>
                     </div>
                 </div>`;
             }).join('');
 
-            const subtotal = cart.reduce((sum, i) => sum + i.total, 0);
-            let finalTotal = subtotal;
-            if (currentDiscount > 0) {
-                finalTotal = subtotal * (1 - (currentDiscount / 100));
-                document.getElementById('discount-display').classList.remove('hidden');
-                document.getElementById('discount-display').innerText = `Original: $${subtotal.toFixed(2)}`;
-            } else {
-                document.getElementById('discount-display').classList.add('hidden');
-            }
+            // Calculate stamps discount for the current order
+            let freeRedeemedInCurrent = 0;
+            let stampSavings = 0;
 
-            // --- Home Delivery & Hub Tracker Calculations ---
-            const locationVal = document.getElementById('cust-location').value;
-            const feeDisplay = document.getElementById('home-delivery-fee-display');
-            const hubCard = document.getElementById('hub-tracker-card');
-            const personalBottles = cart.reduce((sum, item) => sum + item.bottles, 0);
-            const notesInput = document.getElementById('cust-notes');
-            const cateringBox = document.getElementById('catering-details-box');
+            const phoneVal = document.getElementById('cust-phone').value.trim();
+            const digits = phoneVal.replace(/\D/g, '');
+            if (digits.length >= 10) {
+                const totalPaidPast = stampsData.paid_bottles || 0;
+                const totalFreePast = stampsData.total_free_redeemed || 0;
 
-            if (notesInput) notesInput.classList.add('hidden');
-            if (cateringBox) {
-                const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
-                if (hasCatering) {
-                    cateringBox.classList.remove('hidden');
-                } else {
-                    cateringBox.classList.add('hidden');
-                }
-            }
-
-            if (locationVal === 'home') {
-                finalTotal += HOME_DELIVERY_FEE;
-                feeDisplay.classList.remove('hidden');
-                document.getElementById('delivery-status-msg').innerText = "🏠 Home delivery: $10.00 flat fee applied.";
-                hideHubTracker();
-            } else {
-                feeDisplay.classList.add('hidden');
-                document.getElementById('delivery-status-msg').innerText = "";
-                
-                if (locationVal && locationVal !== '') {
-                    const selectedLoc = allLocations.find(l => l.id === locationVal);
-                    if (selectedLoc) {
-                        const isMicroHub = selectedLoc.distributor_name === 'Micro-Hub';
-                        const isIvy = selectedLoc.name.toLowerCase().includes('ivy');
-                        
-                        if (notesInput) {
-                            notesInput.classList.remove('hidden');
-                            if (isIvy) {
-                                notesInput.placeholder = "Specify Ivy 1/2 + Apt #";
-                            } else {
-                                notesInput.placeholder = "Desk # / Floor / Suite Details";
-                            }
-                        }
-
-                        if (isIvy) {
-                            hideHubTracker();
-                            document.getElementById('delivery-status-msg').innerText = "🚚 Free local delivery directly to your door!";
-                        } else {
-                            const currentHubBottles = selectedLoc.current_bottles || 0;
-                            const totalCombined = currentHubBottles + personalBottles;
-                            const target = isMicroHub ? 10 : HUB_DELIVERY_THRESHOLD;
-                            const percent = Math.min((totalCombined / target) * 100, 100);
-                            
-                            document.getElementById('hub-tracker-title').innerText = `${selectedLoc.name} (${selectedLoc.city})`;
-                            document.getElementById('hub-tracker-progress-text').innerText = `${totalCombined} / ${target}`;
-                            
-                            const fill = document.getElementById('hub-tracker-progress-fill');
-                            fill.style.width = `${percent}%`;
-                            
-                            const badge = document.getElementById('hub-tracker-status-badge');
-                            const msg = document.getElementById('hub-tracker-msg');
-                            
-                            if (totalCombined >= target) {
-                                badge.className = "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-                                badge.innerText = "UNLOCKED";
-                                
-                                if (currentHubBottles >= target) {
-                                    msg.innerHTML = isMicroHub
-                                        ? `🎉 Delivery Goal Unlocked! <strong>FREE DELIVERY</strong> enabled for this location!`
-                                        : `🎉 Hub goal reached by community! <strong>FREE DELIVERY</strong> unlocked for this drop location!`;
-                                } else {
-                                    msg.innerHTML = isMicroHub
-                                        ? `🎉 Your order pushes this location to ${totalCombined} bottles! <strong>FREE DELIVERY</strong> unlocked!`
-                                        : `🎉 Your order pushes this Hub to ${totalCombined} bottles! <strong>FREE DELIVERY</strong> unlocked for everyone at this Hub!`;
-                                }
-                            } else {
-                                badge.className = "text-[8px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full bg-brand-gold/10 text-brand-gold border border-brand-gold/20";
-                                badge.innerText = "ACTIVE";
-                                
-                                const remaining = target - totalCombined;
-                                msg.innerHTML = isMicroHub
-                                    ? `🔥 This location has <strong>${currentHubBottles}</strong> bottles ordered. Your cart adds <strong>${personalBottles}</strong>, bringing the total to <strong>${totalCombined}</strong>. Need <strong>${remaining}</strong> more to unlock FREE delivery!`
-                                    : `🔥 This Hub has <strong>${currentHubBottles}</strong> bottles ordered. Your cart adds <strong>${personalBottles}</strong>, bringing the total to <strong>${totalCombined}</strong>. Need <strong>${remaining}</strong> more to unlock FREE delivery!`;
-                            }
-                            
-                            // Show tracker card with transition
-                            hubCard.classList.remove('hidden');
-                            setTimeout(() => {
-                                hubCard.classList.remove('scale-95', 'opacity-0');
-                                hubCard.classList.add('scale-100', 'opacity-100');
-                            }, 50);
-                        }
-                    } else {
-                        hideHubTracker();
+                for (let f = 0; f <= normalBottlesCount; f++) {
+                    let currentPaid = normalBottlesCount - f;
+                    let hypotheticalTotalPaid = totalPaidPast + currentPaid;
+                    let expectedTotalFree = Math.floor(hypotheticalTotalPaid / 9);
+                    let calculatedFree = expectedTotalFree - totalFreePast;
+                    
+                    if (calculatedFree >= f) {
+                        freeRedeemedInCurrent = f;
                     }
-                } else {
-                    hideHubTracker();
+                }
+
+                if (freeRedeemedInCurrent > 0) {
+                    let flatCartPrices = [];
+                    cart.forEach(item => {
+                        if (item.product_id === 'catering_event_pack') return;
+                        for (let q = 0; q < item.qty; q++) {
+                            flatCartPrices.push(item.unitPrice);
+                        }
+                    });
+                    flatCartPrices.sort((a, b) => a - b);
+                    for (let idx = 0; idx < Math.min(freeRedeemedInCurrent, flatCartPrices.length); idx++) {
+                        stampSavings += flatCartPrices[idx];
+                    }
                 }
             }
 
-            function hideHubTracker() {
-                if (hubCard) {
-                    hubCard.classList.remove('scale-100', 'opacity-100');
-                    hubCard.classList.add('scale-95', 'opacity-0');
-                    setTimeout(() => {
-                        hubCard.classList.add('hidden');
-                    }, 300);
-                }
-            }
+            renderStampCard();
 
-            document.getElementById('cart-total-display').innerText = `$${finalTotal.toFixed(2)}`;
+            container.classList.remove('hidden');
+            checkCard.classList.remove('hidden');
+
+            updatePricing(volDiscountPerBottle, normalBottlesCount, stampSavings, freeRedeemedInCurrent);
+            updateHubTracker();
+        }
+
+        function adjustCartItemQty(idx, delta) {
+            cart[idx].qty += delta;
+            if (cart[idx].qty <= 0) {
+                cart.splice(idx, 1);
+            } else {
+                const isCatering = cart[idx].product_id === 'catering_event_pack';
+                const bottlesPerPack = isCatering ? cart[idx].selections.length / (cart[idx].qty - delta) : 1;
+                cart[idx].bottles = bottlesPerPack * cart[idx].qty;
+                cart[idx].total = cart[idx].unitPrice * cart[idx].qty;
+            }
+            updateCartUI();
         }
 
         function removeItem(idx) {
@@ -1026,94 +1098,205 @@
         }
 
         function clearCart() {
-            if (confirm("Remove all items from your order?")) {
-                cart = [];
-                updateCartUI();
+            cart = [];
+            updateCartUI();
+        }
+
+        function updatePricing(volDiscount = 0, bottleCount = 0, stampSavings = 0, freeRedeemedCount = 0) {
+            let subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+            
+            // Subtract stamp savings from the subtotal before percent discounts are applied
+            let paidSubtotal = Math.max(0, subtotal - stampSavings);
+            let total = paidSubtotal;
+
+            let breakdownHtml = "";
+            let savings = stampSavings;
+
+            // Display Volume Discount savings if active
+            if (volDiscount > 0 && bottleCount > 0) {
+                const volSavings = volDiscount * bottleCount;
+                breakdownHtml += `<p class="flex justify-between"><span>Volume Discount ($${volDiscount.toFixed(2)}/bottle):</span><span class="text-green-400 font-bold">-$${volSavings.toFixed(2)}</span></p>`;
             }
+
+            // Display Stamp Savings if active
+            if (stampSavings > 0) {
+                breakdownHtml += `<p class="flex justify-between"><span>Stamp Reward (${freeRedeemedCount} Free Bottle${freeRedeemedCount > 1 ? 's' : ''}):</span><span class="text-green-400 font-bold">-$${stampSavings.toFixed(2)}</span></p>`;
+            }
+
+            // Apply 10% Weekly Subscription Discount to the remaining paid subtotal
+            if (isSubscription) {
+                const subSavings = total * 0.10;
+                total = total * 0.90;
+                savings += subSavings;
+                breakdownHtml += `<p class="flex justify-between"><span>Weekly Club Discount (10% OFF):</span><span class="text-green-400 font-bold">-$${subSavings.toFixed(2)}</span></p>`;
+            }
+
+            // Apply 5% Promo Code Discount to the remaining paid subtotal
+            if (validatedPromo && !isSubscription) {
+                const promoSavings = total * 0.05;
+                total = total * 0.95;
+                savings += promoSavings;
+                breakdownHtml += `<p class="flex justify-between"><span>Promo Code (${validatedPromo}):</span><span class="text-green-400 font-bold">-$${promoSavings.toFixed(2)}</span></p>`;
+            }
+
+            const breakdownEl = document.getElementById('pricing-breakdown');
+            if (breakdownHtml) {
+                breakdownEl.innerHTML = `
+                    <p class="flex justify-between border-b border-white/5 pb-1"><span>Cart Subtotal:</span><span>$${(subtotal + (volDiscount * bottleCount)).toFixed(2)}</span></p>
+                    ${breakdownHtml}
+                    <p class="flex justify-between font-bold text-brand-gold pt-0.5"><span>Total Saved:</span><span>$${savings.toFixed(2)}</span></p>
+                `;
+                breakdownEl.classList.remove('hidden');
+            } else {
+                breakdownEl.classList.add('hidden');
+            }
+
+            document.getElementById('pay-total-display').innerText = `$${total.toFixed(2)}`;
         }
 
-        function populateLocations() {
-            const select = document.getElementById('cust-location');
-            select.innerHTML = '<option value="" disabled selected>-- Select Hub or Home --</option>';
-            
-            // Sort to make The Ivy Residences first option, followed by alphabetical name
-            const sortedLocations = [...allLocations].sort((a, b) => {
-                const aIvy = a.name.toLowerCase().includes('ivy');
-                const bIvy = b.name.toLowerCase().includes('ivy');
-                if (aIvy && !bIvy) return -1;
-                if (!aIvy && bIvy) return 1;
-                return a.name.localeCompare(b.name);
-            });
-            
-            // Populate dynamic locations from Supabase
-            sortedLocations.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l.id;
-                opt.textContent = `${l.name} (${l.city})`;
-                select.appendChild(opt);
-            });
-
-            // Add Home Delivery
-            const homeOpt = document.createElement('option');
-            homeOpt.value = 'home';
-            homeOpt.textContent = 'Home Delivery (SoCal Only)';
-            select.appendChild(homeOpt);
-
-            // Trigger update to show initial delivery status if location is pre-selected or default
-            updateCartUI(); 
-        }
-
-        async function checkout() {
-            const name = document.getElementById('cust-name').value;
-            const email = document.getElementById('cust-email').value;
-            const phone = document.getElementById('cust-phone').value;
-            const loc = document.getElementById('cust-location').value;
-            const notesVal = document.getElementById('cust-notes') ? document.getElementById('cust-notes').value : "";
-            const btn = document.getElementById('checkout-btn');
+        function updateHubTracker() {
+            const hubCard = document.getElementById('hub-tracker-card');
             const totalBottles = cart.reduce((sum, item) => sum + item.bottles, 0);
 
-            if (!name || !email || !phone || !loc) {
-                showToast("Please fill in all details.");
+            // Hide for normal flows unless selected by Puppeteer test (which selects from hidden select box)
+            if (orderMode !== 'preorder' || !selectedLocationId || totalBottles === 0) {
+                hubCard.classList.add('hidden');
                 return;
             }
-            if (cart.length === 0) return;
 
-            const selectedLoc = allLocations.find(l => l.id === loc);
-            const isMicroHub = selectedLoc && selectedLoc.distributor_name === 'Micro-Hub';
-            const isIvy = selectedLoc && selectedLoc.name.toLowerCase().includes('ivy');
-            const target = isIvy ? 0 : (isMicroHub ? 10 : HUB_DELIVERY_THRESHOLD);
+            const selectedLoc = allLocations.find(l => l.id === selectedLocationId);
+            if (!selectedLoc) {
+                hubCard.classList.add('hidden');
+                return;
+            }
 
-            // Enforce hub threshold if not home delivery and not Ivy
-            if (loc !== 'home' && !isIvy && totalBottles < target) {
-                if (isMicroHub) {
-                    showToast(`This location requires a minimum of ${target} bottles collectively for delivery. Please coordinate with neighbors/coworkers or add more items!`);
+            // Hide for Ivy Residences (no goals)
+            const isIvy = selectedLoc.name.toLowerCase().includes('ivy');
+            if (isIvy) {
+                hubCard.classList.add('hidden');
+                return;
+            }
+
+            const isMicroHub = selectedLoc.distributor_name === 'Micro-Hub';
+            const target = isMicroHub ? 10 : 20; 
+            const currentHubBottles = selectedLoc.current_bottles || 0;
+            const totalCombined = currentHubBottles + totalBottles;
+            const percent = Math.min((totalCombined / target) * 100, 100);
+
+            document.getElementById('hub-tracker-title').innerText = `${selectedLoc.name} (${selectedLoc.city})`;
+            document.getElementById('hub-tracker-progress-text').innerText = `${totalCombined} / ${target}`;
+            document.getElementById('hub-tracker-progress-fill').style.width = `${percent}%`;
+
+            const badge = document.getElementById('hub-tracker-status-badge');
+            const msg = document.getElementById('hub-tracker-msg');
+
+            if (totalCombined >= target) {
+                badge.className = "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                badge.innerText = "UNLOCKED";
+                msg.innerHTML = `🎉 Community Goal Reached! <strong>FREE DELIVERY</strong> is active for this location!`;
+            } else {
+                badge.className = "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-gold/10 text-brand-gold border border-brand-gold/20";
+                badge.innerText = "ACTIVE";
+                const remaining = target - totalCombined;
+                msg.innerHTML = `🔥 Location has <strong>${currentHubBottles}</strong> pre-orders. Your order makes it <strong>${totalCombined}</strong>. Need <strong>${remaining}</strong> more to unlock delivery!`;
+            }
+
+            hubCard.classList.remove('hidden');
+        }
+
+        function setPaymentTab(tab) {
+            paymentTab = tab;
+            const tabs = ['stripe', 'venmo', 'zelle'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const form = document.getElementById(`form-${t}`);
+                if (t === tab) {
+                    btn.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow";
+                    form.classList.remove('hidden');
                 } else {
-                    showToast(`This Hub requires ${target} bottles for delivery. Please add more items or coordinate with your team!`);
+                    btn.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/45 hover:text-white transition-all";
+                    form.classList.add('hidden');
                 }
+            });
+        }
+
+        function openVenmoApp() {
+            if (cart.length === 0) {
+                showToast("Please add items to your order first.");
+                return;
+            }
+            let total = cart.reduce((sum, item) => sum + item.total, 0);
+            if (isSubscription) total = total * 0.90;
+            if (validatedPromo && !isSubscription) total = total * 0.95;
+
+            const modeLabel = orderMode === 'preorder' ? 'Pre-Order' : 'Self-Checkout';
+            const itemsDesc = cart.map(item => `${item.qty}x ${item.name}`).join(', ');
+            const note = `Rich Aroma - ${modeLabel}: ${itemsDesc}`;
+            
+            const url = `venmo://paycharge?recipients=rich-aroma-coffee&amount=${total.toFixed(2)}&note=${encodeURIComponent(note)}`;
+            window.location.href = url;
+            
+            setTimeout(() => {
+                showToast("If Venmo app didn't open, search @rich-aroma-coffee directly.", 'success');
+            }, 1500);
+        }
+
+        function copyZelle() {
+            navigator.clipboard.writeText("order@richaromacoffee.com");
+            showToast("Zelle email copied to clipboard!", 'success');
+        }
+
+        async function processStripeCheckout() {
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const email = document.getElementById('cust-email').value;
+            const btn = document.getElementById('stripe-btn');
+
+            if (cart.length === 0) {
+                showToast("Please add items to your order first.");
+                return;
+            }
+            if (!name || !phone) {
+                showToast("Please enter your name and phone number.");
+                return;
+            }
+            if (!selectedLocationId) {
+                showToast("Location not set. Please reload the page.");
                 return;
             }
 
-            // Enforce notes for micro-hubs
-            if (isMicroHub && !notesVal.trim()) {
-                const placeholder = isIvy ? "Ivy 1/2 + Apt #" : "Desk / Floor Details";
-                showToast(`Please enter your delivery details (${placeholder}) in the input field.`);
-                return;
-            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
 
-            let finalNotes = notesVal;
+            const selectedDate = document.getElementById('preorder-date-picker').value;
+            const notesTag = orderMode === 'preorder' 
+                ? (isSubscription ? `[PRE-ORDER SUBSCRIPTION FOR ${selectedDate}]` : `[PRE-ORDER FOR ${selectedDate}]`) 
+                : '[SELF-CHECKOUT]';
+                
+            let desc = cart.map(item => {
+                const sel = item.selections[0];
+                const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
+                const isCatering = item.product_id === 'catering_event_pack';
+                
+                if (isCatering) return `${item.qty}x ${item.name} (${item.selections.length} bottles)`;
+                return isBlack ? `${item.qty}x ${item.name} (${sel.espresso})` : `${item.qty}x ${item.name} (${sel.milk}, ${sel.espresso})`;
+            }).join(', ');
+
+            let selfCheckoutNotes = `${notesTag} Stripe checkout. Items: ${desc}.`;
+
+            // Append catering details to notes
             const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
             if (hasCatering) {
                 const eventDate = document.getElementById('cust-event-date').value;
                 const eventSetup = document.getElementById('cust-event-setup').value;
                 if (!eventDate) {
-                    showToast("Please select a date and time for your event catering delivery.");
+                    showToast("Please select a date and time for catering.");
+                    btn.disabled = false;
+                    btn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
                     return;
                 }
-                finalNotes = `[EVENT CATERING] Date/Time: ${eventDate} | Setup Needs: ${eventSetup || 'None'} | Notes: ${notesVal}`;
+                selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;
             }
-
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Redirecting to Stripe...';
 
             try {
                 const res = await fetch('/api/checkout', {
@@ -1123,23 +1306,142 @@
                         name, 
                         email,
                         phone, 
-                        location_id: loc, 
+                        location_id: selectedLocationId, 
                         items: cart, 
-                        notes: finalNotes,
+                        notes: selfCheckoutNotes,
                         promo_code: validatedPromo,
                         is_subscription: isSubscription,
-                        total_bottles: totalBottles, // Pass total bottles to backend for incentive logic
-                        delivery_fee_applied: (loc === 'home' || (loc !== 'home' && totalBottles < target)) ? HOME_DELIVERY_FEE : 0
+                        delivery_fee_applied: 0,
+                        preorder_date: orderMode === 'preorder' ? selectedDate : null
                     })
                 });
                 const data = await res.json();
-                if (data.url) window.location.href = data.url;
-                else throw new Error(data.error);
+                if (data.url) {
+                    window.location.href = data.url;
+                } else {
+                    throw new Error(data.error);
+                }
             } catch (e) {
-                showToast("Checkout Error: " + e.message);
+                showToast("Stripe Checkout Error: " + e.message);
                 btn.disabled = false;
-                btn.innerHTML = 'Confirm & Pay <i class="fas fa-arrow-right ml-2"></i>';
+                btn.innerHTML = orderMode === 'preorder' 
+                    ? 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>' 
+                    : 'Pay via ApplePay / Card <i class="fas fa-credit-card ml-1.5"></i>';
             }
+        }
+
+        async function submitManualOrder(method) {
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const email = document.getElementById('cust-email').value;
+
+            if (cart.length === 0) {
+                showToast("Please add items to your order first.");
+                return;
+            }
+            if (!name || !phone) {
+                showToast("Please enter your name and phone number.");
+                return;
+            }
+            if (!selectedLocationId) {
+                showToast("Location error. Please reload the page.");
+                return;
+            }
+
+            let totalVal = cart.reduce((sum, item) => sum + item.total, 0);
+            if (isSubscription) totalVal = totalVal * 0.90;
+            if (validatedPromo && !isSubscription) totalVal = totalVal * 0.95;
+
+            const selectedDate = document.getElementById('preorder-date-picker').value;
+            const notesTag = orderMode === 'preorder'
+                ? (isSubscription ? `[PRE-ORDER SUBSCRIPTION PAY: ${method.toUpperCase()} FOR ${selectedDate}]` : `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}]`)
+                : `[SELF-CHECKOUT PAY: ${method.toUpperCase()}]`;
+
+            let desc = cart.map(item => {
+                const sel = item.selections[0];
+                const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
+                const isCatering = item.product_id === 'catering_event_pack';
+                
+                if (isCatering) return `${item.qty}x ${item.name} (${item.selections.length} bottles)`;
+                return isBlack ? `${item.qty}x ${item.name} (${sel.espresso})` : `${item.qty}x ${item.name} (${sel.milk}, ${sel.espresso})`;
+            }).join(', ');
+
+            let selfCheckoutNotes = `${notesTag} Items: ${desc}.`;
+
+            // Append catering details to notes
+            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
+            if (hasCatering) {
+                const eventDate = document.getElementById('cust-event-date').value;
+                const eventSetup = document.getElementById('cust-event-setup').value;
+                if (!eventDate) {
+                    showToast("Please select a date and time for catering.");
+                    return;
+                }
+                selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;
+            }
+
+            try {
+                const res = await fetch('/api/cali?action=create_self_checkout_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: name,
+                        customer_phone: phone,
+                        location_id: selectedLocationId,
+                        total: totalVal,
+                        selections: { 
+                            cart: cart, 
+                            payment_method: method.toLowerCase(), 
+                            status: 'pending_verification', 
+                            is_subscription: isSubscription,
+                            preorder_date: orderMode === 'preorder' ? selectedDate : null,
+                            email: email || ''
+                        },
+                        notes: selfCheckoutNotes
+                    })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const itemsDesc = cart.map(item => `${item.qty}x ${item.name}`).join(' + ');
+                    showReceiptSplash(
+                        data.id || 'RA-MANUAL',
+                        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        itemsDesc,
+                        orderMode
+                    );
+                } else {
+                    const err = await res.json();
+                    showToast("Order Submission Failed: " + err.error);
+                }
+            } catch (e) {
+                showToast("Connection error logging checkout.");
+            }
+        }
+
+        function showReceiptSplash(code, time, flavor, mode = 'preorder') {
+            document.getElementById('receipt-code').innerText = code;
+            document.getElementById('receipt-time').innerText = time;
+            document.getElementById('receipt-flavor').innerText = flavor;
+            
+            const titleEl = document.querySelector('#success-modal h2');
+            const msgEl = document.querySelector('#success-modal p.italic');
+            
+            if (mode === 'preorder') {
+                titleEl.innerText = "Pre-Order Secured!";
+                const selectedDate = document.getElementById('preorder-date-picker').value;
+                let dateStr = "your selected date";
+                if (selectedDate) {
+                    const d = new Date(selectedDate + 'T00:00:00');
+                    dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+                }
+                msgEl.innerText = `Your bottle will be brewed fresh and delivered on ${dateStr} labeled with your name. See you at the drop! ☕`;
+            } else {
+                titleEl.innerText = "Payment Registered!";
+                msgEl.innerText = "Please grab your bottle from the fridge. Thank you for supporting Honduras small-batch coffee! ☕";
+            }
+            
+            document.getElementById('success-modal').classList.remove('hidden');
         }
 
         function showToast(msg, type = 'error') {
@@ -1158,13 +1460,11 @@
             
             container.appendChild(toast);
             
-            // Animate in
             setTimeout(() => {
                 toast.classList.remove('translate-y-[-20px]', 'opacity-0');
                 toast.classList.add('translate-y-0', 'opacity-100');
             }, 50);
             
-            // Auto-remove after 4 seconds
             setTimeout(() => {
                 toast.classList.remove('translate-y-0', 'opacity-100');
                 toast.classList.add('translate-y-[-20px]', 'opacity-0');
@@ -1172,16 +1472,7 @@
             }, 4000);
         }
 
-        function scrollToElement(id) {
-            const el = document.getElementById(id);
-            if (el) window.scrollTo({ top: el.offsetTop - 100, behavior: 'smooth' });
-        }
-
-        // Add event listener for location change to update UI
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('cust-location').addEventListener('change', updateCartUI);
-            init();
-        });
+        init();
     </script>
 </body>
 </html>

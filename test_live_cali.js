@@ -10,9 +10,12 @@ const puppeteer = require('puppeteer');
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
 
+    page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
+    page.on('pageerror', err => console.error('BROWSER ERROR:', err.message));
+
     try {
-        console.log('Navigating to live Cali page...');
-        await page.goto('https://www.richaromacoffee.com/cali', { waitUntil: 'networkidle2', timeout: 30000 });
+        console.log('Navigating to Cali page...');
+        await page.goto(process.env.TEST_URL || 'https://www.richaromacoffee.com/cali', { waitUntil: 'networkidle2', timeout: 30000 });
 
         // Wait for locations to load
         console.log('Waiting for dropdown locations to load...');
@@ -68,7 +71,7 @@ const puppeteer = require('puppeteer');
         // Find and click the "Classic Black Americano" card to customize
         console.log('Opening customization modal for Classic Black Americano...');
         await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('div[onclick^="openStep2"]'));
+            const cards = Array.from(document.querySelectorAll('div[onclick^="selectProduct"]'));
             const blackCard = cards.find(c => c.innerText.toLowerCase().includes('black') || c.innerText.toLowerCase().includes('americano'));
             if (blackCard) {
                 blackCard.click();
@@ -80,51 +83,47 @@ const puppeteer = require('puppeteer');
 
         await new Promise(r => setTimeout(r, 1000));
 
-        // Check if "Classic Black" is rendered and selected by default
+        // Check if "Classic Black Americano" is selected
         const hasClassicBlackSelection = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('.rounded-3xl'));
-            const blackCard = cards.find(c => {
-                const h4 = c.querySelector('h4');
-                return h4 && h4.innerText === 'Classic Black';
-            });
-            if (!blackCard) return { present: false, active: false };
-            const span = blackCard.querySelector('span.font-mono');
-            const count = span ? parseInt(span.innerText) : 0;
-            return { present: true, active: count > 0 };
+            const card = Array.from(document.querySelectorAll('div[onclick^="selectProduct"]')).find(c => c.innerText.toLowerCase().includes('black') || c.innerText.toLowerCase().includes('americano'));
+            if (!card) return { present: false, active: false };
+            const isActive = card.classList.contains('border-brand-brown') && card.classList.contains('bg-brand-cream');
+            return { present: true, active: isActive };
         });
 
         if (hasClassicBlackSelection.present) {
-            console.log('✅ Success! Classic Black is available in the flavor selector.');
+            console.log('✅ Success! Classic Black Americano is available in the menu.');
             if (hasClassicBlackSelection.active) {
-                console.log('✅ Success! Classic Black is SELECTED by default for Classic Black Americano product!');
+                console.log('✅ Success! Classic Black Americano is SELECTED!');
             } else {
-                console.log('❌ Failure: Classic Black is not selected by default.');
+                console.log('❌ Failure: Classic Black Americano is not selected.');
             }
         } else {
-            console.log('❌ Failure: Classic Black option is missing.');
+            console.log('❌ Failure: Classic Black Americano option is missing.');
         }
 
         // Check if espresso level buttons are rendered and correct for Classic Black (should be 2oz, 3oz, 4oz)
         const espressoButtons = await page.evaluate(() => {
-            const label = Array.from(document.querySelectorAll('label')).find(l => l.innerText.includes('ESPRESSO LEVEL'));
+            const labels = Array.from(document.querySelectorAll('label'));
+            const label = labels.find(l => l.textContent.includes('Espresso Strength') || l.innerText.toLowerCase().includes('espresso strength'));
             if (!label) return [];
             const container = label.nextElementSibling;
             if (!container) return [];
             return Array.from(container.querySelectorAll('button')).map(b => b.innerText.replace(/\n/g, ' '));
         });
-        console.log('Production Espresso buttons for Classic Black:', espressoButtons);
+        console.log('Cali Espresso buttons for Classic Black:', espressoButtons);
 
         if (espressoButtons.length !== 3) {
             throw new Error(`Expected 3 espresso levels on live page, got ${espressoButtons.length}`);
         }
-        if (!espressoButtons.some(t => t.toLowerCase().includes('light 2')) || !espressoButtons.some(t => t.toLowerCase().includes('standard 3')) || !espressoButtons.some(t => t.toLowerCase().includes('extra 4'))) {
+        if (!espressoButtons.some(t => t.toLowerCase().includes('2oz')) || !espressoButtons.some(t => t.toLowerCase().includes('3oz')) || !espressoButtons.some(t => t.toLowerCase().includes('4oz'))) {
             throw new Error('Espresso level button values are incorrect for Classic Black');
         }
-        console.log('✅ Success! Espresso levels correctly display 2 oz, 3 oz, and 4 oz for Classic Black.');
+        console.log('✅ Success! Espresso levels correctly display 2oz, 3oz, and 4oz for Classic Black.');
 
         // Check if Event Catering card is present in the product grid
         const hasCateringCard = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('div[onclick^="openStep2"]'));
+            const cards = Array.from(document.querySelectorAll('div[onclick^="selectProduct"]'));
             return cards.some(c => c.innerText.toLowerCase().includes('catering') || c.innerText.toLowerCase().includes('event'));
         });
         if (hasCateringCard) {

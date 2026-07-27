@@ -32,6 +32,131 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // 1.5 Calculate total bottles (excluding catering) for volume discount trigger
+        let calculatedTotalBottles = 0;
+        for (const item of items) {
+            if (item.product_id === 'catering_event_pack') continue;
+            const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+            calculatedTotalBottles += (count * parseInt(item.qty || 1));
+        }
+
+        let volumeDiscount = 0;
+        if (calculatedTotalBottles >= 5) {
+            volumeDiscount = 1.50;
+        } else if (calculatedTotalBottles >= 3) {
+            volumeDiscount = 1.00;
+        }
+
+        // Fetch products to validate base prices
+        const { data: productsData } = await supabase.from('cali_products').select('id, price, name');
+        const priceMap = {};
+        if (productsData) {
+            for (const p of productsData) {
+                priceMap[p.id] = parseFloat(p.price);
+            }
+        }
+
+        const cateringPricing = {
+            25: 115.00,
+            50: 220.00,
+            75: 315.00,
+            100: 400.00,
+            150: 570.00,
+            200: 720.00,
+            250: 875.00,
+            500: 1600.00
+        };
+
+        // 1.7 Calculate Stamp Card Discount (10th Bottle Free)
+        let totalPaidPast = 0;
+        let totalFreePast = 0;
+        let stampsBefore = 0;
+        let stampsAfter = 0;
+        let freeRedeemedInCurrent = 0;
+        let stampSavings = 0;
+
+        if (phone) {
+            const { data: pastOrders } = await supabase
+                .from('cali_orders')
+                .select('selections')
+                .eq('customer_phone', phone)
+                .in('status', ['paid', 'confirmed', 'delivered']);
+
+            if (pastOrders) {
+                for (const order of pastOrders) {
+                    const pCart = order.selections?.cart || [];
+                    const freeInOrder = parseInt(order.selections?.free_bottles_redeemed || 0);
+                    totalFreePast += freeInOrder;
+
+                    for (const item of pCart) {
+                        if (item.product_id === 'catering_event_pack') continue;
+                        if (typeof item.bottles === 'number') {
+                            totalPaidPast += item.bottles;
+                        } else {
+                            const qty = parseInt(item.qty || 1);
+                            const selectionsCount = Array.isArray(item.selections) ? item.selections.length : 1;
+                            totalPaidPast += selectionsCount * qty;
+                        }
+                    }
+                }
+            }
+            // Adjust past paid to be net of free
+            totalPaidPast = Math.max(0, totalPaidPast - totalFreePast);
+            stampsBefore = totalPaidPast % 9;
+
+            // Stable allocation of free bottles for current order
+            for (let f = 0; f <= calculatedTotalBottles; f++) {
+                let currentPaid = calculatedTotalBottles - f;
+                let hypotheticalTotalPaid = totalPaidPast + currentPaid;
+                let expectedTotalFree = Math.floor(hypotheticalTotalPaid / 9);
+                let calculatedFree = expectedTotalFree - totalFreePast;
+                
+                if (calculatedFree >= f) {
+                    freeRedeemedInCurrent = f;
+                }
+            }
+            
+            const currentPaid = calculatedTotalBottles - freeRedeemedInCurrent;
+            stampsAfter = (totalPaidPast + currentPaid) % 9;
+        }
+
+        // Identify the cheapest standard bottles in the cart to set free
+        let flatBottles = [];
+        for (const item of items) {
+            if (item.product_id === 'catering_event_pack') continue;
+            
+            let basePrice = 6.00;
+            if (priceMap[item.product_id] !== undefined) {
+                basePrice = priceMap[item.product_id];
+            } else if (item.name && (item.name.toLowerCase().includes('black') || item.name.toLowerCase().includes('americano'))) {
+                basePrice = 5.00;
+            }
+            
+            let surcharge = 0;
+            let hasOatMilk = false;
+            if (item.selections && Array.isArray(item.selections)) {
+                hasOatMilk = item.selections.some(s => s.milk === 'Oat Milk');
+            } else {
+                hasOatMilk = item.milk === 'Oat Milk';
+            }
+            if (hasOatMilk) surcharge = 1.00;
+
+            const unitPrice = basePrice + surcharge - volumeDiscount;
+            for (let q = 0; q < parseInt(item.qty); q++) {
+                flatBottles.push(unitPrice);
+            }
+        }
+
+        flatBottles.sort((a, b) => a - b);
+        for (let idx = 0; idx < Math.min(freeRedeemedInCurrent, flatBottles.length); idx++) {
+            stampSavings += flatBottles[idx];
+        }
+
+        let stampSavingsDiscounted = stampSavings;
+        if (discountPercent > 0) {
+            stampSavingsDiscounted = stampSavings * (1 - (discountPercent / 100));
+        }
+
         // 2. Prepare Stripe Line Items and Order Notes
         const lineItems = [];
         let combinedNotes = is_subscription ? `[SUBSCRIPTION ORDER] ${notes || ''}\n` : `[CALI ORDER] ${notes || ''}\n`;
@@ -58,7 +183,35 @@ module.exports = async function handler(req, res) {
                 itemDescription = `Flavor: ${item.flavor || 'N/A'}, Milk: ${item.milk || 'N/A'}`;
             }
 
-            let unitPrice = item.unitPrice;
+            // Recalculate/validate unit price on the server to prevent client manipulation
+            let basePrice = 6.00; // default for flavored lattes
+            if (item.product_id === 'catering_event_pack') {
+                const cateringSize = item.selections ? item.selections.length : 25;
+                basePrice = cateringPricing[cateringSize] || 115.00;
+            } else {
+                if (priceMap[item.product_id] !== undefined) {
+                    basePrice = priceMap[item.product_id];
+                } else if (item.name && (item.name.toLowerCase().includes('black') || item.name.toLowerCase().includes('americano'))) {
+                    basePrice = 5.00;
+                }
+            }
+
+            let unitPrice = basePrice;
+            if (item.product_id !== 'catering_event_pack') {
+                // Add oat milk surcharge if any selection has oat milk
+                let hasOatMilk = false;
+                if (item.selections && Array.isArray(item.selections)) {
+                    hasOatMilk = item.selections.some(s => s.milk === 'Oat Milk');
+                } else {
+                    hasOatMilk = item.milk === 'Oat Milk';
+                }
+                if (hasOatMilk) {
+                    unitPrice += 1.00;
+                }
+                // Subtract volume discount
+                unitPrice -= volumeDiscount;
+            }
+
             if (discountPercent > 0) {
                 unitPrice = unitPrice * (1 - (discountPercent / 100));
             }
@@ -84,6 +237,9 @@ module.exports = async function handler(req, res) {
             totalAmount += (unitPrice * item.qty);
         }
 
+        // Deduct the stamps discount from the final totalAmount
+        totalAmount = Math.max(0, totalAmount - stampSavingsDiscounted);
+
         if (sellerInfo) {
             const commission = totalBottles * 1.00;
             combinedNotes += `\n[PROMO: ${promo_code.toUpperCase()}] Seller: ${sellerInfo.name}\nCommission: $${commission.toFixed(2)}`;
@@ -103,10 +259,13 @@ module.exports = async function handler(req, res) {
                     discount: discountPercent,
                     seller_id: sellerInfo ? sellerInfo.id : null,
                     commission: sellerInfo ? totalBottles * 1.0 : 0,
-                    is_subscription: !!is_subscription
+                    is_subscription: !!is_subscription,
+                    free_bottles_redeemed: freeRedeemedInCurrent,
+                    stamps_before: stampsBefore,
+                    stamps_after: stampsAfter
                 },
                 status: 'pending',
-                notes: combinedNotes + (email ? `\nCustomer Email: ${email}` : '')
+                notes: combinedNotes + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}` + (email ? `\nCustomer Email: ${email}` : '')
             })
             .select()
             .single();
