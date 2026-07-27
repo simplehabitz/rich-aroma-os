@@ -742,13 +742,15 @@
 
             let cardsHtml = singlePacks.map(p => {
                 const icon = 'fa-mug-hot';
+                const isSoldOut = p.inventory_limit !== null && p.inventory_limit <= 0;
                 return `
-                <div id="prod-${p.id}" onclick="selectProduct('${p.id}')" class="bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group">
-                     <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden">
+                <div id="prod-${p.id}" onclick="${isSoldOut ? `showToast('${p.name} is currently sold out!', 'error')` : `selectProduct('${p.id}')`}" class="bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group ${isSoldOut ? 'opacity-60 grayscale' : ''}">
+                     <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden relative">
                         ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<i class="fas ${icon} text-brand-brown text-lg"></i>`}
+                        ${isSoldOut ? `<div class="absolute inset-0 bg-red-600/80 flex items-center justify-center text-[7px] font-black uppercase text-white tracking-widest">SOLD OUT</div>` : ''}
                     </div>
                     <h4 class="font-serif font-bold text-xs text-brand-dark mb-1 leading-tight text-center">${p.name}</h4>
-                    <p class="font-mono font-black text-sm text-brand-brown">$${parseFloat(p.price).toFixed(2)}</p>
+                    <p class="font-mono font-black text-sm text-brand-brown">${isSoldOut ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider">SOLD OUT</span>' : `$${parseFloat(p.price).toFixed(2)}`}</p>
                 </div>`;
             }).join('');
 

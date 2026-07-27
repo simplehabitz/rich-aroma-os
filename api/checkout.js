@@ -47,12 +47,27 @@ module.exports = async function handler(req, res) {
             volumeDiscount = 1.00;
         }
 
-        // Fetch products to validate base prices
-        const { data: productsData } = await supabase.from('cali_products').select('id, price, name');
+        // Fetch products to validate base prices and inventory stock
+        const { data: productsData } = await supabase.from('cali_products').select('id, price, name, inventory_limit');
         const priceMap = {};
         if (productsData) {
             for (const p of productsData) {
                 priceMap[p.id] = parseFloat(p.price);
+            }
+        }
+
+        // Validate inventory stock limits
+        if (productsData) {
+            for (const item of items) {
+                if (item.product_id === 'catering_event_pack') continue;
+                const dbProd = productsData.find(p => p.id === item.product_id);
+                if (dbProd && dbProd.inventory_limit !== null) {
+                    const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                    const qtyNeeded = count * parseInt(item.qty || 1);
+                    if (dbProd.inventory_limit < qtyNeeded) {
+                        return res.status(400).json({ error: `Not enough stock for ${dbProd.name}. Only ${dbProd.inventory_limit} bottles left.` });
+                    }
+                }
             }
         }
 

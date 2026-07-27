@@ -35,6 +35,35 @@ module.exports = async function handler(req, res) {
                     notes: `[PAID] Stripe Session: ${session.id}` 
                 }).eq('id', orderId).select().single();
 
+                // Decrement inventory stock if limits are set
+                if (updatedOrder && updatedOrder.selections && updatedOrder.selections.cart) {
+                    const cartItems = updatedOrder.selections.cart;
+                    const productIds = cartItems.map(item => item.product_id).filter(id => id && id !== 'catering_event_pack');
+                    if (productIds.length > 0) {
+                        const { data: dbProducts } = await supabase
+                            .from('cali_products')
+                            .select('id, inventory_limit')
+                            .in('id', productIds);
+                        
+                        if (dbProducts) {
+                            for (const item of cartItems) {
+                                if (item.product_id === 'catering_event_pack') continue;
+                                const dbP = dbProducts.find(p => p.id === item.product_id);
+                                if (dbP && dbP.inventory_limit !== null) {
+                                    const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                                    const qtyNeeded = count * parseInt(item.qty || 1);
+                                    const newStock = Math.max(0, dbP.inventory_limit - qtyNeeded);
+                                    
+                                    await supabase
+                                        .from('cali_products')
+                                        .update({ inventory_limit: newStock })
+                                        .eq('id', item.product_id);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Send Confirmation Emails
                 if (customerEmail) {
                     await sendEmail({
@@ -96,6 +125,35 @@ module.exports = async function handler(req, res) {
                         subscription_id: sub.id,
                         notes: `[RECURRING] Week of ${new Date().toLocaleDateString()}\nStripe Invoice: ${invoice.id}`
                     }).select().single();
+
+                    // Decrement inventory stock if limits are set
+                    if (newOrder && newOrder.selections && newOrder.selections.cart) {
+                        const cartItems = newOrder.selections.cart;
+                        const productIds = cartItems.map(item => item.product_id).filter(id => id && id !== 'catering_event_pack');
+                        if (productIds.length > 0) {
+                            const { data: dbProducts } = await supabase
+                                .from('cali_products')
+                                .select('id, inventory_limit')
+                                .in('id', productIds);
+                            
+                            if (dbProducts) {
+                                for (const item of cartItems) {
+                                    if (item.product_id === 'catering_event_pack') continue;
+                                    const dbP = dbProducts.find(p => p.id === item.product_id);
+                                    if (dbP && dbP.inventory_limit !== null) {
+                                        const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                                        const qtyNeeded = count * parseInt(item.qty || 1);
+                                        const newStock = Math.max(0, dbP.inventory_limit - qtyNeeded);
+                                        
+                                        await supabase
+                                            .from('cali_products')
+                                            .update({ inventory_limit: newStock })
+                                            .eq('id', item.product_id);
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // Notify Customer of recurring order
                     if (newOrder) {
