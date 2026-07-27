@@ -970,6 +970,16 @@
                     btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
                 }
             }
+
+            // Cap customizerQty if it exceeds the new milk option's stock limit
+            if (isGrabMode && milkStock) {
+                const maxStock = opt === 'Regular' ? milkStock['Regular Milk'] : milkStock['Oat Milk'];
+                if (maxStock !== null && maxStock !== undefined && customizerQty > maxStock) {
+                    customizerQty = Math.max(1, maxStock);
+                    document.getElementById('customizer-qty-display').innerText = customizerQty;
+                    showToast(`Capped quantity to ${maxStock} based on available ${opt} stock.`, 'error');
+                }
+            }
         }
 
         function setEspressoOption(opt) {
@@ -987,8 +997,26 @@
         }
 
         function adjustCustomizerQty(delta) {
+            let maxStock = null;
+            if (orderMode === 'grab' && selectedProduct) {
+                const milkStock = selectedProduct.options?.milk_stock;
+                if (milkStock) {
+                    if (customMilk === 'Regular') {
+                        maxStock = milkStock['Regular Milk'];
+                    } else if (customMilk === 'Oat Milk') {
+                        maxStock = milkStock['Oat Milk'];
+                    }
+                } else if (selectedProduct.inventory_limit !== null && selectedProduct.inventory_limit !== undefined) {
+                    maxStock = selectedProduct.inventory_limit;
+                }
+            }
+
             customizerQty += delta;
             if (customizerQty < 1) customizerQty = 1;
+            if (maxStock !== null && maxStock !== undefined && customizerQty > maxStock) {
+                customizerQty = maxStock;
+                showToast(`Only ${maxStock} bottle${maxStock > 1 ? 's' : ''} left in fridge!`, 'error');
+            }
             document.getElementById('customizer-qty-display').innerText = customizerQty;
         }
 
