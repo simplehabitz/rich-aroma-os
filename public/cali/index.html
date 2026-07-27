@@ -1231,6 +1231,7 @@
             if (volDiscount > 0 && bottleCount > 0) {
                 const volSavings = volDiscount * bottleCount;
                 breakdownHtml += `<p class="flex justify-between"><span>Volume Discount ($${volDiscount.toFixed(2)}/bottle):</span><span class="text-green-400 font-bold">-$${volSavings.toFixed(2)}</span></p>`;
+                savings += volSavings;
             }
 
             // Display Stamp Savings if active
