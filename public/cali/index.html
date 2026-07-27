@@ -72,8 +72,8 @@
                 <div class="absolute bottom-0 right-0 w-32 h-32 bg-brand-brown rounded-full blur-2xl translate-x-1/2 translate-y-1/2"></div>
             </div>
             <div class="relative z-10">
-                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Cali Pre-Orders</h1>
-                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Small batch lattes. Brewed night-before, delivered fresh for your shift.</p>
+                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Honors Checkout</h1>
+                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Select your drink, pay instantly, and enjoy your fresh brew.</p>
             </div>
         </div>
 
@@ -96,15 +96,15 @@
                 <i class="fas fa-toggle-on text-brand-brown text-sm"></i> 1.5 Select Option
             </h3>
             <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100">
-                <button onclick="setOrderMode('grab')" id="mode-grab" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Grab from Fridge</button>
-                <button onclick="setOrderMode('preorder')" id="mode-preorder" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Pre-order</button>
+                <button onclick="setOrderMode('grab')" id="mode-grab" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Grab from Fridge</button>
+                <button onclick="setOrderMode('preorder')" id="mode-preorder" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Pre-order</button>
             </div>
             <!-- Preorder Date Selection -->
-            <div id="preorder-date-container" class="space-y-1.5 pt-2 border-t border-gray-50">
+            <div id="preorder-date-container" class="space-y-1.5 pt-2 border-t border-gray-50 hidden">
                 <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Pre-order Date</label>
                 <input type="date" id="preorder-date-picker" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all" onchange="updatePreorderHelperText()" required>
             </div>
-            <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Select a date below for pre-order delivery.</p>
+            <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Take your bottle directly from the honors fridge right now.</p>
         </div>
 
         <!-- 2. Choose Your Drink -->
@@ -237,8 +237,8 @@
                     </div>
                 </div>
 
-                <!-- Promo Code -->
-                <div class="space-y-2">
+                <!-- Promo Code (Hidden to keep DOM fields active) -->
+                <div class="space-y-2 hidden">
                     <label class="block text-[8px] font-black uppercase text-white/30 tracking-wider text-center">Discount Code</label>
                     <div class="flex gap-2">
                         <input type="text" id="promo-code" placeholder="Enter Code" class="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-xs focus:border-brand-gold outline-none transition-colors uppercase font-mono">
@@ -296,7 +296,7 @@
                 <div id="form-venmo" class="hidden space-y-4 animate-fade-in text-center">
                     <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
                         <p class="text-[10px] text-white/70">Venmo Account:</p>
-                        <p class="text-lg font-black text-brand-gold font-mono tracking-wide">@rich-aroma-coffee</p>
+                        <p class="text-lg font-black text-brand-gold font-mono tracking-wide">@NeeneeRichAroma</p>
                         <p class="text-[8px] text-white/40 uppercase tracking-wider">Tap below to auto-launch Venmo or search username manually</p>
                     </div>
                     <button type="button" onclick="openVenmoApp()" class="w-full bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg hover:bg-sky-600 transition-all uppercase tracking-wider text-[10px]">
@@ -405,7 +405,7 @@
         let customEspresso = "Standard";
         let customizerQty = 1;
 
-        let orderMode = "preorder"; // Default to preorder for distro
+        let orderMode = "grab"; // Default to grab for fridge checkout
         let isSubscription = false;
         let currentDiscount = 0;
         let validatedPromo = null;
@@ -587,8 +587,8 @@
                     picker.value = `${yyyy}-${mm}-${dd}`;
                 }
 
-                // Pre-configure mode pre-order
-                setOrderMode('preorder');
+                // Pre-configure mode grab
+                setOrderMode('grab');
             } catch (e) {
                 console.error("Init Error:", e);
                 showToast("System error loading checkout parameters.");
@@ -1027,6 +1027,13 @@
             selectedProduct = null;
             document.getElementById('flavor-customizer').classList.add('hidden');
             renderProducts(); // Remove highlights
+
+            setTimeout(() => {
+                const targetCard = document.getElementById('contact-details-card');
+                if (targetCard) {
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 300);
         }
 
         function updateCartUI() {
@@ -1351,11 +1358,11 @@
             const itemsDesc = cart.map(item => `${item.qty}x ${item.name}`).join(', ');
             const note = `Rich Aroma - ${modeLabel}: ${itemsDesc}`;
             
-            const url = `venmo://paycharge?recipients=rich-aroma-coffee&amount=${total.toFixed(2)}&note=${encodeURIComponent(note)}`;
+            const url = `venmo://paycharge?recipients=NeeneeRichAroma&amount=${total.toFixed(2)}&note=${encodeURIComponent(note)}`;
             window.location.href = url;
             
             setTimeout(() => {
-                showToast("If Venmo app didn't open, search @rich-aroma-coffee directly.", 'success');
+                showToast("If Venmo app didn't open, search @NeeneeRichAroma directly.", 'success');
             }, 1500);
         }
 
