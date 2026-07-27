@@ -427,16 +427,7 @@ module.exports = async (req, res) => {
                 }
             }
 
-            const cateringPricing = {
-                25: 115.00,
-                50: 220.00,
-                75: 315.00,
-                100: 400.00,
-                150: 570.00,
-                200: 720.00,
-                250: 875.00,
-                500: 1600.00
-            };
+            // Catering pricing calculated dynamically in order loop
 
             // 3. Calculate stamps
             let totalPaidPast = 0;
@@ -537,9 +528,17 @@ module.exports = async (req, res) => {
             // Add catering packs
             for (const item of items) {
                 if (item.product_id === 'catering_event_pack') {
-                    const cateringSize = item.selections ? item.selections.length : 25;
-                    const basePrice = cateringPricing[cateringSize] || 115.00;
-                    baseTotal += basePrice * parseInt(item.qty);
+                    const cateringSize = item.selections ? item.selections.length : 30;
+                    let rate = 4.50;
+                    if (cateringSize >= 500) rate = 3.20;
+                    else if (cateringSize >= 250) rate = 3.50;
+                    else if (cateringSize >= 200) rate = 3.60;
+                    else if (cateringSize >= 150) rate = 3.80;
+                    else if (cateringSize >= 100) rate = 4.00;
+                    else if (cateringSize >= 75) rate = 4.20;
+                    else if (cateringSize >= 50) rate = 4.40;
+                    const basePrice = rate * cateringSize;
+                    baseTotal += basePrice * parseInt(item.qty || 1);
                 }
             }
 

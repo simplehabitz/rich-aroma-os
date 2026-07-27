@@ -128,9 +128,40 @@
                         </div>
                     </div>
 
+                    <!-- Catering Customizer Fields -->
+                    <div id="catering-customizer-fields" class="hidden space-y-3">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select up to 3 Flavors (Split Evenly)</label>
+                        <div class="space-y-2">
+                            <select id="catering-flavor-1" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
+                                <option value="Rich Caramel Latte">Rich Caramel Latte</option>
+                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
+                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
+                                <option value="Classic Black Americano">Classic Black Americano</option>
+                            </select>
+                            <select id="catering-flavor-2" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                                <option value="">-- Add 2nd Flavor (Optional) --</option>
+                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
+                                <option value="Rich Caramel Latte">Rich Caramel Latte</option>
+                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
+                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
+                                <option value="Classic Black Americano">Classic Black Americano</option>
+                            </select>
+                            <select id="catering-flavor-3" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                                <option value="">-- Add 3rd Flavor (Optional) --</option>
+                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
+                                <option value="Rich Caramel Latte">Caramel Latte</option>
+                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
+                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
+                                <option value="Classic Black Americano">Classic Black Americano</option>
+                            </select>
+                        </div>
+                        <p class="text-[8px] text-gray-400 italic">Bottles will be split evenly across selected flavors.</p>
+                    </div>
+
                     <!-- Quantity Selector -->
                     <div class="space-y-2 pt-2">
-                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Quantity</label>
+                        <label id="quantity-label" class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Quantity</label>
                         <div class="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 max-w-[140px]">
                             <button type="button" onclick="adjustCustomizerQty(-1)" class="w-8 h-8 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-xs hover:bg-gray-100 transition-all font-bold"><i class="fas fa-minus text-[9px]"></i></button>
                             <span id="customizer-qty-display" class="flex-1 text-center font-bold text-sm">1</span>
@@ -597,6 +628,18 @@
                     picker.value = `${yyyy}-${mm}-${dd}`;
                 }
 
+                // Initialize catering event date picker default 3 days out
+                const cateringPicker = document.getElementById('cust-event-date');
+                if (cateringPicker) {
+                    const minDate = new Date();
+                    minDate.setDate(minDate.getDate() + 3);
+                    const yyyy = minDate.getFullYear();
+                    const mm = String(minDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(minDate.getDate()).padStart(2, '0');
+                    cateringPicker.min = `${yyyy}-${mm}-${dd}T09:00`;
+                    cateringPicker.value = `${yyyy}-${mm}-${dd}T09:00`;
+                }
+
                 // Pre-configure mode grab
                 setOrderMode('grab');
             } catch (e) {
@@ -860,12 +903,13 @@
                 }
             }
 
-            if (id === 'catering_event_pack') {
+            const isCatering = id === 'catering_event_pack';
+            if (isCatering) {
                 selectedProduct = {
                     id: 'catering_event_pack',
                     name: 'Event Catering Pack',
-                    price: 115.00,
-                    bottles_per_pack: 25
+                    price: 135.00,
+                    bottles_per_pack: 30
                 };
             } else {
                 selectedProduct = allProducts.find(p => p.id === id);
@@ -874,8 +918,8 @@
             // Reset customizer settings with milk stock limits checks
             const milkStock = selectedProduct.options?.milk_stock;
             const isGrabMode = orderMode === 'grab';
-            let isRegSoldOut = isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
-            let isOatSoldOut = isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
+            let isRegSoldOut = !isCatering && isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
+            let isOatSoldOut = !isCatering && isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
 
             const regBtn = document.getElementById('milk-reg');
             const oatBtn = document.getElementById('milk-oat');
@@ -909,34 +953,55 @@
                 customMilk = "Regular";
                 setMilkOption("Regular");
             }
-            customizerQty = 1;
+
+            // Adjust Quantity Block Labels & Values
+            const qtyLabel = document.getElementById('quantity-label');
+            if (qtyLabel) {
+                qtyLabel.innerText = isCatering ? "Number of Bottles (min 30)" : "Quantity";
+            }
+            customizerQty = isCatering ? 30 : 1;
             document.getElementById('customizer-qty-display').innerText = customizerQty;
 
-            // Render Espresso Modifiers dynamically based on whether it is Classic Black
-            const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
-            const espContainer = document.getElementById('espresso-options-container');
-            
-            if (isBlack) {
-                customEspresso = "Standard";
-                espContainer.innerHTML = `
-                    <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (2oz)</button>
-                    <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (3oz)</button>
-                    <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (4oz)</button>
-                `;
-            } else {
-                customEspresso = "Standard";
-                espContainer.innerHTML = `
-                    <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (1oz)</button>
-                    <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (2oz)</button>
-                    <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (3oz)</button>
-                `;
+            // Show/Hide catering-specific customizer fields
+            const cateringFields = document.getElementById('catering-customizer-fields');
+            if (cateringFields) {
+                if (isCatering) cateringFields.classList.remove('hidden');
+                else cateringFields.classList.add('hidden');
             }
 
-            // Hide/Show Milk customization container if it is Classic Black
+            // Show/Hide standard modifiers
             const milkContainer = document.getElementById('milk-customizer-container');
             if (milkContainer) {
-                if (isBlack) milkContainer.classList.add('hidden');
-                else milkContainer.classList.remove('hidden');
+                if (isCatering) milkContainer.classList.add('hidden');
+                else {
+                    const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
+                    if (isBlack) milkContainer.classList.add('hidden');
+                    else milkContainer.classList.remove('hidden');
+                }
+            }
+
+            const espContainer = document.getElementById('espresso-options-container');
+            const espWrapper = espContainer?.parentElement;
+            if (espWrapper) {
+                if (isCatering) espWrapper.classList.add('hidden');
+                else {
+                    espWrapper.classList.remove('hidden');
+                    const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
+                    customEspresso = "Standard";
+                    if (isBlack) {
+                        espContainer.innerHTML = `
+                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (2oz)</button>
+                            <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (3oz)</button>
+                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (4oz)</button>
+                        `;
+                    } else {
+                        espContainer.innerHTML = `
+                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (1oz)</button>
+                            <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (2oz)</button>
+                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Extra (3oz)</button>
+                        `;
+                    }
+                }
             }
 
             // Expose customizer
@@ -998,7 +1063,9 @@
 
         function adjustCustomizerQty(delta) {
             let maxStock = null;
-            if (orderMode === 'grab' && selectedProduct) {
+            const isCatering = selectedProduct?.id === 'catering_event_pack';
+            
+            if (orderMode === 'grab' && selectedProduct && !isCatering) {
                 const milkStock = selectedProduct.options?.milk_stock;
                 if (milkStock) {
                     if (customMilk === 'Regular') {
@@ -1012,7 +1079,10 @@
             }
 
             customizerQty += delta;
-            if (customizerQty < 1) customizerQty = 1;
+            
+            const minQty = isCatering ? 30 : 1;
+            if (customizerQty < minQty) customizerQty = minQty;
+            
             if (maxStock !== null && maxStock !== undefined && customizerQty > maxStock) {
                 customizerQty = maxStock;
                 showToast(`Only ${maxStock} bottle${maxStock > 1 ? 's' : ''} left in fridge!`, 'error');
@@ -1028,34 +1098,74 @@
             let surcharge = (!isCatering && customMilk === 'Oat Milk') ? 1.00 : 0;
             let unitPrice = basePrice + surcharge;
 
-            // Search if matching configuration already exists in cart to increment quantity
-            const matchingIndex = cart.findIndex(item => 
-                item.product_id === selectedProduct.id && 
-                item.selections[0].milk === (isCatering ? 'Regular' : customMilk) &&
-                item.selections[0].espresso === (isCatering ? 'Standard' : customEspresso)
-            );
+            if (isCatering) {
+                // Read up to 3 chosen flavors
+                const f1 = document.getElementById('catering-flavor-1').value;
+                const f2 = document.getElementById('catering-flavor-2').value;
+                const f3 = document.getElementById('catering-flavor-3').value;
+                const chosenFlavors = [f1, f2, f3].filter(Boolean);
 
-            if (matchingIndex > -1) {
-                cart[matchingIndex].qty += customizerQty;
-                cart[matchingIndex].bottles = (isCatering ? selectedProduct.bottles_per_pack : 1) * cart[matchingIndex].qty;
-                cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
-            } else {
-                // Renders the selections mapped array for order tracking details
-                const singleSelections = Array.from({ length: isCatering ? selectedProduct.bottles_per_pack : 1 }, () => ({
-                    flavor: isCatering ? 'Vanilla Latte' : selectedProduct.name,
-                    milk: isCatering ? 'Regular' : customMilk,
-                    espresso: isCatering ? 'Standard' : customEspresso
-                }));
+                // Build selections array distributed evenly across flavors
+                const singleSelections = [];
+                for (let i = 0; i < customizerQty; i++) {
+                    const flavor = chosenFlavors[i % chosenFlavors.length];
+                    singleSelections.push({
+                        flavor: flavor,
+                        milk: flavor.toLowerCase().includes('oat') ? 'Oat Milk' : 'Regular',
+                        espresso: 'Standard'
+                    });
+                }
 
+                // Calculate price based on N-bottles tier rates
+                let rate = 4.50;
+                if (customizerQty >= 500) rate = 3.20;
+                else if (customizerQty >= 250) rate = 3.50;
+                else if (customizerQty >= 200) rate = 3.60;
+                else if (customizerQty >= 150) rate = 3.80;
+                else if (customizerQty >= 100) rate = 4.00;
+                else if (customizerQty >= 75) rate = 4.20;
+                else if (customizerQty >= 50) rate = 4.40;
+                const totalPrice = rate * customizerQty;
+
+                // Push catering package to cart as single item
                 cart.push({
-                    product_id: selectedProduct.id,
-                    name: selectedProduct.name,
+                    product_id: 'catering_event_pack',
+                    name: 'Event Catering Pack',
                     selections: singleSelections,
-                    qty: customizerQty,
-                    unitPrice: unitPrice,
-                    total: unitPrice * customizerQty,
-                    bottles: (isCatering ? selectedProduct.bottles_per_pack : 1) * customizerQty
+                    qty: 1,
+                    unitPrice: totalPrice,
+                    total: totalPrice,
+                    bottles: customizerQty
                 });
+            } else {
+                // Search if matching configuration already exists in cart to increment quantity
+                const matchingIndex = cart.findIndex(item => 
+                    item.product_id === selectedProduct.id && 
+                    item.selections[0].milk === customMilk &&
+                    item.selections[0].espresso === customEspresso
+                );
+
+                if (matchingIndex > -1) {
+                    cart[matchingIndex].qty += customizerQty;
+                    cart[matchingIndex].bottles = cart[matchingIndex].qty;
+                    cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
+                } else {
+                    const singleSelections = Array.from({ length: 1 }, () => ({
+                        flavor: selectedProduct.name,
+                        milk: customMilk,
+                        espresso: customEspresso
+                    }));
+
+                    cart.push({
+                        product_id: selectedProduct.id,
+                        name: selectedProduct.name,
+                        selections: singleSelections,
+                        qty: customizerQty,
+                        unitPrice: unitPrice,
+                        total: unitPrice * customizerQty,
+                        bottles: customizerQty
+                    });
+                }
             }
 
             showToast(`${selectedProduct.name} added to cart!`, 'success');
@@ -1090,10 +1200,28 @@
 
             // Expose catering schedules input box if catering pack is added
             const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
+            const grabBtn = document.getElementById('mode-grab');
             if (hasCatering) {
                 cateringDetailsBox.classList.remove('hidden');
+                if (orderMode !== 'preorder') {
+                    setOrderMode('preorder');
+                    showToast("Event Catering requires Pre-Order delivery.", "success");
+                }
+                if (grabBtn) {
+                    grabBtn.disabled = true;
+                    grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all opacity-40 cursor-not-allowed text-gray-405";
+                }
             } else {
                 cateringDetailsBox.classList.add('hidden');
+                if (grabBtn) {
+                    grabBtn.disabled = false;
+                    // Keep styling consistent with setOrderMode expectations
+                    if (orderMode === 'grab') {
+                        grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
+                    } else {
+                        grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
+                    }
+                }
             }
 
             // Dynamically calculate the active volume discount trigger (excluding catering packs)
@@ -1152,9 +1280,13 @@
                 const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
                 const isCatering = item.product_id === 'catering_event_pack';
                 
-                const descText = isCatering 
-                    ? `Catering Batch • ${item.selections.length} Bottles` 
-                    : (isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`);
+                let descText = "";
+                if (isCatering) {
+                    const uniqueFlavors = [...new Set(item.selections.map(s => s.flavor.replace(' Sweet', '').replace(' Rich', '').replace(' Honduran', '').replace(' Classic', '').replace(' Latte', '').replace(' Americano', '')))];
+                    descText = `Catering Batch • ${item.selections.length} Bottles (${uniqueFlavors.join(', ')})`;
+                } else {
+                    descText = isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`;
+                }
                 
                 return `
                 <div class="bg-gray-50 border border-gray-100 p-4 rounded-2xl flex justify-between items-center animate-fade-in">
@@ -1476,6 +1608,15 @@
                     btn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
                     return;
                 }
+                const selDate = new Date(eventDate);
+                const minDate = new Date();
+                minDate.setDate(minDate.getDate() + 3);
+                if (selDate < minDate) {
+                    showToast("Catering events require at least 3-day advanced notice.", "error");
+                    btn.disabled = false;
+                    btn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
+                    return;
+                }
                 selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;
             }
 
@@ -1560,6 +1701,13 @@
                 const eventSetup = document.getElementById('cust-event-setup').value;
                 if (!eventDate) {
                     showToast("Please select a date and time for catering.");
+                    return;
+                }
+                const selDate = new Date(eventDate);
+                const minDate = new Date();
+                minDate.setDate(minDate.getDate() + 3);
+                if (selDate < minDate) {
+                    showToast("Catering events require at least 3-day advanced notice.", "error");
                     return;
                 }
                 selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;

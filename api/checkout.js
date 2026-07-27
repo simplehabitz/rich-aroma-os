@@ -101,16 +101,7 @@ module.exports = async function handler(req, res) {
             }
         }
 
-        const cateringPricing = {
-            25: 115.00,
-            50: 220.00,
-            75: 315.00,
-            100: 400.00,
-            150: 570.00,
-            200: 720.00,
-            250: 875.00,
-            500: 1600.00
-        };
+        // Catering pricing calculated dynamically in order loop
 
         // 1.7 Calculate Stamp Card Discount (10th Bottle Free)
         let totalPaidPast = 0;
@@ -231,8 +222,16 @@ module.exports = async function handler(req, res) {
             // Recalculate/validate unit price on the server to prevent client manipulation
             let basePrice = 6.00; // default for flavored lattes
             if (item.product_id === 'catering_event_pack') {
-                const cateringSize = item.selections ? item.selections.length : 25;
-                basePrice = cateringPricing[cateringSize] || 115.00;
+                const cateringSize = item.selections ? item.selections.length : 30;
+                let rate = 4.50;
+                if (cateringSize >= 500) rate = 3.20;
+                else if (cateringSize >= 250) rate = 3.50;
+                else if (cateringSize >= 200) rate = 3.60;
+                else if (cateringSize >= 150) rate = 3.80;
+                else if (cateringSize >= 100) rate = 4.00;
+                else if (cateringSize >= 75) rate = 4.20;
+                else if (cateringSize >= 50) rate = 4.40;
+                basePrice = rate * cateringSize;
             } else {
                 if (priceMap[item.product_id] !== undefined) {
                     basePrice = priceMap[item.product_id];
