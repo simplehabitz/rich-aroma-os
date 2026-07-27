@@ -349,12 +349,26 @@ module.exports = async (req, res) => {
             }
 
             // Fetch products to validate base prices and inventory stock
-            const { data: productsData } = await supabase.from('cali_products').select('id, price, name, inventory_limit');
+            const { data: productsData } = await supabase.from('cali_products').select('id, price, name, inventory_limit, options');
             const priceMap = {};
             if (productsData) {
                 for (const p of productsData) {
                     priceMap[p.id] = parseFloat(p.price);
                 }
+            }
+
+            // Helper to get milk counts for items
+            function getMilkCounts(item) {
+                const counts = { "Regular Milk": 0, "Oat Milk": 0 };
+                const selections = (item.selections && Array.isArray(item.selections)) ? item.selections : [{}];
+                const qty = parseInt(item.qty || 1);
+                const multiplier = Math.max(1, qty / selections.length);
+                for (const sel of selections) {
+                    const milkSel = sel.milk || 'Regular';
+                    const key = (milkSel === 'Oat Milk') ? 'Oat Milk' : 'Regular Milk';
+                    counts[key] += 1 * multiplier;
+                }
+                return counts;
             }
 
             // Validate inventory stock limits (Only for Honors Grab checkouts, not Pre-Orders)
@@ -363,11 +377,27 @@ module.exports = async (req, res) => {
                 for (const item of items) {
                     if (item.product_id === 'catering_event_pack') continue;
                     const dbProd = productsData.find(p => p.id === item.product_id);
-                    if (dbProd && dbProd.inventory_limit !== null) {
-                        const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
-                        const qtyNeeded = count * parseInt(item.qty || 1);
-                        if (dbProd.inventory_limit < qtyNeeded) {
-                            return res.status(400).json({ error: `Not enough stock for ${dbProd.name}. Only ${dbProd.inventory_limit} bottles left.` });
+                    if (dbProd) {
+                        const milkStock = dbProd.options?.milk_stock;
+                        if (milkStock) {
+                            const counts = getMilkCounts(item);
+                            if (milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] !== undefined) {
+                                if (milkStock['Regular Milk'] < counts['Regular Milk']) {
+                                    return res.status(400).json({ error: `Not enough stock for ${dbProd.name} (Regular Milk). Only ${milkStock['Regular Milk']} left.` });
+                                }
+                            }
+                            if (milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] !== undefined) {
+                                if (milkStock['Oat Milk'] < counts['Oat Milk']) {
+                                    return res.status(400).json({ error: `Not enough stock for ${dbProd.name} (Oat Milk). Only ${milkStock['Oat Milk']} left.` });
+                                }
+                            }
+                        }
+                        if (dbProd.inventory_limit !== null) {
+                            const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                            const qtyNeeded = count * parseInt(item.qty || 1);
+                            if (dbProd.inventory_limit < qtyNeeded) {
+                                return res.status(400).json({ error: `Not enough stock for ${dbProd.name}. Only ${dbProd.inventory_limit} bottles left.` });
+                            }
                         }
                     }
                 }
@@ -517,15 +547,46 @@ module.exports = async (req, res) => {
                 for (const item of items) {
                     if (item.product_id === 'catering_event_pack') continue;
                     const dbProd = productsData.find(p => p.id === item.product_id);
-                    if (dbProd && dbProd.inventory_limit !== null) {
-                        const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
-                        const qtyNeeded = count * parseInt(item.qty || 1);
-                        const newStock = Math.max(0, dbProd.inventory_limit - qtyNeeded);
-                        
-                        await supabase
-                            .from('cali_products')
-                            .update({ inventory_limit: newStock })
-                            .eq('id', item.product_id);
+                    if (dbProd) {
+                        let updatedOptions = dbProd.options;
+                        const milkStock = dbProd.options?.milk_stock;
+                        let needsOptionsUpdate = false;
+
+                        if (milkStock) {
+                            const counts = getMilkCounts(item);
+                            const newMilkStock = { ...milkStock };
+                            if (milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] !== undefined) {
+                                newMilkStock['Regular Milk'] = Math.max(0, milkStock['Regular Milk'] - counts['Regular Milk']);
+                                needsOptionsUpdate = true;
+                            }
+                            if (milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] !== undefined) {
+                                newMilkStock['Oat Milk'] = Math.max(0, milkStock['Oat Milk'] - counts['Oat Milk']);
+                                needsOptionsUpdate = true;
+                            }
+                            if (needsOptionsUpdate) {
+                                updatedOptions = { ...dbProd.options, milk_stock: newMilkStock };
+                            }
+                        }
+
+                        let newGlobalStock = dbProd.inventory_limit;
+                        let needsGlobalUpdate = false;
+                        if (dbProd.inventory_limit !== null) {
+                            const count = (item.selections && Array.isArray(item.selections)) ? item.selections.length : 1;
+                            const qtyNeeded = count * parseInt(item.qty || 1);
+                            newGlobalStock = Math.max(0, dbProd.inventory_limit - qtyNeeded);
+                            needsGlobalUpdate = true;
+                        }
+
+                        if (needsOptionsUpdate || needsGlobalUpdate) {
+                            const updates = {};
+                            if (needsGlobalUpdate) updates.inventory_limit = newGlobalStock;
+                            if (needsOptionsUpdate) updates.options = updatedOptions;
+                            
+                            await supabase
+                                .from('cali_products')
+                                .update(updates)
+                                .eq('id', item.product_id);
+                        }
                     }
                 }
             }

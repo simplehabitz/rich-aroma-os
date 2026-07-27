@@ -744,7 +744,26 @@
             let cardsHtml = singlePacks.map(p => {
                 const icon = 'fa-mug-hot';
                 const isGrabMode = orderMode === 'grab';
-                const isSoldOut = isGrabMode && p.inventory_limit !== null && p.inventory_limit <= 0;
+                const milkStock = p.options?.milk_stock;
+                let isMilkSoldOut = false;
+                if (milkStock) {
+                    const regStock = milkStock['Regular Milk'];
+                    const oatStock = milkStock['Oat Milk'];
+                    const regLimitSet = regStock !== undefined && regStock !== null;
+                    const oatLimitSet = oatStock !== undefined && oatStock !== null;
+                    
+                    if (regLimitSet && oatLimitSet) {
+                        isMilkSoldOut = regStock <= 0 && oatStock <= 0;
+                    } else if (regLimitSet) {
+                        isMilkSoldOut = regStock <= 0;
+                    } else if (oatLimitSet) {
+                        isMilkSoldOut = oatStock <= 0;
+                    }
+                }
+                const isSoldOut = isGrabMode && (
+                    (p.inventory_limit !== null && p.inventory_limit <= 0) || 
+                    isMilkSoldOut
+                );
                 return `
                 <div id="prod-${p.id}" onclick="${isSoldOut ? `showToast('${p.name} is currently sold out!', 'error')` : `selectProduct('${p.id}')`}" class="bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group ${isSoldOut ? 'opacity-60 grayscale' : ''}">
                      <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden relative">
@@ -816,9 +835,44 @@
                 selectedProduct = allProducts.find(p => p.id === id);
             }
 
-            // Reset customizer settings
-            customMilk = "Regular";
-            setMilkOption("Regular");
+            // Reset customizer settings with milk stock limits checks
+            const milkStock = selectedProduct.options?.milk_stock;
+            const isGrabMode = orderMode === 'grab';
+            let isRegSoldOut = isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
+            let isOatSoldOut = isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
+
+            const regBtn = document.getElementById('milk-reg');
+            const oatBtn = document.getElementById('milk-oat');
+
+            if (regBtn) {
+                if (isRegSoldOut) {
+                    regBtn.disabled = true;
+                    regBtn.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-red-100 bg-red-50/20 text-red-400 opacity-60 cursor-not-allowed";
+                    regBtn.innerText = "Regular Milk (SOLD OUT)";
+                } else {
+                    regBtn.disabled = false;
+                    regBtn.innerText = "Regular Milk";
+                }
+            }
+
+            if (oatBtn) {
+                if (isOatSoldOut) {
+                    oatBtn.disabled = true;
+                    oatBtn.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-red-100 bg-red-50/20 text-red-400 opacity-60 cursor-not-allowed";
+                    oatBtn.innerText = "Oat Milk (SOLD OUT)";
+                } else {
+                    oatBtn.disabled = false;
+                    oatBtn.innerText = "Oat Milk (+$1.00)";
+                }
+            }
+
+            if (isRegSoldOut && !isOatSoldOut) {
+                customMilk = "Oat Milk";
+                setMilkOption("Oat Milk");
+            } else {
+                customMilk = "Regular";
+                setMilkOption("Regular");
+            }
             customizerQty = 1;
             document.getElementById('customizer-qty-display').innerText = customizerQty;
 
@@ -860,12 +914,25 @@
             const btnOat = document.getElementById('milk-oat');
             if (!btnReg || !btnOat) return;
 
+            const milkStock = selectedProduct?.options?.milk_stock;
+            const isGrabMode = orderMode === 'grab';
+            let isRegSoldOut = isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
+            let isOatSoldOut = isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
+
             if (opt === 'Regular') {
-                btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
-                btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
+                if (!isRegSoldOut) {
+                    btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
+                }
+                if (!isOatSoldOut) {
+                    btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
+                }
             } else {
-                btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
-                btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
+                if (!isRegSoldOut) {
+                    btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
+                }
+                if (!isOatSoldOut) {
+                    btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
+                }
             }
         }
 

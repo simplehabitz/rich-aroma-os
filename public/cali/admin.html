@@ -304,8 +304,21 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Inventory Stock (Blank = Unlimited)</label>
+                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Global Inventory Stock (Blank = Unlimited)</label>
                     <input type="number" id="prod-stock" placeholder="Unlimited" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
+                </div>
+                <div id="milk-stock-container" class="hidden border border-gray-100 rounded-3xl p-4 bg-gray-50/50 space-y-3">
+                    <span class="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Segmented Milk Stock (Blank = Unlimited)</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[7px] font-black uppercase tracking-wider text-gray-500 mb-1">Regular/Whole Milk</label>
+                            <input type="number" id="prod-stock-regular" placeholder="Unlimited" class="w-full bg-white border border-gray-150 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-brand-brown shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-[7px] font-black uppercase tracking-wider text-gray-500 mb-1">Oat Milk</label>
+                            <input type="number" id="prod-stock-oat" placeholder="Unlimited" class="w-full bg-white border border-gray-150 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-brand-brown shadow-sm">
+                        </div>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Product Imagery</label>
@@ -786,8 +799,25 @@
                     <div class="px-2 flex-1">
                         <h3 class="text-2xl font-serif font-bold text-brand-dark mb-1">${p.name}</h3>
                         <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">${p.bottles_per_pack} BOTTLE PACK</p>
-                        <p class="text-[9px] font-black uppercase tracking-widest mb-6 ${p.inventory_limit === null ? 'text-green-600' : (p.inventory_limit <= 0 ? 'text-red-500 font-bold animate-pulse' : 'text-brand-brown')}">
-                            Stock: ${p.inventory_limit === null ? 'Unlimited' : `${p.inventory_limit} left`}
+                        <p class="text-[9px] font-black uppercase tracking-widest mb-6 ${(() => {
+                            const ms = p.options?.milk_stock;
+                            if (ms) {
+                                const r = ms['Regular Milk'];
+                                const o = ms['Oat Milk'];
+                                const allZero = (r !== null && r !== undefined && r <= 0) && (o !== null && o !== undefined && o <= 0);
+                                return allZero ? 'text-red-500 font-bold animate-pulse' : 'text-brand-brown';
+                            }
+                            return p.inventory_limit === null ? 'text-green-600' : (p.inventory_limit <= 0 ? 'text-red-500 font-bold animate-pulse' : 'text-brand-brown');
+                        })()}">
+                            Stock: ${(() => {
+                                const ms = p.options?.milk_stock;
+                                if (ms) {
+                                    const reg = (ms['Regular Milk'] === null || ms['Regular Milk'] === undefined) ? '∞' : ms['Regular Milk'];
+                                    const oat = (ms['Oat Milk'] === null || ms['Oat Milk'] === undefined) ? '∞' : ms['Oat Milk'];
+                                    return `Whole: ${reg} | Oat: ${oat}`;
+                                }
+                                return p.inventory_limit === null ? 'Unlimited' : `${p.inventory_limit} left`;
+                            })()}
                         </p>
                         
                         <div class="flex justify-between items-end pt-6 border-t border-gray-50">
@@ -881,12 +911,44 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Syncing...';
 
+            let originalOptions = {
+                milk: [
+                    { name: "Regular Milk", price: 0 },
+                    { name: "Oat Milk", price: 1 }
+                ],
+                flavors: ["Vanilla", "Caramel", "Oreo Supreme", "French Vanilla", "Mix"]
+            };
+
+            if (id) {
+                const existing = products.find(x => x.id === id);
+                if (existing && existing.options) {
+                    originalOptions = existing.options;
+                }
+            }
+
+            const regVal = document.getElementById('prod-stock-regular').value.trim();
+            const oatVal = document.getElementById('prod-stock-oat').value.trim();
+            const isBlack = document.getElementById('prod-name').value.toLowerCase().includes('classic black') || 
+                            document.getElementById('prod-name').value.toLowerCase().includes('negro');
+
+            if (!isBlack) {
+                originalOptions.milk_stock = {
+                    "Regular Milk": regVal === '' ? null : parseInt(regVal),
+                    "Oat Milk": oatVal === '' ? null : parseInt(oatVal)
+                };
+            } else {
+                if (originalOptions.milk_stock) {
+                    delete originalOptions.milk_stock;
+                }
+            }
+
             const payload = {
                 name: document.getElementById('prod-name').value,
                 price: parseFloat(document.getElementById('prod-price').value),
                 bottles_per_pack: parseInt(document.getElementById('prod-bottles').value),
                 active: document.getElementById('prod-active').checked,
-                inventory_limit: document.getElementById('prod-stock').value.trim() === '' ? null : parseInt(document.getElementById('prod-stock').value)
+                inventory_limit: document.getElementById('prod-stock').value.trim() === '' ? null : parseInt(document.getElementById('prod-stock').value),
+                options: originalOptions
             };
 
             if (window.pendingImageBase64) payload.imageBase64 = window.pendingImageBase64;
@@ -914,9 +976,14 @@
             document.getElementById('product-modal').classList.remove('hidden');
             const title = document.getElementById('product-modal-title');
             const delBtn = document.getElementById('prod-delete-btn');
-            const statusText = document.getElementById('upload-status-text');
             const previewImg = document.getElementById('modal-image-preview');
-            
+            const statusText = document.getElementById('upload-status-text');
+            const milkStockContainer = document.getElementById('milk-stock-container');
+            const regInput = document.getElementById('prod-stock-regular');
+            const oatInput = document.getElementById('prod-stock-oat');
+
+            window.pendingImageBase64 = null;
+            document.getElementById('prod-file').value = '';
             statusText.innerText = "Click to upload photo";
             statusText.className = "text-[10px] font-black uppercase tracking-widest text-gray-400";
             previewImg.classList.add('hidden');
@@ -933,6 +1000,18 @@
                 document.getElementById('prod-active').checked = p.active;
                 delBtn.classList.remove('hidden');
 
+                const isBlack = p.name.toLowerCase().includes('classic black') || p.name.toLowerCase().includes('negro');
+                if (isBlack) {
+                    milkStockContainer.classList.add('hidden');
+                    regInput.value = '';
+                    oatInput.value = '';
+                } else {
+                    milkStockContainer.classList.remove('hidden');
+                    const milkStock = p.options?.milk_stock;
+                    regInput.value = (milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null) ? milkStock['Regular Milk'] : '';
+                    oatInput.value = (milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null) ? milkStock['Oat Milk'] : '';
+                }
+
                 if (p.image_url) {
                     previewImg.src = p.image_url;
                     previewImg.classList.remove('hidden');
@@ -947,6 +1026,10 @@
                 document.getElementById('prod-image').value = '';
                 document.getElementById('prod-active').checked = true;
                 delBtn.classList.add('hidden');
+                
+                milkStockContainer.classList.remove('hidden');
+                regInput.value = '';
+                oatInput.value = '';
             }
         }
 
