@@ -129,38 +129,116 @@
                     </div>
 
                     <!-- Catering Customizer Fields -->
-                    <div id="catering-customizer-fields" class="hidden space-y-3">
-                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select up to 3 Flavors (Split Evenly)</label>
-                        <div class="space-y-2">
-                            <select id="catering-flavor-1" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
-                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
-                                <option value="Rich Caramel Latte">Rich Caramel Latte</option>
-                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
-                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
-                                <option value="Classic Black Americano">Classic Black Americano</option>
-                            </select>
-                            <select id="catering-flavor-2" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
-                                <option value="">-- Add 2nd Flavor (Optional) --</option>
-                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
-                                <option value="Rich Caramel Latte">Rich Caramel Latte</option>
-                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
-                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
-                                <option value="Classic Black Americano">Classic Black Americano</option>
-                            </select>
-                            <select id="catering-flavor-3" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
-                                <option value="">-- Add 3rd Flavor (Optional) --</option>
-                                <option value="Sweet Vanilla Latte">Sweet Vanilla Latte</option>
-                                <option value="Rich Caramel Latte">Caramel Latte</option>
-                                <option value="Honduran Horchata Latte">Honduran Horchata Latte</option>
-                                <option value="Oat Milk Horchata Latte">Oat Milk Horchata Latte</option>
-                                <option value="Classic Black Americano">Classic Black Americano</option>
-                            </select>
+                    <div id="catering-customizer-fields" class="hidden space-y-4">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Customize Your Catering Batch (Min 30 Bottles Total)</label>
+                        
+                        <div class="space-y-3 bg-gray-50/50 rounded-2xl p-3 border border-gray-100 max-h-[300px] overflow-y-auto">
+                            <!-- Classic Black -->
+                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-brand-dark">Classic Black</span>
+                                    <!-- Qty counter -->
+                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
+                                        <button type="button" onclick="adjustCateringFlavorQty('classic_black', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
+                                        <span id="cat-qty-classic_black" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('classic_black', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dirty Chai -->
+                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-brand-dark">Dirty Chai</span>
+                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
+                                        <span id="cat-qty-dirty_chai" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                                    </div>
+                                </div>
+                                <!-- Milk Selector -->
+                                <div id="cat-milk-box-dirty_chai" class="hidden flex items-center justify-between gap-2">
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
+                                    <select id="cat-milk-dirty_chai" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
+                                        <option value="Regular">Regular Milk</option>
+                                        <option value="Oat Milk">Oat Milk</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Caramel Latte -->
+                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-brand-dark">Caramel Latte</span>
+                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
+                                        <span id="cat-qty-caramel_latte" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                                    </div>
+                                </div>
+                                <div id="cat-milk-box-caramel_latte" class="hidden flex items-center justify-between gap-2">
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
+                                    <select id="cat-milk-caramel_latte" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
+                                        <option value="Regular">Regular Milk</option>
+                                        <option value="Oat Milk">Oat Milk</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- French Vanilla -->
+                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-brand-dark">French Vanilla</span>
+                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
+                                        <span id="cat-qty-french_vanilla" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                                    </div>
+                                </div>
+                                <div id="cat-milk-box-french_vanilla" class="hidden flex items-center justify-between gap-2">
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
+                                    <select id="cat-milk-french_vanilla" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
+                                        <option value="Regular">Regular Milk</option>
+                                        <option value="Oat Milk">Oat Milk</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Vanilla Latte -->
+                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] font-bold text-brand-dark">Vanilla Latte</span>
+                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
+                                        <span id="cat-qty-vanilla_latte" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                                    </div>
+                                </div>
+                                <div id="cat-milk-box-vanilla_latte" class="hidden flex items-center justify-between gap-2">
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
+                                    <select id="cat-milk-vanilla_latte" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
+                                        <option value="Regular">Regular Milk</option>
+                                        <option value="Oat Milk">Oat Milk</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <p class="text-[8px] text-gray-400 italic">Bottles will be split evenly across selected flavors.</p>
+
+                        <!-- Summary Badge -->
+                        <div class="bg-brand-cream/40 border border-brand-brown/10 p-3 rounded-2xl flex justify-between items-center">
+                            <div>
+                                <span class="text-[8px] font-bold uppercase tracking-wider text-gray-400 block">Total Bottles Selected</span>
+                                <span id="catering-total-bottles" class="text-sm font-black text-brand-brown">0 / 30 minimum</span>
+                            </div>
+                            <div>
+                                <span class="text-[8px] font-bold uppercase tracking-wider text-gray-400 block text-right">Est. Price</span>
+                                <span id="catering-total-price" class="text-sm font-black text-brand-dark text-right block">$0.00</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Quantity Selector -->
-                    <div class="space-y-2 pt-2">
+                    <div id="quantity-customizer-container" class="space-y-2 pt-2">
                         <label id="quantity-label" class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Quantity</label>
                         <div class="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 max-w-[140px]">
                             <button type="button" onclick="adjustCustomizerQty(-1)" class="w-8 h-8 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-xs hover:bg-gray-100 transition-all font-bold"><i class="fas fa-minus text-[9px]"></i></button>
@@ -171,7 +249,7 @@
 
                     <!-- Add to Order Button -->
                     <div class="pt-2">
-                        <button type="button" onclick="addItemToOrder()" class="w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]">
+                        <button type="button" id="add-to-order-btn" onclick="addItemToOrder()" class="w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]">
                             Add to My Order <i class="fas fa-plus ml-1"></i>
                         </button>
                     </div>
@@ -452,6 +530,13 @@
         let validatedPromo = null;
         let cart = [];
         window.cart = cart;
+        let cateringQuantities = {
+            classic_black: 0,
+            dirty_chai: 0,
+            caramel_latte: 0,
+            french_vanilla: 0,
+            vanilla_latte: 30
+        };
         let receiptBase64 = null;
 
         let stampsData = {
@@ -866,7 +951,7 @@
                             <p class="text-[8px] text-white/50 uppercase tracking-widest font-black">Meetings, Parties & Events</p>
                         </div>
                     </div>
-                    <p class="font-mono font-black text-xs text-brand-gold">from $3.20/bottle</p>
+                    <p class="font-mono font-black text-xs text-brand-gold">Min 30 Bottles</p>
                 </div>`;
 
             list.innerHTML = cardsHtml;
@@ -954,10 +1039,11 @@
                 setMilkOption("Regular");
             }
 
-            // Adjust Quantity Block Labels & Values
-            const qtyLabel = document.getElementById('quantity-label');
-            if (qtyLabel) {
-                qtyLabel.innerText = isCatering ? "Number of Bottles (min 30)" : "Quantity";
+            // Toggle Quantity selector container based on catering
+            const qtyContainer = document.getElementById('quantity-customizer-container');
+            if (qtyContainer) {
+                if (isCatering) qtyContainer.classList.add('hidden');
+                else qtyContainer.classList.remove('hidden');
             }
             customizerQty = isCatering ? 30 : 1;
             document.getElementById('customizer-qty-display').innerText = customizerQty;
@@ -965,8 +1051,38 @@
             // Show/Hide catering-specific customizer fields
             const cateringFields = document.getElementById('catering-customizer-fields');
             if (cateringFields) {
-                if (isCatering) cateringFields.classList.remove('hidden');
-                else cateringFields.classList.add('hidden');
+                if (isCatering) {
+                    cateringFields.classList.remove('hidden');
+                    
+                    // Pre-fill default catering values
+                    cateringQuantities = {
+                        classic_black: 0,
+                        dirty_chai: 0,
+                        caramel_latte: 0,
+                        french_vanilla: 0,
+                        vanilla_latte: 30
+                    };
+                    
+                    // Reset UI display values
+                    Object.keys(cateringQuantities).forEach(flavorId => {
+                        const qtyEl = document.getElementById(`cat-qty-${flavorId}`);
+                        if (qtyEl) qtyEl.innerText = cateringQuantities[flavorId];
+                        
+                        const milkBox = document.getElementById(`cat-milk-box-${flavorId}`);
+                        if (milkBox) {
+                            if (cateringQuantities[flavorId] > 0 && flavorId !== 'classic_black') {
+                                milkBox.classList.remove('hidden');
+                            } else {
+                                milkBox.classList.add('hidden');
+                            }
+                        }
+                    });
+                    
+                    updateCateringState();
+                } else {
+                    cateringFields.classList.add('hidden');
+                    updateCateringState(); // reset add-to-order-btn text state
+                }
             }
 
             // Show/Hide standard modifiers
@@ -1061,6 +1177,65 @@
             if (btnE) btnE.className = opt === 'Extra' ? activeClass : inactiveClass;
         }
 
+        function adjustCateringFlavorQty(flavorId, delta) {
+            cateringQuantities[flavorId] = Math.max(0, cateringQuantities[flavorId] + delta);
+            
+            const qtyEl = document.getElementById(`cat-qty-${flavorId}`);
+            if (qtyEl) qtyEl.innerText = cateringQuantities[flavorId];
+            
+            const milkBox = document.getElementById(`cat-milk-box-${flavorId}`);
+            if (milkBox) {
+                if (cateringQuantities[flavorId] > 0 && flavorId !== 'classic_black') {
+                    milkBox.classList.remove('hidden');
+                } else {
+                    milkBox.classList.add('hidden');
+                }
+            }
+            
+            updateCateringState();
+        }
+
+        function updateCateringState() {
+            const totalBottles = Object.values(cateringQuantities).reduce((a, b) => a + b, 0);
+            let rate = 4.50;
+            if (totalBottles >= 500) rate = 3.20;
+            else if (totalBottles >= 250) rate = 3.50;
+            else if (totalBottles >= 200) rate = 3.60;
+            else if (totalBottles >= 150) rate = 3.80;
+            else if (totalBottles >= 100) rate = 4.00;
+            else if (totalBottles >= 75) rate = 4.20;
+            else if (totalBottles >= 50) rate = 4.40;
+            const totalPrice = rate * totalBottles;
+
+            const isCatering = selectedProduct?.id === 'catering_event_pack';
+            const addBtn = document.getElementById('add-to-order-btn');
+            
+            if (isCatering) {
+                const totEl = document.getElementById('catering-total-bottles');
+                const priEl = document.getElementById('catering-total-price');
+                if (totEl) totEl.innerText = `${totalBottles} / 30 minimum`;
+                if (priEl) priEl.innerText = totalBottles > 0 ? `$${totalPrice.toFixed(2)}` : "$0.00";
+                
+                if (addBtn) {
+                    if (totalBottles < 30) {
+                        addBtn.disabled = true;
+                        addBtn.innerHTML = `Select at least 30 bottles (Currently: ${totalBottles}) <i class="fas fa-info-circle ml-1"></i>`;
+                        addBtn.className = "w-full bg-gray-300 text-gray-500 font-black py-4 rounded-xl cursor-not-allowed uppercase tracking-wider text-[9px]";
+                    } else {
+                        addBtn.disabled = false;
+                        addBtn.innerHTML = `Add Catering Batch to Order ($${totalPrice.toFixed(2)}) <i class="fas fa-plus ml-1"></i>`;
+                        addBtn.className = "w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]";
+                    }
+                }
+            } else {
+                if (addBtn) {
+                    addBtn.disabled = false;
+                    addBtn.innerHTML = `Add to My Order <i class="fas fa-plus ml-1"></i>`;
+                    addBtn.className = "w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]";
+                }
+            }
+        }
+
         function adjustCustomizerQty(delta) {
             let maxStock = null;
             const isCatering = selectedProduct?.id === 'catering_event_pack';
@@ -1099,33 +1274,46 @@
             let unitPrice = basePrice + surcharge;
 
             if (isCatering) {
-                // Read up to 3 chosen flavors
-                const f1 = document.getElementById('catering-flavor-1').value;
-                const f2 = document.getElementById('catering-flavor-2').value;
-                const f3 = document.getElementById('catering-flavor-3').value;
-                const chosenFlavors = [f1, f2, f3].filter(Boolean);
+                const nameMap = {
+                    classic_black: 'Classic Black Americano',
+                    dirty_chai: 'Dirty Chai Latte',
+                    caramel_latte: 'Rich Caramel Latte',
+                    french_vanilla: 'French Vanilla Latte',
+                    vanilla_latte: 'Sweet Vanilla Latte'
+                };
 
-                // Build selections array distributed evenly across flavors
                 const singleSelections = [];
-                for (let i = 0; i < customizerQty; i++) {
-                    const flavor = chosenFlavors[i % chosenFlavors.length];
-                    singleSelections.push({
-                        flavor: flavor,
-                        milk: flavor.toLowerCase().includes('oat') ? 'Oat Milk' : 'Regular',
-                        espresso: 'Standard'
-                    });
+                Object.keys(cateringQuantities).forEach(flavorId => {
+                    const flavorQty = cateringQuantities[flavorId];
+                    if (flavorQty > 0) {
+                        const flavorName = nameMap[flavorId];
+                        const milk = flavorId === 'classic_black' ? 'Regular' : (document.getElementById(`cat-milk-${flavorId}`)?.value || 'Regular');
+                        for (let i = 0; i < flavorQty; i++) {
+                            singleSelections.push({
+                                flavor: flavorName,
+                                milk: milk,
+                                espresso: 'Standard'
+                            });
+                        }
+                    }
+                });
+
+                const totalBottles = singleSelections.length;
+                if (totalBottles < 30) {
+                    showToast("Please select at least 30 bottles for catering.", "error");
+                    return;
                 }
 
                 // Calculate price based on N-bottles tier rates
                 let rate = 4.50;
-                if (customizerQty >= 500) rate = 3.20;
-                else if (customizerQty >= 250) rate = 3.50;
-                else if (customizerQty >= 200) rate = 3.60;
-                else if (customizerQty >= 150) rate = 3.80;
-                else if (customizerQty >= 100) rate = 4.00;
-                else if (customizerQty >= 75) rate = 4.20;
-                else if (customizerQty >= 50) rate = 4.40;
-                const totalPrice = rate * customizerQty;
+                if (totalBottles >= 500) rate = 3.20;
+                else if (totalBottles >= 250) rate = 3.50;
+                else if (totalBottles >= 200) rate = 3.60;
+                else if (totalBottles >= 150) rate = 3.80;
+                else if (totalBottles >= 100) rate = 4.00;
+                else if (totalBottles >= 75) rate = 4.20;
+                else if (totalBottles >= 50) rate = 4.40;
+                const totalPrice = rate * totalBottles;
 
                 // Push catering package to cart as single item
                 cart.push({
@@ -1135,7 +1323,7 @@
                     qty: 1,
                     unitPrice: totalPrice,
                     total: totalPrice,
-                    bottles: customizerQty
+                    bottles: totalBottles
                 });
             } else {
                 // Search if matching configuration already exists in cart to increment quantity
@@ -1282,8 +1470,14 @@
                 
                 let descText = "";
                 if (isCatering) {
-                    const uniqueFlavors = [...new Set(item.selections.map(s => s.flavor.replace(' Sweet', '').replace(' Rich', '').replace(' Honduran', '').replace(' Classic', '').replace(' Latte', '').replace(' Americano', '')))];
-                    descText = `Catering Batch • ${item.selections.length} Bottles (${uniqueFlavors.join(', ')})`;
+                    const counts = {};
+                    item.selections.forEach(s => {
+                        const baseName = s.flavor.replace(' Sweet', '').replace(' Rich', '').replace(' Honduran', '').replace(' Classic', '').replace(' Dirty', '').replace(' French', '').replace(' Latte', '').replace(' Americano', '').trim();
+                        const label = s.milk === 'Oat Milk' ? `${baseName} (Oat)` : baseName;
+                        counts[label] = (counts[label] || 0) + 1;
+                    });
+                    const summary = Object.entries(counts).map(([label, qty]) => `${qty}x ${label}`).join(', ');
+                    descText = `Catering Batch • ${item.selections.length} Bottles (${summary})`;
                 } else {
                     descText = isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`;
                 }
