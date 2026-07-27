@@ -310,7 +310,31 @@ module.exports = async (req, res) => {
 
         // 6d. CREATE SELF CHECKOUT ORDER (PUBLIC)
         if (req.method === 'POST' && action === 'create_self_checkout_order') {
-            const { customer_name, customer_phone, location_id, total, selections, notes } = req.body;
+            const { customer_name, customer_phone, location_id, total, selections, notes, receiptBase64 } = req.body;
+            
+            let receiptImageUrl = null;
+            if (receiptBase64 && receiptBase64.startsWith('data:image')) {
+                try {
+                    const base64Data = receiptBase64.replace(/^data:image\/\w+;base64,/, "");
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const mimeType = receiptBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
+                    const ext = mimeType.split('/')[1] || 'png';
+                    const storagePath = `receipts/REC_${Date.now()}.${ext}`;
+
+                    const { error: uploadError } = await supabase.storage
+                        .from('menu-images')
+                        .upload(storagePath, buffer, { contentType: mimeType, upsert: true });
+
+                    if (!uploadError) {
+                        const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(storagePath);
+                        receiptImageUrl = publicUrl;
+                    } else {
+                        console.error("Receipt upload error:", uploadError);
+                    }
+                } catch (err) {
+                    console.error("Receipt process failed:", err);
+                }
+            }
             
             const items = selections?.cart || [];
             const is_subscription = !!selections?.is_subscription;
@@ -525,7 +549,8 @@ module.exports = async (req, res) => {
                 ...selections,
                 free_bottles_redeemed: freeRedeemedInCurrent,
                 stamps_before: stampsBefore,
-                stamps_after: stampsAfter
+                stamps_after: stampsAfter,
+                receipt_image_url: receiptImageUrl
             };
 
             const updatedNotes = (notes || '[SELF-CHECKOUT ORDER]') + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}`;

@@ -77,25 +77,7 @@
             </div>
         </div>
 
-        <!-- 1. Customer Details Box (Location selection is hidden but populated dynamically for tests) -->
-        <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4">
-            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
-                <i class="fas fa-user-circle text-brand-brown text-sm"></i> 1. Your Contact Details
-            </h3>
-            
-            <div class="space-y-3">
-                <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
-                <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all" oninput="fetchStamps()">
-                <input type="email" id="cust-email" class="hidden">
-                
-                <!-- Hidden Location Selection (Kept in DOM to satisfy automated tests like test_live_cali.js) -->
-                <div class="hidden">
-                    <select id="cust-location" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm">
-                        <option value="" disabled selected>-- Select Location --</option>
-                    </select>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Digital Stamp Card Box -->
         <div id="stamp-card-container" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4 animate-fade-in">
@@ -210,6 +192,25 @@
             </div>
         </div>
 
+        <!-- Your Contact Details (Shown dynamically with checkout summary) -->
+        <div id="contact-details-card" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
+                <i class="fas fa-user-circle text-brand-brown text-sm"></i> Your Contact Details
+            </h3>
+            <div class="space-y-3">
+                <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
+                <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all" oninput="fetchStamps()">
+                <input type="email" id="cust-email" class="hidden">
+                
+                <!-- Hidden Location Selection (Kept in DOM to satisfy automated tests like test_live_cali.js) -->
+                <div class="hidden">
+                    <select id="cust-location" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm">
+                        <option value="" disabled selected>-- Select Location --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <!-- 4. Checkout Card -->
         <div id="checkout-card" class="hidden bg-brand-dark rounded-[2.5rem] p-6 text-white shadow-xl relative overflow-hidden border border-white/5">
             <div class="relative z-10 space-y-6">
@@ -298,11 +299,23 @@
                         <p class="text-lg font-black text-brand-gold font-mono tracking-wide">@rich-aroma-coffee</p>
                         <p class="text-[8px] text-white/40 uppercase tracking-wider">Tap below to auto-launch Venmo or search username manually</p>
                     </div>
-                    <button onclick="openVenmoApp()" class="w-full bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg hover:bg-sky-600 transition-all uppercase tracking-wider text-[10px]">
+                    <button type="button" onclick="openVenmoApp()" class="w-full bg-sky-500 text-white font-black py-4 rounded-xl shadow-lg hover:bg-sky-600 transition-all uppercase tracking-wider text-[10px]">
                         Open Venmo App <i class="fas fa-mobile-alt ml-1.5"></i>
                     </button>
-                    <button onclick="submitManualOrder('Venmo')" class="w-full bg-white/10 text-white font-black py-3 rounded-xl border border-white/10 hover:bg-white/20 transition-all text-[8px] uppercase tracking-widest">
-                        I Paid! Show Verification Screen
+                    
+                    <!-- Screenshot Upload -->
+                    <div class="space-y-2 mt-4 text-left">
+                        <label class="block text-[8px] font-black uppercase text-white/40 tracking-wider">Upload Transfer Screenshot (Required)</label>
+                        <div onclick="document.getElementById('receipt-upload-venmo').click()" class="bg-white/5 border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-brand-gold transition-all relative overflow-hidden h-28">
+                            <input type="file" id="receipt-upload-venmo" accept="image/*" class="hidden" onchange="handleReceiptUpload(this, 'venmo')">
+                            <i id="receipt-icon-venmo" class="fas fa-receipt text-2xl text-white/30 mb-1"></i>
+                            <span id="receipt-status-venmo" class="text-[9px] font-black uppercase tracking-wider text-white/50">Tap to upload receipt</span>
+                            <img id="receipt-preview-venmo" class="hidden absolute inset-0 w-full h-full object-cover">
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="submitManualOrder('Venmo')" class="w-full bg-white/10 text-white font-black py-3 rounded-xl border border-white/10 hover:bg-white/20 transition-all text-[8px] uppercase tracking-widest">
+                        I Paid! Submit Verification Screenshot
                     </button>
                 </div>
 
@@ -313,12 +326,24 @@
                             <p class="text-[10px] text-white/70">Zelle Recipient Phone/Email:</p>
                             <p class="text-sm font-black text-brand-gold font-mono tracking-wide">order@richaromacoffee.com</p>
                         </div>
-                        <button onclick="copyZelle()" class="text-[8px] font-black uppercase bg-brand-gold/10 text-brand-gold border border-brand-gold/20 px-3 py-1.5 rounded-full hover:bg-brand-gold/25 transition-all">
+                        <button type="button" onclick="copyZelle()" class="text-[8px] font-black uppercase bg-brand-gold/10 text-brand-gold border border-brand-gold/20 px-3 py-1.5 rounded-full hover:bg-brand-gold/25 transition-all">
                             Copy Email
                         </button>
                     </div>
-                    <button onclick="submitManualOrder('Zelle')" class="w-full bg-white/15 text-white font-black py-4 rounded-xl shadow-lg hover:bg-white/20 transition-all uppercase tracking-wider text-[10px]">
-                        I Zelled! Show Verification Screen <i class="fas fa-check ml-1.5"></i>
+                    
+                    <!-- Screenshot Upload -->
+                    <div class="space-y-2 mt-4 text-left">
+                        <label class="block text-[8px] font-black uppercase text-white/40 tracking-wider">Upload Transfer Screenshot (Required)</label>
+                        <div onclick="document.getElementById('receipt-upload-zelle').click()" class="bg-white/5 border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-brand-gold transition-all relative overflow-hidden h-28">
+                            <input type="file" id="receipt-upload-zelle" accept="image/*" class="hidden" onchange="handleReceiptUpload(this, 'zelle')">
+                            <i id="receipt-icon-zelle" class="fas fa-receipt text-2xl text-white/30 mb-1"></i>
+                            <span id="receipt-status-zelle" class="text-[9px] font-black uppercase tracking-wider text-white/50">Tap to upload receipt</span>
+                            <img id="receipt-preview-zelle" class="hidden absolute inset-0 w-full h-full object-cover">
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="submitManualOrder('Zelle')" class="w-full bg-white/15 text-white font-black py-4 rounded-xl shadow-lg hover:bg-white/20 transition-all uppercase tracking-wider text-[10px]">
+                        I Zelled! Submit Verification Screenshot <i class="fas fa-check ml-1.5"></i>
                     </button>
                 </div>
 
@@ -386,6 +411,7 @@
         let validatedPromo = null;
         let cart = [];
         window.cart = cart;
+        let receiptBase64 = null;
 
         let stampsData = {
             total_bottles: 0,
@@ -1291,6 +1317,27 @@
             });
         }
 
+        function handleReceiptUpload(input, type) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                receiptBase64 = e.target.result;
+                const img = document.getElementById(`receipt-preview-${type}`);
+                const icon = document.getElementById(`receipt-icon-${type}`);
+                const status = document.getElementById(`receipt-status-${type}`);
+                if (img) {
+                    img.src = receiptBase64;
+                    img.classList.remove('hidden');
+                }
+                if (icon) icon.classList.add('hidden');
+                if (status) status.classList.add('hidden');
+                showToast("Screenshot uploaded successfully!", "success");
+            };
+            reader.readAsDataURL(file);
+        }
+
         function openVenmoApp() {
             if (cart.length === 0) {
                 showToast("Please add items to your order first.");
@@ -1418,6 +1465,10 @@
                 showToast("Location error. Please reload the page.");
                 return;
             }
+            if (!receiptBase64) {
+                showToast("Please upload a screenshot of your transfer as proof of payment.", "error");
+                return;
+            }
 
             let totalVal = cart.reduce((sum, item) => sum + item.total, 0);
             if (isSubscription) totalVal = totalVal * 0.90;
@@ -1468,12 +1519,28 @@
                             preorder_date: orderMode === 'preorder' ? selectedDate : null,
                             email: email || ''
                         },
-                        notes: selfCheckoutNotes
+                        notes: selfCheckoutNotes,
+                        receiptBase64: receiptBase64
                     })
                 });
                 
                 if (res.ok) {
                     const data = await res.json();
+                    receiptBase64 = null;
+                    const preVenmo = document.getElementById('receipt-preview-venmo');
+                    const iconVenmo = document.getElementById('receipt-icon-venmo');
+                    const statVenmo = document.getElementById('receipt-status-venmo');
+                    if (preVenmo) { preVenmo.classList.add('hidden'); preVenmo.src = ''; }
+                    if (iconVenmo) iconVenmo.classList.remove('hidden');
+                    if (statVenmo) { statVenmo.classList.remove('hidden'); statVenmo.innerText = 'Tap to upload receipt'; }
+
+                    const preZelle = document.getElementById('receipt-preview-zelle');
+                    const iconZelle = document.getElementById('receipt-icon-zelle');
+                    const statZelle = document.getElementById('receipt-status-zelle');
+                    if (preZelle) { preZelle.classList.add('hidden'); preZelle.src = ''; }
+                    if (iconZelle) iconZelle.classList.remove('hidden');
+                    if (statZelle) { statZelle.classList.remove('hidden'); statZelle.innerText = 'Tap to upload receipt'; }
+
                     const itemsDesc = cart.map(item => `${item.qty}x ${item.name}`).join(' + ');
                     showReceiptSplash(
                         data.id || 'RA-MANUAL',

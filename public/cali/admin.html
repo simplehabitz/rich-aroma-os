@@ -879,6 +879,18 @@
                         </td>
                         <td class="px-8 py-6">
                             <div class="text-xs font-black text-brand-dark mb-1">${selectionText}</div>
+                            ${(() => {
+                                if (o.selections && o.selections.receipt_image_url) {
+                                    return `
+                                        <div class="mt-2 mb-1">
+                                            <a href="${o.selections.receipt_image_url}" target="_blank" class="inline-flex items-center gap-1.5 bg-brand-gold/15 text-brand-gold border border-brand-gold/25 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider hover:bg-brand-gold/30 transition-all">
+                                                <i class="fas fa-image text-[9px]"></i> View Receipt
+                                            </a>
+                                        </div>
+                                    `;
+                                }
+                                return '';
+                            })()}
                             <div class="text-[9px] font-bold text-brand-brown uppercase tracking-wider opacity-60">
                                 ${new Date(o.created_at).toLocaleDateString()}
                             </div>
