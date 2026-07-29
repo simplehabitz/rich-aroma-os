@@ -111,6 +111,13 @@
 
                 <!-- Customizer (Expands when product chosen) -->
                 <div id="flavor-customizer" class="hidden pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
+                    <!-- Customizer Header / Close -->
+                    <div class="flex justify-between items-center pb-2 border-b border-gray-50">
+                        <span id="customizer-title-label" class="text-[9px] font-black uppercase text-brand-brown tracking-wider">Customize Order</span>
+                        <button type="button" onclick="closeCustomizer()" class="text-gray-405 hover:text-red-600 transition-all text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg">
+                            Cancel <i class="fas fa-times text-[8px]"></i>
+                        </button>
+                    </div>
                     <!-- Milk Modifier -->
                     <div id="milk-customizer-container" class="space-y-2">
                         <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Milk Customization</label>
@@ -1000,6 +1007,12 @@
                 selectedProduct = allProducts.find(p => p.id === id);
             }
 
+            // Update title label dynamically
+            const titleLabel = document.getElementById('customizer-title-label');
+            if (titleLabel) {
+                titleLabel.innerText = isCatering ? "Customize Event Catering" : `Customize ${selectedProduct.name}`;
+            }
+
             // Reset customizer settings with milk stock limits checks
             const milkStock = selectedProduct.options?.milk_stock;
             const isGrabMode = orderMode === 'grab';
@@ -1175,6 +1188,13 @@
             if (btnL) btnL.className = opt === 'Light' ? activeClass : inactiveClass;
             if (btnS) btnS.className = opt === 'Standard' ? activeClass : inactiveClass;
             if (btnE) btnE.className = opt === 'Extra' ? activeClass : inactiveClass;
+        }
+
+        function closeCustomizer() {
+            selectedProduct = null;
+            const customizer = document.getElementById('flavor-customizer');
+            if (customizer) customizer.classList.add('hidden');
+            renderProducts(); // clear active card highlights
         }
 
         function adjustCateringFlavorQty(flavorId, delta) {
