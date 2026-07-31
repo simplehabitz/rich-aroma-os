@@ -785,6 +785,7 @@
 
     <script>
         let session = null;
+        let isServiceBusiness = false;
         let menuItems = [];
         let categories = [];
         let activeCategory = null;
@@ -803,6 +804,7 @@
             const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
                 return (category || '').toLowerCase().includes(keyword);
             });
+            isServiceBusiness = isService;
 
             const leftCol = document.getElementById('partner-left-col');
             const centerCol = document.getElementById('partner-center-col');
@@ -1368,9 +1370,7 @@
             document.getElementById('edit-item-default-stock').value = item.default_daily_stock !== undefined ? item.default_daily_stock : '';
 
             // Service checks
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             const titleEl = document.querySelector('#edit-modal h3');
             const gachaGroup = document.getElementById('edit-gacha-group');
@@ -1409,9 +1409,7 @@
             const stockQty = document.getElementById('edit-item-stock-quantity').value;
             const defaultStock = document.getElementById('edit-item-default-stock').value;
 
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
             const duration = isService ? document.getElementById('edit-item-duration').value : null;
 
             const btn = document.getElementById('btn-save-item');
@@ -1515,9 +1513,7 @@
             document.getElementById('btn-create-camera-toggle').innerText = "Abrir Cámara 📷";
 
             // Service Adaptation
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             const titleEl = document.querySelector('#create-modal h3');
             const submitBtn = document.getElementById('btn-create-item');
@@ -1701,9 +1697,7 @@
             const defaultStock = document.getElementById('create-item-default-stock').value;
             const isGachaPromo = document.getElementById('create-item-gacha-promo').checked;
 
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
             const duration = isService ? document.getElementById('create-item-duration').value : null;
 
             if (!name || !price) return alert("El nombre y el precio son obligatorios.");
@@ -1770,9 +1764,7 @@
             document.getElementById('sett-gacha-automate').checked = !!campaign.automateWeekly;
 
             // Service Adaptations
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             const titleEl = document.querySelector('#settings-modal h3');
             const gachaGroup = document.getElementById('sett-gacha-group');
@@ -1871,9 +1863,7 @@
                 open_days: openDays
             };
 
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             const bookingLeadTime = isService ? document.getElementById('sett-booking-lead-time').value : undefined;
             const bookingBuffer = isService ? document.getElementById('sett-booking-buffer').value : undefined;
@@ -2107,9 +2097,7 @@
         };
 
         function openUgcModal() {
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             const titleEl = document.querySelector('#ugc-modal h3');
             const descEl = document.querySelector('#ugc-modal p.text-[9px]');
@@ -2184,9 +2172,7 @@
 
             if (!rewardValue || !count || !maxClaims) return alert("Completa todos los campos");
 
-            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
-                return (session?.user?.category || '').toLowerCase().includes(keyword);
-            });
+            const isService = isServiceBusiness;
 
             btn.innerText = "Generando..."; btn.disabled = true;
 
