@@ -99,12 +99,19 @@
                             <i class="fas fa-clock mr-1"></i> Horarios y Disponibilidad
                         </button>
                     </div>
+                    <!-- Layout Switches -->
+                    <div id="calendar-layout-selectors" class="flex bg-white/5 p-1 rounded-xl gap-1">
+                        <button onclick="setCalendarLayout('day')" id="layout-btn-day" class="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-cyan text-dark transition-all">Día</button>
+                        <button onclick="setCalendarLayout('week')" id="layout-btn-week" class="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/60 hover:text-white transition-all">Semana</button>
+                        <button onclick="setCalendarLayout('month')" id="layout-btn-month" class="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/60 hover:text-white transition-all">Mes</button>
+                    </div>
                 </div>
 
                 <!-- Tab 1: Agenda view -->
+                <!-- Tab 1: Agenda view -->
                 <div id="view-agenda" class="flex-1 flex overflow-hidden">
-                    <!-- Left Strip: Calendar Days -->
-                    <div class="w-64 border-r border-white/5 bg-charcoal/50 flex flex-col shrink-0">
+                    <!-- Left Strip: Calendar Days (Day View layout only) -->
+                    <div id="agenda-day-strip" class="layout-day-el w-64 border-r border-white/5 bg-charcoal/50 flex flex-col shrink-0">
                         <div class="p-5 border-b border-white/5">
                             <span class="text-[8px] uppercase tracking-widest font-black text-white/30 block mb-3">Mes Actual</span>
                             <div class="flex items-center justify-between">
@@ -120,8 +127,8 @@
                         </div>
                     </div>
 
-                    <!-- Right List: Day's Appointments Details -->
-                    <div class="flex-1 flex flex-col overflow-hidden bg-black/10">
+                    <!-- Right List: Day's Appointments Details (Day View layout only) -->
+                    <div id="agenda-day-details" class="layout-day-el flex-1 flex flex-col overflow-hidden bg-black/10">
                         <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
                             <div>
                                 <h3 id="agenda-day-title" class="font-black text-xs uppercase tracking-wider text-white">Citas del Día</h3>
@@ -131,6 +138,52 @@
                         </div>
                         <div id="agenda-appointments-list" class="flex-1 overflow-y-auto p-6 space-y-4 hide-scroll">
                             <!-- Appointments for the selected day list here -->
+                        </div>
+                    </div>
+
+                    <!-- Layout 2: Week Grid view -->
+                    <div id="view-week-grid" class="hidden flex-1 flex flex-col overflow-hidden bg-black/10">
+                        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20 bg-charcoal/20">
+                            <div>
+                                <h3 class="font-black text-xs uppercase tracking-wider text-white">Vista Semanal</h3>
+                                <p id="week-grid-subtitle" class="text-[9px] text-cyan font-bold uppercase tracking-widest mt-0.5">Semana del Lunes</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="prevWeekGrid()" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black text-white/70 uppercase tracking-widest flex items-center gap-1 active:scale-95 transition-all"><i class="fas fa-chevron-left"></i> Anterior</button>
+                                <button onclick="nextWeekGrid()" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black text-white/70 uppercase tracking-widest flex items-center gap-1 active:scale-95 transition-all">Siguiente <i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <div id="week-grid-columns" class="flex-1 grid grid-cols-7 overflow-x-auto p-4 gap-4 hide-scroll bg-black/20">
+                            <!-- Generated week columns here -->
+                        </div>
+                    </div>
+
+                    <!-- Layout 3: Month Grid view -->
+                    <div id="view-month-grid" class="hidden flex-1 flex flex-col overflow-hidden bg-black/10">
+                        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20 bg-charcoal/20">
+                            <div>
+                                <h3 class="font-black text-xs uppercase tracking-wider text-white">Vista Mensual</h3>
+                                <p id="month-grid-subtitle" class="text-[9px] text-cyan font-bold uppercase tracking-widest mt-0.5">Mes</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="prevMonthGrid()" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black text-white/70 uppercase tracking-widest flex items-center gap-1 active:scale-95 transition-all"><i class="fas fa-chevron-left"></i> Anterior</button>
+                                <button onclick="nextMonthGrid()" class="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black text-white/70 uppercase tracking-widest flex items-center gap-1 active:scale-95 transition-all">Siguiente <i class="fas fa-chevron-right"></i></button>
+                            </div>
+                        </div>
+                        <!-- Month Grid Header and Days -->
+                        <div class="flex-1 flex flex-col p-4 bg-black/20 overflow-hidden">
+                            <div class="grid grid-cols-7 gap-2 mb-2 shrink-0">
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Dom</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Lun</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Mar</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Mie</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Jue</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Vie</div>
+                                <div class="text-center text-[9px] font-black uppercase tracking-widest text-white/30">Sab</div>
+                            </div>
+                            <div id="month-grid-cells" class="flex-1 grid grid-cols-7 grid-rows-6 gap-2 min-h-0">
+                                <!-- Generated month cells here -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1185,16 +1238,22 @@
                             </div>
                             <div class="flex gap-2 w-1/2">
                                 ${actionBtn}
-                            </div>
                         </div>
                     </div>
+                `;
             }).join('');
 
             // Refresh calendar/agenda items if visible
             const schedulerWorkspace = document.getElementById('scheduler-workspace');
             if (schedulerWorkspace && !schedulerWorkspace.classList.contains('hidden')) {
-                renderCalendarStrip();
-                renderSelectedDayAgenda();
+                if (currentCalendarLayout === 'day') {
+                    renderCalendarStrip();
+                    renderSelectedDayAgenda();
+                } else if (currentCalendarLayout === 'week') {
+                    renderWeekGrid();
+                } else if (currentCalendarLayout === 'month') {
+                    renderMonthGrid();
+                }
             }
         }
 
@@ -2371,18 +2430,21 @@
             const tabAvailability = document.getElementById('tab-availability');
             const viewAgenda = document.getElementById('view-agenda');
             const viewAvailability = document.getElementById('view-availability');
+            const selectors = document.getElementById('calendar-layout-selectors');
 
             if (tabName === 'agenda') {
                 if (tabAgenda) tabAgenda.className = "text-xs font-black uppercase tracking-widest border-b-2 border-cyan pb-4 pt-4 text-white";
                 if (tabAvailability) tabAvailability.className = "text-xs font-black uppercase tracking-widest border-b-2 border-transparent pb-4 pt-4 text-white/40 hover:text-white transition-all";
                 if (viewAgenda) viewAgenda.classList.remove('hidden');
                 if (viewAvailability) viewAvailability.classList.add('hidden');
-                renderSelectedDayAgenda();
+                if (selectors) selectors.classList.remove('hidden');
+                setCalendarLayout(currentCalendarLayout);
             } else if (tabName === 'availability') {
                 if (tabAgenda) tabAgenda.className = "text-xs font-black uppercase tracking-widest border-b-2 border-transparent pb-4 pt-4 text-white/40 hover:text-white transition-all";
                 if (tabAvailability) tabAvailability.className = "text-xs font-black uppercase tracking-widest border-b-2 border-cyan pb-4 pt-4 text-white";
                 if (viewAgenda) viewAgenda.classList.add('hidden');
                 if (viewAvailability) viewAvailability.classList.remove('hidden');
+                if (selectors) selectors.classList.add('hidden');
                 loadAvailabilitySettingsUI();
             }
         }
@@ -2452,6 +2514,206 @@
                     btn.innerText = originalText;
                 }
             }
+        }
+
+        let currentCalendarLayout = 'day'; // 'day', 'week', 'month'
+        let currentMonthStart = new Date();
+        currentMonthStart.setDate(1); // Set to start of current month
+
+        function setCalendarLayout(layout) {
+            currentCalendarLayout = layout;
+            
+            const btnDay = document.getElementById('layout-btn-day');
+            const btnWeek = document.getElementById('layout-btn-week');
+            const btnMonth = document.getElementById('layout-btn-month');
+
+            const dayViews = document.querySelectorAll('.layout-day-el');
+            const weekView = document.getElementById('view-week-grid');
+            const monthView = document.getElementById('view-month-grid');
+
+            // Reset buttons
+            [btnDay, btnWeek, btnMonth].forEach(b => {
+                if (b) {
+                    b.className = "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/60 hover:text-white transition-all";
+                }
+            });
+
+            // Set active button
+            const activeBtn = document.getElementById(`layout-btn-${layout}`);
+            if (activeBtn) {
+                activeBtn.className = "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-cyan text-dark shadow-sm transition-all";
+            }
+
+            if (layout === 'day') {
+                dayViews.forEach(el => el.classList.remove('hidden'));
+                if (weekView) weekView.classList.add('hidden');
+                if (monthView) monthView.classList.add('hidden');
+                renderSelectedDayAgenda();
+            } else if (layout === 'week') {
+                dayViews.forEach(el => el.classList.add('hidden'));
+                if (weekView) weekView.classList.remove('hidden');
+                if (monthView) monthView.classList.add('hidden');
+                renderWeekGrid();
+            } else if (layout === 'month') {
+                dayViews.forEach(el => el.classList.add('hidden'));
+                if (weekView) weekView.classList.add('hidden');
+                if (monthView) monthView.classList.remove('hidden');
+                renderMonthGrid();
+            }
+        }
+
+        function prevWeekGrid() {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            renderWeekGrid();
+        }
+
+        function nextWeekGrid() {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            renderWeekGrid();
+        }
+
+        function renderWeekGrid() {
+            const columnsContainer = document.getElementById('week-grid-columns');
+            const subtitle = document.getElementById('week-grid-subtitle');
+            if (!columnsContainer) return;
+
+            const dateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+            subtitle.innerText = `Semana del Lunes ${currentWeekStart.toLocaleDateString('es-ES', dateOptions)}`;
+
+            const tempDate = new Date(currentWeekStart);
+            const columnsHTML = [];
+            const weekdays = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+
+            for (let i = 0; i < 7; i++) {
+                const dateStr = tempDate.toISOString().split('T')[0];
+                const dayNum = tempDate.getDate();
+                const dayIdx = tempDate.getDay();
+                
+                // Get bookings for this day
+                const dayBookings = liveOrders.filter(o => {
+                    return (o.status && o.status.includes('booking') && o.scheduled_for && o.scheduled_for.startsWith(dateStr));
+                });
+
+                // Sort by time
+                dayBookings.sort((a, b) => new Date(a.scheduled_for) - new Date(b.scheduled_for));
+
+                const isToday = new Date().toDateString() === tempDate.toDateString();
+
+                const bookingsHTML = dayBookings.map(o => {
+                    const timeStr = new Date(o.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    const reasonMatch = o.notes ? o.notes.match(/\[MOTIVO:\s*([^\]]+)\]/) : null;
+                    const reason = reasonMatch ? reasonMatch[1] : 'Consulta';
+                    
+                    let statusColor = 'border-l-cyan';
+                    if (o.status === 'confirmed_booking') statusColor = 'border-l-green-500';
+
+                    return `
+                        <div onclick="selectCalendarDate('${dateStr}'); setCalendarLayout('day');" class="p-3 bg-white/5 border-l-2 ${statusColor} rounded-xl hover:bg-white/10 transition-all cursor-pointer text-left space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[9px] font-black text-cyan font-mono">${timeStr}</span>
+                                <span class="text-[7px] font-mono opacity-50">#${o.order_number}</span>
+                            </div>
+                            <h5 class="text-[10px] font-black text-white truncate">${o.customers?.name || 'Invitado'}</h5>
+                            <p class="text-[8px] text-white/50 uppercase tracking-tighter truncate">${reason}</p>
+                        </div>
+                    `;
+                }).join('');
+
+                columnsHTML.push(`
+                    <div class="flex flex-col bg-charcoal/50 border border-white/5 rounded-3xl p-3 h-full overflow-hidden min-w-[120px]">
+                        <div class="pb-3 border-b border-white/5 text-center shrink-0">
+                            <span class="block text-[8px] uppercase tracking-widest ${isToday ? 'text-cyan font-black' : 'text-white/40'}">${weekdays[dayIdx]}</span>
+                            <span class="text-lg font-black ${isToday ? 'text-cyan' : 'text-white'}">${dayNum}</span>
+                        </div>
+                        <div class="flex-1 overflow-y-auto pt-3 space-y-2 hide-scroll">
+                            ${bookingsHTML || '<div class="text-[8px] text-white/20 italic text-center py-10 uppercase font-bold">Sin citas</div>'}
+                        </div>
+                    </div>
+                `);
+
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+
+            columnsContainer.innerHTML = columnsHTML.join('');
+        }
+
+        function prevMonthGrid() {
+            currentMonthStart.setMonth(currentMonthStart.getMonth() - 1);
+            renderMonthGrid();
+        }
+
+        function nextMonthGrid() {
+            currentMonthStart.setMonth(currentMonthStart.getMonth() + 1);
+            renderMonthGrid();
+        }
+
+        function renderMonthGrid() {
+            const cellsContainer = document.getElementById('month-grid-cells');
+            const subtitle = document.getElementById('month-grid-subtitle');
+            if (!cellsContainer) return;
+
+            const year = currentMonthStart.getFullYear();
+            const month = currentMonthStart.getMonth();
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            subtitle.innerText = `${monthNames[month]} ${year}`;
+
+            // Calculate start and end day pads
+            const firstDayIndex = new Date(year, month, 1).getDay(); // Sunday=0, Monday=1 etc.
+            const totalDays = new Date(year, month + 1, 0).getDate();
+            const prevTotalDays = new Date(year, month, 0).getDate();
+
+            const cellsHTML = [];
+
+            // 1. Previous month padded cells
+            for (let i = firstDayIndex - 1; i >= 0; i--) {
+                const dayNum = prevTotalDays - i;
+                cellsHTML.push(`
+                    <div class="bg-charcoal/20 border border-white/5 rounded-2xl p-3 flex flex-col justify-between opacity-25 cursor-not-allowed">
+                        <span class="text-xs font-bold text-white/40">${dayNum}</span>
+                    </div>
+                `);
+            }
+
+            // 2. Current month cells
+            for (let i = 1; i <= totalDays; i++) {
+                const tempDate = new Date(year, month, i);
+                const dateStr = tempDate.toISOString().split('T')[0];
+                const isToday = new Date().toDateString() === tempDate.toDateString();
+
+                // Get bookings for this day
+                const dayBookingsCount = getBookingCountForDate(dateStr);
+
+                let badgeHTML = '';
+                if (dayBookingsCount > 0) {
+                    badgeHTML = `<span class="px-2 py-0.5 rounded-lg bg-cyan text-dark text-[8px] font-black">${dayBookingsCount} Citas</span>`;
+                }
+
+                cellsHTML.push(`
+                    <div onclick="selectCalendarDate('${dateStr}'); setCalendarLayout('day');" 
+                        class="bg-charcoal/50 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-cyan/30 transition-all cursor-pointer ${isToday ? 'border-cyan bg-cyan/5' : ''}">
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-black ${isToday ? 'text-cyan' : 'text-white'}">${i}</span>
+                            ${isToday ? '<span class="w-1.5 h-1.5 rounded-full bg-cyan"></span>' : ''}
+                        </div>
+                        <div class="text-right mt-auto">
+                            ${badgeHTML}
+                        </div>
+                    </div>
+                `);
+            }
+
+            // 3. Next month padded cells
+            const totalCellsWritten = firstDayIndex + totalDays;
+            const remainingCells = 42 - totalCellsWritten;
+            for (let i = 1; i <= remainingCells; i++) {
+                cellsHTML.push(`
+                    <div class="bg-charcoal/20 border border-white/5 rounded-2xl p-3 flex flex-col justify-between opacity-25 cursor-not-allowed">
+                        <span class="text-xs font-bold text-white/40">${i}</span>
+                    </div>
+                `);
+            }
+
+            cellsContainer.innerHTML = cellsHTML.join('');
         }
 
         function initializeCalendarStrip() {
