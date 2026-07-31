@@ -1145,7 +1145,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_settings') {
-            const { restaurantId, acceptedPayments, bankDetails, gachaCampaign, operatingHours } = req.body || {};
+            const { restaurantId, acceptedPayments, bankDetails, gachaCampaign, operatingHours, bookingLeadTime, bookingBuffer } = req.body || {};
             if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
 
             const { data: resData } = await supabase.from('restaurants').select('settings').eq('id', restaurantId).single();
@@ -1154,6 +1154,15 @@ module.exports = async (req, res) => {
             settings.bank_details = bankDetails || {};
             if (operatingHours) {
                 settings.operating_hours = operatingHours;
+            }
+            if (req.body.ugc_codes) {
+                settings.ugc_codes = req.body.ugc_codes;
+            }
+            if (bookingLeadTime !== undefined) {
+                settings.booking_lead_time = bookingLeadTime;
+            }
+            if (bookingBuffer !== undefined) {
+                settings.booking_buffer = bookingBuffer;
             }
 
             if (gachaCampaign) {
@@ -1256,6 +1265,9 @@ module.exports = async (req, res) => {
                 if (stock_quantity !== undefined) {
                     settings.product_inventory[itemId].stock_quantity = stock_quantity === '' ? null : parseInt(stock_quantity);
                 }
+                if (req.body.duration !== undefined) {
+                    settings.product_inventory[itemId].duration = req.body.duration === '' ? null : parseInt(req.body.duration);
+                }
 
                 // Gacha promo handling
                 if (is_gacha_promo !== undefined) {
@@ -1322,7 +1334,8 @@ module.exports = async (req, res) => {
             settings.product_inventory[itemId] = {
                 is_unlimited: is_unlimited !== false,
                 default_daily_stock: default_daily_stock ? parseInt(default_daily_stock) : null,
-                stock_quantity: is_unlimited !== false ? null : 0
+                stock_quantity: is_unlimited !== false ? null : 0,
+                duration: req.body.duration ? parseInt(req.body.duration) : null
             };
 
             if (is_gacha_promo) {

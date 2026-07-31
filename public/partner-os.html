@@ -290,7 +290,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-1">
+                <div class="space-y-1" id="edit-gacha-group">
                     <label class="text-[9px] font-black text-white/20 uppercase ml-4">Promoción Gacha (Lotería)</label>
                     <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
                         <input type="checkbox" id="edit-item-gacha-promo" class="w-5 h-5 accent-cyan">
@@ -303,8 +303,21 @@
                     <input type="number" id="edit-item-price" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-black text-2xl outline-none focus:border-cyan text-white">
                 </div>
 
+                <!-- Estimated Duration (Visible for services) -->
+                <div id="edit-duration-group" class="hidden space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Duración Estimada</label>
+                    <select id="edit-item-duration" class="w-full bg-charcoal border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan">
+                        <option value="15">15 minutos</option>
+                        <option value="30" selected>30 minutos</option>
+                        <option value="45">45 minutos</option>
+                        <option value="60">1 hora</option>
+                        <option value="90">1.5 horas</option>
+                        <option value="120">2 horas</option>
+                    </select>
+                </div>
+
                 <!-- STOCK CONTROLS -->
-                <div class="space-y-1">
+                <div class="space-y-1" id="edit-stock-group">
                     <label class="text-[9px] font-black text-white/20 uppercase ml-4">Tipo de Inventario</label>
                     <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
                         <input type="checkbox" id="edit-item-is-unlimited" onchange="toggleEditStockDisplay(this.checked)" class="w-5 h-5 accent-cyan">
@@ -396,7 +409,7 @@
                     <input type="number" id="create-item-price" placeholder="0" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-black text-2xl outline-none focus:border-cyan text-white">
                 </div>
 
-                <div class="space-y-1">
+                <div class="space-y-1" id="create-category-group">
                     <label class="text-[9px] font-black text-white/20 uppercase ml-4">Categoría</label>
                     <select id="create-item-category" class="w-full bg-charcoal border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan">
                         <option value="bebidas">Bebidas</option>
@@ -406,7 +419,20 @@
                     </select>
                 </div>
 
-                <div class="space-y-1">
+                <!-- Estimated Duration (Visible for services) -->
+                <div id="create-duration-group" class="hidden space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Duración Estimada</label>
+                    <select id="create-item-duration" class="w-full bg-charcoal border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan">
+                        <option value="15">15 minutos</option>
+                        <option value="30" selected>30 minutos</option>
+                        <option value="45">45 minutos</option>
+                        <option value="60">1 hora</option>
+                        <option value="90">1.5 horas</option>
+                        <option value="120">2 horas</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1" id="create-gacha-group">
                     <label class="text-[9px] font-black text-white/20 uppercase ml-4">Promoción Gacha (Lotería)</label>
                     <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
                         <input type="checkbox" id="create-item-gacha-promo" class="w-5 h-5 accent-cyan">
@@ -415,7 +441,7 @@
                 </div>
 
                 <!-- STOCK CONTROLS -->
-                <div class="space-y-1">
+                <div class="space-y-1" id="create-stock-group">
                     <label class="text-[9px] font-black text-white/20 uppercase ml-4">Tipo de Inventario</label>
                     <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
                         <input type="checkbox" id="create-item-is-unlimited" checked onchange="toggleCreateStockDisplay(this.checked)" class="w-5 h-5 accent-cyan">
@@ -471,8 +497,37 @@
                     </div>
                 </div>
 
+                <!-- BOOKING RULES (Visible for services) -->
+                <div id="sett-booking-rules-group" class="hidden border-t border-white/5 pt-4 space-y-3">
+                    <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-2">Reglas de Reserva de Citas</p>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2 block mb-1.5">Antelación Mínima para Reservar</label>
+                            <select id="sett-booking-lead-time" class="w-full bg-charcoal border border-white/10 p-3.5 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                                <option value="1">1 hora antes</option>
+                                <option value="2">2 horas antes</option>
+                                <option value="4" selected>4 horas antes</option>
+                                <option value="12">12 horas antes</option>
+                                <option value="24">24 horas antes (1 día)</option>
+                                <option value="48">48 horas antes (2 días)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2 block mb-1.5">Tiempo de Holgura entre Citas (Buffer)</label>
+                            <select id="sett-booking-buffer" class="w-full bg-charcoal border border-white/10 p-3.5 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                                <option value="0" selected>Sin tiempo de holgura</option>
+                                <option value="5">5 minutos</option>
+                                <option value="10">10 minutos</option>
+                                <option value="15">15 minutos</option>
+                                <option value="20">20 minutos</option>
+                                <option value="30">30 minutos</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- GACHA CAMPAIGN SECTION -->
-                <div class="border-t border-white/5 pt-4 space-y-3">
+                <div id="sett-gacha-group" class="border-t border-white/5 pt-4 space-y-3">
                     <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-2">Viernes de Gacha (Marketing en Especie)</p>
                     <div class="space-y-3">
                         <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
@@ -508,18 +563,18 @@
                 </div>
 
                 <!-- REDEEM VOUCHER SECTION -->
-                <div class="border-t border-white/5 pt-4 space-y-3">
+                <div id="sett-qr-group" class="border-t border-white/5 pt-4 space-y-3">
                     <div class="flex justify-between items-center mb-1">
                         <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em]">Redimir Premios de Cliente</p>
                         <button onclick="toggleCustomerQRScanner()" id="btn-toggle-qr-scan" class="text-[9px] font-black text-cyan uppercase bg-cyan/10 border border-cyan/20 px-3 py-1 rounded-xl active:scale-95 transition-all">Escanear QR 📷</button>
                     </div>
-
+ 
                     <!-- Scan camera preview container -->
                     <div id="sett-qr-reader-container" class="hidden space-y-2">
                         <div id="sett-qr-reader" class="w-full bg-black/40 rounded-2xl overflow-hidden border border-white/10" style="min-height: 200px;"></div>
                         <p class="text-[9px] text-white/40 text-center font-bold">Apunta al código QR de membresía del cliente.</p>
                     </div>
-
+ 
                     <!-- Scanned Customer summary card & active vouchers list -->
                     <div id="sett-scanned-customer-panel" class="hidden space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
                         <div class="flex items-center justify-between border-b border-white/5 pb-2">
@@ -538,7 +593,7 @@
                             </div>
                         </div>
                     </div>
-
+ 
                     <!-- Manual input fallback -->
                     <div class="flex gap-2">
                         <input type="text" id="sett-gacha-claim-code" placeholder="Código Manual (QL-XXXX-XXXX)" class="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
@@ -1312,6 +1367,29 @@
             document.getElementById('edit-item-stock-quantity').value = item.stock_quantity !== undefined ? item.stock_quantity : '';
             document.getElementById('edit-item-default-stock').value = item.default_daily_stock !== undefined ? item.default_daily_stock : '';
 
+            // Service checks
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
+            const titleEl = document.querySelector('#edit-modal h3');
+            const gachaGroup = document.getElementById('edit-gacha-group');
+            const stockGroup = document.getElementById('edit-stock-group');
+            const durationGroup = document.getElementById('edit-duration-group');
+
+            if (isService) {
+                if (titleEl) titleEl.innerText = "Editar Servicio";
+                if (gachaGroup) gachaGroup.classList.add('hidden');
+                if (stockGroup) stockGroup.classList.add('hidden');
+                if (durationGroup) durationGroup.classList.remove('hidden');
+                document.getElementById('edit-item-duration').value = item.duration || "30";
+            } else {
+                if (titleEl) titleEl.innerText = "Editar Item";
+                if (gachaGroup) gachaGroup.classList.remove('hidden');
+                if (stockGroup) stockGroup.classList.remove('hidden');
+                if (durationGroup) durationGroup.classList.add('hidden');
+            }
+
             // Reset batch inputs
             document.getElementById('edit-batch-name').value = '';
             document.getElementById('edit-batch-qty').value = '';
@@ -1331,6 +1409,11 @@
             const stockQty = document.getElementById('edit-item-stock-quantity').value;
             const defaultStock = document.getElementById('edit-item-default-stock').value;
 
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+            const duration = isService ? document.getElementById('edit-item-duration').value : null;
+
             const btn = document.getElementById('btn-save-item');
             btn.innerText = "Guardando..."; btn.disabled = true;
 
@@ -1342,10 +1425,11 @@
                         itemId: id, 
                         price, 
                         available,
-                        is_unlimited: isUnlimited,
-                        is_gacha_promo: isGachaPromo,
-                        stock_quantity: stockQty,
-                        default_daily_stock: defaultStock
+                        is_unlimited: isService ? true : isUnlimited,
+                        is_gacha_promo: isService ? false : isGachaPromo,
+                        stock_quantity: isService ? null : stockQty,
+                        default_daily_stock: isService ? null : defaultStock,
+                        duration
                     })
                 });
 
@@ -1429,6 +1513,36 @@
             document.getElementById('create-editor-controls').classList.add('hidden');
             document.getElementById('create-camera-container').classList.add('hidden');
             document.getElementById('btn-create-camera-toggle').innerText = "Abrir Cámara 📷";
+
+            // Service Adaptation
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
+            const titleEl = document.querySelector('#create-modal h3');
+            const submitBtn = document.getElementById('btn-create-item');
+            const catGroup = document.getElementById('create-category-group');
+            const stockGroup = document.getElementById('create-stock-group');
+            const gachaGroup = document.getElementById('create-gacha-group');
+            const durationGroup = document.getElementById('create-duration-group');
+
+            if (isService) {
+                if (titleEl) titleEl.innerText = "Nuevo Servicio";
+                if (submitBtn) submitBtn.innerText = "Crear Servicio";
+                if (catGroup) catGroup.classList.add('hidden');
+                if (stockGroup) stockGroup.classList.add('hidden');
+                if (gachaGroup) gachaGroup.classList.add('hidden');
+                if (durationGroup) durationGroup.classList.remove('hidden');
+                document.getElementById('create-item-category').value = 'servicios';
+            } else {
+                if (titleEl) titleEl.innerText = "Nuevo Producto";
+                if (submitBtn) submitBtn.innerText = "Crear Producto";
+                if (catGroup) catGroup.classList.remove('hidden');
+                if (stockGroup) stockGroup.classList.remove('hidden');
+                if (gachaGroup) gachaGroup.classList.remove('hidden');
+                if (durationGroup) durationGroup.classList.add('hidden');
+            }
+
             document.getElementById('create-modal').classList.remove('hidden');
         }
 
@@ -1587,6 +1701,11 @@
             const defaultStock = document.getElementById('create-item-default-stock').value;
             const isGachaPromo = document.getElementById('create-item-gacha-promo').checked;
 
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+            const duration = isService ? document.getElementById('create-item-duration').value : null;
+
             if (!name || !price) return alert("El nombre y el precio son obligatorios.");
 
             const btn = document.getElementById('btn-create-item');
@@ -1600,11 +1719,12 @@
                         restaurant_id: session.restaurantId,
                         name,
                         price,
-                        category,
-                        is_unlimited: isUnlimited,
-                        default_daily_stock: defaultStock,
-                        is_gacha_promo: isGachaPromo,
-                        imageBase64: createImgBase64
+                        category: isService ? 'servicios' : category,
+                        is_unlimited: isService ? true : isUnlimited,
+                        default_daily_stock: isService ? null : defaultStock,
+                        is_gacha_promo: isService ? false : isGachaPromo,
+                        imageBase64: createImgBase64,
+                        duration
                     })
                 });
 
@@ -1648,6 +1768,32 @@
             }
             document.getElementById('sett-gacha-quantity').value = campaign.quantity || 5;
             document.getElementById('sett-gacha-automate').checked = !!campaign.automateWeekly;
+
+            // Service Adaptations
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
+            const titleEl = document.querySelector('#settings-modal h3');
+            const gachaGroup = document.getElementById('sett-gacha-group');
+            const qrGroup = document.getElementById('sett-qr-group');
+            const bookingGroup = document.getElementById('sett-booking-rules-group');
+
+            if (isService) {
+                if (titleEl) titleEl.innerText = "Reglas de Cita";
+                if (gachaGroup) gachaGroup.classList.add('hidden');
+                if (qrGroup) qrGroup.classList.add('hidden');
+                if (bookingGroup) bookingGroup.classList.remove('hidden');
+
+                // Load booking lead time and buffer
+                document.getElementById('sett-booking-lead-time').value = settings.booking_lead_time || "4";
+                document.getElementById('sett-booking-buffer').value = settings.booking_buffer || "0";
+            } else {
+                if (titleEl) titleEl.innerText = "Ajustes de Pago";
+                if (gachaGroup) gachaGroup.classList.remove('hidden');
+                if (qrGroup) qrGroup.classList.remove('hidden');
+                if (bookingGroup) bookingGroup.classList.add('hidden');
+            }
 
             // Populate Operating Hours
             const hours = settings.operating_hours || {};
@@ -1725,6 +1871,13 @@
                 open_days: openDays
             };
 
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
+            const bookingLeadTime = isService ? document.getElementById('sett-booking-lead-time').value : undefined;
+            const bookingBuffer = isService ? document.getElementById('sett-booking-buffer').value : undefined;
+
             try {
                 const res = await fetch('/api/store?action=partner_update_settings', {
                     method: 'POST',
@@ -1734,7 +1887,9 @@
                         acceptedPayments,
                         bankDetails,
                         gachaCampaign,
-                        operatingHours
+                        operatingHours,
+                        bookingLeadTime,
+                        bookingBuffer
                     })
                 });
 
@@ -1952,6 +2107,40 @@
         };
 
         function openUgcModal() {
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
+            const titleEl = document.querySelector('#ugc-modal h3');
+            const descEl = document.querySelector('#ugc-modal p.text-[9px]');
+            const rewardTypeSelect = document.getElementById('ugc-reward-type');
+            const generateBtn = document.getElementById('btn-generate-ugc');
+
+            if (isService) {
+                if (titleEl) titleEl.innerText = "Promociones y Enlaces de Reserva";
+                if (descEl) descEl.innerText = "Genera enlaces de reserva directa para tus servicios o cupones de descuento para compartir en tus redes o WhatsApp.";
+                if (rewardTypeSelect) {
+                    rewardTypeSelect.innerHTML = `
+                        <option value="booking_link" class="bg-charcoal text-white">Enlace de Reserva Directo</option>
+                        <option value="discount" class="bg-charcoal text-white">Cupón de Descuento (Lps)</option>
+                    `;
+                }
+                if (generateBtn) generateBtn.innerText = "Generar Enlace / Promo 🔗";
+                toggleUgcValueLabel('booking_link');
+            } else {
+                if (titleEl) titleEl.innerText = "Regalos UGC por DMs";
+                if (descEl) descEl.innerText = "Genera enlaces de recompensa únicos para enviárselos por DMs (Instagram/TikTok) a los clientes que compartan contenido (UGC) sobre tu negocio.";
+                if (rewardTypeSelect) {
+                    rewardTypeSelect.innerHTML = `
+                        <option value="points" class="bg-charcoal text-white">Rico Points (Saldo)</option>
+                        <option value="gacha_spin" class="bg-charcoal text-white">Giro Ruleta Gacha</option>
+                        <option value="item" class="bg-charcoal text-white">Producto Gratis</option>
+                    `;
+                }
+                if (generateBtn) generateBtn.innerText = "Generar Enlaces de Regalo 🎁";
+                toggleUgcValueLabel('points');
+            }
+
             document.getElementById('ugc-modal').classList.remove('hidden');
             renderUgcLinks();
         }
@@ -1964,7 +2153,15 @@
             const label = document.getElementById('ugc-val-label');
             const container = document.getElementById('ugc-val-input-container');
             
-            if (val === 'gacha_spin') {
+            if (val === 'booking_link') {
+                label.innerText = "Selecciona el Servicio";
+                const options = `<option value="all" class="bg-charcoal text-white">Todos los Servicios</option>` + 
+                                menuItems.map(item => `<option value="${item.id}" class="bg-charcoal text-white">${item.name}</option>`).join('');
+                container.innerHTML = `<select id="ugc-reward-value" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">${options}</select>`;
+            } else if (val === 'discount') {
+                label.innerText = "Descuento (Lempiras)";
+                container.innerHTML = `<input type="number" id="ugc-reward-value" value="200" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">`;
+            } else if (val === 'gacha_spin') {
                 label.innerText = "Equivalencia Puntos (Ej: 100)";
                 container.innerHTML = `<input type="number" id="ugc-reward-value" value="100" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">`;
             } else if (val === 'item') {
@@ -1987,7 +2184,58 @@
 
             if (!rewardValue || !count || !maxClaims) return alert("Completa todos los campos");
 
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (session?.user?.category || '').toLowerCase().includes(keyword);
+            });
+
             btn.innerText = "Generando..."; btn.disabled = true;
+
+            // Handle Direct Booking Links (Local creation + save to DB settings)
+            if (isService && rewardType === 'booking_link') {
+                try {
+                    const serviceSelect = document.getElementById('ugc-reward-value');
+                    const serviceId = serviceSelect.value;
+                    const serviceName = serviceId === 'all' ? 'Todos los Servicios' : serviceSelect.options[serviceSelect.selectedIndex].text;
+
+                    const key = 'PROMO_LINK_' + Math.floor(100000 + Math.random() * 900000);
+                    const claimUrl = serviceId === 'all' 
+                        ? `${window.location.origin}/quimieats.html?id=${session.restaurantId}`
+                        : `${window.location.origin}/quimieats.html?id=${session.restaurantId}&service=${serviceId}`;
+
+                    if (!session.user.settings) session.user.settings = {};
+                    if (!session.user.settings.ugc_codes) session.user.settings.ugc_codes = {};
+
+                    session.user.settings.ugc_codes[key] = {
+                        reward_type: 'booking_link',
+                        reward_value: serviceName,
+                        max_claims: 99999,
+                        is_redeemed: false,
+                        claims: [],
+                        custom_url: claimUrl
+                    };
+
+                    await fetch('/api/store?action=partner_update_settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            restaurantId: session.restaurantId,
+                            ugc_codes: session.user.settings.ugc_codes
+                        })
+                    });
+
+                    alert("¡Éxito! Generaste un nuevo enlace de reserva directo.");
+                    renderUgcLinks();
+                } catch(e) {
+                    console.error(e);
+                    alert("Error guardando enlace de promoción");
+                } finally {
+                    btn.innerText = "Generar Enlace / Promo 🔗"; btn.disabled = false;
+                }
+                return;
+            }
+
+            // Normal claim code creation (For discounts, translate type to points)
+            const finalRewardType = rewardType === 'discount' ? 'points' : rewardType;
 
             try {
                 const res = await fetch('/api/store?action=partner_generate_ugc_codes', {
@@ -1995,7 +2243,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         restaurantId: session.restaurantId,
-                        rewardType,
+                        rewardType: finalRewardType,
                         rewardValue,
                         maxClaims: parseInt(maxClaims),
                         count: parseInt(count)
@@ -2004,13 +2252,13 @@
 
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    alert(`¡Éxito! Generaste ${count} nuevos enlaces de regalo.`);
+                    alert(`¡Éxito! Generaste ${count} nuevos cupones.`);
                     if (!session.user.settings) session.user.settings = {};
                     if (!session.user.settings.ugc_codes) session.user.settings.ugc_codes = {};
                     
                     data.codes.forEach(c => {
                         session.user.settings.ugc_codes[c] = {
-                            reward_type: rewardType,
+                            reward_type: rewardType, // discount or other
                             reward_value: rewardValue,
                             max_claims: parseInt(maxClaims),
                             is_redeemed: false,
@@ -2026,7 +2274,8 @@
                 console.error(e);
                 alert("Error de red");
             } finally {
-                btn.innerText = "Generar Enlaces de Regalo 🎁"; btn.disabled = false;
+                btn.innerText = isService ? "Generar Enlace / Promo 🔗" : "Generar Enlaces de Regalo 🎁";
+                btn.disabled = false;
             }
         }
 
@@ -2042,24 +2291,31 @@
 
             container.innerHTML = keys.slice().reverse().map(k => {
                 const item = codes[k];
-                const claimUrl = `${window.location.origin}/claim.html?code=${k}`;
-                const max = parseInt(item.max_claims) || 1;
-                const claimsCount = (item.claims || []).length;
-                const statusLabel = item.is_redeemed || claimsCount >= max ? 'Agotado' : 'Activo';
-                const statusColor = item.is_redeemed || claimsCount >= max ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400';
+                const isBookingLink = item.reward_type === 'booking_link';
+                const claimUrl = isBookingLink ? item.custom_url : `${window.location.origin}/claim.html?code=${k}`;
+                const max = isBookingLink ? 'Ilimitado' : (parseInt(item.max_claims) || 1);
+                const claimsCount = isBookingLink ? 0 : ((item.claims || []).length);
+                const statusLabel = isBookingLink ? 'Enlace Activo' : (item.is_redeemed || claimsCount >= max ? 'Agotado' : 'Activo');
+                const statusColor = isBookingLink ? 'bg-cyan/20 text-cyan' : (item.is_redeemed || claimsCount >= max ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400');
                 
                 let prizeInfo = `Recompensa: L. ${item.reward_value}`;
                 if (item.reward_type === 'gacha_spin') {
                     prizeInfo = `Recompensa: Giro Gacha (Equiv. ${item.reward_value} pts)`;
+                } else if (item.reward_type === 'booking_link') {
+                    prizeInfo = `Reserva Directa: ${item.reward_value}`;
+                } else if (item.reward_type === 'discount') {
+                    prizeInfo = `Cupón Descuento: L. ${item.reward_value}`;
                 }
+
+                const displayName = isBookingLink ? 'PROMO' : k.split('_UGC_')[1];
 
                 return `
                 <div class="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between gap-4">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
-                            <span class="text-[9px] font-mono font-black text-white truncate max-w-[120px]">${k.split('_UGC_')[1]}</span>
+                            <span class="text-[9px] font-mono font-black text-white truncate max-w-[120px]">${displayName}</span>
                             <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${statusColor}">
-                                ${statusLabel} (${claimsCount}/${max})
+                                ${statusLabel} ${isBookingLink ? '' : `(${claimsCount}/${max})`}
                             </span>
                         </div>
                         <p class="text-[9px] text-white/40 font-bold uppercase mt-1">${prizeInfo}</p>
