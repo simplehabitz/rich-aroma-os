@@ -1,0 +1,2463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Socio OS | QuimiEats</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { cyan: '#00F2FF', dark: '#0D0D0D', charcoal: '#1A1A1A', gold: '#C9A66B' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0D0D0D; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- LOGIN OVERLAY -->
+    <div id="login-overlay" class="fixed inset-0 bg-dark z-[200] flex items-center justify-center p-6">
+        <div class="max-w-sm w-full space-y-8 text-center">
+            <h1 class="text-4xl font-black italic tracking-tighter text-cyan">QUIMI<span class="text-white">EATS</span></h1>
+            <h2 class="text-xs uppercase tracking-widest text-white/50 font-bold">Partner OS</h2>
+            <div class="glass p-8 rounded-[3rem] space-y-6 shadow-2xl">
+                <div class="space-y-4 text-left">
+                    <div>
+                        <label class="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-2 ml-4">ID de Negocio</label>
+                        <input type="text" id="login-res-id" placeholder="ej: tonys-pizza" class="w-full bg-white/5 border border-white/10 p-5 rounded-3xl font-bold text-white outline-none focus:border-cyan transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-2 ml-4">PIN</label>
+                        <input type="password" id="login-pin" maxlength="4" placeholder="****" class="w-full bg-white/5 border border-white/10 p-5 rounded-3xl text-center text-3xl tracking-[1em] font-black text-white outline-none focus:border-cyan transition-all">
+                    </div>
+                </div>
+                <button onclick="handleLogin()" id="btn-login" class="w-full bg-cyan text-dark py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg shadow-cyan/20 active:scale-95 transition-all">Acceder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="app-container" class="hidden flex-1 flex overflow-hidden">
+        
+        <!-- LEFT: Categories -->
+        <div id="partner-left-col" class="w-24 bg-charcoal border-r border-white/5 flex flex-col items-center py-6 gap-4 overflow-y-auto hide-scroll shrink-0">
+            <div class="w-12 h-12 bg-cyan/20 rounded-full flex items-center justify-center text-cyan mb-4 shadow-lg shadow-cyan/10">
+                <i class="fas fa-store"></i>
+            </div>
+            <div id="category-list" class="flex flex-col gap-4 w-full px-2">
+                <!-- Categories -->
+            </div>
+            <div class="mt-auto pt-4 border-t border-white/5 w-full flex justify-center">
+                <button onclick="logout()" class="w-12 h-12 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all flex items-center justify-center">
+                    <i class="fas fa-power-off"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- CENTER: Menu & POS -->
+        <div id="partner-center-col" class="flex-1 flex flex-col relative bg-[#121212]">
+            <header class="h-20 border-b border-white/5 px-8 flex items-center justify-between shrink-0 glass z-10">
+                <div class="flex items-center gap-3">
+                    <img id="header-res-logo" src="/favicon.png" class="w-10 h-10 rounded-xl object-cover border border-white/10 hidden">
+                    <div>
+                        <h2 id="header-res-name" class="text-2xl font-black uppercase tracking-tighter">Negocio</h2>
+                        <p id="header-user-name" class="text-[10px] text-cyan font-bold uppercase tracking-widest">Usuario</p>
+                    </div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <button onclick="openCreateModal()" class="px-6 h-12 bg-cyan text-dark rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-cyan/20 active:scale-95 transition-all"><i class="fas fa-plus mr-2"></i> Nuevo Producto</button>
+                    <button onclick="openUgcModal()" title="Campañas UGC / Regalos por DMs" class="w-12 h-12 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-all flex items-center justify-center"><i class="fas fa-gift"></i></button>
+                    <button onclick="openSettingsModal()" title="Ajustes de Negocio" class="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all"><i class="fas fa-cog"></i></button>
+                    <button onclick="refreshData()" class="w-12 h-12 rounded-2xl bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all"><i class="fas fa-sync-alt"></i></button>
+                </div>
+            </header>
+
+            <div class="flex-1 overflow-y-auto p-8 hide-scroll" id="menu-grid">
+                <!-- Menu Items -->
+            </div>
+
+            <!-- SCHEDULER WORKSPACE (For Service Providers) -->
+            <div id="scheduler-workspace" class="hidden flex-1 flex flex-col overflow-hidden bg-dark">
+                <!-- Top Tabs Bar -->
+                <div class="h-14 border-b border-white/5 px-8 flex items-center justify-between shrink-0 bg-black/20 z-10">
+                    <div class="flex gap-6">
+                        <button onclick="setSchedulerTab('agenda')" id="tab-agenda" class="text-xs font-black uppercase tracking-widest border-b-2 border-cyan pb-4 pt-4 text-white">
+                            <i class="fas fa-list mr-1"></i> Agenda de Citas
+                        </button>
+                        <button onclick="setSchedulerTab('availability')" id="tab-availability" class="text-xs font-black uppercase tracking-widest border-b-2 border-transparent pb-4 pt-4 text-white/40 hover:text-white transition-all">
+                            <i class="fas fa-clock mr-1"></i> Horarios y Disponibilidad
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab 1: Agenda view -->
+                <div id="view-agenda" class="flex-1 flex overflow-hidden">
+                    <!-- Left Strip: Calendar Days -->
+                    <div class="w-64 border-r border-white/5 bg-charcoal/50 flex flex-col shrink-0">
+                        <div class="p-5 border-b border-white/5">
+                            <span class="text-[8px] uppercase tracking-widest font-black text-white/30 block mb-3">Mes Actual</span>
+                            <div class="flex items-center justify-between">
+                                <h4 id="calendar-month-label" class="text-xs font-black uppercase tracking-wider text-white">-</h4>
+                                <div class="flex gap-1">
+                                    <button onclick="prevWeek()" class="w-6 h-6 bg-white/5 hover:bg-white/10 rounded text-xs text-white/50 hover:text-white flex items-center justify-center"><i class="fas fa-chevron-left"></i></button>
+                                    <button onclick="nextWeek()" class="w-6 h-6 bg-white/5 hover:bg-white/10 rounded text-xs text-white/50 hover:text-white flex items-center justify-center"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="calendar-days-list" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scroll">
+                            <!-- Generated week days list -->
+                        </div>
+                    </div>
+
+                    <!-- Right List: Day's Appointments Details -->
+                    <div class="flex-1 flex flex-col overflow-hidden bg-black/10">
+                        <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
+                            <div>
+                                <h3 id="agenda-day-title" class="font-black text-xs uppercase tracking-wider text-white">Citas del Día</h3>
+                                <p id="agenda-day-subtitle" class="text-[9px] text-cyan font-bold uppercase tracking-widest mt-0.5">-</p>
+                            </div>
+                            <span id="agenda-day-count" class="bg-cyan text-dark px-2 py-0.5 rounded text-[10px] font-black">0 Citas</span>
+                        </div>
+                        <div id="agenda-appointments-list" class="flex-1 overflow-y-auto p-6 space-y-4 hide-scroll">
+                            <!-- Appointments for the selected day list here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Availability view -->
+                <div id="view-availability" class="hidden flex-1 overflow-y-auto p-8 space-y-6 hide-scroll">
+                    <div class="max-w-2xl bg-charcoal/50 border border-white/5 p-8 rounded-[2.5rem] space-y-6">
+                        <div>
+                            <h3 class="text-lg font-black uppercase tracking-tight text-white">Configuración de Disponibilidad</h3>
+                            <p class="text-xs text-white/40 mt-1">Define los días de la semana y los rangos de horas durante los cuales los clientes pueden solicitar citas.</p>
+                        </div>
+
+                        <div class="space-y-4 pt-4 border-t border-white/5">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-[9px] font-black text-white/40 uppercase tracking-widest block mb-2">Hora de Inicio General</label>
+                                    <input type="time" id="avail-start-time" value="08:00" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-[9px] font-black text-white/40 uppercase tracking-widest block mb-2">Hora de Fin General</label>
+                                    <input type="time" id="avail-end-time" value="17:00" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan text-sm">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[9px] font-black text-white/40 uppercase tracking-widest block mb-2">Días Laborales Disponibles</label>
+                                <div class="grid grid-cols-7 gap-2">
+                                    <button onclick="toggleAvailDay(1)" id="day-opt-1" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark">Lun</button>
+                                    <button onclick="toggleAvailDay(2)" id="day-opt-2" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark">Mar</button>
+                                    <button onclick="toggleAvailDay(3)" id="day-opt-3" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark">Mie</button>
+                                    <button onclick="toggleAvailDay(4)" id="day-opt-4" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark">Jue</button>
+                                    <button onclick="toggleAvailDay(5)" id="day-opt-5" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark">Vie</button>
+                                    <button onclick="toggleAvailDay(6)" id="day-opt-6" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-white/5 text-white/40">Sab</button>
+                                    <button onclick="toggleAvailDay(0)" id="day-opt-0" class="py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-white/5 text-white/40">Dom</button>
+                                </div>
+                            </div>
+
+                            <div class="pt-6">
+                                <button onclick="saveAvailabilitySettings()" class="bg-cyan text-dark px-6 py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-cyan/20 active:scale-95 transition-all">Guardar Configuración</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Sidebar (Cart & Live Orders) -->
+        <div id="partner-right-col" class="w-[400px] bg-charcoal border-l border-white/5 flex flex-col shrink-0">
+            
+            <!-- CART SECTION -->
+            <div id="pos-cart-panel" class="flex flex-col max-h-[50%] border-b border-white/5">
+                <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20">
+                    <h3 class="font-black uppercase tracking-widest text-sm text-cyan"><i class="fas fa-shopping-cart mr-2"></i> POS (Caja)</h3>
+                    <button onclick="clearCart()" class="text-white/20 hover:text-red-400 text-xs font-bold uppercase"><i class="fas fa-trash"></i></button>
+                </div>
+                <div id="cart-items" class="flex-1 overflow-y-auto p-4 space-y-2 hide-scroll">
+                    <div class="text-center py-10 text-white/20 text-xs font-bold uppercase italic">Venta Directa Vacía</div>
+                </div>
+                <div class="p-6 bg-black/40 space-y-4">
+                    <div class="flex justify-between items-end">
+                        <span class="text-xs font-bold uppercase tracking-widest text-white/50">Total Cobrar</span>
+                        <span id="cart-total" class="text-3xl font-black text-white italic">L 0</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="checkout('cash')" class="flex-1 bg-green-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-lg shadow-green-500/20"><i class="fas fa-money-bill-wave mr-1"></i> Efectivo</button>
+                        <button onclick="checkout('transfer')" class="flex-1 bg-blue-500 text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-lg shadow-blue-500/20"><i class="fas fa-university mr-1"></i> Transf.</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE ORDERS SECTION -->
+            <div id="orders-feed-panel" class="flex-1 flex flex-col overflow-hidden bg-black/10">
+                <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/40">
+                    <h3 id="orders-feed-title" class="font-black uppercase tracking-widest text-sm text-gold"><i class="fas fa-bell mr-2"></i> Pedidos Activos</h3>
+                    <span id="order-count" class="bg-gold text-dark px-2 py-0.5 rounded text-[10px] font-black">0</span>
+                </div>
+                <div id="live-orders" class="flex-1 overflow-y-auto p-4 space-y-4 hide-scroll">
+                    <!-- Orders inject here -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ITEM EDIT MODAL -->
+    <div id="edit-modal" class="hidden fixed inset-0 bg-dark/95 backdrop-blur-md z-[300] flex items-center justify-center p-6 overflow-y-auto">
+        <div class="bg-charcoal w-full max-w-sm rounded-[3rem] p-8 space-y-6 shadow-2xl border border-white/5 my-auto max-h-[90vh] overflow-y-auto hide-scroll">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-black uppercase tracking-tight text-white">Editar Item</h3>
+                <button onclick="closeEditModal()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <input type="hidden" id="edit-item-id">
+            
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Disponibilidad</label>
+                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="edit-item-available" class="sr-only peer">
+                            <div class="w-11 h-6 bg-red-500/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                        <span id="edit-item-status-text" class="text-xs font-black uppercase tracking-widest text-green-500">Activo</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Promoción Gacha (Lotería)</label>
+                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="edit-item-gacha-promo" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Patrocinar en Ruleta QuimiLoto</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Precio (Lps)</label>
+                    <input type="number" id="edit-item-price" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-black text-2xl outline-none focus:border-cyan text-white">
+                </div>
+
+                <!-- STOCK CONTROLS -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Tipo de Inventario</label>
+                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+                        <input type="checkbox" id="edit-item-is-unlimited" onchange="toggleEditStockDisplay(this.checked)" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Ilimitado (Cafés, bebidas)</span>
+                    </div>
+                </div>
+
+                <div id="edit-stock-container" class="hidden space-y-4 bg-black/20 p-4 rounded-3xl border border-white/5">
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-white/30 uppercase ml-2">Stock Disponible Actual</label>
+                        <input type="number" id="edit-item-stock-quantity" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl font-bold text-sm text-white">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[8px] font-black text-white/30 uppercase ml-2">Autoreabastecimiento Diario Base</label>
+                        <input type="number" id="edit-item-default-stock" placeholder="Ninguno (vacío)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl font-bold text-sm text-white">
+                    </div>
+
+                    <!-- BATCHES SECTION -->
+                    <div class="border-t border-white/5 pt-4 space-y-3">
+                        <p class="text-[8px] font-black text-cyan uppercase tracking-widest">Registrar Nuevo Lote Horneado</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="edit-batch-name" placeholder="Ej: Lote Mañana" class="bg-white/5 border border-white/10 p-3 rounded-xl text-xs text-white">
+                            <input type="number" id="edit-batch-qty" placeholder="Cant" class="bg-white/5 border border-white/10 p-3 rounded-xl text-xs text-white">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[7px] font-black text-white/20 uppercase ml-2">Horas de caducidad (Ej: 24 para repostería, 72 para jugos)</label>
+                            <input type="number" id="edit-batch-hours" placeholder="Horas para vencer (Ej: 24)" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs text-white">
+                        </div>
+                        <button onclick="submitNewBatch()" id="btn-add-batch" class="w-full bg-gold/20 text-gold border border-gold/30 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest active:scale-95 transition-all">Agregar Lote en POS</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-4">
+                <button onclick="deleteItem()" class="px-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all"><i class="fas fa-trash-alt"></i></button>
+                <button onclick="submitItemEdit()" id="btn-save-item" class="flex-1 bg-cyan text-dark py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 shadow-xl transition-all">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ITEM CREATE MODAL -->
+    <div id="create-modal" class="hidden fixed inset-0 bg-dark/95 backdrop-blur-md z-[300] flex items-center justify-center p-6 overflow-y-auto">
+        <div class="bg-charcoal w-full max-w-sm rounded-[3rem] p-8 space-y-6 shadow-2xl border border-white/5 my-auto max-h-[90vh] overflow-y-auto hide-scroll">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-black uppercase tracking-tight text-white">Nuevo Producto</h3>
+                <button onclick="closeCreateModal()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Image selector -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center px-4">
+                        <label class="text-[9px] font-black text-white/20 uppercase">Imagen</label>
+                        <button onclick="toggleCreateCamera()" id="btn-create-camera-toggle" class="text-[9px] font-black text-cyan uppercase tracking-wider hover:underline bg-transparent outline-none border-none cursor-pointer">Abrir Cámara 📷</button>
+                    </div>
+                    <div id="create-camera-container" class="hidden w-full relative">
+                        <video id="create-video-stream" class="w-full h-48 object-cover rounded-2xl border border-white/10" autoplay playsinline></video>
+                        <button onclick="captureCreatePhoto()" class="absolute bottom-2 left-1/2 -translate-x-1/2 px-4 py-2 bg-cyan text-dark font-black text-[10px] uppercase tracking-wider rounded-xl shadow-lg active:scale-95 transition-all">Tomar Foto 📸</button>
+                    </div>
+                    <div id="create-img-preview" class="w-full h-32 bg-white/5 rounded-2xl border border-dashed border-white/10 flex items-center justify-center overflow-hidden cursor-pointer" onclick="document.getElementById('create-file').click()">
+                        <i class="fas fa-camera text-2xl text-white/10"></i>
+                    </div>
+                    <input type="file" id="create-file" class="hidden" accept="image/*" onchange="handleCreateImage(this)">
+                    
+                    <!-- Editor controls -->
+                    <div id="create-editor-controls" class="hidden space-y-2 p-4 bg-black/20 rounded-2xl border border-white/5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-[8px] font-black text-white/30 uppercase">Brillo</label>
+                            <input type="range" id="create-edit-brightness" min="50" max="150" value="100" class="w-2/3 accent-cyan" oninput="applyCreateFilters()">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="text-[8px] font-black text-white/30 uppercase">Contraste</label>
+                            <input type="range" id="create-edit-contrast" min="50" max="150" value="100" class="w-2/3 accent-cyan" oninput="applyCreateFilters()">
+                        </div>
+                        <div class="flex gap-2 pt-2">
+                            <button onclick="rotateCreateImage()" class="flex-1 py-2 bg-white/5 hover:bg-white/10 text-white font-black text-[9px] uppercase tracking-wider rounded-xl">Rotar 90° 🔄</button>
+                            <button onclick="describeCreateImageAI()" id="btn-create-ai-describe" class="flex-1 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 font-black text-[9px] uppercase tracking-wider rounded-xl"><i class="fas fa-magic mr-1"></i>IA Rellenar ✨</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Nombre</label>
+                    <input type="text" id="create-item-name" placeholder="Ej: Tres Leches, Jugo de Piña" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-bold outline-none focus:border-cyan text-white">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Precio (Lps)</label>
+                    <input type="number" id="create-item-price" placeholder="0" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-black text-2xl outline-none focus:border-cyan text-white">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Categoría</label>
+                    <select id="create-item-category" class="w-full bg-charcoal border border-white/10 p-4 rounded-2xl font-bold text-white outline-none focus:border-cyan">
+                        <option value="bebidas">Bebidas</option>
+                        <option value="comida">Comidas</option>
+                        <option value="reposteria">Repostería</option>
+                        <option value="jugos">Jugos</option>
+                    </select>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Promoción Gacha (Lotería)</label>
+                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="create-item-gacha-promo" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Patrocinar en Ruleta QuimiLoto</span>
+                    </div>
+                </div>
+
+                <!-- STOCK CONTROLS -->
+                <div class="space-y-1">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Tipo de Inventario</label>
+                    <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
+                        <input type="checkbox" id="create-item-is-unlimited" checked onchange="toggleCreateStockDisplay(this.checked)" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Ilimitado</span>
+                    </div>
+                </div>
+
+                <div id="create-stock-container" class="hidden space-y-2">
+                    <label class="text-[9px] font-black text-white/20 uppercase ml-4">Autoreabastecimiento Diario Base</label>
+                    <input type="number" id="create-item-default-stock" placeholder="Ej: 15" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl font-bold outline-none focus:border-cyan text-white">
+                </div>
+            </div>
+
+            <button onclick="submitItemCreate()" id="btn-create-item" class="w-full bg-cyan text-dark py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 shadow-xl transition-all">Crear Producto</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-dark/95 backdrop-blur-md z-[300] flex items-center justify-center p-6 overflow-y-auto">
+        <div class="bg-charcoal w-full max-w-sm rounded-[3rem] p-8 space-y-6 shadow-2xl border border-white/5 my-auto max-h-[90vh] overflow-y-auto hide-scroll">
+            <div class="flex justify-between items-center">
+                <h3 class="text-2xl font-black uppercase tracking-tight text-white">Ajustes de Pago</h3>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-2">Métodos de Pago Aceptados</p>
+                <div class="space-y-2">
+                    <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="sett-pay-cash" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Efectivo</span>
+                    </label>
+                    <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="sett-pay-transfer" onchange="toggleSettBankFields(this.checked)" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Transferencia</span>
+                    </label>
+                    <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="sett-pay-card" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Tarjeta</span>
+                    </label>
+                    <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                        <input type="checkbox" id="sett-pay-rico" class="w-5 h-5 accent-cyan">
+                        <span class="text-xs font-black uppercase tracking-widest text-white/70">Rico Cash</span>
+                    </label>
+                </div>
+
+                <div id="sett-bank-fields" class="hidden space-y-3 p-4 bg-black/20 rounded-2xl border border-white/5">
+                    <p class="text-[9px] font-black text-white/40 uppercase tracking-widest">Cuenta de Transferencia</p>
+                    <div class="space-y-2">
+                        <input type="text" id="sett-bank-name" placeholder="Banco (e.g. BAC, Occidente)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank-acc" placeholder="Número de Cuenta" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank-owner" placeholder="Nombre del Titular" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                    </div>
+                </div>
+
+                <!-- GACHA CAMPAIGN SECTION -->
+                <div class="border-t border-white/5 pt-4 space-y-3">
+                    <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-2">Viernes de Gacha (Marketing en Especie)</p>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 bg-white/5 p-4 rounded-2xl border border-white/10 cursor-pointer">
+                            <input type="checkbox" id="sett-gacha-active" class="w-5 h-5 accent-cyan">
+                            <span class="text-xs font-black uppercase tracking-widest text-white/70">Participar esta semana</span>
+                        </label>
+                        
+                        <div class="space-y-2">
+                            <div>
+                                <label class="text-[8px] font-black text-white/30 uppercase ml-2">Producto a Regalar</label>
+                                <select id="sett-gacha-item-id" class="w-full bg-charcoal border border-white/10 p-3.5 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                                    <option value="">Selecciona un producto...</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[8px] font-black text-white/30 uppercase ml-2">Cantidad (Stock Semanal)</label>
+                                    <input type="number" id="sett-gacha-quantity" placeholder="5" min="1" max="100" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                                </div>
+                                <div class="flex items-center justify-center pt-2">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" id="sett-gacha-automate" class="w-4 h-4 accent-cyan">
+                                        <span class="text-[9px] font-black uppercase tracking-wider text-white/50">Automatizar</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="text-[9px] text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 p-2.5 rounded-xl">
+                            ⚠️ Los cambios se cierran los jueves a medianoche. Las campañas quedan congeladas y activas a partir del viernes.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- REDEEM VOUCHER SECTION -->
+                <div class="border-t border-white/5 pt-4 space-y-3">
+                    <div class="flex justify-between items-center mb-1">
+                        <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em]">Redimir Premios de Cliente</p>
+                        <button onclick="toggleCustomerQRScanner()" id="btn-toggle-qr-scan" class="text-[9px] font-black text-cyan uppercase bg-cyan/10 border border-cyan/20 px-3 py-1 rounded-xl active:scale-95 transition-all">Escanear QR 📷</button>
+                    </div>
+
+                    <!-- Scan camera preview container -->
+                    <div id="sett-qr-reader-container" class="hidden space-y-2">
+                        <div id="sett-qr-reader" class="w-full bg-black/40 rounded-2xl overflow-hidden border border-white/10" style="min-height: 200px;"></div>
+                        <p class="text-[9px] text-white/40 text-center font-bold">Apunta al código QR de membresía del cliente.</p>
+                    </div>
+
+                    <!-- Scanned Customer summary card & active vouchers list -->
+                    <div id="sett-scanned-customer-panel" class="hidden space-y-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                        <div class="flex items-center justify-between border-b border-white/5 pb-2">
+                            <div>
+                                <h4 id="scan-cust-name" class="font-black text-xs text-white">Cliente</h4>
+                                <p id="scan-cust-phone" class="text-[9px] text-white/40 font-mono mt-0.5">Tel: --</p>
+                            </div>
+                            <div class="text-right">
+                                <span id="scan-cust-points" class="bg-cyan/15 border border-cyan/20 text-cyan text-[10px] font-black px-2.5 py-1 rounded-full">0 pts</span>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <span class="block text-[8px] font-black text-white/30 uppercase tracking-widest">Cupones Disponibles</span>
+                            <div id="scan-cust-vouchers-list" class="space-y-1.5 max-h-[150px] overflow-y-auto pr-1">
+                                <!-- Dynamically filled via scan -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Manual input fallback -->
+                    <div class="flex gap-2">
+                        <input type="text" id="sett-gacha-claim-code" placeholder="Código Manual (QL-XXXX-XXXX)" class="flex-1 bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <button onclick="redeemGachaVoucher()" id="btn-redeem-gacha" class="bg-cyan text-dark font-black text-[10px] px-4 rounded-2xl active:scale-95 transition-all">Validar</button>
+                    </div>
+                </div>
+
+                <!-- OPERATING HOURS SECTION -->
+                <div class="border-t border-white/5 pt-4 space-y-3">
+                    <p class="text-[10px] font-black text-cyan uppercase tracking-[0.2em] mb-2">Horario de Operación</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2">Apertura</label>
+                            <input type="time" id="sett-hours-open" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        </div>
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2">Cierre</label>
+                            <input type="time" id="sett-hours-close" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2">Prep Inicio (Pausa)</label>
+                            <input type="time" id="sett-hours-mid-start" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        </div>
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2">Prep Fin (Pausa)</label>
+                            <input type="time" id="sett-hours-mid-end" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2">
+                        <div>
+                            <label class="text-[8px] font-black text-white/30 uppercase ml-2">Último Pedido (minutos antes del cierre)</label>
+                            <input type="number" id="sett-hours-buffer" placeholder="ej: 15" min="0" max="60" class="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[8px] font-black text-white/30 uppercase ml-2 block mb-1">Días Laborales</label>
+                        <div class="flex flex-wrap gap-2">
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-1" class="accent-cyan"> Lun
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-2" class="accent-cyan"> Mar
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-3" class="accent-cyan"> Mié
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-4" class="accent-cyan"> Jue
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-5" class="accent-cyan"> Vie
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-6" class="accent-cyan"> Sáb
+                            </label>
+                            <label class="flex items-center gap-1 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer">
+                                <input type="checkbox" id="day-0" class="accent-cyan"> Dom
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="submitSettingsUpdate()" id="btn-save-settings" class="w-full bg-cyan text-dark py-5 rounded-2xl font-black uppercase tracking-widest active:scale-95 shadow-xl transition-all">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- UGC MODAL -->
+    <div id="ugc-modal" class="hidden fixed inset-0 bg-dark/95 backdrop-blur-md z-[300] flex items-center justify-center p-6 overflow-y-auto">
+        <div class="bg-charcoal w-full max-w-md rounded-[3rem] p-8 space-y-6 shadow-2xl border border-white/5 my-auto max-h-[90vh] overflow-y-auto hide-scroll">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center"><i class="fas fa-gift text-xs"></i></div>
+                    <h3 class="text-xl font-black uppercase tracking-tight text-white">Regalos UGC por DMs</h3>
+                </div>
+                <button onclick="closeUgcModal()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <p class="text-[9px] text-white/40 font-bold uppercase leading-relaxed">Genera enlaces de recompensa únicos para enviárselos por DMs (Instagram/TikTok) a los clientes que compartan contenido (UGC) sobre tu negocio.</p>
+            
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1.5 ml-2">Tipo de Regalo</label>
+                        <select id="ugc-reward-type" onchange="toggleUgcValueLabel(this.value)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">
+                            <option value="points" class="bg-charcoal text-white">Rico Points (Saldo)</option>
+                            <option value="gacha_spin" class="bg-charcoal text-white">Giro Ruleta Gacha</option>
+                            <option value="item" class="bg-charcoal text-white">Producto Gratis</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label id="ugc-val-label" class="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1.5 ml-2">Monto (Lempiras)</label>
+                        <div id="ugc-val-input-container">
+                            <input type="number" id="ugc-reward-value" value="30" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1.5 ml-2">Límite Ganadores (Max)</label>
+                        <input type="number" id="ugc-max-claims" value="1" placeholder="Ej: 1 o 10" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1.5 ml-2">Enlaces a Generar</label>
+                        <input type="number" id="ugc-code-count" value="5" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">
+                    </div>
+                </div>
+                
+                <button onclick="generateUgcCodes()" id="btn-generate-ugc" class="w-full bg-purple-600 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-purple-500 transition-all active:scale-95 shadow-lg shadow-purple-600/20">Generar Enlaces de Regalo 🎁</button>
+            </div>
+            
+            <div class="border-t border-white/5 pt-4 space-y-3">
+                <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest">Tus Enlaces Generados</p>
+                <div id="ugc-links-list" class="space-y-2 max-h-[250px] overflow-y-auto hide-scroll">
+                    <p class="text-center py-6 text-white/20 text-[9px] uppercase font-bold italic">No has generado enlaces aún</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODIFIER MODAL (Hidden by default) -->
+    <div id="modifier-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-center justify-center p-6">
+        <div class="glass w-full max-w-2xl h-[90vh] rounded-[2.5rem] flex flex-col overflow-hidden border border-white/10 animate-in fade-in duration-300">
+            <!-- Header -->
+            <div class="p-6 border-b border-white/5 flex justify-between items-center bg-black/20 shrink-0">
+                <div>
+                    <h2 class="text-2xl font-display font-black text-white uppercase tracking-tight" id="mod-item-name">Latte</h2>
+                    <p class="text-cyan font-mono text-lg font-bold" id="mod-item-price">L. 55.00</p>
+                </div>
+                <button onclick="closeModal()" class="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 text-white/40 hover:bg-red-500/20 hover:text-red-400 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Scrollable Groups container -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6 hide-scroll" id="mod-dynamic-container-wrapper">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="mod-dynamic-container">
+                    <!-- Dynamic groups injected here -->
+                </div>
+                
+                <!-- Custom Note -->
+                <div class="pt-4 border-t border-white/5">
+                    <h3 class="font-black text-white/40 uppercase text-[9px] tracking-widest mb-3">Nota Especial</h3>
+                    <input type="text" id="mod-note" placeholder="Ej. Sin azucar, bien caliente..." class="w-full p-4 bg-white/5 border border-white/10 rounded-xl text-white text-xs outline-none focus:border-cyan transition-all">
+                </div>
+            </div>
+
+            <!-- Footer Action -->
+            <div class="p-6 border-t border-white/5 bg-black/20 space-y-4 shrink-0">
+                <!-- Quantity Selector -->
+                <div class="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 shadow-inner">
+                    <span class="text-white/40 font-black uppercase text-[10px] tracking-widest ml-2">Cantidad</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="changeQuantity(-1)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-white/60 hover:bg-white/10 active:scale-95 transition-all text-lg font-bold">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span id="mod-quantity" class="font-mono font-black text-2xl text-cyan min-w-[2.5rem] text-center">1</span>
+                        <button onclick="changeQuantity(1)" class="w-10 h-10 flex items-center justify-center rounded-xl bg-cyan text-dark hover:bg-cyan/90 shadow-lg shadow-cyan/20 active:scale-95 transition-all text-lg font-bold">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button onclick="confirmItem()" class="w-full bg-cyan text-dark py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:bg-cyan/90 active:scale-95 transition-all flex justify-between px-6">
+                    <span>Agregar a la Venta</span>
+                    <span id="mod-total-display">L. 55.00</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO FOR CHIME -->
+    <script>
+        const chime = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        let soundEnabled = false;
+
+        // ENABLE AUDIO ON FIRST CLICK
+        document.body.addEventListener('click', () => {
+            if (!soundEnabled) {
+                chime.play().then(() => { chime.pause(); chime.currentTime = 0; }).catch(()=>{});
+                soundEnabled = true;
+            }
+        }, { once: true });
+    </script>
+
+    <script>
+        let session = null;
+        let menuItems = [];
+        let categories = [];
+        let activeCategory = null;
+        let cart = [];
+        let liveOrders = [];
+        let pollInterval = null;
+        let lastOrderCount = 0;
+        let modGroups = [];
+        let modOptions = [];
+        let itemModifierGroups = [];
+        let currentItem = null;
+        let currentQuantity = 1;
+        let currentMods = {};
+
+        function adjustLayoutForService(category) {
+            const isService = ['médico', 'dentista', 'abogado', 'clínica', 'servicio', 'medico', 'clinica', 'abogado', 'servicio'].some(keyword => {
+                return (category || '').toLowerCase().includes(keyword);
+            });
+
+            const leftCol = document.getElementById('partner-left-col');
+            const centerCol = document.getElementById('partner-center-col');
+            const menuGrid = document.getElementById('menu-grid');
+            const schedulerWorkspace = document.getElementById('scheduler-workspace');
+            const cartPanel = document.getElementById('pos-cart-panel');
+            const rightCol = document.getElementById('partner-right-col');
+            const feedTitle = document.getElementById('orders-feed-title');
+
+            if (isService) {
+                if (leftCol) leftCol.classList.remove('hidden');
+                if (centerCol) centerCol.classList.remove('hidden');
+                if (menuGrid) menuGrid.classList.add('hidden');
+                if (schedulerWorkspace) schedulerWorkspace.classList.remove('hidden');
+                if (cartPanel) cartPanel.classList.add('hidden');
+                
+                if (rightCol) {
+                    rightCol.classList.add('w-[400px]');
+                    rightCol.classList.remove('w-full', 'flex-1');
+                }
+                if (feedTitle) feedTitle.innerHTML = '<i class="fas fa-bell mr-2"></i> Solicitudes de Citas';
+                
+                setSchedulerTab('agenda');
+                initializeCalendarStrip();
+            } else {
+                if (leftCol) leftCol.classList.remove('hidden');
+                if (centerCol) centerCol.classList.remove('hidden');
+                if (menuGrid) menuGrid.classList.remove('hidden');
+                if (schedulerWorkspace) schedulerWorkspace.classList.add('hidden');
+                if (cartPanel) cartPanel.classList.remove('hidden');
+                
+                if (rightCol) {
+                    rightCol.classList.add('w-[400px]');
+                    rightCol.classList.remove('w-full', 'flex-1');
+                }
+                if (feedTitle) feedTitle.innerHTML = '<i class="fas fa-bell mr-2"></i> Pedidos Activos';
+            }
+        }
+
+        // --- AUTH ---
+        async function handleLogin() {
+            const resId = document.getElementById('login-res-id').value.trim();
+            const pin = document.getElementById('login-pin').value;
+            const btn = document.getElementById('btn-login');
+
+            if (!resId || !pin) return alert("Completa los datos");
+            
+            btn.innerText = "Verificando..."; btn.disabled = true;
+            try {
+                const res = await fetch('/api/store?action=partner_login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ restaurantId: resId, pin })
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.success) {
+                    session = { restaurantId: resId, user: data.partner };
+                    document.getElementById('login-overlay').classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('hidden');
+                    document.getElementById('header-res-name').innerText = resId.replace(/-/g, ' ');
+                    document.getElementById('header-user-name').innerText = data.partner.name;
+
+                    fetch(`/api/store?action=restaurant_info&id=${resId}`)
+                        .then(r => r.json())
+                        .then(info => {
+                            if (info) {
+                                document.getElementById('header-res-name').innerText = info.name;
+                                if (info.logo_url) {
+                                    const logoImg = document.getElementById('header-res-logo');
+                                    logoImg.src = info.logo_url;
+                                    logoImg.classList.remove('hidden');
+                                }
+                                adjustLayoutForService(info.category);
+                            }
+                        }).catch(e => console.warn(e));
+                    
+                    await loadData();
+                    startPolling();
+                } else {
+                    alert(data.error || "Login fallido");
+                }
+            } catch (e) {
+                alert("Error de red");
+            } finally {
+                btn.innerText = "Acceder"; btn.disabled = false;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('ra_kitchen_emp');
+            localStorage.removeItem('ra_staff_pin');
+            session = null;
+            if (pollInterval) clearInterval(pollInterval);
+            location.reload();
+        }
+
+        let activeDrivers = [];
+
+        async function fetchActiveDrivers() {
+            try {
+                const res = await fetch('/api/store?action=list_drivers');
+                if (res.ok) {
+                    const data = await res.json();
+                    activeDrivers = data.drivers || [];
+                }
+            } catch(e) { console.error("Failed to load active drivers:", e); }
+        }
+
+        async function loadData() {
+            await Promise.all([fetchMenu(), fetchOrders(), fetchActiveDrivers()]);
+        }
+
+        async function refreshData() {
+            const btn = document.querySelector('button[onclick="refreshData()"]');
+            btn.classList.add('animate-spin');
+            await loadData();
+            setTimeout(() => btn.classList.remove('animate-spin'), 500);
+        }
+
+        async function assignOrderDriver(orderId, driverId) {
+            if (!driverId) return;
+            try {
+                const res = await fetch('/api/store?action=assign_driver', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId, driverId })
+                });
+                if (res.ok) {
+                    alert("Motorizado asignado con éxito.");
+                    await fetchOrders();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "No se pudo asignar el motorizado.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error al conectar con el servidor.");
+            }
+        }
+
+        async function fetchMenu() {
+            if (!session) return;
+            try {
+                const v = Date.now();
+                const res = await fetch(`/api/v2-menu?id=${session.restaurantId}&v=${v}`);
+                const data = await res.json();
+                menuItems = data.items || [];
+                categories = data.categories || [];
+                modGroups = data.modGroups || [];
+                modOptions = data.modOptions || [];
+                itemModifierGroups = data.itemModGroups || [];
+                
+                if (!activeCategory && categories.length > 0) activeCategory = categories[0].id;
+                renderCategories();
+                renderMenuGrid();
+            } catch (e) { console.error("Menu fetch error", e); }
+        }
+
+        async function fetchOrders() {
+            if (!session) return;
+            try {
+                const res = await fetch(`/api/store?action=partner_orders&restaurantId=${session.restaurantId}`);
+                const data = await res.json();
+                liveOrders = data.orders || [];
+                
+                const activeCount = liveOrders.filter(o => ['pending', 'paid', 'preparing', 'pending_verification', 'pending_booking', 'confirmed_booking'].includes(o.status)).length;
+                if (soundEnabled && activeCount > lastOrderCount) {
+                    chime.play().catch(()=>{});
+                }
+                lastOrderCount = activeCount;
+
+                renderOrders();
+            } catch (e) { console.error("Orders fetch error", e); }
+        }
+
+        function startPolling() {
+            pollInterval = setInterval(fetchOrders, 10000); // 10 seconds heartbeat
+        }
+
+        // --- RENDER MENU ---
+        function renderCategories() {
+            const container = document.getElementById('category-list');
+            container.innerHTML = categories.map(c => `
+                <button onclick="setCategory('${c.id}')" class="w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all ${c.id === activeCategory ? 'bg-cyan text-dark shadow-lg shadow-cyan/20' : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'}">
+                    <span class="text-[9px] font-black uppercase tracking-tighter truncate w-14 text-center">${c.name}</span>
+                </button>
+            `).join('');
+        }
+
+        function setCategory(id) {
+            activeCategory = id;
+            renderCategories();
+            renderMenuGrid();
+        }
+
+        function renderMenuGrid() {
+            const container = document.getElementById('menu-grid');
+            const items = menuItems.filter(i => (i.category || 'otros').toLowerCase() === activeCategory);
+            
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-white/20 text-center py-20 font-bold uppercase italic">No hay items</div>';
+                return;
+            }
+
+            container.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">` + items.map(i => {
+                const available = i.available !== false;
+                const hasMods = itemModifierGroups.some(img => img.item_id === i.id);
+                const clickHandler = hasMods ? `openModifier('${i.id}')` : `addToCart('${i.id}')`;
+                return `
+                <div class="glass rounded-[2rem] p-4 flex flex-col relative group cursor-pointer hover:border-cyan/30 transition-all ${!available ? 'opacity-50 grayscale' : ''}" onclick="${clickHandler}">
+                    <button onclick="event.stopPropagation(); openEditModal('${i.id}')" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white/50 hover:text-cyan hover:bg-black/80 flex items-center justify-center z-10 backdrop-blur-sm transition-all"><i class="fas fa-pencil-alt text-[10px]"></i></button>
+                    <div class="h-24 w-full bg-white/5 rounded-xl mb-3 overflow-hidden">
+                        ${i.image_url ? `<img src="${i.image_url}" class="w-full h-full object-cover">` : ''}
+                    </div>
+                    <h4 class="font-black uppercase tracking-tight text-xs leading-tight mb-1 text-white truncate">${i.name}</h4>
+                    <div class="mt-auto flex justify-between items-center">
+                        <span class="text-cyan font-mono font-bold text-sm">L ${parseFloat(i.price).toFixed(0)}</span>
+                        ${!available ? `<span class="text-[8px] bg-red-500/20 text-red-500 px-2 py-0.5 rounded uppercase font-black">Agotado</span>` : ''}
+                    </div>
+                </div>
+            `}).join('') + `</div>`;
+        }
+
+        // --- POS CART ---
+        function addToCart(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            if (item.available === false) return alert("Item agotado");
+            
+            const existing = cart.find(i => i.id === itemId);
+            if (existing) existing.qty++;
+            else cart.push({ ...item, qty: 1 });
+            renderCart();
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            
+            if (cart.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-white/20 text-xs font-bold uppercase italic">Venta Directa Vacía</div>';
+                totalEl.innerText = 'L 0';
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map((item, idx) => {
+                const sub = (parseFloat(item.price) || 0) * item.qty;
+                total += sub;
+                const modsList = item.mods && item.mods.length > 0
+                    ? `<div class="pl-2 text-[9px] text-white/40 font-bold uppercase tracking-wider mt-1"><i class="fas fa-plus text-[7px] mr-1 text-gold"></i>${item.mods.map(m => m.name).join(', ')}</div>`
+                    : '';
+                const noteText = item.note
+                    ? `<div class="pl-2 text-[9px] text-cyan/60 italic font-black uppercase mt-0.5"><i class="fas fa-comment-dots mr-1"></i>${item.note}</div>`
+                    : '';
+
+                return `
+                    <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <p class="text-xs font-bold text-white truncate uppercase">${item.name}</p>
+                            <p class="text-[10px] text-cyan font-mono">L ${item.price} x ${item.qty}</p>
+                            ${modsList}
+                            ${noteText}
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-black text-sm text-white">L ${sub.toFixed(0)}</span>
+                            <button onclick="removeFromCart(${idx})" class="w-6 h-6 rounded bg-red-500/20 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white"><i class="fas fa-times text-[10px]"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            totalEl.innerText = `L ${total.toFixed(0)}`;
+        }
+
+        function clearCart() { cart = []; renderCart(); }
+
+        async function checkout(method) {
+            if (cart.length === 0) return;
+            if (!confirm(`¿Cobrar L ${document.getElementById('cart-total').innerText} en ${method === 'cash' ? 'Efectivo' : 'Transferencia'}?`)) return;
+
+            const total = cart.reduce((s, i) => s + (parseFloat(i.price) * i.qty), 0);
+            
+            const payload = {
+                restaurantId: session.restaurantId,
+                items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, finalPrice: i.price, mods: i.mods || [], note: i.note || "" })),
+                total,
+                paymentMethod: method,
+                fulfillment: 'walk_in',
+                notes: 'POS Partner Walk-in'
+            };
+
+            try {
+                const res = await fetch('/api/store?action=orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (res.ok) {
+                    clearCart();
+                    await fetchOrders(); // instantly show in feed
+                } else {
+                    alert("Error procesando pago");
+                }
+            } catch (e) { alert("Error de red"); }
+        }
+
+        // --- LIVE ORDERS ---
+        function renderOrders() {
+            const container = document.getElementById('live-orders');
+            const displayOrders = liveOrders.filter(o => !['completed', 'cancelled', 'void', 'completed_booking', 'cancelled_booking'].includes(o.status));
+            
+            document.getElementById('order-count').innerText = displayOrders.length;
+
+            if (displayOrders.length === 0) {
+                container.innerHTML = '<div class="text-center py-10 text-white/20 text-xs font-bold uppercase italic">Sin Pedidos / Citas Activos</div>';
+                return;
+            }
+
+            container.innerHTML = displayOrders.map(o => {
+                const isBooking = o.status.includes('booking') || (o.notes && o.notes.includes('[FULFILLMENT: booking]'));
+                const isDelivery = !isBooking && o.fulfillment_type === 'delivery';
+                const isWalkIn = !isBooking && o.fulfillment_type === 'walk_in';
+                const date = new Date(o.created_at);
+                const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                
+                // Status Color Logic
+                let sColor = 'bg-white/10 text-white';
+                let sLabel = o.status.toUpperCase();
+                if (o.status === 'pending' || o.status === 'pending_verification') { sColor = 'bg-blue-500 text-white'; sLabel = 'NUEVO'; }
+                if (o.status === 'paid') { sColor = 'bg-blue-500 text-white'; sLabel = 'PAGADO (NUEVO)'; }
+                if (o.status === 'preparing') { sColor = 'bg-amber-500 text-dark'; sLabel = 'PREPARANDO'; }
+                if (o.status === 'ready' || o.status === 'food_ready') { sColor = 'bg-green-500 text-dark'; sLabel = 'LISTO'; }
+                if (o.status === 'pending_booking') { sColor = 'bg-cyan text-dark'; sLabel = 'CITA SOLICITADA'; }
+                if (o.status === 'confirmed_booking') { sColor = 'bg-green-500 text-dark'; sLabel = 'CITA CONFIRMADA'; }
+
+                // Action Button Logic
+                let actionBtn = '';
+                if (isBooking) {
+                    if (o.status === 'pending_booking') {
+                        actionBtn = `
+                            <button onclick="updateOrderStatus('${o.id}', 'confirmed_booking')" class="flex-1 bg-green-500 text-dark py-2 rounded-lg font-black uppercase text-[10px] tracking-widest mr-2 active:scale-95 transition-all">Confirmar</button>
+                            <button onclick="updateOrderStatus('${o.id}', 'cancelled_booking')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Rechazar</button>
+                        `;
+                    } else if (o.status === 'confirmed_booking') {
+                        actionBtn = `
+                            <button onclick="updateOrderStatus('${o.id}', 'completed_booking')" class="flex-1 bg-cyan text-dark py-2 rounded-lg font-black uppercase text-[10px] tracking-widest mr-2 active:scale-95 transition-all">Completar</button>
+                            <button onclick="updateOrderStatus('${o.id}', 'cancelled_booking')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Cancelar</button>
+                        `;
+                    }
+                } else {
+                    if (['pending', 'paid', 'pending_verification'].includes(o.status)) {
+                        actionBtn = `<button onclick="updateOrderStatus('${o.id}', 'preparing')" class="flex-1 bg-amber-500 text-dark py-2 rounded-lg font-black uppercase text-[10px] tracking-widest">A Preparar</button>`;
+                    } else if (o.status === 'preparing') {
+                        actionBtn = `<button onclick="updateOrderStatus('${o.id}', 'ready')" class="flex-1 bg-green-500 text-dark py-2 rounded-lg font-black uppercase text-[10px] tracking-widest">Marcar Listo</button>`;
+                    } else if (o.status === 'ready' || o.status === 'food_ready') {
+                        actionBtn = `<button onclick="updateOrderStatus('${o.id}', 'completed')" class="flex-1 bg-white/20 text-white py-2 rounded-lg font-black uppercase text-[10px] tracking-widest">Completar (Entregado)</button>`;
+                    }
+                }
+
+                // WhatsApp Logic
+                let waCust = '';
+                let waDriver = '';
+                
+                // Extract customer phone
+                let phone = o.customers?.phone;
+                if (!phone && o.notes) {
+                    const match = o.notes.match(/\[TEL:\s*([^\]]+)\]/);
+                    if (match) phone = match[1].trim();
+                }
+
+                if (phone && !isWalkIn) {
+                    const cleanPhone = phone.replace(/\D/g, '');
+                    let waText = '';
+                    if (isBooking) {
+                        const dateScheduled = o.scheduled_for ? new Date(o.scheduled_for).toLocaleString() : '';
+                        waText = `Hola, le saludamos de ${session.restaurantId.replace(/-/g, ' ').toUpperCase()}. Nos contactamos sobre su cita programada para el ${dateScheduled}.`;
+                    } else {
+                        waText = `Hola, somos ${session.restaurantId.replace(/-/g, ' ')}. Tu pedido #${o.order_number} esta siendo procesado.`;
+                    }
+                    const waLink = `https://wa.me/${cleanPhone.length===8 ? '504'+cleanPhone : cleanPhone}?text=${encodeURIComponent(waText)}`;
+                    waCust = `<a href="${waLink}" target="_blank" class="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-colors" title="WhatsApp Cliente"><i class="fab fa-whatsapp"></i></a>`;
+                }
+
+                let driverInfoHTML = '';
+                if (isDelivery) {
+                    if (o.driver_id) {
+                        const drv = activeDrivers.find(d => d.id === o.driver_id);
+                        const drvName = drv ? drv.name : 'Asignado';
+                        driverInfoHTML = `
+                            <div class="mt-2 p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                                    <span class="text-[10px] font-black uppercase text-green-400">Motorizado: ${drvName}</span>
+                                </div>
+                                <span class="text-[9px] text-white/30 font-black uppercase">En Ruta 🛵</span>
+                            </div>
+                        `;
+                        waDriver = `<button onclick="alert('WhatsApp para motorizados no configurado aún.')" class="w-8 h-8 rounded-lg bg-green-500/20 text-green-500 flex items-center justify-center hover:bg-green-500 hover:text-white transition-colors" title="WhatsApp Repartidor"><i class="fab fa-whatsapp"></i></button>`;
+                    } else {
+                        const options = ['<option value="">-- Asignar Motorizado --</option>']
+                            .concat(activeDrivers.map(d => `<option value="${d.id}">${d.name}</option>`))
+                            .join('');
+                        driverInfoHTML = `
+                            <div class="mt-2 p-2 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between gap-2">
+                                <span class="text-[9px] font-black uppercase text-white/30">Motorizado:</span>
+                                <select onchange="assignOrderDriver('${o.id}', this.value)" class="bg-charcoal border border-white/10 text-white p-2 rounded-lg text-[10px] outline-none focus:border-cyan flex-1 font-bold">
+                                    ${options}
+                                </select>
+                            </div>
+                        `;
+                        waDriver = `<button class="w-8 h-8 rounded-lg bg-white/5 text-white/20 flex items-center justify-center cursor-not-allowed" title="Sin Repartidor" disabled><i class="fas fa-motorcycle"></i></button>`;
+                    }
+                }
+
+                // Render items or Booking details
+                let detailsHTML = '';
+                if (isBooking) {
+                    const cleanNotes = o.notes ? o.notes.replace(/\[FULFILLMENT:[^\]]*\]/g, '').replace(/\[MOTIVO:[^\]]*\]/g, '').trim() : 'Sin notas.';
+                    const reasonMatch = o.notes ? o.notes.match(/\[MOTIVO:\s*([^\]]+)\]/) : null;
+                    const reason = reasonMatch ? reasonMatch[1] : 'Consulta General';
+                    
+                    detailsHTML = `
+                        <div class="mb-3 p-3 bg-white/5 border border-white/5 rounded-2xl space-y-2">
+                            <div>
+                                <span class="block text-[8px] uppercase tracking-widest text-cyan font-black">Horario Solicitado</span>
+                                <span class="text-[11px] font-black text-white"><i class="fas fa-calendar-alt mr-1 text-cyan"></i> ${o.scheduled_for ? new Date(o.scheduled_for).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'No especificado'}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[8px] uppercase tracking-widest text-white/35 font-black">Motivo de Cita</span>
+                                <span class="text-[10px] font-bold text-white uppercase tracking-tight">${reason}</span>
+                            </div>
+                            ${cleanNotes ? `
+                            <div>
+                                <span class="block text-[8px] uppercase tracking-widest text-white/35 font-black">Detalles / Notas</span>
+                                <p class="text-[10px] text-white/60 leading-normal italic">"${cleanNotes}"</p>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    detailsHTML = `
+                        <div class="mb-3 space-y-1.5">
+                            ${(o.items||[]).map(i => {
+                                const modsList = i.mods && i.mods.length > 0
+                                    ? `<div class="pl-4 text-[9px] text-white/40 font-bold uppercase tracking-wider leading-relaxed"><i class="fas fa-plus text-[7px] mr-1 text-gold"></i>${i.mods.map(m => m.name).join(', ')}</div>`
+                                    : '';
+                                const noteText = i.note
+                                    ? `<div class="pl-4 text-[9px] text-cyan/60 italic font-black uppercase leading-relaxed"><i class="fas fa-comment-dots mr-1"></i>${i.note}</div>`
+                                    : '';
+                                return `
+                                <div class="text-xs text-white/80 font-bold">
+                                    <span class="text-cyan">${i.qty}x</span> ${i.name}
+                                </div>
+                                ${modsList}
+                                ${noteText}
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="glass p-5 rounded-2xl border-l-4 ${o.status==='pending_booking' ? 'border-l-cyan' : o.status==='confirmed_booking' ? 'border-l-green-500' : o.status==='pending' ? 'border-l-blue-500' : o.status==='preparing' ? 'border-l-amber-500' : o.status==='ready' ? 'border-l-green-500' : 'border-l-white/20'}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <span class="font-black text-sm">${isBooking ? '📅 CITA' : '🍔 PEDIDO'} #${o.order_number}</span>
+                                <span class="text-[9px] text-white/50 ml-2 font-mono">${timeStr}</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[8px] font-black tracking-widest ${sColor}">${sLabel}</span>
+                        </div>
+                        
+                        ${detailsHTML}
+
+                        ${driverInfoHTML}
+
+                        <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                            <div class="flex gap-2">
+                                ${waCust}
+                                ${waDriver}
+                            </div>
+                            <div class="flex gap-2 w-1/2">
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+            }).join('');
+
+            // Refresh calendar/agenda items if visible
+            const schedulerWorkspace = document.getElementById('scheduler-workspace');
+            if (schedulerWorkspace && !schedulerWorkspace.classList.contains('hidden')) {
+                renderCalendarStrip();
+                renderSelectedDayAgenda();
+            }
+        }
+
+        async function updateOrderStatus(id, newStatus) {
+            try {
+                const res = await fetch('/api/store?action=partner_update_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: id, status: newStatus })
+                });
+                if (res.ok) fetchOrders();
+            } catch (e) { console.error(e); }
+        }
+
+        // --- ITEM EDITING ---
+        const chkStatus = document.getElementById('edit-item-available');
+        const txtStatus = document.getElementById('edit-item-status-text');
+
+        chkStatus.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                txtStatus.innerText = 'Activo'; txtStatus.className = 'text-xs font-black uppercase tracking-widest text-green-500';
+            } else {
+                txtStatus.innerText = 'Agotado'; txtStatus.className = 'text-xs font-black uppercase tracking-widest text-red-500';
+            }
+        });
+
+        function toggleEditStockDisplay(isUnlimited) {
+            const container = document.getElementById('edit-stock-container');
+            if (isUnlimited) container.classList.add('hidden');
+            else container.classList.remove('hidden');
+        }
+
+        function toggleCreateStockDisplay(isUnlimited) {
+            const container = document.getElementById('create-stock-container');
+            if (isUnlimited) container.classList.add('hidden');
+            else container.classList.remove('hidden');
+        }
+
+        function openEditModal(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+
+            document.getElementById('edit-item-id').value = item.id;
+            document.getElementById('edit-item-price').value = item.price;
+            
+            const isAvail = item.available !== false;
+            chkStatus.checked = isAvail;
+            chkStatus.dispatchEvent(new Event('change'));
+
+            const isUnlimited = item.is_unlimited !== false;
+            document.getElementById('edit-item-is-unlimited').checked = isUnlimited;
+            toggleEditStockDisplay(isUnlimited);
+
+            document.getElementById('edit-item-gacha-promo').checked = !!item.is_gacha_promo;
+
+            document.getElementById('edit-item-stock-quantity').value = item.stock_quantity !== undefined ? item.stock_quantity : '';
+            document.getElementById('edit-item-default-stock').value = item.default_daily_stock !== undefined ? item.default_daily_stock : '';
+
+            // Reset batch inputs
+            document.getElementById('edit-batch-name').value = '';
+            document.getElementById('edit-batch-qty').value = '';
+            document.getElementById('edit-batch-hours').value = '24';
+
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+
+        async function submitItemEdit() {
+            const id = document.getElementById('edit-item-id').value;
+            const price = document.getElementById('edit-item-price').value;
+            const available = document.getElementById('edit-item-available').checked;
+            const isUnlimited = document.getElementById('edit-item-is-unlimited').checked;
+            const isGachaPromo = document.getElementById('edit-item-gacha-promo').checked;
+            const stockQty = document.getElementById('edit-item-stock-quantity').value;
+            const defaultStock = document.getElementById('edit-item-default-stock').value;
+
+            const btn = document.getElementById('btn-save-item');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/store?action=partner_update_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        itemId: id, 
+                        price, 
+                        available,
+                        is_unlimited: isUnlimited,
+                        is_gacha_promo: isGachaPromo,
+                        stock_quantity: stockQty,
+                        default_daily_stock: defaultStock
+                    })
+                });
+
+                if (res.ok) {
+                    closeEditModal();
+                    await fetchMenu();
+                } else {
+                    alert("Error al actualizar");
+                }
+            } catch (e) { alert("Error de red"); }
+            finally { btn.innerText = "Guardar Cambios"; btn.disabled = false; }
+        }
+
+        async function deleteItem() {
+            const id = document.getElementById('edit-item-id').value;
+            if (!confirm("¿Estás seguro de que deseas eliminar este producto permanentemente de tu catálogo?")) return;
+
+            try {
+                const res = await fetch('/api/store?action=partner_delete_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itemId: id })
+                });
+
+                if (res.ok) {
+                    closeEditModal();
+                    await fetchMenu();
+                } else {
+                    alert("Error al eliminar el producto");
+                }
+            } catch(e) { alert("Error de conexión"); }
+        }
+
+        async function submitNewBatch() {
+            const id = document.getElementById('edit-item-id').value;
+            const batchName = document.getElementById('edit-batch-name').value.trim();
+            const qty = document.getElementById('edit-batch-qty').value;
+            const hours = document.getElementById('edit-batch-hours').value || '24';
+
+            if (!batchName || !qty) return alert("Por favor ingresa un nombre de lote y la cantidad.");
+
+            const btn = document.getElementById('btn-add-batch');
+            btn.innerText = "Registrando lote..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/store?action=partner_add_batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ itemId: id, batchName, quantity: qty, hoursToExpire: hours })
+                });
+
+                if (res.ok) {
+                    alert("✅ Lote registrado con éxito");
+                    closeEditModal();
+                    await fetchMenu();
+                } else {
+                    alert("Error al registrar el lote");
+                }
+            } catch(e) { alert("Error de conexión"); }
+            finally { btn.innerText = "Agregar Lote en POS"; btn.disabled = false; }
+        }
+
+        // --- NEW PRODUCT CREATION ---
+        let createImgBase64 = null;
+
+        // --- CAMERA AND PHOTO ADJUSTMENTS ---
+        let cameraStream = null;
+        let originalImgElement = null;
+        let currentRotationAngle = 0;
+
+        function openCreateModal() {
+            document.getElementById('create-item-name').value = '';
+            document.getElementById('create-item-price').value = '';
+            document.getElementById('create-item-category').value = 'bebidas';
+            document.getElementById('create-item-is-unlimited').checked = true;
+            toggleCreateStockDisplay(true);
+            createImgBase64 = null;
+            originalImgElement = null;
+            currentRotationAngle = 0;
+            document.getElementById('create-img-preview').innerHTML = '<i class="fas fa-camera text-2xl text-white/10"></i>';
+            document.getElementById('create-editor-controls').classList.add('hidden');
+            document.getElementById('create-camera-container').classList.add('hidden');
+            document.getElementById('btn-create-camera-toggle').innerText = "Abrir Cámara 📷";
+            document.getElementById('create-modal').classList.remove('hidden');
+        }
+
+        function closeCreateModal() { 
+            stopCameraStream();
+            document.getElementById('create-modal').classList.add('hidden'); 
+        }
+
+        async function toggleCreateCamera() {
+            const container = document.getElementById('create-camera-container');
+            const video = document.getElementById('create-video-stream');
+            const toggleBtn = document.getElementById('btn-create-camera-toggle');
+
+            if (cameraStream) {
+                stopCameraStream();
+                container.classList.add('hidden');
+                toggleBtn.innerText = "Abrir Cámara 📷";
+            } else {
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment' },
+                        audio: false
+                    });
+                    video.srcObject = cameraStream;
+                    container.classList.remove('hidden');
+                    toggleBtn.innerText = "Cerrar Cámara ❌";
+                } catch(e) {
+                    alert("No se pudo acceder a la cámara. Asegúrate de dar permisos o usar HTTPS.");
+                }
+            }
+        }
+
+        function stopCameraStream() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+        }
+
+        function captureCreatePhoto() {
+            const video = document.getElementById('create-video-stream');
+            if (!video || !cameraStream) return;
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const capturedBase64 = canvas.toDataURL('image/png');
+            loadImageToEditor(capturedBase64);
+            stopCameraStream();
+            document.getElementById('create-camera-container').classList.add('hidden');
+            document.getElementById('btn-create-camera-toggle').innerText = "Abrir Cámara 📷";
+        }
+
+        function handleCreateImage(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                loadImageToEditor(e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadImageToEditor(srcBase64) {
+            originalImgElement = new Image();
+            originalImgElement.onload = () => {
+                currentRotationAngle = 0;
+                document.getElementById('create-edit-brightness').value = 100;
+                document.getElementById('create-edit-contrast').value = 100;
+                document.getElementById('create-editor-controls').classList.remove('hidden');
+                applyCreateFilters();
+            };
+            originalImgElement.src = srcBase64;
+        }
+
+        function applyCreateFilters() {
+            if (!originalImgElement) return;
+
+            const brightnessVal = document.getElementById('create-edit-brightness').value;
+            const contrastVal = document.getElementById('create-edit-contrast').value;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            if (currentRotationAngle % 180 === 0) {
+                canvas.width = originalImgElement.width;
+                canvas.height = originalImgElement.height;
+            } else {
+                canvas.width = originalImgElement.height;
+                canvas.height = originalImgElement.width;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate((currentRotationAngle * Math.PI) / 180);
+            ctx.filter = `brightness(${brightnessVal}%) contrast(${contrastVal}%)`;
+            ctx.drawImage(originalImgElement, -originalImgElement.width / 2, -originalImgElement.height / 2);
+
+            createImgBase64 = canvas.toDataURL('image/png');
+            document.getElementById('create-img-preview').innerHTML = `<img src="${createImgBase64}" class="w-full h-full object-cover">`;
+        }
+
+        function rotateCreateImage() {
+            if (!originalImgElement) return;
+            currentRotationAngle = (currentRotationAngle + 90) % 360;
+            applyCreateFilters();
+        }
+
+        async function describeCreateImageAI() {
+            if (!createImgBase64) return alert("Primero sube o toma una foto.");
+
+            const btn = document.getElementById('btn-create-ai-describe');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner animate-spin mr-1"></i>IA Analizando...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/store?action=partner_ai_describe', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: createImgBase64 })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.name) {
+                        document.getElementById('create-item-name').value = data.name;
+                    }
+                    if (data.category) {
+                        let cat = data.category.toLowerCase();
+                        if (cat === 'postre' || cat === 'repostería') cat = 'reposteria';
+                        if (cat === 'plato' || cat === 'comidas') cat = 'comida';
+                        document.getElementById('create-item-category').value = cat;
+                    }
+                    alert("Campos de producto autocompletados con éxito!");
+                } else {
+                    alert("Error en el servicio de IA.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error al conectar con el servidor.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function submitItemCreate() {
+            const name = document.getElementById('create-item-name').value.trim();
+            const price = document.getElementById('create-item-price').value;
+            const category = document.getElementById('create-item-category').value;
+            const isUnlimited = document.getElementById('create-item-is-unlimited').checked;
+            const defaultStock = document.getElementById('create-item-default-stock').value;
+            const isGachaPromo = document.getElementById('create-item-gacha-promo').checked;
+
+            if (!name || !price) return alert("El nombre y el precio son obligatorios.");
+
+            const btn = document.getElementById('btn-create-item');
+            btn.innerText = "Creando..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/store?action=partner_create_item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        restaurant_id: session.restaurantId,
+                        name,
+                        price,
+                        category,
+                        is_unlimited: isUnlimited,
+                        default_daily_stock: defaultStock,
+                        is_gacha_promo: isGachaPromo,
+                        imageBase64: createImgBase64
+                    })
+                });
+
+                if (res.ok) {
+                    closeCreateModal();
+                    await fetchMenu();
+                } else {
+                    alert("Error al crear el producto");
+                }
+            } catch(e) { alert("Error de red"); }
+            finally { btn.innerText = "Crear Producto"; btn.disabled = false; }
+        }
+
+        // --- PARTNER SETTINGS MODAL & API ---
+        function openSettingsModal() {
+            if (!session || !session.user) return;
+            const settings = session.user.settings || {};
+            const accepted = settings.accepted_payments || {};
+            const bank = settings.bank_details || {};
+            const campaign = settings.gachaCampaign || {};
+
+            // Populate checkboxes
+            document.getElementById('sett-pay-cash').checked = accepted.cash !== false; // default true
+            document.getElementById('sett-pay-transfer').checked = !!accepted.transfer;
+            document.getElementById('sett-pay-card').checked = !!accepted.card;
+            document.getElementById('sett-pay-rico').checked = !!accepted.rico;
+
+            // Populate bank details
+            document.getElementById('sett-bank-name').value = bank.name || '';
+            document.getElementById('sett-bank-acc').value = bank.account || '';
+            document.getElementById('sett-bank-owner').value = bank.owner || '';
+
+            // Populate Gacha Campaign
+            document.getElementById('sett-gacha-active').checked = !!campaign.isActive;
+            
+            const itemSelector = document.getElementById('sett-gacha-item-id');
+            if (itemSelector) {
+                itemSelector.innerHTML = '<option value="">Selecciona un producto...</option>' + 
+                    menuItems.map(item => `<option value="${item.id}">${item.name}</option>`).join('');
+                itemSelector.value = campaign.itemId || '';
+            }
+            document.getElementById('sett-gacha-quantity').value = campaign.quantity || 5;
+            document.getElementById('sett-gacha-automate').checked = !!campaign.automateWeekly;
+
+            // Populate Operating Hours
+            const hours = settings.operating_hours || {};
+            document.getElementById('sett-hours-open').value = hours.open || '';
+            document.getElementById('sett-hours-close').value = hours.close || '';
+            document.getElementById('sett-hours-mid-start').value = hours.midday_close_start || '';
+            document.getElementById('sett-hours-mid-end').value = hours.midday_close_end || '';
+            document.getElementById('sett-hours-buffer').value = hours.closing_buffer_min !== undefined ? hours.closing_buffer_min : 0;
+
+            // Populate open days checkboxes
+            const openDaysList = Array.isArray(hours.open_days) ? hours.open_days.map(Number) : [1, 2, 3, 4, 5, 6, 0];
+            for (let d = 0; d <= 6; d++) {
+                const cb = document.getElementById(`day-${d}`);
+                if (cb) cb.checked = openDaysList.includes(d);
+            }
+
+            // Clear validation fields
+            document.getElementById('sett-gacha-claim-code').value = '';
+
+            toggleSettBankFields(!!accepted.transfer);
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            stopCustomerQRScanner();
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function toggleSettBankFields(visible) {
+            const fields = document.getElementById('sett-bank-fields');
+            if (visible) {
+                fields.classList.remove('hidden');
+            } else {
+                fields.classList.add('hidden');
+            }
+        }
+
+        async function submitSettingsUpdate() {
+            const btn = document.getElementById('btn-save-settings');
+            btn.innerText = "Guardando..."; btn.disabled = true;
+
+            const acceptedPayments = {
+                cash: document.getElementById('sett-pay-cash').checked,
+                transfer: document.getElementById('sett-pay-transfer').checked,
+                card: document.getElementById('sett-pay-card').checked,
+                rico: document.getElementById('sett-pay-rico').checked
+            };
+
+            const bankDetails = {
+                name: document.getElementById('sett-bank-name').value.trim(),
+                account: document.getElementById('sett-bank-acc').value.trim(),
+                owner: document.getElementById('sett-bank-owner').value.trim()
+            };
+
+            const gachaCampaign = {
+                isActive: document.getElementById('sett-gacha-active').checked,
+                itemId: document.getElementById('sett-gacha-item-id').value || '',
+                quantity: parseInt(document.getElementById('sett-gacha-quantity').value) || 5,
+                automateWeekly: document.getElementById('sett-gacha-automate').checked
+            };
+
+            const openDays = [];
+            for (let d = 0; d <= 6; d++) {
+                if (document.getElementById(`day-${d}`).checked) {
+                    openDays.push(d);
+                }
+            }
+
+            const operatingHours = {
+                open: document.getElementById('sett-hours-open').value || null,
+                close: document.getElementById('sett-hours-close').value || null,
+                midday_close_start: document.getElementById('sett-hours-mid-start').value || null,
+                midday_close_end: document.getElementById('sett-hours-mid-end').value || null,
+                closing_buffer_min: parseInt(document.getElementById('sett-hours-buffer').value) || 0,
+                open_days: openDays
+            };
+
+            try {
+                const res = await fetch('/api/store?action=partner_update_settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: session.restaurantId,
+                        acceptedPayments,
+                        bankDetails,
+                        gachaCampaign,
+                        operatingHours
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    session.user.settings = data.settings;
+                    closeSettingsModal();
+                    alert("Ajustes guardados con éxito.");
+                } else {
+                    alert("Error al guardar la configuración");
+                }
+            } catch(e) {
+                alert("Error de conexión");
+            } finally {
+                btn.innerText = "Guardar Cambios"; btn.disabled = false;
+            }
+        }
+
+        async function redeemGachaVoucher() {
+            const codeInput = document.getElementById('sett-gacha-claim-code');
+            const claimCode = codeInput.value.trim().toUpperCase();
+            if (!claimCode) return alert("Por favor ingresa un código de premio válido (ej: QL-XXXX-XXXX).");
+
+            const btn = document.getElementById('btn-redeem-gacha');
+            const originalText = btn.innerText;
+            btn.innerText = "Redimiendo..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/gacha/redeem_prize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: session.restaurantId,
+                        claimCode
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`¡Éxito! Premio Validado:\n🎁 ${data.prizeName}\n\n${data.message}`);
+                    codeInput.value = '';
+                } else {
+                    alert(data.error || "Código no válido o ya redimido.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de conexión al redimir el cupón.");
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
+            }
+        }
+
+        let customerQRScannerInstance = null;
+        let activeScannedCustomerId = null;
+
+        async function toggleCustomerQRScanner() {
+            const container = document.getElementById('sett-qr-reader-container');
+            const toggleBtn = document.getElementById('btn-toggle-qr-scan');
+
+            if (customerQRScannerInstance) {
+                stopCustomerQRScanner();
+                container.classList.add('hidden');
+                toggleBtn.innerText = "Escanear QR 📷";
+            } else {
+                container.classList.remove('hidden');
+                toggleBtn.innerText = "Cerrar Cámara ❌";
+                document.getElementById('sett-scanned-customer-panel').classList.add('hidden');
+
+                try {
+                    customerQRScannerInstance = new Html5Qrcode("sett-qr-reader");
+                    await customerQRScannerInstance.start(
+                        { facingMode: "environment" },
+                        {
+                            fps: 10,
+                            qrbox: { width: 220, height: 220 }
+                        },
+                        async (decodedText) => {
+                            console.log("QR Code Scanned successfully:", decodedText);
+                            stopCustomerQRScanner();
+                            container.classList.add('hidden');
+                            toggleBtn.innerText = "Escanear QR 📷";
+                            await loadScannedCustomerProfile(decodedText);
+                        },
+                        (errorMessage) => {}
+                    );
+                } catch (err) {
+                    console.error("Html5Qrcode init failed:", err);
+                    alert("No se pudo iniciar el escáner QR. Verifica permisos de cámara.");
+                    container.classList.add('hidden');
+                    toggleBtn.innerText = "Escanear QR 📷";
+                    customerQRScannerInstance = null;
+                }
+            }
+        }
+
+        async function stopCustomerQRScanner() {
+            if (customerQRScannerInstance) {
+                try {
+                    await customerQRScannerInstance.stop();
+                } catch (e) {
+                    console.warn(e);
+                }
+                customerQRScannerInstance = null;
+            }
+            document.getElementById('sett-qr-reader-container').classList.add('hidden');
+            document.getElementById('btn-toggle-qr-scan').innerText = "Escanear QR 📷";
+        }
+
+        async function loadScannedCustomerProfile(customerId) {
+            try {
+                activeScannedCustomerId = customerId;
+
+                // 1. Fetch customer details
+                const profileRes = await fetch(`/api/store?action=customer_profile&id=${customerId}`);
+                if (!profileRes.ok) throw new Error("Cliente no encontrado.");
+                const customer = await profileRes.json();
+
+                // 2. Fetch customer claims
+                const claimsRes = await fetch(`/api/gacha/get_claims?customerId=${customerId}`);
+                const claimsData = await claimsRes.json();
+                const claims = (claimsData.claims || []).filter(c => c.restaurantId === session.restaurantId);
+
+                // Populate Scanned panel
+                document.getElementById('scan-cust-name').innerText = customer.name || 'Cliente sin nombre';
+                document.getElementById('scan-cust-phone').innerText = `Tel: ${customer.phone || 'N/A'}`;
+                document.getElementById('scan-cust-points').innerText = `${customer.points || 0} pts`;
+
+                const listContainer = document.getElementById('scan-cust-vouchers-list');
+                if (claims.length > 0) {
+                    listContainer.innerHTML = claims.map(claim => `
+                        <div class="bg-white/5 border border-white/5 p-3 rounded-xl flex justify-between items-center text-xs">
+                            <div>
+                                <div class="font-black text-cyan">${claim.prizeName}</div>
+                                <div class="text-[8px] text-white/40 font-mono mt-0.5">${claim.claimCode}</div>
+                            </div>
+                            <button onclick="redeemScannedVoucher('${claim.claimCode}', '${claim.prizeName.replace(/'/g, "\\'")}')" class="bg-cyan text-dark font-black text-[9px] px-3 py-1.5 rounded-lg active:scale-95 transition-all">Redimir</button>
+                        </div>
+                    `).join('');
+                } else {
+                    listContainer.innerHTML = `<div class="text-[9px] text-white/40 italic text-center py-2">No tiene premios disponibles en este comercio.</div>`;
+                }
+
+                document.getElementById('sett-scanned-customer-panel').classList.remove('hidden');
+
+            } catch(e) {
+                console.error(e);
+                alert(e.message || "Error al cargar la información del cliente.");
+            }
+        }
+
+        async function redeemScannedVoucher(claimCode, prizeName) {
+            if (!confirm(`¿Redimir premio: ${prizeName}?`)) return;
+            try {
+                const res = await fetch('/api/gacha/redeem_prize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: session.restaurantId,
+                        claimCode
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert(`¡Éxito! Premio Validado:\n🎁 ${data.prizeName}\n\n${data.message}`);
+                    if (activeScannedCustomerId) {
+                        await loadScannedCustomerProfile(activeScannedCustomerId);
+                    }
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "No se pudo redimir el cupón.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error al conectar con el servidor.");
+            }
+        }
+
+        window.onload = async () => {
+            try {
+                const savedEmp = localStorage.getItem('ra_kitchen_emp');
+                const savedPin = localStorage.getItem('ra_staff_pin');
+                if (savedEmp && savedPin) {
+                    const parsed = JSON.parse(savedEmp);
+                    if (parsed.restaurant_id && parsed.restaurant_id !== 'rich-aroma') {
+                        // Automatically initialize merchant session!
+                        session = { restaurantId: parsed.restaurant_id, user: { name: parsed.name } };
+                        document.getElementById('login-overlay').classList.add('hidden');
+                        document.getElementById('app-container').classList.remove('hidden');
+                        document.getElementById('header-res-name').innerText = parsed.restaurant_id.replace(/-/g, ' ');
+                        document.getElementById('header-user-name').innerText = parsed.name;
+
+                        fetch(`/api/store?action=restaurant_info&id=${parsed.restaurant_id}`)
+                            .then(r => r.json())
+                            .then(info => {
+                                if (info) {
+                                    document.getElementById('header-res-name').innerText = info.name;
+                                    if (info.logo_url) {
+                                        const logoImg = document.getElementById('header-res-logo');
+                                        logoImg.src = info.logo_url;
+                                        logoImg.classList.remove('hidden');
+                                    }
+                                    adjustLayoutForService(info.category);
+                                }
+                            }).catch(e => console.warn(e));
+                        
+                        await loadData();
+                        startPolling();
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error("Auto-session restoration failed:", e);
+            }
+        };
+
+        function openUgcModal() {
+            document.getElementById('ugc-modal').classList.remove('hidden');
+            renderUgcLinks();
+        }
+
+        function closeUgcModal() {
+            document.getElementById('ugc-modal').classList.add('hidden');
+        }
+
+        function toggleUgcValueLabel(val) {
+            const label = document.getElementById('ugc-val-label');
+            const container = document.getElementById('ugc-val-input-container');
+            
+            if (val === 'gacha_spin') {
+                label.innerText = "Equivalencia Puntos (Ej: 100)";
+                container.innerHTML = `<input type="number" id="ugc-reward-value" value="100" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">`;
+            } else if (val === 'item') {
+                label.innerText = "Selecciona Producto Gratis";
+                const options = menuItems.map(item => `<option value="${item.id}" class="bg-charcoal text-white">${item.name}</option>`).join('');
+                container.innerHTML = `<select id="ugc-reward-value" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">${options}</select>`;
+            } else {
+                label.innerText = "Monto (Lempiras)";
+                container.innerHTML = `<input type="number" id="ugc-reward-value" value="30" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-purple-500 transition-all">`;
+            }
+        }
+
+        async function generateUgcCodes() {
+            if (!session) return;
+            const rewardType = document.getElementById('ugc-reward-type').value;
+            const rewardValue = document.getElementById('ugc-reward-value').value.trim();
+            const maxClaims = document.getElementById('ugc-max-claims').value.trim();
+            const count = document.getElementById('ugc-code-count').value.trim();
+            const btn = document.getElementById('btn-generate-ugc');
+
+            if (!rewardValue || !count || !maxClaims) return alert("Completa todos los campos");
+
+            btn.innerText = "Generando..."; btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/store?action=partner_generate_ugc_codes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: session.restaurantId,
+                        rewardType,
+                        rewardValue,
+                        maxClaims: parseInt(maxClaims),
+                        count: parseInt(count)
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(`¡Éxito! Generaste ${count} nuevos enlaces de regalo.`);
+                    if (!session.user.settings) session.user.settings = {};
+                    if (!session.user.settings.ugc_codes) session.user.settings.ugc_codes = {};
+                    
+                    data.codes.forEach(c => {
+                        session.user.settings.ugc_codes[c] = {
+                            reward_type: rewardType,
+                            reward_value: rewardValue,
+                            max_claims: parseInt(maxClaims),
+                            is_redeemed: false,
+                            claims: []
+                        };
+                    });
+
+                    renderUgcLinks();
+                } else {
+                    alert(data.error || "Error al generar códigos");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de red");
+            } finally {
+                btn.innerText = "Generar Enlaces de Regalo 🎁"; btn.disabled = false;
+            }
+        }
+
+        function renderUgcLinks() {
+            const container = document.getElementById('ugc-links-list');
+            const codes = session.user?.settings?.ugc_codes || {};
+            const keys = Object.keys(codes);
+
+            if (keys.length === 0) {
+                container.innerHTML = `<p class="text-center py-6 text-white/20 text-[9px] uppercase font-bold italic">No has generado enlaces aún</p>`;
+                return;
+            }
+
+            container.innerHTML = keys.slice().reverse().map(k => {
+                const item = codes[k];
+                const claimUrl = `${window.location.origin}/claim.html?code=${k}`;
+                const max = parseInt(item.max_claims) || 1;
+                const claimsCount = (item.claims || []).length;
+                const statusLabel = item.is_redeemed || claimsCount >= max ? 'Agotado' : 'Activo';
+                const statusColor = item.is_redeemed || claimsCount >= max ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400';
+                
+                let prizeInfo = `Recompensa: L. ${item.reward_value}`;
+                if (item.reward_type === 'gacha_spin') {
+                    prizeInfo = `Recompensa: Giro Gacha (Equiv. ${item.reward_value} pts)`;
+                }
+
+                return `
+                <div class="p-4 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-between gap-4">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[9px] font-mono font-black text-white truncate max-w-[120px]">${k.split('_UGC_')[1]}</span>
+                            <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${statusColor}">
+                                ${statusLabel} (${claimsCount}/${max})
+                            </span>
+                        </div>
+                        <p class="text-[9px] text-white/40 font-bold uppercase mt-1">${prizeInfo}</p>
+                    </div>
+                    <button onclick="copyToClipboard('${claimUrl}', this)" class="px-3 py-2 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 rounded-xl text-[8px] font-black uppercase tracking-wider shrink-0 transition-all">
+                        Copiar Enlace
+                    </button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = btn.innerText;
+                btn.innerText = "Copiado! ✓";
+                btn.classList.replace('text-purple-400', 'text-green-400');
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.classList.replace('text-green-400', 'text-purple-400');
+                }, 1500);
+            }).catch(err => {
+                console.error("Copy failed", err);
+            });
+        }
+
+        // --- MODIFIER DIALOG LOGIC ---
+        function openModifier(id) {
+            currentItem = menuItems.find(i => i.id === id);
+            currentQuantity = 1;
+            currentMods = {};
+            
+            // Pre-select defaults
+            const relevantGroupIds = itemModifierGroups
+                .filter(img => img.item_id === id)
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                .map(img => img.group_id);
+
+            relevantGroupIds.forEach(groupId => {
+                const group = modGroups.find(g => g.id === groupId);
+                if (!group) return;
+                const defaults = modOptions.filter(o => o.group_id === group.id && o.is_default);
+                if (defaults.length > 0) {
+                    currentMods[group.id] = defaults.map(d => d.id);
+                }
+            });
+
+            document.getElementById('mod-item-name').innerText = currentItem.name;
+            document.getElementById('mod-item-price').innerText = `L. ${(parseFloat(currentItem.price) || 0).toFixed(2)}`;
+            document.getElementById('mod-quantity').innerText = "1";
+            document.getElementById('mod-note').value = "";
+            
+            renderModifiers(id);
+            document.getElementById('modifier-modal').classList.remove('hidden');
+            updateModPrice();
+        }
+
+        function renderModifiers(id) {
+            const container = document.getElementById('mod-dynamic-container');
+            const relevantGroupIds = itemModifierGroups
+                .filter(img => img.item_id === id)
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                .map(img => img.group_id);
+            
+            container.innerHTML = relevantGroupIds.map(groupId => {
+                const group = modGroups.find(g => g.id === groupId);
+                if (!group) return '';
+                const options = modOptions.filter(o => o.group_id === group.id);
+                const selected = currentMods[group.id] || [];
+                
+                const gridCols = options.length > 4 ? 'grid-cols-3' : 'grid-cols-2';
+
+                return `
+                    <div class="bg-white/5 p-5 rounded-3xl border border-white/10">
+                        <h3 class="font-black text-white/40 uppercase text-[9px] tracking-[0.2em] mb-4 flex items-center justify-between">
+                            <span>${group.name}</span>
+                            ${group.required ? '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-[8px]">OBLIGATORIO</span>' : '<span class="text-[8px] opacity-50 italic text-white/60">Opcional</span>'}
+                        </h3>
+                        <div class="grid ${gridCols} gap-3">
+                            ${options.map(opt => {
+                                const isSel = selected.includes(opt.id);
+                                return `
+                                <button onclick="toggleMod('${group.id}', '${opt.id}', ${group.max_selections}, '${id}')" id="mod-${opt.id}" 
+                                    class="p-4 border rounded-2xl text-xs font-black transition-all flex flex-col items-start gap-1 shadow-sm ${isSel ? 'border-cyan bg-cyan text-dark font-black' : 'border-white/10 bg-white/5 text-white/60 hover:border-cyan/30'}">
+                                    <span class="leading-tight">${opt.name}</span>
+                                    ${opt.price_adjustment > 0 ? `<span class="${isSel ? 'text-dark/70 font-black' : 'text-green-400'} text-[9px] font-mono">+L.${opt.price_adjustment}</span>` : ''}
+                                </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleMod(groupId, optId, max, itemId) {
+            let selected = currentMods[groupId] || [];
+            if (selected.includes(optId)) {
+                if (!modGroups.find(g => g.id === groupId).required || selected.length > 1) {
+                    selected = selected.filter(id => id !== optId);
+                }
+            } else {
+                if (max === 1) selected = [optId];
+                else if (selected.length < max) selected.push(optId);
+            }
+            currentMods[groupId] = selected;
+            renderModifiers(itemId);
+            updateModPrice();
+        }
+
+        function changeQuantity(amt) {
+            currentQuantity = Math.max(1, currentQuantity + amt);
+            document.getElementById('mod-quantity').innerText = currentQuantity;
+            updateModPrice();
+        }
+
+        function updateModPrice() {
+            let total = parseFloat(currentItem.price) || 0;
+            let allRequiredMet = true;
+
+            const relevantGroupIds = itemModifierGroups
+                .filter(img => img.item_id === currentItem.id)
+                .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                .map(img => img.group_id);
+
+            relevantGroupIds.forEach(groupId => {
+                const group = modGroups.find(g => g.id === groupId);
+                if (!group) return;
+                const selected = currentMods[group.id] || [];
+                if (group.required && selected.length === 0) allRequiredMet = false;
+                
+                selected.forEach(oid => {
+                    const opt = modOptions.find(o => o.id === oid);
+                    if (opt) total += parseFloat(opt.price_adjustment || 0);
+                });
+            });
+
+            const confirmBtn = document.querySelector('button[onclick="confirmItem()"]');
+            if (confirmBtn) {
+                confirmBtn.disabled = !allRequiredMet;
+                confirmBtn.className = `w-full py-4 rounded-xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all flex justify-between px-6 ${allRequiredMet ? 'bg-cyan text-dark hover:bg-cyan/90' : 'bg-white/10 text-white/30 cursor-not-allowed shadow-none'}`;
+            }
+
+            document.getElementById('mod-total-display').innerText = `L. ${(total * currentQuantity).toFixed(0)}`;
+        }
+
+        function closeModal() {
+            document.getElementById('modifier-modal').classList.add('hidden');
+        }
+
+        function confirmItem() {
+            const mods = [];
+            let priceWithMods = parseFloat(currentItem.price) || 0;
+            for (const gid in currentMods) {
+                currentMods[gid].forEach(oid => {
+                    const opt = modOptions.find(o => o.id === oid);
+                    if (opt) {
+                        mods.push({ id: opt.id, name: opt.name, price: parseFloat(opt.price_adjustment) || 0 });
+                        priceWithMods += (parseFloat(opt.price_adjustment) || 0);
+                    }
+                });
+            }
+            const note = document.getElementById('mod-note')?.value || "";
+            const item = {
+                id: currentItem.id,
+                name: currentItem.name,
+                qty: currentQuantity,
+                price: priceWithMods,
+                mods,
+                note,
+                finalPrice: priceWithMods * currentQuantity
+            };
+            cart.push(item);
+            renderCart();
+            closeModal();
+        }
+
+        // --- SCHEDULER LOGIC ---
+        let selectedDate = new Date();
+        let currentWeekStart = new Date();
+        
+        // Set currentWeekStart to start of current week (Monday)
+        function initWeekStart() {
+            const currentWeekDay = currentWeekStart.getDay();
+            const currentWeekDiff = currentWeekStart.getDate() - currentWeekDay + (currentWeekDay === 0 ? -6 : 1);
+            currentWeekStart.setDate(currentWeekDiff);
+        }
+        initWeekStart();
+
+        function prevWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            renderCalendarStrip();
+        }
+
+        function nextWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            renderCalendarStrip();
+        }
+
+        function renderCalendarStrip() {
+            const container = document.getElementById('calendar-days-list');
+            if (!container) return;
+
+            // Update Month Label
+            const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('calendar-month-label').innerText = `${monthNames[currentWeekStart.getMonth()]} ${currentWeekStart.getFullYear()}`;
+
+            const days = [];
+            const tempDate = new Date(currentWeekStart);
+
+            for (let i = 0; i < 7; i++) {
+                const dayNum = tempDate.getDate();
+                const dayIdx = tempDate.getDay();
+                const dateStr = tempDate.toISOString().split('T')[0];
+                const weekdays = ["Dom", "Lun", "Mar", "Mie", "Jue", "Vie", "Sab"];
+                const isSelected = selectedDate.toDateString() === tempDate.toDateString();
+                
+                days.push(`
+                    <button onclick="selectCalendarDate('${dateStr}')" class="w-full p-4 rounded-2xl flex items-center justify-between transition-all ${isSelected ? 'bg-cyan text-dark shadow-lg shadow-cyan/20 font-black font-black' : 'bg-white/5 text-white hover:bg-white/10'}">
+                        <div class="text-left">
+                            <span class="block text-[8px] uppercase tracking-widest ${isSelected ? 'text-dark/60' : 'text-white/40'}">${weekdays[dayIdx]}</span>
+                            <span class="text-sm font-black">${dayNum}</span>
+                        </div>
+                        <span class="text-[9px] px-2 py-0.5 rounded font-mono ${isSelected ? 'bg-dark/20 text-dark' : 'bg-white/10 text-white/50'}">${getBookingCountForDate(dateStr)} citas</span>
+                    </button>
+                `);
+                
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+
+            container.innerHTML = days.join('');
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedDate = new Date(dateStr + 'T00:00:00');
+            renderCalendarStrip();
+            renderSelectedDayAgenda();
+        }
+
+        function getBookingCountForDate(dateStr) {
+            return liveOrders.filter(o => {
+                return (o.status && o.status.includes('booking') && o.scheduled_for && o.scheduled_for.startsWith(dateStr));
+            }).length;
+        }
+
+        function renderSelectedDayAgenda() {
+            const container = document.getElementById('agenda-appointments-list');
+            const title = document.getElementById('agenda-day-title');
+            const subtitle = document.getElementById('agenda-day-subtitle');
+            const countBadge = document.getElementById('agenda-day-count');
+
+            if (!container) return;
+
+            const dateStr = selectedDate.toISOString().split('T')[0];
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            subtitle.innerText = selectedDate.toLocaleDateString('es-ES', dateOptions);
+
+            const dayBookings = liveOrders.filter(o => {
+                return (o.status && o.status.includes('booking') && o.scheduled_for && o.scheduled_for.startsWith(dateStr));
+            });
+
+            countBadge.innerText = `${dayBookings.length} Cita(s)`;
+
+            if (dayBookings.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20 bg-white/5 border border-white/5 rounded-3xl space-y-4">
+                        <div class="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center text-white/20 text-xl mx-auto"><i class="fas fa-calendar-times"></i></div>
+                        <div>
+                            <h4 class="text-xs font-black uppercase text-white/30 tracking-widest">Sin Citas Programadas</h4>
+                            <p class="text-[10px] text-white/20 mt-1">No hay citas registradas para este día.</p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = dayBookings.map(o => {
+                const dateObj = new Date(o.scheduled_for);
+                const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const cleanNotes = o.notes ? o.notes.replace(/\[FULFILLMENT:[^\]]*\]/g, '').replace(/\[MOTIVO:[^\]]*\]/g, '').trim() : 'Sin notas.';
+                const reasonMatch = o.notes ? o.notes.match(/\[MOTIVO:\s*([^\]]+)\]/) : null;
+                const reason = reasonMatch ? reasonMatch[1] : 'Consulta General';
+                
+                let sColor = 'bg-white/10 text-white';
+                let sLabel = o.status.toUpperCase();
+                if (o.status === 'pending_booking') { sColor = 'bg-cyan text-dark'; sLabel = 'SOLICITADA'; }
+                if (o.status === 'confirmed_booking') { sColor = 'bg-green-500 text-dark'; sLabel = 'CONFIRMADA'; }
+
+                let actionBtn = '';
+                if (o.status === 'pending_booking') {
+                    actionBtn = `
+                        <button onclick="updateOrderStatus('${o.id}', 'confirmed_booking')" class="bg-green-500 text-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest mr-2 active:scale-95 transition-all">Confirmar Cita</button>
+                        <button onclick="updateOrderStatus('${o.id}', 'cancelled_booking')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Rechazar</button>
+                    `;
+                } else if (o.status === 'confirmed_booking') {
+                    actionBtn = `
+                        <button onclick="updateOrderStatus('${o.id}', 'completed_booking')" class="bg-cyan text-dark px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest mr-2 active:scale-95 transition-all">Completar Cita</button>
+                        <button onclick="updateOrderStatus('${o.id}', 'cancelled_booking')" class="bg-red-500 text-white px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Cancelar</button>
+                    `;
+                }
+
+                // WhatsApp Client Link
+                let waCust = '';
+                let phone = o.customers?.phone;
+                if (!phone && o.notes) {
+                    const match = o.notes.match(/\[TEL:\s*([^\]]+)\]/);
+                    if (match) phone = match[1].trim();
+                }
+                if (phone) {
+                    const cleanPhone = phone.replace(/\D/g, '');
+                    const waText = `Hola, le saludamos de ${session.restaurantId.replace(/-/g, ' ').toUpperCase()}. Nos contactamos sobre su cita programada para el ${o.scheduled_for ? new Date(o.scheduled_for).toLocaleString() : ''}.`;
+                    const waLink = `https://wa.me/${cleanPhone.length===8 ? '504'+cleanPhone : cleanPhone}?text=${encodeURIComponent(waText)}`;
+                    waCust = `<a href="${waLink}" target="_blank" class="bg-green-500/20 text-green-500 px-4 py-2 rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center gap-1 hover:bg-green-500 hover:text-white transition-colors" title="WhatsApp Cliente"><i class="fab fa-whatsapp"></i> WhatsApp</a>`;
+                }
+
+                return `
+                    <div class="glass p-6 rounded-3xl border border-white/5 space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-cyan/15 text-cyan flex items-center justify-center text-sm font-black"><i class="fas fa-clock"></i></div>
+                                <div>
+                                    <h4 class="text-sm font-black text-white">${timeStr}</h4>
+                                    <p class="text-[10px] text-white/40 uppercase tracking-wide">Paciente: ${o.customers?.name || 'Cliente sin Nombre'}</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[8px] font-black tracking-widest ${sColor}">${sLabel}</span>
+                        </div>
+                        
+                        <div class="space-y-1.5 pt-2 border-t border-white/5">
+                            <div class="text-[9px] font-black text-white/30 uppercase tracking-widest">Motivo de Cita</div>
+                            <p class="text-xs font-black text-white uppercase tracking-tight">${reason}</p>
+                            ${cleanNotes ? `<p class="text-xs text-white/50 leading-relaxed italic">"${cleanNotes}"</p>` : ''}
+                        </div>
+
+                        <div class="flex items-center justify-between pt-4 border-t border-white/5">
+                            <div class="flex gap-2">
+                                ${waCust}
+                            </div>
+                            <div class="flex">
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let activeAvailDays = [1, 2, 3, 4, 5];
+
+        function toggleAvailDay(dayIdx) {
+            const idx = activeAvailDays.indexOf(dayIdx);
+            const btn = document.getElementById(`day-opt-${dayIdx}`);
+            if (idx > -1) {
+                activeAvailDays.splice(idx, 1);
+                if (btn) {
+                    btn.className = "py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-white/5 text-white/40";
+                }
+            } else {
+                activeAvailDays.push(dayIdx);
+                if (btn) {
+                    btn.className = "py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark";
+                }
+            }
+        }
+
+        function setSchedulerTab(tabName) {
+            const tabAgenda = document.getElementById('tab-agenda');
+            const tabAvailability = document.getElementById('tab-availability');
+            const viewAgenda = document.getElementById('view-agenda');
+            const viewAvailability = document.getElementById('view-availability');
+
+            if (tabName === 'agenda') {
+                if (tabAgenda) tabAgenda.className = "text-xs font-black uppercase tracking-widest border-b-2 border-cyan pb-4 pt-4 text-white";
+                if (tabAvailability) tabAvailability.className = "text-xs font-black uppercase tracking-widest border-b-2 border-transparent pb-4 pt-4 text-white/40 hover:text-white transition-all";
+                if (viewAgenda) viewAgenda.classList.remove('hidden');
+                if (viewAvailability) viewAvailability.classList.add('hidden');
+                renderSelectedDayAgenda();
+            } else if (tabName === 'availability') {
+                if (tabAgenda) tabAgenda.className = "text-xs font-black uppercase tracking-widest border-b-2 border-transparent pb-4 pt-4 text-white/40 hover:text-white transition-all";
+                if (tabAvailability) tabAvailability.className = "text-xs font-black uppercase tracking-widest border-b-2 border-cyan pb-4 pt-4 text-white";
+                if (viewAgenda) viewAgenda.classList.add('hidden');
+                if (viewAvailability) viewAvailability.classList.remove('hidden');
+                loadAvailabilitySettingsUI();
+            }
+        }
+
+        function loadAvailabilitySettingsUI() {
+            if (!session) return;
+            fetch(`/api/store?action=restaurant_info&id=${session.restaurantId}`)
+                .then(r => r.json())
+                .then(info => {
+                    if (info && info.settings) {
+                        const operatingHours = info.settings.operating_hours || {};
+                        document.getElementById('avail-start-time').value = operatingHours.start || "08:00";
+                        document.getElementById('avail-end-time').value = operatingHours.end || "17:00";
+                        
+                        activeAvailDays = operatingHours.days || [1, 2, 3, 4, 5];
+                        for (let i = 0; i <= 6; i++) {
+                            const btn = document.getElementById(`day-opt-${i}`);
+                            if (btn) {
+                                if (activeAvailDays.includes(i)) {
+                                    btn.className = "py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-cyan text-dark";
+                                } else {
+                                    btn.className = "py-3 rounded-xl font-bold text-xs uppercase tracking-tighter bg-white/5 text-white/40";
+                                }
+                            }
+                        }
+                    }
+                }).catch(e => console.warn(e));
+        }
+
+        async function saveAvailabilitySettings() {
+            if (!session) return;
+            const start = document.getElementById('avail-start-time').value;
+            const end = document.getElementById('avail-end-time').value;
+            
+            const btn = document.querySelector('#view-availability button[onclick*="saveAvailabilitySettings"]');
+            const originalText = btn ? btn.innerText : "Guardar Configuración";
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = "Guardando...";
+            }
+
+            try {
+                const res = await fetch('/api/store?action=partner_update_settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: session.restaurantId,
+                        operatingHours: {
+                            start,
+                            end,
+                            days: activeAvailDays
+                        }
+                    })
+                });
+
+                if (res.ok) {
+                    alert("¡Configuración de disponibilidad guardada con éxito!");
+                } else {
+                    const data = await res.json();
+                    alert("Error: " + (data.error || "No se pudo guardar la configuración."));
+                }
+            } catch (e) {
+                alert("Error de red.");
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                }
+            }
+        }
+
+        function initializeCalendarStrip() {
+            renderCalendarStrip();
+            renderSelectedDayAgenda();
+        }
+    </script>
+</body>
+</html>
