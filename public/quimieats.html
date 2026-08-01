@@ -531,11 +531,7 @@
             
             document.getElementById('store-menu-view').classList.remove('hidden');
             
-            if (isProfessionalService(r)) {
-                renderServiceBookingView(r);
-            } else {
-                fetchMenu(id);
-            }
+            fetchMenu(id);
         }
 
         function renderServiceBookingView(r) {
@@ -544,6 +540,23 @@
             
             const rawPhone = (r.phone || '50499990000').replace(/\D/g, '');
             const phone = rawPhone.startsWith('504') ? rawPhone : `504${rawPhone}`;
+
+            // Build dynamic service options from the fetched menu
+            let serviceOptionsHtml = '';
+            if (window.menu && window.menu.length > 0) {
+                serviceOptionsHtml = window.menu.map(item => {
+                    const priceLabel = item.price > 0 ? ` - L. ${item.price}` : ' - Gratis';
+                    const durationLabel = item.duration ? ` (${item.duration} min)` : '';
+                    return `<option value="${item.name}" data-item-id="${item.id}" data-price="${item.price}" data-duration="${item.duration || 30}" class="bg-dark text-white">${item.name}${priceLabel}${durationLabel}</option>`;
+                }).join('');
+            } else {
+                serviceOptionsHtml = `
+                    <option value="Consulta General" data-price="0" data-duration="30" class="bg-dark text-white">Consulta General - Gratis</option>
+                    <option value="Chequeo de Rutina" data-price="0" data-duration="30" class="bg-dark text-white">Chequeo de Rutina / Diagnóstico - Gratis</option>
+                    <option value="Procedimiento Especializado" data-price="0" data-duration="45" class="bg-dark text-white">Procedimiento Especializado - Gratis</option>
+                    <option value="Urgencia / Asistencia Inmediata" data-price="0" data-duration="30" class="bg-dark text-white">Urgencia / Emergencia - Gratis</option>
+                `;
+            }
 
             container.innerHTML = `
                 <div class="space-y-6 py-4 animate-in fade-in duration-300">
@@ -557,11 +570,11 @@
                             <div>
                                 <label class="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1.5 block">Motivo de Consulta / Servicio</label>
                                 <select id="srv-reason" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs text-white outline-none focus:border-orange-500 font-bold">
-                                    <option value="Consulta General" class="bg-dark text-white">Consulta General</option>
-                                    <option value="Chequeo de Rutina" class="bg-dark text-white">Chequeo de Rutina / Diagnóstico</option>
-                                    <option value="Procedimiento / Especialidad" class="bg-dark text-white">Procedimiento Especializado</option>
-                                    <option value="Urgencia / Asistencia Inmediata" class="bg-dark text-white">Urgencia / Emergencia</option>
+                                    ${serviceOptionsHtml}
                                 </select>
+                                <div id="srv-details-badge" class="mt-2 text-[10px] font-black text-orange-400 uppercase tracking-widest flex gap-3">
+                                    <!-- Dynamic badge content -->
+                                </div>
                             </div>
                             
                             <div class="grid grid-cols-2 gap-3">
@@ -572,9 +585,14 @@
                                 <div>
                                     <label class="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1.5 block">Horario Preferido</label>
                                     <select id="srv-time" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl text-xs text-white outline-none focus:border-orange-500 font-bold">
-                                        <option value="Mañana (8:00 AM - 12:00 PM)" class="bg-dark text-white">Mañana (8 AM - 12 PM)</option>
-                                        <option value="Tarde (1:00 PM - 5:00 PM)" class="bg-dark text-white">Tarde (1 PM - 5 PM)</option>
-                                        <option value="Sábado por la mañana" class="bg-dark text-white">Sábado por la Mañana</option>
+                                        <option value="08:00 AM" class="bg-dark text-white">08:00 AM</option>
+                                        <option value="09:00 AM" class="bg-dark text-white">09:00 AM</option>
+                                        <option value="10:00 AM" class="bg-dark text-white">10:00 AM</option>
+                                        <option value="11:00 AM" class="bg-dark text-white">11:00 AM</option>
+                                        <option value="01:00 PM" class="bg-dark text-white">01:00 PM</option>
+                                        <option value="02:00 PM" class="bg-dark text-white">02:00 PM</option>
+                                        <option value="03:00 PM" class="bg-dark text-white">03:00 PM</option>
+                                        <option value="04:00 PM" class="bg-dark text-white">04:00 PM</option>
                                     </select>
                                 </div>
                             </div>
@@ -609,6 +627,41 @@
                 dateInput.value = tomorrow.toISOString().split('T')[0];
                 dateInput.min = new Date().toISOString().split('T')[0];
             }
+
+            // Bind change listener to reason to update details badge
+            const selectEl = document.getElementById('srv-reason');
+            const detailsBadge = document.getElementById('srv-details-badge');
+            
+            const updateDetails = () => {
+                if (!selectEl || !detailsBadge) return;
+                const opt = selectEl.options[selectEl.selectedIndex];
+                if (!opt) return;
+                const price = opt.getAttribute('data-price');
+                const dur = opt.getAttribute('data-duration');
+                
+                let detailsText = '';
+                if (price !== null && price !== undefined) {
+                    detailsText += `💰 L. ${price}`;
+                }
+                if (dur) {
+                    detailsText += ` ⏱️ ${dur} Minutos`;
+                }
+                detailsBadge.innerHTML = detailsText;
+            };
+
+            if (selectEl) {
+                selectEl.addEventListener('change', updateDetails);
+                
+                // Pre-select service from URL query param if present
+                const urlParams = new URLSearchParams(window.location.search);
+                const targetServiceId = urlParams.get('service');
+                if (targetServiceId) {
+                    const opt = Array.from(selectEl.options).find(o => o.getAttribute('data-item-id') === targetServiceId);
+                    if (opt) selectEl.value = opt.value;
+                }
+                
+                updateDetails();
+            }
         }
 
         window.requestServiceAppointment = async (specialistName, phone) => {
@@ -625,6 +678,31 @@
 
             const submitBtn = document.querySelector('button[onclick*="requestServiceAppointment"]');
             const originalText = submitBtn ? submitBtn.innerHTML : "Solicitar Cita por WhatsApp";
+
+            const r = allRestaurants.find(x => x.id === activeStoreId);
+            if (r) {
+                const settings = r.settings || {};
+                const leadTimeHours = parseInt(settings.booking_lead_time) || 4; // default 4 hours
+
+                // Parse selected datetime
+                const match = timeVal.match(/(\d+):(\d+) (AM|PM)/i);
+                if (match) {
+                    let hour = parseInt(match[1]);
+                    const min = match[2];
+                    const period = match[3].toUpperCase();
+                    if (period === 'PM' && hour < 12) hour += 12;
+                    if (period === 'AM' && hour === 12) hour = 0;
+
+                    const selectedDateTime = new Date(`${dateVal}T${String(hour).padStart(2, '0')}:${min}:00`);
+                    const minAllowedTime = new Date(Date.now() + leadTimeHours * 60 * 60 * 1000);
+
+                    if (selectedDateTime < minAllowedTime) {
+                        alert(`Este especialista requiere reservar con un mínimo de ${leadTimeHours} horas de antelación. Por favor selecciona un horario posterior.`);
+                        return;
+                    }
+                }
+            }
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Registrando cita...';
@@ -837,7 +915,12 @@
                         console.error("Failed to check active gacha campaign:", e);
                     }
 
-                    renderInAppMenu(finalCategories, resId);
+                    const rStore = allRestaurants.find(x => x.id === resId);
+                    if (rStore && isProfessionalService(rStore)) {
+                        renderServiceBookingView(rStore);
+                    } else {
+                        renderInAppMenu(finalCategories, resId);
+                    }
                 } else {
                     container.innerHTML = `
                         <div class="p-20 text-center space-y-4">
