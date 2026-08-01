@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuimiEats Dev Hub & Live Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { gold: '#C9A66B', dark: '#0A0A0B', charcoal: '#16161A', cyan: '#00F2FF' }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+        body { background-color: #0A0A0B; color: white; font-family: 'Outfit', sans-serif; }
+        .glass { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .device-shadow { box-shadow: 0 25px 50px -12px rgba(0, 242, 255, 0.15); }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col hide-scroll">
+
+    <!-- Top Navigation -->
+    <header class="w-full px-8 py-4 border-b border-white/5 bg-charcoal/40 backdrop-blur-md flex justify-between items-center z-50 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-xl bg-cyan/15 border border-cyan/35 flex items-center justify-center text-cyan text-sm"><i class="fas fa-terminal"></i></div>
+            <div>
+                <h1 class="text-md font-black uppercase tracking-tight">QUIMIEATS <span class="text-cyan">DEV HUB</span></h1>
+                <p class="text-[9px] text-white/40 font-bold uppercase tracking-wider">Simulador de Ecosistema Integrado</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <!-- Partner Target Selector -->
+            <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-2xl">
+                <label class="text-[9px] font-black uppercase text-white/40 tracking-wider">Perfil de Prueba:</label>
+                <select id="sim-partner-select" onchange="syncSimulatorPartner(this.value)" class="bg-transparent text-xs font-bold text-white outline-none cursor-pointer">
+                    <option value="dental-arita" class="bg-charcoal text-white">Dentista: Centro Dental Arita</option>
+                    <option value="rich-aroma" class="bg-charcoal text-white">Restaurante: Rich Aroma Cafe</option>
+                </select>
+            </div>
+            
+            <button onclick="reloadSimulators()" class="p-2 bg-white/5 border border-white/10 text-white/70 hover:text-white rounded-xl active:scale-95 transition-all text-xs" title="Recargar simuladores"><i class="fas fa-redo-alt"></i></button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex overflow-hidden min-h-0">
+        <!-- Sidebar Controls -->
+        <aside class="w-80 border-r border-white/5 bg-charcoal/20 p-6 space-y-6 overflow-y-auto hide-scroll shrink-0">
+            <!-- Quick Presets -->
+            <div class="glass p-5 rounded-3xl space-y-4">
+                <p class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-id-card"></i> Credenciales de Acceso</p>
+                
+                <div class="space-y-3">
+                    <!-- Preset Dental -->
+                    <div onclick="syncSimulatorPartner('dental-arita')" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl cursor-pointer transition-all text-left">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white">Dr. Oscar Arita 🦷</span>
+                            <span class="bg-cyan/15 text-cyan text-[7px] font-black uppercase px-2 py-0.5 rounded">Servicio</span>
+                        </div>
+                        <p class="text-[9px] text-white/40 font-mono mt-1">ID: dental-arita <br> PIN: 1234</p>
+                    </div>
+
+                    <!-- Preset Cafe -->
+                    <div onclick="syncSimulatorPartner('rich-aroma')" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl cursor-pointer transition-all text-left">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-white">Rich Aroma Cafe ☕</span>
+                            <span class="bg-orange-500/15 text-orange-400 text-[7px] font-black uppercase px-2 py-0.5 rounded">Comida</span>
+                        </div>
+                        <p class="text-[9px] text-white/40 font-mono mt-1">ID: rich-aroma <br> PIN: 1234</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instant Actions -->
+            <div class="glass p-5 rounded-3xl space-y-4">
+                <p class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-bolt"></i> Simular Interacciones</p>
+                <div class="space-y-2">
+                    <button onclick="triggerMockBooking()" id="btn-mock-booking" class="w-full py-3 bg-cyan text-dark font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-cyan/90 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fas fa-calendar-plus"></i> Inyectar Cita Creada
+                    </button>
+                    
+                    <button onclick="triggerMockOrder()" id="btn-mock-order" class="w-full py-3 bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fas fa-utensils"></i> Inyectar Pedido Comida
+                    </button>
+                </div>
+                <p class="text-[8px] text-white/30 text-center leading-normal">Los botones crean registros de prueba directos en la base de datos de Supabase para gatillar las alertas sonoras y vistas del KDS/Calendario.</p>
+            </div>
+
+            <!-- Directory Grid -->
+            <div class="glass p-5 rounded-3xl space-y-3">
+                <p class="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-folder-open"></i> Enlaces directos</p>
+                <div class="grid grid-cols-1 gap-2 text-left">
+                    <a href="/onboarding" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Registro Socio</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
+                    <a href="/socios" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Landing Socios</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
+                    <a href="/quimieats-admin.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Consola Admin</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
+                    <a href="/driver-portal.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Portal Motoristas</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
+                    <a href="/kitchen.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Pantalla KDS Cocina</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Simulated Device Viewports -->
+        <section class="flex-1 p-6 flex justify-center items-center gap-8 bg-dark relative overflow-y-auto">
+            <!-- Simulated Device 1: Customer PWA -->
+            <div class="flex flex-col items-center gap-2">
+                <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-mobile-alt"></i> QuimiEats Cliente PWA</span>
+                
+                <!-- Phone Wrapper Frame -->
+                <div class="w-[375px] h-[720px] bg-charcoal rounded-[3.5rem] border-8 border-white/10 p-1 relative overflow-hidden device-shadow">
+                    <!-- Top Notch -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/10 rounded-b-2xl z-50 flex items-center justify-center">
+                        <div class="w-12 h-1 bg-black rounded-full mb-1"></div>
+                    </div>
+                    
+                    <!-- Content Iframe -->
+                    <iframe id="iframe-customer" src="/quimieats.html?id=dental-arita" class="w-full h-full bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
+                </div>
+            </div>
+
+            <!-- Simulated Device 2: Partner OS -->
+            <div class="flex flex-col items-center gap-2">
+                <span class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-tablet-alt"></i> Partner OS (POS / Calendario)</span>
+                
+                <!-- Tablet/Desktop Wrapper Frame -->
+                <div class="w-[375px] h-[720px] bg-charcoal rounded-[3.5rem] border-8 border-white/10 p-1 relative overflow-hidden device-shadow">
+                    <!-- Top Notch -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/10 rounded-b-2xl z-50 flex items-center justify-center">
+                        <div class="w-12 h-1 bg-black rounded-full mb-1"></div>
+                    </div>
+                    
+                    <!-- Content Iframe -->
+                    <iframe id="iframe-partner" src="/partner-os.html" class="w-full h-full bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dev Scripts -->
+    <script>
+        function syncSimulatorPartner(partnerId) {
+            document.getElementById('sim-partner-select').value = partnerId;
+            
+            const customerIframe = document.getElementById('iframe-customer');
+            const partnerIframe = document.getElementById('iframe-partner');
+            
+            customerIframe.src = `/quimieats.html?id=${partnerId}`;
+            // If they sync, we force reload frames
+            partnerIframe.src = `/partner-os.html`;
+        }
+
+        function reloadSimulators() {
+            document.getElementById('iframe-customer').contentWindow.location.reload();
+            document.getElementById('iframe-partner').contentWindow.location.reload();
+        }
+
+        async function triggerMockBooking() {
+            const btn = document.getElementById('btn-mock-booking');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Inyectando...';
+
+            try {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const dateStr = tomorrow.toISOString().split('T')[0];
+
+                const payload = {
+                    items: [{ name: "Cita Previa: Consulta General", price: 0, qty: 1 }],
+                    total: 0,
+                    subtotal: 0,
+                    discount: 0,
+                    paymentMethod: 'cash',
+                    customerId: '0xSIMULATED_CLIENT',
+                    status: 'pending_booking',
+                    restaurantId: 'dental-arita',
+                    scheduled_for: `${dateStr} 09:00 AM`,
+                    notes: '[FULFILLMENT: booking] [MOTIVO: Consulta General] Creado desde Simulador Dev Hub',
+                    fulfillment: 'booking'
+                };
+
+                const res = await fetch('/api/store?action=orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert("¡Cita de prueba inyectada con éxito! Revisa la vista del calendario en el simulador derecho.");
+                } else {
+                    alert("No se pudo inyectar la cita de prueba.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de red.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+
+        async function triggerMockOrder() {
+            const btn = document.getElementById('btn-mock-order');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Inyectando...';
+
+            try {
+                const payload = {
+                    items: [{ name: "Baleada Sencilla", price: 25, qty: 2 }, { name: "Café Americano 8oz", price: 35, qty: 1 }],
+                    total: 85,
+                    subtotal: 85,
+                    discount: 0,
+                    paymentMethod: 'cash',
+                    customerId: '0xSIMULATED_CLIENT',
+                    status: 'pending',
+                    restaurantId: 'rich-aroma',
+                    fulfillment: 'carryout',
+                    notes: 'Creado desde Simulador Dev Hub'
+                };
+
+                const res = await fetch('/api/store?action=orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert("¡Pedido de prueba inyectada con éxito! Revisa la cola de órdenes en el simulador derecho.");
+                } else {
+                    alert("No se pudo inyectar el pedido de prueba.");
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de red.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    </script>
+</body>
+</html>
