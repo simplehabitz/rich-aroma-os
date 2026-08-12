@@ -492,6 +492,7 @@ module.exports = async (req, res) => {
                 }
                 
                 let surcharge = 0;
+                let espressoSurcharge = 0;
                 if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
                     if (item.selections && Array.isArray(item.selections)) {
                         const oatCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
@@ -505,9 +506,22 @@ module.exports = async (req, res) => {
                         hasOatMilk = item.milk === 'Oat Milk';
                     }
                     if (hasOatMilk) surcharge = 1.00;
+
+                    const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
+                    const hasEspressoModifier = (item.selections && Array.isArray(item.selections)) ? 
+                        item.selections[0].espresso : item.espresso;
+                    if (isMatcha) {
+                        if (hasEspressoModifier === 'Standard' || hasEspressoModifier === 'Extra') {
+                            espressoSurcharge = 1.00;
+                        }
+                    } else {
+                        if (hasEspressoModifier === 'Extra') {
+                            espressoSurcharge = 1.00;
+                        }
+                    }
                 }
 
-                const unitPrice = basePrice + surcharge - volumeDiscount;
+                const unitPrice = basePrice + surcharge + espressoSurcharge - volumeDiscount;
                 for (let q = 0; q < parseInt(item.qty); q++) {
                     flatBottles.push(unitPrice);
                 }

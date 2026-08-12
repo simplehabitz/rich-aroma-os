@@ -1381,14 +1381,23 @@
                 else {
                     espWrapper.classList.remove('hidden');
                     const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
-                    customEspresso = "Standard";
-                    if (isBlack) {
+                    const isMatcha = selectedProduct.name.toLowerCase().includes('matcha');
+                    if (isMatcha) {
+                        customEspresso = "Light";
+                        espContainer.innerHTML = `
+                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">No Espresso</button>
+                            <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">+1 Shot (+$1.00)</button>
+                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">+2 Shots (+$1.00)</button>
+                        `;
+                    } else if (isBlack) {
+                        customEspresso = "Standard";
                         espContainer.innerHTML = `
                             <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Light (2oz)</button>
                             <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (3oz)</button>
                             <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Extra (4oz)</button>
                         `;
                     } else {
+                        customEspresso = "Standard";
                         espContainer.innerHTML = `
                             <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Light (1oz)</button>
                             <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (2oz)</button>
@@ -1646,8 +1655,21 @@
                     return;
                 }
 
+                let espressoSurcharge = 0;
+                const isMatcha = selectedProduct.name.toLowerCase().includes('matcha');
+                if (isMatcha) {
+                    if (customEspresso === 'Standard' || customEspresso === 'Extra') {
+                        espressoSurcharge = 1.00;
+                    }
+                } else {
+                    if (customEspresso === 'Extra') {
+                        espressoSurcharge = 1.00;
+                    }
+                }
+
                 // Add REG items if selected
                 if (singleRegQty > 0) {
+                    const regUnitPrice = basePrice + espressoSurcharge;
                     const matchingIndex = cart.findIndex(item => 
                         item.product_id === selectedProduct.id && 
                         item.selections[0].milk === 'Regular' &&
@@ -1670,8 +1692,8 @@
                             name: selectedProduct.name,
                             selections: singleSelections,
                             qty: singleRegQty,
-                            unitPrice: basePrice,
-                            total: basePrice * singleRegQty,
+                            unitPrice: regUnitPrice,
+                            total: regUnitPrice * singleRegQty,
                             bottles: singleRegQty
                         });
                     }
@@ -1679,7 +1701,7 @@
 
                 // Add OAT items if selected (+$1.00 surcharge)
                 if (singleOatQty > 0) {
-                    const oatUnitPrice = basePrice + 1.00;
+                    const oatUnitPrice = basePrice + 1.00 + espressoSurcharge;
                     const matchingIndex = cart.findIndex(item => 
                         item.product_id === selectedProduct.id && 
                         item.selections[0].milk === 'Oat Milk' &&
@@ -1810,8 +1832,21 @@
                 // Add Oat Milk surcharge
                 let surcharge = (item.selections[0].milk === 'Oat Milk') ? 1.00 : 0;
 
+                // Add Espresso strength surcharge
+                let espressoSurcharge = 0;
+                const isMatcha = item.name.toLowerCase().includes('matcha');
+                if (isMatcha) {
+                    if (item.selections[0].espresso === 'Standard' || item.selections[0].espresso === 'Extra') {
+                        espressoSurcharge = 1.00;
+                    }
+                } else {
+                    if (item.selections[0].espresso === 'Extra') {
+                        espressoSurcharge = 1.00;
+                    }
+                }
+
                 // Deduct active volume discount
-                item.unitPrice = basePrice + surcharge - volDiscountPerBottle;
+                item.unitPrice = basePrice + surcharge + espressoSurcharge - volDiscountPerBottle;
                 item.total = item.unitPrice * item.qty;
             });
 
@@ -1842,7 +1877,15 @@
                     const summary = Object.entries(counts).map(([label, qty]) => `${qty}x ${label}`).join(', ');
                     descText = `5-Drink Bundle • (${summary})`;
                 } else {
-                    descText = isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`;
+                    const isMatchaItem = item.name.toLowerCase().includes('matcha');
+                    if (isMatchaItem) {
+                        let espText = "No Espresso";
+                        if (sel.espresso === 'Standard') espText = "+1 Shot";
+                        else if (sel.espresso === 'Extra') espText = "+2 Shots";
+                        descText = `${sel.milk} • ${espText}`;
+                    } else {
+                        descText = isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`;
+                    }
                 }
                 
                 return `

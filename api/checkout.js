@@ -245,6 +245,7 @@ module.exports = async function handler(req, res) {
             let unitPrice = basePrice;
             if (item.product_id !== 'catering_event_pack') {
                 let surcharge = 0;
+                let espressoSurcharge = 0;
                 if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
                     if (item.selections && Array.isArray(item.selections)) {
                         const oatCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
@@ -259,8 +260,21 @@ module.exports = async function handler(req, res) {
                         hasOatMilk = item.milk === 'Oat Milk';
                     }
                     if (hasOatMilk) surcharge = 1.00;
+
+                    const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
+                    const hasEspressoModifier = (item.selections && Array.isArray(item.selections)) ? 
+                        item.selections[0].espresso : item.espresso;
+                    if (isMatcha) {
+                        if (hasEspressoModifier === 'Standard' || hasEspressoModifier === 'Extra') {
+                            espressoSurcharge = 1.00;
+                        }
+                    } else {
+                        if (hasEspressoModifier === 'Extra') {
+                            espressoSurcharge = 1.00;
+                        }
+                    }
                 }
-                unitPrice += surcharge;
+                unitPrice += surcharge + espressoSurcharge;
                 // Subtract volume discount
                 unitPrice -= volumeDiscount;
             }
