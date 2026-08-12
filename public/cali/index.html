@@ -1845,8 +1845,8 @@
                     }
                 }
 
-                // Deduct active volume discount
-                item.unitPrice = basePrice + surcharge + espressoSurcharge - volDiscountPerBottle;
+                // Keep unit price at full value including surcharges (volume discount will be subtracted at checkout display)
+                item.unitPrice = basePrice + surcharge + espressoSurcharge;
                 item.total = item.unitPrice * item.qty;
             });
 
@@ -1995,6 +1995,7 @@
             // Display Volume Discount savings if active
             if (activeVolDiscount > 0 && activeBottleCount > 0) {
                 const volSavings = activeVolDiscount * activeBottleCount;
+                total = Math.max(0, total - volSavings);
                 breakdownHtml += `<p class="flex justify-between"><span>Volume Discount ($${activeVolDiscount.toFixed(2)}/bottle):</span><span class="text-green-400 font-bold">-$${volSavings.toFixed(2)}</span></p>`;
                 savings += volSavings;
             }
