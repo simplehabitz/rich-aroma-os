@@ -492,13 +492,20 @@ module.exports = async (req, res) => {
                 }
                 
                 let surcharge = 0;
-                let hasOatMilk = false;
-                if (item.selections && Array.isArray(item.selections)) {
-                    hasOatMilk = item.selections.some(s => s.milk === 'Oat Milk');
+                if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                    if (item.selections && Array.isArray(item.selections)) {
+                        const oatCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
+                        surcharge = oatCount * 1.00;
+                    }
                 } else {
-                    hasOatMilk = item.milk === 'Oat Milk';
+                    let hasOatMilk = false;
+                    if (item.selections && Array.isArray(item.selections)) {
+                        hasOatMilk = item.selections.some(s => s.milk === 'Oat Milk');
+                    } else {
+                        hasOatMilk = item.milk === 'Oat Milk';
+                    }
+                    if (hasOatMilk) surcharge = 1.00;
                 }
-                if (hasOatMilk) surcharge = 1.00;
 
                 const unitPrice = basePrice + surcharge - volumeDiscount;
                 for (let q = 0; q < parseInt(item.qty); q++) {
@@ -538,7 +545,9 @@ module.exports = async (req, res) => {
                     else if (cateringSize >= 75) rate = 5.20;
                     else if (cateringSize >= 50) rate = 5.40;
                     const basePrice = rate * cateringSize;
-                    baseTotal += basePrice * parseInt(item.qty || 1);
+                    const oatCount = item.selections ? item.selections.filter(s => s.milk === 'Oat Milk').length : 0;
+                    const cateringTotalPrice = basePrice + (oatCount * 1.00);
+                    baseTotal += cateringTotalPrice * parseInt(item.qty || 1);
                 }
             }
 

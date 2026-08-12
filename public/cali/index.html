@@ -1565,13 +1565,16 @@
                     return;
                 }
 
+                const oatCount = singleSelections.filter(s => s.milk === 'Oat Milk').length;
+                const bundleTotalPrice = 25.00 + (oatCount * 1.00);
+
                 cart.push({
                     product_id: '83d571c7-5aa8-4efb-b649-0ee286dd463d',
                     name: '5 Flavor Bundle',
                     selections: singleSelections,
                     qty: 1,
-                    unitPrice: 25.00,
-                    total: 25.00,
+                    unitPrice: bundleTotalPrice,
+                    total: bundleTotalPrice,
                     bottles: 5
                 });
             } else if (isCatering) {
@@ -1623,7 +1626,9 @@
                 else if (totalBottles >= 100) rate = 5.00;
                 else if (totalBottles >= 75) rate = 5.20;
                 else if (totalBottles >= 50) rate = 5.40;
-                const totalPrice = rate * totalBottles;
+                const basePrice = rate * totalBottles;
+                const oatCount = singleSelections.filter(s => s.milk === 'Oat Milk').length;
+                const cateringTotalPrice = basePrice + (oatCount * 1.00);
 
                 // Push catering package to cart as single item
                 cart.push({
@@ -1631,8 +1636,8 @@
                     name: 'Event Catering Pack',
                     selections: singleSelections,
                     qty: 1,
-                    unitPrice: totalPrice,
-                    total: totalPrice,
+                    unitPrice: cateringTotalPrice,
+                    total: cateringTotalPrice,
                     bottles: totalBottles
                 });
             } else {
