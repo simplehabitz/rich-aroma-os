@@ -813,6 +813,18 @@
                                             ${o.selections?.delivery_address || 'Address N/A'}
                                         </div>
                                     `;
+                                } else if (mode === 'kaiser_route') {
+                                    return `
+                                        <div class="text-[10px] font-bold text-teal-600 flex items-center gap-1">
+                                            <i class="fas fa-hospital text-[9px]"></i> KAISER ROUTE
+                                        </div>
+                                        <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.kaiser_hospital || ''}">
+                                            ${o.selections?.kaiser_hospital || 'Hospital'}
+                                        </div>
+                                        <div class="text-[8px] text-gray-400 font-bold uppercase mt-0.5">
+                                            Dept: ${o.selections?.kaiser_department || 'N/A'}
+                                        </div>
+                                    `;
                                 } else if (mode === 'hub') {
                                     return `
                                         <div class="text-[10px] font-bold text-gray-700 flex items-center gap-1">
@@ -900,6 +912,16 @@
                                                 <span class="font-bold text-brand-brown"><i class="fas fa-truck text-[9px] mr-1"></i> DELIVERY</span>
                                                 <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.delivery_address || ''}">
                                                     ${o.selections?.delivery_address || 'Address N/A'}
+                                                </div>
+                                            `;
+                                        } else if (mode === 'kaiser_route') {
+                                            return `
+                                                <span class="font-bold text-teal-600"><i class="fas fa-hospital text-[9px] mr-1"></i> KAISER ROUTE</span>
+                                                <div class="text-[9px] text-gray-500 mt-0.5" title="${o.selections?.kaiser_hospital || ''}">
+                                                    ${o.selections?.kaiser_hospital || 'Kaiser Hospital'}
+                                                </div>
+                                                <div class="text-[8px] text-gray-400 font-bold uppercase mt-0.5">
+                                                    Dept: ${o.selections?.kaiser_department || 'N/A'}
                                                 </div>
                                             `;
                                         } else if (mode === 'hub') {

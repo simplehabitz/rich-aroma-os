@@ -522,20 +522,34 @@
                     <!-- Fulfillment Option Selection -->
                     <div class="space-y-2 pt-2 border-t border-gray-50">
                         <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Fulfillment Option</label>
-                        <div class="grid grid-cols-3 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100" id="fulfillment-toggle-container">
+                        <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100" id="fulfillment-toggle-container">
                             <button type="button" onclick="setFulfillmentType('pickup')" id="ful-pickup" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Pick Up</button>
-                            <button type="button" onclick="setFulfillmentType('hub')" id="ful-hub" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Hub Drop-off</button>
-                            <button type="button" onclick="setFulfillmentType('delivery')" id="ful-delivery" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark opacity-50 cursor-not-allowed" disabled>Delivery</button>
+                            <button type="button" onclick="setFulfillmentType('kaiser_route')" id="ful-kaiser" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Kaiser Route</button>
+                            <button type="button" onclick="setFulfillmentType('delivery')" id="ful-delivery" class="hidden py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Custom Delivery</button>
                         </div>
                         <p id="fulfillment-helper-text" class="text-[9px] text-gray-405 font-medium italic ml-1">Pick up your order directly from our kitchen in Ontario, CA.</p>
                     </div>
 
-                    <!-- Workplace Hub Selection (Shown only when Hub Drop-off selected) -->
-                    <div id="hub-selection-container" class="space-y-1.5 hidden animate-fade-in">
-                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Workplace Hub</label>
-                        <select id="visible-cust-location" onchange="syncLocationSelect(this.value)" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown outline-none">
-                            <!-- Populated dynamically -->
-                        </select>
+                    <!-- Kaiser Daily Route Selection (Shown only when Kaiser Route selected) -->
+                    <div id="kaiser-route-container" class="space-y-3 hidden animate-fade-in">
+                        <div>
+                            <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Select Kaiser Hospital Drop-off</label>
+                            <select id="kaiser-hospital-select" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs focus:border-brand-brown outline-none">
+                                <option value="Kaiser Fontana (Fontana Medical Center) - 9:00 AM">Kaiser Fontana (Fontana Medical Center) - 9:00 AM</option>
+                                <option value="Kaiser Ontario (Ontario Medical Center) - 9:30 AM">Kaiser Ontario (Ontario Medical Center) - 9:30 AM</option>
+                                <option value="Kaiser Riverside (Riverside Medical Center) - 10:15 AM">Kaiser Riverside (Riverside Medical Center) - 10:15 AM</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Department / Unit</label>
+                                <input type="text" id="kaiser-dept" placeholder="e.g. ICU, Emergency Room" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Drop-off Instructions</label>
+                                <input type="text" id="kaiser-instructions" placeholder="e.g. Leave at front desk" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Custom Event Delivery Address Input (Shown only when Custom Delivery selected) -->
@@ -1774,13 +1788,14 @@
             // Enable or disable delivery option button based on total bottles in cart
             const totalBottles = cart.reduce((sum, item) => sum + item.bottles, 0);
             const delBtn = document.getElementById('ful-delivery');
-            if (delBtn) {
+            const toggleContainer = document.getElementById('fulfillment-toggle-container');
+            if (delBtn && toggleContainer) {
                 if (totalBottles >= 30) {
-                    delBtn.disabled = false;
-                    delBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    delBtn.classList.remove('hidden');
+                    toggleContainer.className = "grid grid-cols-3 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100";
                 } else {
-                    delBtn.disabled = true;
-                    delBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    delBtn.classList.add('hidden');
+                    toggleContainer.className = "grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100";
                     if (selectedFulfillmentType === 'delivery') {
                         setFulfillmentType('pickup');
                     }
@@ -2214,6 +2229,13 @@
                     showToast("Please enter and verify your delivery address.");
                     return;
                 }
+            } else if (selectedFulfillmentType === 'kaiser_route') {
+                const hospital = document.getElementById('kaiser-hospital-select').value;
+                const dept = document.getElementById('kaiser-dept').value.trim();
+                if (!hospital || !dept) {
+                    showToast("Please select your hospital and enter your Department/Unit.");
+                    return;
+                }
             }
 
             const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
@@ -2290,6 +2312,12 @@
             if (selectedFulfillmentType === 'delivery') {
                 selfCheckoutNotes += `\n[DELIVERY DETAILS] Address: ${selectedDeliveryAddress} | Fee: $${calculatedDeliveryFee.toFixed(2)}`;
             }
+            if (selectedFulfillmentType === 'kaiser_route') {
+                const hospital = document.getElementById('kaiser-hospital-select').value;
+                const dept = document.getElementById('kaiser-dept').value.trim();
+                const instructions = document.getElementById('kaiser-instructions').value.trim();
+                selfCheckoutNotes += `\n[KAISER ROUTE] Hospital: ${hospital} | Dept: ${dept} | Instructions: ${instructions}`;
+            }
 
             try {
                 const res = await fetch('/api/checkout', {
@@ -2310,7 +2338,10 @@
                         preorder_date: selectedDate,
                         insulated_bag: insulatedBagQty > 0,
                         insulated_bag_qty: insulatedBagQty,
-                        custom_label_message: customLabelMessage
+                        custom_label_message: customLabelMessage,
+                        kaiser_hospital: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-hospital-select').value : null,
+                        kaiser_department: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-dept').value.trim() : null,
+                        kaiser_instructions: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-instructions').value.trim() : null
                     })
                 });
                 const data = await res.json();
@@ -2348,6 +2379,13 @@
             } else if (selectedFulfillmentType === 'delivery') {
                 if (!selectedDeliveryAddress || !isDeliveryAddressVerified) {
                     showToast("Please enter and verify your delivery address.");
+                    return;
+                }
+            } else if (selectedFulfillmentType === 'kaiser_route') {
+                const hospital = document.getElementById('kaiser-hospital-select').value;
+                const dept = document.getElementById('kaiser-dept').value.trim();
+                if (!hospital || !dept) {
+                    showToast("Please select your hospital and enter your Department/Unit.");
                     return;
                 }
             }
@@ -2429,6 +2467,12 @@
             if (selectedFulfillmentType === 'delivery') {
                 selfCheckoutNotes += `\n[DELIVERY DETAILS] Address: ${selectedDeliveryAddress} | Fee: $${calculatedDeliveryFee.toFixed(2)}`;
             }
+            if (selectedFulfillmentType === 'kaiser_route') {
+                const hospital = document.getElementById('kaiser-hospital-select').value;
+                const dept = document.getElementById('kaiser-dept').value.trim();
+                const instructions = document.getElementById('kaiser-instructions').value.trim();
+                selfCheckoutNotes += `\n[KAISER ROUTE] Hospital: ${hospital} | Dept: ${dept} | Instructions: ${instructions}`;
+            }
 
             try {
                 const res = await fetch('/api/cali?action=create_self_checkout_order', {
@@ -2451,7 +2495,10 @@
                             delivery_fee: selectedFulfillmentType === 'delivery' ? calculatedDeliveryFee : 0,
                             insulated_bag: insulatedBagQty > 0,
                             insulated_bag_qty: insulatedBagQty,
-                            custom_label_message: customLabelMessage
+                            custom_label_message: customLabelMessage,
+                            kaiser_hospital: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-hospital-select').value : null,
+                            kaiser_department: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-dept').value.trim() : null,
+                            kaiser_instructions: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-instructions').value.trim() : null
                         },
                         notes: selfCheckoutNotes,
                         receiptBase64: receiptBase64
@@ -2529,10 +2576,10 @@
         function setFulfillmentType(type) {
             selectedFulfillmentType = type;
             const btnPickup = document.getElementById('ful-pickup');
-            const btnHub = document.getElementById('ful-hub');
+            const btnKaiser = document.getElementById('ful-kaiser');
             const btnDelivery = document.getElementById('ful-delivery');
             const helper = document.getElementById('fulfillment-helper-text');
-            const hubContainer = document.getElementById('hub-selection-container');
+            const kaiserContainer = document.getElementById('kaiser-route-container');
             const customDeliveryContainer = document.getElementById('custom-delivery-container');
 
             // Reset styling
@@ -2540,22 +2587,22 @@
             const activeClass = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
 
             if (btnPickup) btnPickup.className = type === 'pickup' ? activeClass : inactiveClass;
-            if (btnHub) btnHub.className = type === 'hub' ? activeClass : inactiveClass;
+            if (btnKaiser) btnKaiser.className = type === 'kaiser_route' ? activeClass : inactiveClass;
             if (btnDelivery) btnDelivery.className = type === 'delivery' ? activeClass : inactiveClass;
 
             if (type === 'pickup') {
                 if (helper) helper.innerText = "Pick up your order directly from our kitchen in Ontario, CA.";
-                if (hubContainer) hubContainer.classList.add('hidden');
+                if (kaiserContainer) kaiserContainer.classList.add('hidden');
                 if (customDeliveryContainer) customDeliveryContainer.classList.add('hidden');
                 calculatedDeliveryFee = 0;
-            } else if (type === 'hub') {
-                if (helper) helper.innerText = "Captain Rico will drop your labeled bottle off at your workplace location.";
-                if (hubContainer) hubContainer.classList.remove('hidden');
+            } else if (type === 'kaiser_route') {
+                if (helper) helper.innerText = "Daily batched delivery direct to local Kaiser Permanente hospitals. Free of charge!";
+                if (kaiserContainer) kaiserContainer.classList.remove('hidden');
                 if (customDeliveryContainer) customDeliveryContainer.classList.add('hidden');
                 calculatedDeliveryFee = 0;
             } else if (type === 'delivery') {
                 if (helper) helper.innerText = "We'll deliver your catering batch directly to your event address (within 75 miles of Ontario, CA).";
-                if (hubContainer) hubContainer.classList.add('hidden');
+                if (kaiserContainer) kaiserContainer.classList.add('hidden');
                 if (customDeliveryContainer) customDeliveryContainer.classList.remove('hidden');
             }
 

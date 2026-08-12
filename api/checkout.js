@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const { name, email, phone, location_id, items, notes, promo_code, is_subscription, delivery_fee, fulfillment_type, delivery_address, preorder_date, insulated_bag, insulated_bag_qty, custom_label_message } = req.body;
+        const { name, email, phone, location_id, items, notes, promo_code, is_subscription, delivery_fee, fulfillment_type, delivery_address, preorder_date, insulated_bag, insulated_bag_qty, custom_label_message, kaiser_hospital, kaiser_department, kaiser_instructions } = req.body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Cart is empty' });
@@ -373,7 +373,10 @@ module.exports = async function handler(req, res) {
                     delivery_fee: delivery_fee || 0,
                     insulated_bag: calculatedInsulatedBagQty > 0,
                     insulated_bag_qty: calculatedInsulatedBagQty,
-                    custom_label_message: custom_label_message || null
+                    custom_label_message: custom_label_message || null,
+                    kaiser_hospital: kaiser_hospital || null,
+                    kaiser_department: kaiser_department || null,
+                    kaiser_instructions: kaiser_instructions || null
                 },
                 status: 'pending',
                 notes: combinedNotes + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}` + (email ? `\nCustomer Email: ${email}` : '')

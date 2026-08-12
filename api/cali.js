@@ -597,6 +597,9 @@ module.exports = async (req, res) => {
             if (selections && selections.fulfillment_type === 'delivery') {
                 updatedNotes += `\n[DELIVERY] Address: ${selections.delivery_address} | Fee: $${parseFloat(selections.delivery_fee).toFixed(2)}`;
             }
+            if (selections && selections.fulfillment_type === 'kaiser_route') {
+                updatedNotes += `\n[DELIVERY: KAISER ROUTE] Hospital: ${selections.kaiser_hospital} | Dept: ${selections.kaiser_department} | Instructions: ${selections.kaiser_instructions || 'None'}`;
+            }
             if (calculatedInsulatedBagQty > 0) {
                 updatedNotes += `\n[CATERING OPTION] Insulated Cooler Bag & Ice Packs (x${calculatedInsulatedBagQty}) included (Priced-in)`;
             }
