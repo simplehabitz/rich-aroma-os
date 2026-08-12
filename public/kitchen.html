@@ -83,7 +83,19 @@
         let currentEmployee = null;
         let restaurantInfo = null; // New: Store restaurant info
         const urlParams = new URLSearchParams(window.location.search);
-        const currentResId = urlParams.get('restaurantId') || 'rich-aroma';
+        let currentResId = urlParams.get('restaurantId');
+        if (!currentResId) {
+            try {
+                const savedEmp = localStorage.getItem('ra_kitchen_emp');
+                if (savedEmp) {
+                    const parsed = JSON.parse(savedEmp);
+                    if (parsed && parsed.restaurant_id) {
+                        currentResId = parsed.restaurant_id;
+                    }
+                }
+            } catch(e) {}
+        }
+        if (!currentResId) currentResId = 'rich-aroma';
 
         window.onload = () => {
             fetchRestaurantInfo(); // Fetch info on load

@@ -529,30 +529,57 @@ module.exports = async (req, res) => {
             for (const item of items) {
                 if (item.product_id === 'catering_event_pack') {
                     const cateringSize = item.selections ? item.selections.length : 30;
-                    let rate = 4.50;
-                    if (cateringSize >= 500) rate = 3.20;
-                    else if (cateringSize >= 250) rate = 3.50;
-                    else if (cateringSize >= 200) rate = 3.60;
-                    else if (cateringSize >= 150) rate = 3.80;
-                    else if (cateringSize >= 100) rate = 4.00;
-                    else if (cateringSize >= 75) rate = 4.20;
-                    else if (cateringSize >= 50) rate = 4.40;
+                    let rate = 5.50;
+                    if (cateringSize >= 500) rate = 4.20;
+                    else if (cateringSize >= 250) rate = 4.50;
+                    else if (cateringSize >= 200) rate = 4.60;
+                    else if (cateringSize >= 150) rate = 4.80;
+                    else if (cateringSize >= 100) rate = 5.00;
+                    else if (cateringSize >= 75) rate = 5.20;
+                    else if (cateringSize >= 50) rate = 5.40;
                     const basePrice = rate * cateringSize;
                     baseTotal += basePrice * parseInt(item.qty || 1);
                 }
             }
 
-            const calculatedTotal = Math.max(0, baseTotal - stampSavingsDiscounted);
+            let calculatedTotal = Math.max(0, baseTotal - stampSavingsDiscounted);
+            if (selections && selections.delivery_fee) {
+                calculatedTotal += parseFloat(selections.delivery_fee);
+            }
+            let totalBottlesCount = 0;
+            if (selections && selections.cart) {
+                selections.cart.forEach(item => {
+                    if (item.product_id === 'catering_event_pack') {
+                        totalBottlesCount += (item.selections ? item.selections.length : 30) * parseInt(item.qty || 1);
+                    } else if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                        totalBottlesCount += 5 * parseInt(item.qty || 1);
+                    } else {
+                        totalBottlesCount += parseInt(item.qty || 1);
+                    }
+                });
+            }
+            const calculatedInsulatedBagQty = Math.floor(totalBottlesCount / 30);
 
             const updatedSelections = {
                 ...selections,
+                insulated_bag: calculatedInsulatedBagQty > 0,
+                insulated_bag_qty: calculatedInsulatedBagQty,
                 free_bottles_redeemed: freeRedeemedInCurrent,
                 stamps_before: stampsBefore,
                 stamps_after: stampsAfter,
                 receipt_image_url: receiptImageUrl
             };
 
-            const updatedNotes = (notes || '[SELF-CHECKOUT ORDER]') + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}`;
+            let updatedNotes = (notes || '[SELF-CHECKOUT ORDER]') + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}`;
+            if (selections && selections.fulfillment_type === 'delivery') {
+                updatedNotes += `\n[DELIVERY] Address: ${selections.delivery_address} | Fee: $${parseFloat(selections.delivery_fee).toFixed(2)}`;
+            }
+            if (calculatedInsulatedBagQty > 0) {
+                updatedNotes += `\n[CATERING OPTION] Insulated Cooler Bag & Ice Packs (x${calculatedInsulatedBagQty}) included (Priced-in)`;
+            }
+            if (selections && selections.custom_label_message) {
+                updatedNotes += `\n[CUSTOM LABELS] Message: "${selections.custom_label_message}"`;
+            }
             
             const { data, error } = await supabase.from('cali_orders').insert({
                 customer_name: customer_name || 'Guest',

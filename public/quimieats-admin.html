@@ -97,6 +97,7 @@
             <button onclick="switchTab('drivers')" id="tab-drivers" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Drivers</button>
             <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Ventas / P&L</button>
             <button onclick="switchTab('orders')" id="tab-orders" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Pedidos</button>
+            <button onclick="switchTab('sims')" id="tab-sims" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Simulaciones</button>
         </div>
 
         <!-- PARTNERS VIEW -->
@@ -285,7 +286,44 @@
                     </table>
                 </div>
             </div>
-        </section>
+        <!-- SIMULATIONS VIEW -->
+        <div id="view-sims" class="hidden space-y-10">
+            <section class="space-y-6">
+                <div class="px-4">
+                    <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Simulación del Sistema y Motores de Pago</h2>
+                    <p class="text-xs text-white/40 font-bold uppercase tracking-widest mt-1">Ejecute los scripts de pruebas del backend en tiempo real y visualice la salida directamente en la consola interactiva.</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass p-8 rounded-[2.5rem] space-y-4">
+                        <div class="w-12 h-12 rounded-2xl bg-cyan-400/10 flex items-center justify-center text-cyan mb-2">
+                            <i class="fas fa-university text-lg"></i>
+                        </div>
+                        <h4 class="text-lg font-black uppercase tracking-tight">Simulación de Ajustes & Canales de Pago</h4>
+                        <p class="text-xs text-white/50 leading-relaxed">Verifica el flujo completo de configuración de canales de pago. Actualiza el perfil de `pupuseria-mary` con la cuenta de Banco de Occidente y comprueba su recuperación dinámica desde la API de menú del cliente.</p>
+                        <button onclick="runSimulation('payment')" id="btn-sim-payment" class="w-full bg-cyan text-dark h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-cyan/20">Ejecutar Prueba de Pago</button>
+                    </div>
+
+                    <div class="glass p-8 rounded-[2.5rem] space-y-4">
+                        <div class="w-12 h-12 rounded-2xl bg-gold/10 flex items-center justify-center text-gold mb-2">
+                            <i class="fas fa-hourglass-half text-lg"></i>
+                        </div>
+                        <h4 class="text-lg font-black uppercase tracking-tight">Simulación de FIFO & Expiración Excedente</h4>
+                        <p class="text-xs text-white/50 leading-relaxed">Verifica el motor de deducción FIFO de stock de lotes perecederos y la asignación automática de descuentos (20% OFF / 50% OFF) junto a la inyección de premios en la Gacha Welcome Wheel.</p>
+                        <button onclick="runSimulation('batch')" id="btn-sim-batch" class="w-full bg-gold text-dark h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg shadow-gold/20">Ejecutar Prueba FIFO / Expiración</button>
+                    </div>
+                </div>
+
+                <!-- Simulation output logger console -->
+                <div class="glass p-8 rounded-[2.5rem] space-y-4 border border-white/10">
+                    <div class="flex justify-between items-center">
+                        <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/50"><i class="fas fa-terminal mr-2"></i> Consola Interactiva de Resultados</p>
+                        <button onclick="clearConsole()" class="text-white/20 hover:text-white text-xs font-bold uppercase">Limpiar</button>
+                    </div>
+                    <pre id="console-output" class="bg-black/40 border border-white/5 p-6 rounded-2xl font-mono text-[11px] text-green-400 min-h-[250px] max-h-[400px] overflow-y-auto hide-scrollbar whitespace-pre-wrap leading-relaxed">Consola lista. Seleccione una simulación para comenzar...</pre>
+                </div>
+            </section>
+        </div>
 
     </div>
 
@@ -403,10 +441,16 @@
                     <label class="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2 block">Categoría</label>
                     <select id="qa-cat" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-cyan-500 font-bold text-white">
                         <option value="restaurante">Restaurante</option>
+                        <option value="casero">Comida Casera (Hecho en Casa)</option>
                         <option value="reposteria">Café / Repostería</option>
                         <option value="ferreteria">Ferretería</option>
+                        <option value="super">Tienda de Conveniencia (Super)</option>
                         <option value="supermercado">Supermercado</option>
                         <option value="farmacia">Farmacia</option>
+                        <option value="medico">Médico / Especialista</option>
+                        <option value="dentista">Dentista / Odontología</option>
+                        <option value="clinica">Clínica</option>
+                        <option value="abogado">Legal / Abogado</option>
                         <option value="servicios">Servicios</option>
                     </select>
                 </div>
@@ -1221,9 +1265,9 @@
             const category = document.getElementById('qa-cat').value;
             const file = document.getElementById('qa-file').files[0];
 
-            if (!name || !phone) {
+            if (!name) {
                 btn.innerText = ogText; btn.disabled = false;
-                return alert("Faltan datos");
+                return alert("El nombre del negocio es obligatorio.");
             }
 
             try {
@@ -1481,6 +1525,43 @@
                 console.error(e);
                 alert("Error de red");
             }
+        }
+
+        // --- SIMULATIONS ---
+        async function runSimulation(type) {
+            const btn = document.getElementById(`btn-sim-${type}`);
+            const consoleOutput = document.getElementById('console-output');
+            const originalText = btn.innerText;
+            btn.innerText = "EJECUTANDO..."; btn.disabled = true;
+
+            consoleOutput.innerText = `[INFO] Iniciando simulación de tipo '${type}' en el servidor...\n\n`;
+            
+            try {
+                const res = await fetch('/api/admin/run_simulation', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('quimieats_admin_pin')}`
+                    },
+                    body: JSON.stringify({ type })
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    consoleOutput.innerText = data.output || "Simulación finalizada sin salida.";
+                    if (type === 'payment') loadData();
+                } else {
+                    consoleOutput.innerText = `[ERROR] Error del servidor: ${data.error || 'Desconocido'}\n\n${data.output || ''}`;
+                }
+            } catch(e) {
+                consoleOutput.innerText = `[ERROR] Error de red: No se pudo conectar al endpoint de simulación.\n${e.message}`;
+            } finally {
+                btn.innerText = originalText; btn.disabled = false;
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerText = "Consola limpia. Seleccione una simulación para comenzar...";
         }
 
         // --- INIT ---

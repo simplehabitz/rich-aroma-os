@@ -8,23 +8,21 @@ const { notifyOrder } = require('./email-service');
  * Main Order Orchestrator for Rich Aroma OS & QuimiEats
  */
 async function createOrder(orderRequest, supabase = defaultSupabase) {
-    const { 
-        items, 
-        paymentMethod, 
-        secondaryPaymentMethod,
-        ricoAmount,
-        customerId, 
-        customerPhone, 
-        customerName,
-        notes, 
-        fulfillment, 
-        restaurantId,
-        isPos = false,
-        shiftId,
-        guestPhone,
-        scheduledFor, // New Parameter
-        category // New Parameter for restaurant
-    } = orderRequest;
+    const items = orderRequest.items;
+    const paymentMethod = orderRequest.paymentMethod || orderRequest.payment_method;
+    const secondaryPaymentMethod = orderRequest.secondaryPaymentMethod || orderRequest.secondary_payment_method;
+    const ricoAmount = orderRequest.ricoAmount || orderRequest.rico_amount;
+    const customerId = orderRequest.customerId || orderRequest.customer_id;
+    const customerPhone = orderRequest.customerPhone || orderRequest.customer_phone;
+    const customerName = orderRequest.customerName || orderRequest.customer_name;
+    const notes = orderRequest.notes;
+    const fulfillment = orderRequest.fulfillment || orderRequest.fulfillment_type;
+    const restaurantId = orderRequest.restaurantId || orderRequest.restaurant_id;
+    const isPos = orderRequest.isPos || orderRequest.is_pos || false;
+    const shiftId = orderRequest.shiftId || orderRequest.shift_id;
+    const guestPhone = orderRequest.guestPhone || orderRequest.guest_phone;
+    const scheduledFor = orderRequest.scheduledFor || orderRequest.scheduled_for;
+    const category = orderRequest.category;
 
     const targetResId = restaurantId || 'rich-aroma';
     const cleanPhone = (customerPhone || guestPhone || '').replace(/\D/g, '');
@@ -152,16 +150,28 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
         // 3. Rico Balance Logic
         let orderStatus = 'pending';
+        let ricoAmountPaid = 0;
         if (paymentMethod === 'rico_balance' && customer) {
             const currentBalance = parseFloat(customer.rico_balance) || 0;
             if (currentBalance >= finalOrderData.total) {
                 orderStatus = 'paid';
+                ricoAmountPaid = finalOrderData.total;
                 await supabase.from('customers').update({ rico_balance: currentBalance - finalOrderData.total }).eq('id', customer.id);
                 await supabase.from('balance_history').insert({
                     customer_id: customer.id,
                     type: 'payment',
                     amount: -finalOrderData.total,
                     notes: `Order #${finalOrderData.total}`
+                });
+            } else if (currentBalance > 0) {
+                orderStatus = 'partial_paid';
+                ricoAmountPaid = currentBalance;
+                await supabase.from('customers').update({ rico_balance: 0 }).eq('id', customer.id);
+                await supabase.from('balance_history').insert({
+                    customer_id: customer.id,
+                    type: 'payment',
+                    amount: -currentBalance,
+                    notes: `Partial Order #${currentBalance}`
                 });
             } else {
                 throw new Error('Saldo insuficiente en Rico Cash');
@@ -183,7 +193,7 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             status: orderStatus,
             payment_method: paymentMethod,
             secondary_payment_method: secondaryPaymentMethod,
-            rico_amount_paid: ricoAmount || 0,
+            rico_amount_paid: ricoAmountPaid || ricoAmount || 0,
             customer_id: finalCustomerId,
             restaurant_id: targetResId,
             shift_id: shiftId,
@@ -194,6 +204,12 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
                    (notes || '')
         };
 
+        if (fulfillment === 'delivery') {
+            const deliveryPin = Math.floor(1000 + Math.random() * 9000).toString();
+            dbOrder.delivery_pin = deliveryPin;
+            dbOrder.notes = (dbOrder.notes || '') + ` [DELIVERY_PIN: ${deliveryPin}]`;
+        }
+
         // QuimiEats Commission Note
         if (!isPos && targetResId !== 'rich-aroma') {
             const commission = parseFloat(dbOrder.total) * 0.10;
@@ -201,7 +217,58 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             dbOrder.notes = (dbOrder.notes || '') + " " + ledgerNote;
         }
 
-        const { data, error } = await supabase.from('orders').insert(dbOrder).select().single();
+        // Bank Transfer Screenshot Upload & Gemini AI Verification Audit
+        if (paymentMethod === 'transfer' && !isPos) {
+            dbOrder.status = 'awaiting_transfer_approval';
+            
+            if (orderRequest.transferScreenshot) {
+                try {
+                    const base64Data = orderRequest.transferScreenshot.replace(/^data:image\/\w+;base64,/, "");
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const fileName = `comprobantes/${Date.now()}-${Math.floor(Math.random() * 100000)}.png`;
+                    
+                    const { data: uploadData, error: uploadErr } = await supabase.storage
+                        .from('menu-images')
+                        .upload(fileName, buffer, { contentType: 'image/png', upsert: true });
+                        
+                    if (uploadErr) throw uploadErr;
+                    
+                    const publicUrl = supabase.storage.from('menu-images').getPublicUrl(fileName).data.publicUrl;
+                    
+                    // Call AI Auditor
+                    const { auditTransferScreenshot } = require('./ai-service');
+                    const aiReport = await auditTransferScreenshot(orderRequest.transferScreenshot, dbOrder.total, orderRequest.transferReference);
+                    
+                    dbOrder.notes = (dbOrder.notes || '') + ` [TRANSFER_REF: ${orderRequest.transferReference || aiReport.reference_number || 'PENDIENTE'}] [TRANSFER_IMAGE: ${publicUrl}] [AI_STATUS: ${aiReport.status}] [AI_REPORT: ${JSON.stringify(aiReport)}]`;
+                } catch (err) {
+                    console.error("[OrderService] Screenshot upload / AI audit failed:", err);
+                    dbOrder.notes = (dbOrder.notes || '') + ` [TRANSFER_REF: ${orderRequest.transferReference || 'PENDIENTE'}] [AI_STATUS: suspicious] [AI_REPORT: {"status":"suspicious","reason":"Fallo en carga de imagen o auditoría AI"}]`;
+                }
+            } else {
+                dbOrder.notes = (dbOrder.notes || '') + ` [TRANSFER_REF: ${orderRequest.transferReference || 'PENDIENTE'}] [AI_STATUS: pending]`;
+            }
+        }
+
+        let data = null;
+        let error = null;
+        const firstTry = await supabase.from('orders').insert(dbOrder).select().single();
+        data = firstTry.data;
+        error = firstTry.error;
+
+        if (error) {
+            const errorMsg = error.message || '';
+            if (errorMsg.includes('delivery_pin') || errorMsg.includes('delivery_status') || errorMsg.includes('driver_id')) {
+                console.warn("[OrderService] DB schema missing delivery columns. Retrying with fallback...");
+                const fallbackOrder = { ...dbOrder };
+                delete fallbackOrder.delivery_pin;
+                delete fallbackOrder.delivery_status;
+                delete fallbackOrder.driver_id;
+                
+                const retry = await supabase.from('orders').insert(fallbackOrder).select().single();
+                data = retry.data;
+                error = retry.error;
+            }
+        }
         if (error) throw error;
 
         // 5. Post-Order Background Tasks
@@ -209,6 +276,68 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             // Loyalty Points
             if (finalCustomerId) {
                 await awardPoints(finalCustomerId, dbOrder.total, paymentMethod, supabase);
+            }
+            // Digital Stamp Card Logic (Coffee/Bebidas category)
+            if (finalCustomerId) {
+                try {
+                    const coffeeItemsCount = (dbOrder.items || []).reduce((sum, item) => {
+                        const cat = (item.category || '').toLowerCase();
+                        const name = (item.name || '').toLowerCase();
+                        const isCoffeeCat = cat === 'café' || cat === 'bebidas' || cat === 'coffee' || cat === 'bebida';
+                        const isCoffeeName = name.includes('latte') || name.includes('cappuccino') || name.includes('café') || name.includes('cafe') || name.includes('espresso') || name.includes('macchiato');
+                        if (isCoffeeCat || isCoffeeName) {
+                            return sum + (parseInt(item.qty) || 1);
+                        }
+                        return sum;
+                    }, 0);
+
+                    if (coffeeItemsCount > 0) {
+                        const { data: customer } = await supabase.from('customers').select('*').eq('id', finalCustomerId).single();
+                        if (customer) {
+                            let currentStamps = 0;
+                            let hasStampsColumn = 'stamps' in customer;
+
+                            if (hasStampsColumn) {
+                                currentStamps = parseInt(customer.stamps) || 0;
+                            } else {
+                                const tags = Array.isArray(customer.tags) ? customer.tags : [];
+                                const stampTag = tags.find(t => t.startsWith('stamps:'));
+                                if (stampTag) {
+                                    currentStamps = parseInt(stampTag.split(':')[1]) || 0;
+                                }
+                            }
+
+                            let newStamps = currentStamps + coffeeItemsCount;
+                            let spinsAwarded = 0;
+
+                            if (newStamps >= 10) {
+                                spinsAwarded = Math.floor(newStamps / 10);
+                                newStamps = newStamps % 10;
+                            }
+
+                            const updates = {};
+                            if (hasStampsColumn) {
+                                updates.stamps = newStamps;
+                            } else {
+                                const tags = Array.isArray(customer.tags) ? customer.tags : [];
+                                const cleanTags = tags.filter(t => !t.startsWith('stamps:'));
+                                cleanTags.push(`stamps:${newStamps}`);
+                                updates.tags = cleanTags;
+                            }
+
+                            if (spinsAwarded > 0) {
+                                const pointsBonus = spinsAwarded * 10; // 10 points = 1 Gacha Spin
+                                updates.points = (parseInt(customer.points) || 0) + pointsBonus;
+                                console.log(`[StampCard] Customer ${finalCustomerId} completed card. Awarded ${spinsAwarded} Gacha spins (+${pointsBonus} points).`);
+                            }
+
+                            await supabase.from('customers').update(updates).eq('id', customer.id);
+                            console.log(`[StampCard] Customer ${finalCustomerId} stamps updated: ${currentStamps} -> ${newStamps} (+${spinsAwarded * 10} points)`);
+                        }
+                    }
+                } catch (stampErr) {
+                    console.error("[StampCard] Failed to process stamps:", stampErr);
+                }
             }
             // Inventory (Rich Aroma Only)
             if (targetResId === 'rich-aroma') {

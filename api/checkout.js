@@ -6,7 +6,7 @@ module.exports = async function handler(req, res) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const { name, email, phone, location_id, items, notes, promo_code, is_subscription } = req.body;
+        const { name, email, phone, location_id, items, notes, promo_code, is_subscription, delivery_fee, fulfillment_type, delivery_address, preorder_date, insulated_bag, insulated_bag_qty, custom_label_message } = req.body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Cart is empty' });
@@ -223,14 +223,14 @@ module.exports = async function handler(req, res) {
             let basePrice = 6.00; // default for flavored lattes
             if (item.product_id === 'catering_event_pack') {
                 const cateringSize = item.selections ? item.selections.length : 30;
-                let rate = 4.50;
-                if (cateringSize >= 500) rate = 3.20;
-                else if (cateringSize >= 250) rate = 3.50;
-                else if (cateringSize >= 200) rate = 3.60;
-                else if (cateringSize >= 150) rate = 3.80;
-                else if (cateringSize >= 100) rate = 4.00;
-                else if (cateringSize >= 75) rate = 4.20;
-                else if (cateringSize >= 50) rate = 4.40;
+                let rate = 5.50;
+                if (cateringSize >= 500) rate = 4.20;
+                else if (cateringSize >= 250) rate = 4.50;
+                else if (cateringSize >= 200) rate = 4.60;
+                else if (cateringSize >= 150) rate = 4.80;
+                else if (cateringSize >= 100) rate = 5.00;
+                else if (cateringSize >= 75) rate = 5.20;
+                else if (cateringSize >= 50) rate = 5.40;
                 basePrice = rate * cateringSize;
             } else {
                 if (priceMap[item.product_id] !== undefined) {
@@ -284,6 +284,44 @@ module.exports = async function handler(req, res) {
         // Deduct the stamps discount from the final totalAmount
         totalAmount = Math.max(0, totalAmount - stampSavingsDiscounted);
 
+        if (delivery_fee && parseFloat(delivery_fee) > 0) {
+            const feeVal = parseFloat(delivery_fee);
+            lineItems.push({
+                price_data: {
+                    currency: 'usd',
+                    product_data: {
+                        name: 'Event Delivery Fee',
+                        description: `Catering Delivery up to 75 miles (${delivery_address || 'Custom Address'})`
+                    },
+                    unit_amount: Math.round(feeVal * 100),
+                },
+                quantity: 1,
+            });
+            totalAmount += feeVal;
+            combinedNotes += `\n[DELIVERY] Address: ${delivery_address} | Fee: $${feeVal.toFixed(2)}`;
+        }
+
+        // Calculate total bottles in order
+        let totalCheckoutBottles = 0;
+        for (const item of items) {
+            if (item.product_id === 'catering_event_pack') {
+                totalCheckoutBottles += (item.selections ? item.selections.length : 30) * parseInt(item.qty || 1);
+            } else if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                totalCheckoutBottles += 5 * parseInt(item.qty || 1);
+            } else {
+                totalCheckoutBottles += parseInt(item.qty || 1);
+            }
+        }
+
+        const calculatedInsulatedBagQty = Math.floor(totalCheckoutBottles / 30);
+        if (calculatedInsulatedBagQty > 0) {
+            combinedNotes += `\n[CATERING OPTION] Insulated Cooler Bag & Ice Packs (x${calculatedInsulatedBagQty}) included (Priced-in)`;
+        }
+
+        if (custom_label_message) {
+            combinedNotes += `\n[CUSTOM LABELS] Message: "${custom_label_message}"`;
+        }
+
         if (sellerInfo) {
             const commission = totalBottles * 1.00;
             combinedNotes += `\n[PROMO: ${promo_code.toUpperCase()}] Seller: ${sellerInfo.name}\nCommission: $${commission.toFixed(2)}`;
@@ -306,7 +344,13 @@ module.exports = async function handler(req, res) {
                     is_subscription: !!is_subscription,
                     free_bottles_redeemed: freeRedeemedInCurrent,
                     stamps_before: stampsBefore,
-                    stamps_after: stampsAfter
+                    stamps_after: stampsAfter,
+                    fulfillment_type: fulfillment_type || 'pickup',
+                    delivery_address: delivery_address || null,
+                    delivery_fee: delivery_fee || 0,
+                    insulated_bag: calculatedInsulatedBagQty > 0,
+                    insulated_bag_qty: calculatedInsulatedBagQty,
+                    custom_label_message: custom_label_message || null
                 },
                 status: 'pending',
                 notes: combinedNotes + `\n[STAMPS] Redeemed: ${freeRedeemedInCurrent} | Stamps: ${stampsBefore} -> ${stampsAfter}` + (email ? `\nCustomer Email: ${email}` : '')

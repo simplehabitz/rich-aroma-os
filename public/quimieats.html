@@ -97,8 +97,14 @@
                         <span id="header-wallet-badge" class="hidden text-[9px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5 rounded-full font-black uppercase tracking-tight"></span>
                     </div>
                     <div class="flex items-center text-xs text-gray-500 gap-1 cursor-pointer">
-                        <span>📍 Plaza Quimistán</span>
-                        <i class="fas fa-chevron-down"></i>
+                        <span>📍</span>
+                        <select id="location-selector" onchange="changeCity(this.value)" class="bg-transparent border-none outline-none font-bold text-gray-700 cursor-pointer appearance-none">
+                            <option value="quimistan" selected>Quimistán</option>
+                            <option value="pinalejo">Pinalejo</option>
+                            <option value="macuelizo">Macuelizo</option>
+                            <option value="azacualpa">Azacualpa</option>
+                        </select>
+                        <i class="fas fa-chevron-down text-[8px] text-gray-400 ml-0.5"></i>
                     </div>
                 </div>
             </div>
@@ -147,52 +153,43 @@
             <div class="text-2xl">🍔</div>
             <div>
                 <span class="block font-black text-orange-800 text-sm uppercase leading-none">Restaurantes</span>
-                <span class="text-[10px] text-orange-600 font-bold uppercase tracking-widest">Y Comida</span>
+                <span class="text-[10px] text-orange-600 font-bold uppercase tracking-widest">Comida Preparada</span>
+            </div>
+        </div>
+
+        <!-- Súper & Tiendas -->
+        <div onclick="filterRestaurants('super')" class="col-span-2 bg-green-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-green-100 shadow-sm active:scale-95 transition-all">
+            <div class="text-2xl">🛒</div>
+            <div>
+                <span class="block font-black text-green-800 text-sm uppercase leading-none">Súper & Tiendas</span>
+                <span class="text-[10px] text-green-600 font-bold uppercase tracking-widest">Abarrotería y Más</span>
+            </div>
+        </div>
+
+        <!-- Café & Bebidas -->
+        <div onclick="filterRestaurants('cafe')" class="col-span-2 bg-yellow-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-yellow-100 shadow-sm active:scale-95 transition-all">
+            <div class="text-2xl">☕</div>
+            <div>
+                <span class="block font-black text-yellow-800 text-sm uppercase leading-none">Café & Bebidas</span>
+                <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-widest">Rich Aroma & Licuados</span>
+            </div>
+        </div>
+
+        <!-- Repostería & Postres -->
+        <div onclick="filterRestaurants('reposteria')" class="bg-pink-50 p-3 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-pink-100 shadow-sm active:scale-95 transition-all">
+            <div class="text-2xl">🍰</div>
+            <div>
+                <span class="block font-black text-pink-800 text-sm uppercase leading-none">Postres</span>
+                <span class="text-[8px] text-pink-600 font-bold uppercase tracking-tight">Repostería</span>
             </div>
         </div>
 
         <!-- Comida Casera -->
-        <div onclick="filterRestaurants('casero')" class="col-span-2 bg-amber-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-amber-100 shadow-sm active:scale-95 transition-all">
+        <div onclick="filterRestaurants('casero')" class="bg-amber-50 p-3 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-amber-100 shadow-sm active:scale-95 transition-all">
             <div class="text-2xl">🍲</div>
             <div>
-                <span class="block font-black text-amber-800 text-sm uppercase leading-none">Comida Casera</span>
-                <span class="text-[10px] text-amber-600 font-bold uppercase tracking-widest">Hecho en Casa</span>
-            </div>
-        </div>
-        
-        <!-- Supermercado -->
-        <div onclick="filterRestaurants('super')" class="col-span-2 bg-green-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-green-100 shadow-sm active:scale-95 transition-all">
-            <div class="text-2xl">🛒</div>
-            <div>
-                <span class="block font-black text-green-800 text-sm uppercase leading-none">Supermercado</span>
-                <span class="text-[10px] text-green-600 font-bold uppercase tracking-widest">Y Tiendas</span>
-            </div>
-        </div>
-
-        <!-- Salud -->
-        <div onclick="filterRestaurants('salud')" class="col-span-2 bg-blue-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-blue-100 shadow-sm active:scale-95 transition-all">
-            <div class="text-2xl">🩺</div>
-            <div>
-                <span class="block font-black text-blue-800 text-sm uppercase leading-none">Salud</span>
-                <span class="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Médicos</span>
-            </div>
-        </div>
-
-        <!-- Técnicos -->
-        <div onclick="filterRestaurants('servicio')" class="col-span-2 bg-yellow-50 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-yellow-100 shadow-sm active:scale-95 transition-all">
-            <div class="text-2xl">🛠️</div>
-            <div>
-                <span class="block font-black text-yellow-800 text-sm uppercase leading-none">Técnicos</span>
-                <span class="text-[10px] text-yellow-600 font-bold uppercase tracking-tight">Reparaciones</span>
-            </div>
-        </div>
-
-        <!-- Legal / Abogado -->
-        <div onclick="filterRestaurants('abogado')" class="col-span-2 bg-gray-100 p-4 rounded-2xl flex flex-col justify-between h-32 cursor-pointer border border-gray-250 shadow-sm active:scale-95 transition-all">
-            <div class="text-2xl">⚖️</div>
-            <div>
-                <span class="block font-black text-gray-800 text-sm uppercase leading-none">Legal</span>
-                <span class="text-[10px] text-gray-650 font-bold uppercase tracking-widest">Abogados</span>
+                <span class="block font-black text-amber-800 text-sm uppercase leading-none">Casera</span>
+                <span class="text-[8px] text-amber-600 font-bold uppercase tracking-tight">Hecho en Casa</span>
             </div>
         </div>
     </div>
@@ -308,6 +305,19 @@
         }
 
         let allRestaurants = [];
+        let currentCategory = null;
+
+        function changeCity(city) {
+            localStorage.setItem('quimieats_selected_city', city);
+            filterRestaurants(currentCategory);
+        }
+
+        function openMandados() {
+            const city = document.getElementById('location-selector')?.value || 'quimistan';
+            const cityName = city.charAt(0).toUpperCase() + city.slice(1);
+            const text = encodeURIComponent(`Hola QuimiEats, necesito solicitar un Mandado Express en ${cityName}: `);
+            window.open(`https://wa.me/50497814474?text=${text}`, '_blank');
+        }
 
         async function loadRestaurants() {
             try {
@@ -334,6 +344,7 @@
         }
 
         function filterRestaurants(category) {
+            currentCategory = category;
             const featuredSection = document.getElementById('featured-section');
             const listSection = document.getElementById('restaurant-list');
             const listTitle = document.getElementById('list-title');
@@ -353,9 +364,11 @@
                     const cat = (r.category || '').toLowerCase();
                     const name = (r.name || '').toLowerCase();
 
-                    if (search === 'comida') return cat.includes('comida') || cat.includes('restaurante') || cat.includes('reposteria') || cat.includes('cafe');
-                    if (search === 'salud') return cat.includes('médico') || cat.includes('dentista') || cat.includes('farmacia') || cat.includes('clínica') || cat.includes('salud') || cat.includes('medico');
-                    if (search === 'servicio') return cat.includes('técnico') || cat.includes('ac') || cat.includes('eléctrico') || cat.includes('reparación');
+                    if (search === 'comida') return cat.includes('comida') || cat.includes('restaurante');
+                    if (search === 'casero') return cat.includes('casero') || cat.includes('hondureña') || cat.includes('típica') || cat.includes('tipica') || cat.includes('almuerzo');
+                    if (search === 'super') return cat.includes('super') || cat.includes('supermercado') || cat.includes('tienda') || cat.includes('abarrotería') || cat.includes('conveniencia');
+                    if (search === 'cafe') return cat.includes('cafe') || cat.includes('café') || cat.includes('bebida') || cat.includes('licuado') || cat.includes('smoothie') || cat.includes('frappe') || cat.includes('soda') || cat.includes('refresco') || cat.includes('jugo');
+                    if (search === 'reposteria') return cat.includes('reposteria') || cat.includes('repostería') || cat.includes('postre') || cat.includes('panadería') || cat.includes('panaderia') || cat.includes('pan');
 
                     return cat.includes(search) || name.includes(search);
                 });
@@ -364,9 +377,11 @@
                     const cat = (r.category || '').toLowerCase();
                     const name = (r.name || '').toLowerCase();
 
-                    if (search === 'comida') return cat.includes('comida') || cat.includes('restaurante') || cat.includes('reposteria') || cat.includes('cafe');
-                    if (search === 'salud') return cat.includes('médico') || cat.includes('dentista') || cat.includes('farmacia') || cat.includes('clínica') || cat.includes('salud') || cat.includes('medico');
-                    if (search === 'servicio') return cat.includes('técnico') || cat.includes('ac') || cat.includes('eléctrico') || cat.includes('reparación');
+                    if (search === 'comida') return cat.includes('comida') || cat.includes('restaurante');
+                    if (search === 'casero') return cat.includes('casero') || cat.includes('hondureña') || cat.includes('típica') || cat.includes('tipica') || cat.includes('almuerzo');
+                    if (search === 'super') return cat.includes('super') || cat.includes('supermercado') || cat.includes('tienda') || cat.includes('abarrotería') || cat.includes('conveniencia');
+                    if (search === 'cafe') return cat.includes('cafe') || cat.includes('café') || cat.includes('bebida') || cat.includes('licuado') || cat.includes('smoothie') || cat.includes('frappe') || cat.includes('soda') || cat.includes('refresco') || cat.includes('jugo');
+                    if (search === 'reposteria') return cat.includes('reposteria') || cat.includes('repostería') || cat.includes('postre') || cat.includes('panadería') || cat.includes('panaderia') || cat.includes('pan');
 
                     return cat.includes(search) || name.includes(search);
                 });

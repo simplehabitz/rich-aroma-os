@@ -67,6 +67,7 @@ CREATE TABLE menu_items (
     image_url TEXT,
     is_secret BOOLEAN DEFAULT FALSE, -- Secret Menu items
     is_available BOOLEAN DEFAULT TRUE,
+    is_bundle BOOLEAN DEFAULT FALSE, -- Combo bundle items
     prep_station TEXT DEFAULT 'KITCHEN' -- KITCHEN or BAR
 );
 
@@ -90,10 +91,20 @@ CREATE TABLE order_items (
     menu_item_id UUID REFERENCES menu_items(id),
     quantity INTEGER NOT NULL,
     price_at_time DECIMAL(10,2) NOT NULL, -- Snapshotted price
-    modifiers JSONB -- e.g., {"milk": "oat", "sugar": "none"}
+    modifiers JSONB, -- e.g., {"milk": "oat", "sugar": "none"}
+    bundle_selections JSONB -- e.g., [{"slot_name": "Bebida", "item_id": "UUID", "upcharge": 0.00}]
 );
 
--- 7. GIFTS (The Viral Loop)
+-- 7. BUNDLE SLOTS (The Combos)
+CREATE TABLE bundle_slots (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    parent_item_id UUID REFERENCES menu_items(id) ON DELETE CASCADE,
+    slot_name TEXT NOT NULL, -- e.g., "Bebida", "Acompañamiento"
+    allowed_category TEXT NOT NULL, -- e.g., "Drinks", "Sides"
+    upcharge DECIMAL(10,2) DEFAULT 0.00
+);
+
+-- 8. GIFTS (The Viral Loop)
 CREATE TABLE gifts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sender_id UUID REFERENCES users(id),

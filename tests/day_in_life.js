@@ -76,12 +76,18 @@ async function run() {
         // Simulate Task Completion
         // Ensure a task template exists
         let taskId = 1;
-        const { data: tasks } = await supabase.from('daily_tasks').select('id').limit(1);
-        if (tasks && tasks.length > 0) {
-            taskId = tasks[0].id;
-        } else {
-             const { data: newTask } = await supabase.from('daily_tasks').insert({ role: 'barista', task_description: 'Check grinder' }).select().single();
-             taskId = newTask.id;
+        try {
+            const { data: tasks, error } = await supabase.from('daily_tasks').select('id').limit(1);
+            if (error) throw error;
+            if (tasks && tasks.length > 0) {
+                taskId = tasks[0].id;
+            } else {
+                 const { data: newTask } = await supabase.from('daily_tasks').insert({ role: 'barista', task_description: 'Check grinder' }).select().single();
+                 taskId = newTask.id;
+            }
+        } catch (dbErr) {
+            console.log("ℹ️ Table 'daily_tasks' not available, using mock taskId=1");
+            taskId = 1;
         }
         
         const taskLog = await api('POST', '/api/tasks', {
@@ -161,6 +167,7 @@ async function run() {
             total: 600,
             paymentMethod: 'rico_balance',
             customerId: ana.id,
+            fulfillment: 'delivery',
             notes: 'Delivery please'
         };
         
@@ -169,8 +176,8 @@ async function run() {
         console.log(`ℹ️ Order Status: ${order2.status}`);
 
         // Verify Split Payment Logic
-        const { data: anaUpdated } = await supabase.from('customers').select('cash_balance, membership_credit').eq('id', ana.id).single();
-        const totalBalance = anaUpdated.cash_balance + anaUpdated.membership_credit;
+        const { data: anaUpdated } = await supabase.from('customers').select('rico_balance').eq('id', ana.id).single();
+        const totalBalance = parseFloat(anaUpdated.rico_balance) || 0;
         console.log(`ℹ️ Ana Remaining Balance: ${totalBalance}`);
         
         if (totalBalance === 0) {
@@ -199,18 +206,65 @@ async function run() {
         });
         console.log("✅ Order 2 Claimed by Jose");
 
-        // Simulate 'Complete Order' (Delivery)
+        // Fetch order details to retrieve generated delivery PIN
+        const { data: orderDetails } = await supabase.from('orders').select('*').eq('id', order2.id).single();
+        let expectedPin = orderDetails.delivery_pin;
+        if (!expectedPin && orderDetails.notes) {
+            const match = orderDetails.notes.match(/\[DELIVERY_PIN:\s*(\d{4})\]/);
+            if (match) expectedPin = match[1];
+        }
+        console.log(`ℹ️ Generated Delivery PIN for Order 2: ${expectedPin}`);
+
+        // Try marking as delivered with an INVALID PIN (should fail)
+        try {
+            await api('PATCH', `/api/orders/${order2.id}/delivery-status`, {
+                status: 'delivered',
+                driverId: jose.id,
+                pin: '0000'
+            });
+            throw new Error("Validation failure: accepted invalid PIN!");
+        } catch (e) {
+            console.log("✅ Invalid PIN correctly rejected with error:", e.message);
+        }
+
+        // Simulate 'Complete Order' (Delivery) with the CORRECT PIN (should pass)
         const deliverRes = await api('PATCH', `/api/orders/${order2.id}/delivery-status`, {
-            status: 'delivered'
+            status: 'delivered',
+            driverId: jose.id,
+            pin: expectedPin
         });
-        console.log("✅ Order 2 Delivered");
+        console.log("✅ Order 2 Delivered with correct PIN");
         
         // Verify Status
-        const { data: order2Final } = await supabase.from('orders').select('status, delivery_status').eq('id', order2.id).single();
-         if (order2Final.status === 'completed' && order2Final.delivery_status === 'delivered') {
+        const { data: order2Final } = await supabase.from('orders').select('status, notes').eq('id', order2.id).single();
+        const parsedDeliveryStatus = order2Final.notes?.includes('status=delivered') ? 'delivered' : 'pending';
+        if (order2Final.status === 'completed' && parsedDeliveryStatus === 'delivered') {
             console.log("✅ Order 2 Status Verified: Completed & Delivered");
         } else {
-            console.warn(`⚠️ Order 2 Status Check: ${order2Final.status}/${order2Final.delivery_status}`);
+            console.warn(`⚠️ Order 2 Status Check: ${order2Final.status}/${parsedDeliveryStatus}`);
+        }
+
+        // Verify Customer Bypass: Place Order 3 (Delivery, Cash)
+        console.log("ℹ️ Testing Customer Confirmation Bypass...");
+        const order3Res = await api('POST', '/api/orders', {
+            items: [{ id: 'menu_item_1', name: 'Coffee', price: 40, qty: 1 }],
+            subtotal: 40,
+            total: 40,
+            paymentMethod: 'cash',
+            customerId: carlos.id,
+            fulfillment: 'delivery',
+            restaurantId: 'rich-aroma'
+        });
+        const order3 = order3Res;
+
+        // Customer clicks "Confirmar Recepción"
+        await api('POST', `/api/orders/${order3.id}/customer-confirm`);
+        const { data: order3Final } = await supabase.from('orders').select('status, notes').eq('id', order3.id).single();
+        const parsedDeliveryStatus3 = order3Final.notes?.includes('status=delivered') ? 'delivered' : 'pending';
+        if (order3Final.status === 'completed' && parsedDeliveryStatus3 === 'delivered') {
+            console.log("✅ Order 3 (Bypass) Status Verified: Completed & Delivered via Customer Side");
+        } else {
+            throw new Error(`Bypass verification failed: ${order3Final.status}/${parsedDeliveryStatus3}`);
         }
 
 

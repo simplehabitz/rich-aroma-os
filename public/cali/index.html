@@ -46,7 +46,7 @@
 <body class="antialiased font-sans pb-24">
 
     <!-- Toast Notifications Container -->
-    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 pointer-events-none space-y-3 max-w-sm w-full px-4"></div>
+    <div id="toast-container" class="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] pointer-events-none space-y-3 max-w-sm w-full px-4"></div>
 
     <!-- Header -->
     <nav class="sticky top-0 z-50 glass-panel border-b border-gray-100 shadow-sm">
@@ -72,8 +72,8 @@
                 <div class="absolute bottom-0 right-0 w-32 h-32 bg-brand-brown rounded-full blur-2xl translate-x-1/2 translate-y-1/2"></div>
             </div>
             <div class="relative z-10">
-                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Honors Checkout</h1>
-                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Select your drink, pay instantly, and enjoy your fresh brew.</p>
+                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Rich Aroma Cali Distro</h1>
+                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Artisinally brewed espresso and signature lattes delivered fresh or available for pickup.</p>
             </div>
         </div>
 
@@ -81,19 +81,14 @@
 
         <!-- Menu Section View -->
         <div id="menu-view" class="space-y-6">
-            <!-- 1.5 Select Option Toggle -->
-            <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-3">
+            <!-- 1.5 Select Option Toggle (Hidden for customer ordering) -->
+            <div class="bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-3 hidden">
                 <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
                     <i class="fas fa-toggle-on text-brand-brown text-sm"></i> 1.5 Select Option
                 </h3>
                 <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100">
                     <button onclick="setOrderMode('grab')" id="mode-grab" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Grab from Fridge</button>
                     <button onclick="setOrderMode('preorder')" id="mode-preorder" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Pre-order</button>
-                </div>
-                <!-- Preorder Date Selection -->
-                <div id="preorder-date-container" class="space-y-1.5 pt-2 border-t border-gray-50 hidden">
-                    <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Pre-order Date</label>
-                    <input type="date" id="preorder-date-picker" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all" onchange="updatePreorderHelperText()" required>
                 </div>
                 <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Take your bottle directly from the honors fridge right now.</p>
             </div>
@@ -109,31 +104,50 @@
                     <div class="col-span-full text-center py-6 text-gray-400 text-xs italic">Loading menu...</div>
                 </div>
 
-                <!-- Customizer (Expands when product chosen) -->
-                <div id="flavor-customizer" class="hidden pt-4 border-t border-gray-100 space-y-4 animate-fade-in">
-                    <!-- Customizer Header / Close -->
-                    <div class="flex justify-between items-center pb-2 border-b border-gray-50">
-                        <span id="customizer-title-label" class="text-[9px] font-black uppercase text-brand-brown tracking-wider">Customize Order</span>
-                        <button type="button" onclick="closeCustomizer()" class="text-gray-405 hover:text-red-600 transition-all text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg">
-                            Cancel <i class="fas fa-times text-[8px]"></i>
-                        </button>
-                    </div>
-                    <!-- Milk Modifier -->
-                    <div id="milk-customizer-container" class="space-y-2">
-                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Milk Customization</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button onclick="setMilkOption('Regular')" id="milk-reg" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Regular Milk</button>
-                            <button onclick="setMilkOption('Oat Milk')" id="milk-oat" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Oat Milk (+$1.00)</button>
+                <!-- Customizer Modal Overlay -->
+                <div id="flavor-customizer-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-dark/60 backdrop-blur-sm animate-fade-in" onclick="if(event.target === this) closeCustomizer()">
+                    <div id="flavor-customizer" class="bg-white rounded-[2rem] max-w-sm w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-gray-100 space-y-4 relative">
+                        <!-- Customizer Header / Close -->
+                        <div class="flex justify-between items-center pb-2 border-b border-gray-50">
+                            <span id="customizer-title-label" class="text-[9px] font-black uppercase text-brand-brown tracking-wider">Customize Order</span>
+                            <button type="button" onclick="closeCustomizer()" class="text-gray-405 hover:text-red-650 transition-all text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-lg">
+                                Close <i class="fas fa-times text-[8px]"></i>
+                            </button>
                         </div>
-                    </div>
-                    
-                    <!-- Espresso Modifier -->
-                    <div class="space-y-2">
-                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Espresso Strength</label>
-                        <div class="grid grid-cols-3 gap-2" id="espresso-options-container">
-                            <!-- Rendered dynamically depending on flavor -->
+
+                        <!-- Single Drink Customizer Fields -->
+                        <div id="single-customizer-fields" class="hidden space-y-3">
+                            <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Quantities</label>
+                            <div class="space-y-3 bg-gray-50/50 rounded-2xl p-3 border border-gray-100">
+                                <div class="flex justify-between items-center py-1">
+                                    <span id="single-drink-name-label" class="text-[10px] font-bold text-brand-dark shrink-0">Beverage Name</span>
+                                    <div class="flex items-center gap-3">
+                                        <!-- Regular Counter -->
+                                        <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150" id="single-reg-counter-container">
+                                            <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                            <button type="button" onclick="adjustSingleFlavorQty('reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                            <span id="single-qty-reg" class="text-[9px] font-black text-brand-dark w-5 text-center">1</span>
+                                            <button type="button" onclick="adjustSingleFlavorQty('reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                        </div>
+                                        <!-- Oat Counter -->
+                                        <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150" id="single-oat-counter-container">
+                                            <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                            <button type="button" onclick="adjustSingleFlavorQty('oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                            <span id="single-qty-oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                            <button type="button" onclick="adjustSingleFlavorQty('oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                        
+                        <!-- Espresso Modifier -->
+                        <div id="espresso-customizer-container" class="space-y-2">
+                            <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Espresso Strength</label>
+                            <div class="grid grid-cols-3 gap-2" id="espresso-options-container">
+                                <!-- Rendered dynamically depending on flavor -->
+                            </div>
+                        </div>
 
                     <!-- Catering Customizer Fields -->
                     <div id="catering-customizer-fields" class="hidden space-y-4">
@@ -141,92 +155,120 @@
                         
                         <div class="space-y-3 bg-gray-50/50 rounded-2xl p-3 border border-gray-100 max-h-[300px] overflow-y-auto">
                             <!-- Classic Black -->
-                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-brand-dark">Classic Black</span>
-                                    <!-- Qty counter -->
-                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
-                                        <button type="button" onclick="adjustCateringFlavorQty('classic_black', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
-                                        <span id="cat-qty-classic_black" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
-                                        <button type="button" onclick="adjustCateringFlavorQty('classic_black', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
-                                    </div>
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div>
+                                    <span class="text-[10px] font-bold text-brand-dark block">Classic Black</span>
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">No Milk</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                    <button type="button" onclick="adjustCateringFlavorQty('classic_black', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                    <span id="cat-qty-classic_black" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                    <button type="button" onclick="adjustCateringFlavorQty('classic_black', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
                                 </div>
                             </div>
 
                             <!-- Dirty Chai -->
-                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-brand-dark">Dirty Chai</span>
-                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
-                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
-                                        <span id="cat-qty-dirty_chai" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
-                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Dirty Chai</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai_reg', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-dirty_chai_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai_reg', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
                                     </div>
-                                </div>
-                                <!-- Milk Selector -->
-                                <div id="cat-milk-box-dirty_chai" class="hidden flex items-center justify-between gap-2">
-                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
-                                    <select id="cat-milk-dirty_chai" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
-                                        <option value="Regular">Regular Milk</option>
-                                        <option value="Oat Milk">Oat Milk</option>
-                                    </select>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai_oat', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-dirty_chai_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('dirty_chai_oat', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Caramel Latte -->
-                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-brand-dark">Caramel Latte</span>
-                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
-                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
-                                        <span id="cat-qty-caramel_latte" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
-                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Caramel Latte</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte_reg', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-caramel_latte_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte_reg', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
                                     </div>
-                                </div>
-                                <div id="cat-milk-box-caramel_latte" class="hidden flex items-center justify-between gap-2">
-                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
-                                    <select id="cat-milk-caramel_latte" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
-                                        <option value="Regular">Regular Milk</option>
-                                        <option value="Oat Milk">Oat Milk</option>
-                                    </select>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte_oat', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-caramel_latte_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('caramel_latte_oat', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- French Vanilla -->
-                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-brand-dark">French Vanilla</span>
-                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
-                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
-                                        <span id="cat-qty-french_vanilla" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
-                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">French Vanilla</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla_reg', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-french_vanilla_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla_reg', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
                                     </div>
-                                </div>
-                                <div id="cat-milk-box-french_vanilla" class="hidden flex items-center justify-between gap-2">
-                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
-                                    <select id="cat-milk-french_vanilla" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
-                                        <option value="Regular">Regular Milk</option>
-                                        <option value="Oat Milk">Oat Milk</option>
-                                    </select>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla_oat', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-french_vanilla_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('french_vanilla_oat', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- Vanilla Latte -->
-                            <div class="flex flex-col gap-2 pb-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] font-bold text-brand-dark">Vanilla Latte</span>
-                                    <div class="flex items-center gap-2 bg-white px-2 py-1 rounded-xl border border-gray-150">
-                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte', -5)" class="w-5 h-5 rounded-md text-[9px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[8px]"></i></button>
-                                        <span id="cat-qty-vanilla_latte" class="text-[10px] font-black text-brand-dark w-6 text-center">0</span>
-                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte', 5)" class="w-5 h-5 rounded-md text-[9px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[8px]"></i></button>
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Vanilla Latte</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte_reg', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-vanilla_latte_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">30</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte_reg', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte_oat', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-vanilla_latte_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_latte_oat', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
                                     </div>
                                 </div>
-                                <div id="cat-milk-box-vanilla_latte" class="hidden flex items-center justify-between gap-2">
-                                    <span class="text-[8px] text-gray-400 font-bold uppercase">Milk Type:</span>
-                                    <select id="cat-milk-vanilla_latte" class="bg-white border border-gray-100 rounded-lg px-2 py-1 text-[9px] font-bold text-brand-dark focus:border-brand-brown outline-none">
-                                        <option value="Regular">Regular Milk</option>
-                                        <option value="Oat Milk">Oat Milk</option>
-                                    </select>
+                            </div>
+
+                            <!-- Vanilla Matcha -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Vanilla Matcha</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_matcha_reg', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-vanilla_matcha_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_matcha_reg', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_matcha_oat', -5)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="cat-qty-vanilla_matcha_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustCateringFlavorQty('vanilla_matcha_oat', 5)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -244,8 +286,141 @@
                         </div>
                     </div>
 
-                    <!-- Quantity Selector -->
-                    <div id="quantity-customizer-container" class="space-y-2 pt-2">
+                    <!-- Bundle Customizer Fields -->
+                    <div id="bundle-customizer-fields" class="hidden space-y-4">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Your 5 Bottles</label>
+                        
+                        <div class="space-y-3 bg-gray-50/50 rounded-2xl p-3 border border-gray-100 max-h-[300px] overflow-y-auto">
+                            <!-- Classic Black -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <div>
+                                    <span class="text-[10px] font-bold text-brand-dark block">Classic Black</span>
+                                    <span class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">No Milk</span>
+                                </div>
+                                <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                    <button type="button" onclick="adjustBundleFlavorQty('classic_black', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                    <span id="bun-qty-classic_black" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                    <button type="button" onclick="adjustBundleFlavorQty('classic_black', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Dirty Chai -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Dirty Chai</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('dirty_chai_reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-dirty_chai_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('dirty_chai_reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('dirty_chai_oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-dirty_chai_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('dirty_chai_oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Caramel Latte -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Caramel Latte</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('caramel_latte_reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-caramel_latte_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('caramel_latte_reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('caramel_latte_oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-caramel_latte_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('caramel_latte_oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- French Vanilla -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">French Vanilla</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('french_vanilla_reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-french_vanilla_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('french_vanilla_reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('french_vanilla_oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-french_vanilla_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('french_vanilla_oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Vanilla Latte -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Vanilla Latte</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_latte_reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-vanilla_latte_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_latte_reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_latte_oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-vanilla_latte_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_latte_oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Vanilla Matcha -->
+                            <div class="flex justify-between items-center py-2.5 border-b border-gray-100/60 last:border-0 last:pb-0">
+                                <span class="text-[10px] font-bold text-brand-dark shrink-0">Vanilla Matcha</span>
+                                <div class="flex items-center gap-4">
+                                    <!-- Regular Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-gray-400 uppercase mr-1">Reg</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_matcha_reg', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-vanilla_matcha_reg" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_matcha_reg', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                    <!-- Oat Counter -->
+                                    <div class="flex items-center gap-1.5 bg-white px-1.5 py-0.5 rounded-lg border border-gray-150">
+                                        <span class="text-[7px] font-black text-brand-gold uppercase mr-1">Oat</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_matcha_oat', -1)" class="w-4 h-4 rounded text-[8px] bg-gray-50 flex items-center justify-center font-bold hover:bg-gray-100"><i class="fas fa-minus text-[7px]"></i></button>
+                                        <span id="bun-qty-vanilla_matcha_oat" class="text-[9px] font-black text-brand-dark w-5 text-center">0</span>
+                                        <button type="button" onclick="adjustBundleFlavorQty('vanilla_matcha_oat', 1)" class="w-4 h-4 rounded text-[8px] bg-brand-dark text-white flex items-center justify-center font-bold hover:bg-brand-brown"><i class="fas fa-plus text-[7px]"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bundle Summary Badge -->
+                        <div class="bg-brand-cream/40 border border-brand-brown/10 p-3 rounded-2xl flex justify-between items-center">
+                            <div>
+                                <span class="text-[8px] font-bold uppercase tracking-wider text-gray-400 block">Total Bundle Selection</span>
+                                <span id="bundle-total-bottles" class="text-sm font-black text-brand-brown">0 / 5 selection</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity Selector (obsolete) -->
+                    <div id="quantity-customizer-container" class="hidden">
                         <label id="quantity-label" class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Quantity</label>
                         <div class="flex items-center gap-4 bg-gray-50 p-1.5 rounded-2xl border border-gray-100 max-w-[140px]">
                             <button type="button" onclick="adjustCustomizerQty(-1)" class="w-8 h-8 rounded-xl bg-white shadow-sm border border-gray-100 flex items-center justify-center text-xs hover:bg-gray-100 transition-all font-bold"><i class="fas fa-minus text-[9px]"></i></button>
@@ -263,6 +438,7 @@
                 </div>
             </div>
         </div>
+    </div>
 
         <!-- Checkout Section View -->
         <div id="checkout-view" class="hidden space-y-6">
@@ -281,7 +457,6 @@
                 </div>
                 <p id="stamp-helper-text" class="text-[9px] text-gray-500 font-semibold italic text-center leading-relaxed"></p>
             </div>
-
             <!-- 2.5 Event Catering Box (Catering details input fields) -->
             <div id="catering-details-box" class="hidden bg-white rounded-[2.5rem] p-6 border border-gray-100 shadow-sm space-y-4 animate-fade-in">
                 <h3 class="text-sm font-serif font-bold text-brand-dark flex items-center gap-2">
@@ -295,6 +470,16 @@
                     <div>
                         <label class="block text-[8px] font-black uppercase text-gray-455 tracking-wider mb-1">Special Setup Needs</label>
                         <textarea id="cust-event-setup" placeholder="Setup details: Ice buckets, display stands, or setup needs?" class="w-full h-24 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all no-scrollbar resize-none"></textarea>
+                    </div>
+                    <!-- Add-ons -->
+                    <div class="pt-2 border-t border-gray-100/60 space-y-3">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <label class="block text-[8px] font-black uppercase text-gray-455 tracking-wider">Custom Label Message</label>
+                                <span id="label-char-counter" class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">0 / 55 chars</span>
+                            </div>
+                            <input type="text" id="catering-custom-label" maxlength="55" oninput="updateLabelCharCounter(this)" placeholder="e.g. Happy 30th Birthday Alex! (Max 55 characters)" class="w-full bg-gray-50 border border-gray-150 rounded-xl px-3 py-2.5 text-xs focus:border-brand-brown focus:bg-white outline-none transition-all">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -327,6 +512,43 @@
                     <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
                     <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all" oninput="fetchStamps()">
                     <input type="email" id="cust-email" class="hidden">
+                    
+                    <!-- Pre-order Date Selection -->
+                    <div id="preorder-date-container" class="space-y-1.5 pt-2 border-t border-gray-50">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Delivery / Pickup Date</label>
+                        <input type="date" id="preorder-date-picker" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all" onchange="updatePreorderHelperText()" required>
+                    </div>
+
+                    <!-- Fulfillment Option Selection -->
+                    <div class="space-y-2 pt-2 border-t border-gray-50">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Fulfillment Option</label>
+                        <div class="grid grid-cols-3 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100" id="fulfillment-toggle-container">
+                            <button type="button" onclick="setFulfillmentType('pickup')" id="ful-pickup" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">Pick Up</button>
+                            <button type="button" onclick="setFulfillmentType('hub')" id="ful-hub" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark">Hub Drop-off</button>
+                            <button type="button" onclick="setFulfillmentType('delivery')" id="ful-delivery" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark opacity-50 cursor-not-allowed" disabled>Delivery</button>
+                        </div>
+                        <p id="fulfillment-helper-text" class="text-[9px] text-gray-405 font-medium italic ml-1">Pick up your order directly from our kitchen in Ontario, CA.</p>
+                    </div>
+
+                    <!-- Workplace Hub Selection (Shown only when Hub Drop-off selected) -->
+                    <div id="hub-selection-container" class="space-y-1.5 hidden animate-fade-in">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Workplace Hub</label>
+                        <select id="visible-cust-location" onchange="syncLocationSelect(this.value)" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown outline-none">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+
+                    <!-- Custom Event Delivery Address Input (Shown only when Custom Delivery selected) -->
+                    <div id="custom-delivery-container" class="space-y-2 hidden animate-fade-in">
+                        <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Delivery Address (Catering Event)</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="cust-delivery-address" placeholder="e.g. 123 Main St, Fontana, CA" class="flex-1 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm focus:border-brand-brown focus:bg-white outline-none transition-all">
+                            <button type="button" id="verify-address-btn" onclick="verifyCaliDeliveryAddress()" class="bg-brand-dark text-white px-4 rounded-xl font-black text-[9px] uppercase tracking-wider hover:bg-brand-brown transition-all shrink-0">Verify</button>
+                        </div>
+                        <div id="delivery-fee-info" class="text-[9px] text-gray-455 font-bold italic ml-1 mt-1">
+                            Enter address to calculate delivery fee. Must be within 75 miles of Ontario, CA.
+                        </div>
+                    </div>
                     
                     <!-- Hidden Location Selection (Kept in DOM to satisfy automated tests like test_live_cali.js) -->
                     <div class="hidden">
@@ -530,8 +752,10 @@
         let customMilk = "Regular";
         let customEspresso = "Standard";
         let customizerQty = 1;
+        let singleRegQty = 1;
+        let singleOatQty = 0;
 
-        let orderMode = "grab"; // Default to grab for fridge checkout
+        let orderMode = "preorder"; // Always preorder style checkout
         let isSubscription = false;
         let currentDiscount = 0;
         let validatedPromo = null;
@@ -539,10 +763,16 @@
         window.cart = cart;
         let cateringQuantities = {
             classic_black: 0,
-            dirty_chai: 0,
-            caramel_latte: 0,
-            french_vanilla: 0,
-            vanilla_latte: 30
+            dirty_chai_reg: 0,
+            dirty_chai_oat: 0,
+            caramel_latte_reg: 0,
+            caramel_latte_oat: 0,
+            french_vanilla_reg: 0,
+            french_vanilla_oat: 0,
+            vanilla_latte_reg: 30,
+            vanilla_latte_oat: 0,
+            vanilla_matcha_reg: 0,
+            vanilla_matcha_oat: 0
         };
         let receiptBase64 = null;
 
@@ -552,6 +782,30 @@
             paid_bottles: 0,
             stamps: 0,
             earned_free: 0
+        };
+
+        let activeVolDiscount = 0;
+        let activeBottleCount = 0;
+        let activeStampSavings = 0;
+        let activeFreeRedeemedCount = 0;
+
+        let calculatedDeliveryFee = 0;
+        let selectedFulfillmentType = 'pickup'; // Default
+        let selectedDeliveryAddress = null;
+        let isDeliveryAddressVerified = false;
+
+        let bundleQuantities = {
+            classic_black: 0,
+            dirty_chai_reg: 0,
+            dirty_chai_oat: 0,
+            caramel_latte_reg: 0,
+            caramel_latte_oat: 0,
+            french_vanilla_reg: 0,
+            french_vanilla_oat: 0,
+            vanilla_latte_reg: 0,
+            vanilla_latte_oat: 0,
+            vanilla_matcha_reg: 0,
+            vanilla_matcha_oat: 0
         };
 
         async function fetchStamps() {
@@ -732,8 +986,8 @@
                     cateringPicker.value = `${yyyy}-${mm}-${dd}T09:00`;
                 }
 
-                // Pre-configure mode grab
-                setOrderMode('grab');
+                // Pre-configure orderMode to preorder
+                setOrderMode('preorder');
             } catch (e) {
                 console.error("Init Error:", e);
                 showToast("System error loading checkout parameters.");
@@ -742,6 +996,7 @@
 
         function populateLocations() {
             const select = document.getElementById('cust-location');
+            const visibleSelect = document.getElementById('visible-cust-location');
             if (!select) return;
 
             // Sort to match index.html logic: Ivy residences first, followed by alphabetical
@@ -754,17 +1009,31 @@
             });
 
             select.innerHTML = '<option value="" disabled selected>-- Select Location --</option>';
+            if (visibleSelect) {
+                visibleSelect.innerHTML = '<option value="" disabled selected>-- Select Location --</option>';
+            }
+
             sortedLocations.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = l.id;
                 opt.textContent = `${l.name} (${l.city})`;
                 select.appendChild(opt);
+                
+                if (visibleSelect) {
+                    const visibleOpt = document.createElement('option');
+                    visibleOpt.value = l.id;
+                    visibleOpt.textContent = `${l.name} (${l.city})`;
+                    visibleSelect.appendChild(visibleOpt);
+                }
             });
 
             // Set the default location to the first one loaded to allow background checkout validation
             if (sortedLocations.length > 0) {
                 selectedLocationId = sortedLocations[0].id;
                 select.value = selectedLocationId;
+                if (visibleSelect) {
+                    visibleSelect.value = selectedLocationId;
+                }
             }
 
             // If a location is prefilled via URL query param
@@ -776,6 +1045,9 @@
                 if (match) {
                     selectedLocationId = match.id;
                     select.value = selectedLocationId;
+                    if (visibleSelect) {
+                        visibleSelect.value = selectedLocationId;
+                    }
                 }
             }
 
@@ -784,39 +1056,18 @@
 
         function setOrderMode(mode) {
             orderMode = mode;
-            const btnGrab = document.getElementById('mode-grab');
-            const btnPre = document.getElementById('mode-preorder');
-            const helperText = document.getElementById('mode-helper-text');
             const heroTitle = document.getElementById('hero-title');
             const heroDesc = document.getElementById('hero-desc');
-            const subFreqContainer = document.getElementById('sub-frequency-container');
-            const dateContainer = document.getElementById('preorder-date-container');
+            const datePicker = document.getElementById('preorder-date-picker');
 
-            if (mode === 'grab') {
-                btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
-                btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
-                helperText.innerText = "Take your bottle directly from the honors fridge right now.";
-                heroTitle.innerText = "Honors Checkout";
-                heroDesc.innerText = "Select your drink, pay instantly, and enjoy your fresh brew.";
-                
-                subFreqContainer.classList.add('hidden');
-                dateContainer.classList.add('hidden');
-                setSubscription(false);
-                
-                const stripeBtn = document.getElementById('stripe-btn');
-                if (stripeBtn) stripeBtn.innerHTML = 'Pay via ApplePay / Card <i class="fas fa-credit-card ml-1.5"></i>';
-            } else {
-                btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
-                btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
-                heroTitle.innerText = "Cali Pre-Orders";
-                heroDesc.innerText = "Small batch lattes. Brewed night-before, delivered fresh for your shift.";
-                
-                subFreqContainer.classList.add('hidden');
-                dateContainer.classList.remove('hidden');
-                updatePreorderHelperText();
-                
-                const stripeBtn = document.getElementById('stripe-btn');
-                if (stripeBtn) stripeBtn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
+            heroTitle.innerText = "Rich Aroma Cali Distro";
+            heroDesc.innerText = "Artisinally brewed espresso and signature lattes delivered fresh or available for pickup.";
+
+            const dateVal = datePicker ? datePicker.value : null;
+            if (dateVal) {
+                const d = new Date(dateVal + 'T00:00:00');
+                const formattedDate = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+                heroTitle.innerText = `${d.toLocaleDateString('en-US', { weekday: 'long' })} Order`;
             }
 
             updateHubTracker();
@@ -826,21 +1077,16 @@
 
         function updatePreorderHelperText() {
             const datePicker = document.getElementById('preorder-date-picker');
-            const helperText = document.getElementById('mode-helper-text');
             const heroTitle = document.getElementById('hero-title');
             
-            if (orderMode === 'preorder') {
-                const dateVal = datePicker.value;
-                if (dateVal) {
-                    const d = new Date(dateVal + 'T00:00:00');
-                    const options = { weekday: 'long', month: 'long', day: 'numeric' };
-                    const formattedDate = d.toLocaleDateString('en-US', options);
-                    helperText.innerText = `Pre-order for ${formattedDate} delivery. Captain Rico will drop your labeled bottle off at the location.`;
-                    heroTitle.innerText = `${d.toLocaleDateString('en-US', { weekday: 'long' })} Pre-Order`;
-                } else {
-                    helperText.innerText = "Select a date below for pre-order delivery.";
-                    heroTitle.innerText = "Cali Pre-Orders";
-                }
+            const dateVal = datePicker.value;
+            if (dateVal) {
+                const d = new Date(dateVal + 'T00:00:00');
+                const options = { weekday: 'long', month: 'long', day: 'numeric' };
+                const formattedDate = d.toLocaleDateString('en-US', options);
+                heroTitle.innerText = `${d.toLocaleDateString('en-US', { weekday: 'long' })} Order`;
+            } else {
+                heroTitle.innerText = "Rich Aroma Cali Distro";
             }
         }
 
@@ -906,6 +1152,7 @@
             const list = document.getElementById('product-list');
             // Hide bundles, show active single pack products
             const singlePacks = allProducts.filter(p => p.active && p.bottles_per_pack === 1);
+            const bundlePacks = allProducts.filter(p => p.active && p.bottles_per_pack === 5);
 
             if (singlePacks.length === 0) {
                 list.innerHTML = '<div class="col-span-full text-center py-6 text-gray-400">No single drinks available.</div>';
@@ -940,11 +1187,29 @@
                      <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mb-3 shadow-inner overflow-hidden relative">
                         ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover">` : `<i class="fas ${icon} text-brand-brown text-lg"></i>`}
                         ${isSoldOut ? `<div class="absolute inset-0 bg-red-600/80 flex items-center justify-center text-[7px] font-black uppercase text-white tracking-widest">SOLD OUT</div>` : ''}
-                    </div>
-                    <h4 class="font-serif font-bold text-xs text-brand-dark mb-1 leading-tight text-center">${p.name}</h4>
-                    <p class="font-mono font-black text-sm text-brand-brown">${isSoldOut ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider">SOLD OUT</span>' : `$${parseFloat(p.price).toFixed(2)}`}</p>
+                     </div>
+                     <h4 class="font-serif font-bold text-xs text-brand-dark mb-1 leading-tight text-center">${p.name}</h4>
+                     <p class="font-mono font-black text-sm text-brand-brown">${isSoldOut ? '<span class="text-red-500 font-bold text-[9px] uppercase tracking-wider">SOLD OUT</span>' : `$${parseFloat(p.price).toFixed(2)}`}</p>
                 </div>`;
             }).join('');
+
+            // Append 5 Flavor Bundle Card to grid
+            const bundleP = allProducts.find(p => p.id === '83d571c7-5aa8-4efb-b649-0ee286dd463d');
+            if (bundleP && bundleP.active) {
+                cardsHtml += `
+                <div id="prod-${bundleP.id}" onclick="selectProduct('${bundleP.id}')" class="col-span-2 bg-gradient-to-r from-amber-500 to-brand-brown text-white rounded-3xl p-5 text-center cursor-pointer hover:shadow-lg transition-all flex items-center justify-between group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white shrink-0">
+                            <i class="fas fa-boxes-stacked"></i>
+                        </div>
+                        <div class="text-left">
+                            <h4 class="font-serif font-bold text-xs">${bundleP.name}</h4>
+                            <p class="text-[8px] text-white/70 uppercase tracking-widest font-black">Choose any 5 signature flavors</p>
+                        </div>
+                    </div>
+                    <p class="font-mono font-black text-xs text-brand-gold">$${parseFloat(bundleP.price).toFixed(2)}</p>
+                </div>`;
+            }
 
             // Append Event Catering Card to grid
             cardsHtml += `
@@ -977,7 +1242,9 @@
             allProducts.forEach(p => {
                 const card = document.getElementById(`prod-${p.id}`);
                 if (card) {
-                    card.className = "bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group";
+                    card.className = p.id === '83d571c7-5aa8-4efb-b649-0ee286dd463d'
+                        ? "col-span-2 bg-gradient-to-r from-amber-500 to-brand-brown text-white rounded-3xl p-5 text-center cursor-pointer hover:shadow-lg transition-all flex items-center justify-between group"
+                        : "bg-gray-50 border border-gray-100 rounded-3xl p-4 text-center cursor-pointer hover:shadow-lg transition-all flex flex-col items-center justify-between group";
                 }
             });
             const cateringCard = document.getElementById('prod-catering_event_pack');
@@ -990,12 +1257,15 @@
             if (activeCard) {
                 if (id === 'catering_event_pack') {
                     activeCard.className = "col-span-2 bg-brand-dark border-2 border-brand-gold text-white rounded-3xl p-5 text-center cursor-pointer shadow-lg transition-all flex items-center justify-between group";
+                } else if (id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                    activeCard.className = "col-span-2 bg-gradient-to-r from-amber-500 to-brand-brown border-2 border-brand-gold text-white rounded-3xl p-5 text-center cursor-pointer shadow-lg transition-all flex items-center justify-between group";
                 } else {
                     activeCard.className = "bg-brand-cream border-2 border-brand-brown rounded-3xl p-4 text-center cursor-pointer shadow-md transition-all flex flex-col items-center justify-between group";
                 }
             }
 
             const isCatering = id === 'catering_event_pack';
+            const isBundle = id === '83d571c7-5aa8-4efb-b649-0ee286dd463d';
             if (isCatering) {
                 selectedProduct = {
                     id: 'catering_event_pack',
@@ -1010,56 +1280,8 @@
             // Update title label dynamically
             const titleLabel = document.getElementById('customizer-title-label');
             if (titleLabel) {
-                titleLabel.innerText = isCatering ? "Customize Event Catering" : `Customize ${selectedProduct.name}`;
+                titleLabel.innerText = isCatering ? "Customize Event Catering" : (isBundle ? "Customize 5 Flavor Bundle" : `Customize ${selectedProduct.name}`);
             }
-
-            // Reset customizer settings with milk stock limits checks
-            const milkStock = selectedProduct.options?.milk_stock;
-            const isGrabMode = orderMode === 'grab';
-            let isRegSoldOut = !isCatering && isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
-            let isOatSoldOut = !isCatering && isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
-
-            const regBtn = document.getElementById('milk-reg');
-            const oatBtn = document.getElementById('milk-oat');
-
-            if (regBtn) {
-                if (isRegSoldOut) {
-                    regBtn.disabled = true;
-                    regBtn.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-red-100 bg-red-50/20 text-red-400 opacity-60 cursor-not-allowed";
-                    regBtn.innerText = "Regular Milk (SOLD OUT)";
-                } else {
-                    regBtn.disabled = false;
-                    regBtn.innerText = "Regular Milk";
-                }
-            }
-
-            if (oatBtn) {
-                if (isOatSoldOut) {
-                    oatBtn.disabled = true;
-                    oatBtn.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-red-100 bg-red-50/20 text-red-400 opacity-60 cursor-not-allowed";
-                    oatBtn.innerText = "Oat Milk (SOLD OUT)";
-                } else {
-                    oatBtn.disabled = false;
-                    oatBtn.innerText = "Oat Milk (+$1.00)";
-                }
-            }
-
-            if (isRegSoldOut && !isOatSoldOut) {
-                customMilk = "Oat Milk";
-                setMilkOption("Oat Milk");
-            } else {
-                customMilk = "Regular";
-                setMilkOption("Regular");
-            }
-
-            // Toggle Quantity selector container based on catering
-            const qtyContainer = document.getElementById('quantity-customizer-container');
-            if (qtyContainer) {
-                if (isCatering) qtyContainer.classList.add('hidden');
-                else qtyContainer.classList.remove('hidden');
-            }
-            customizerQty = isCatering ? 30 : 1;
-            document.getElementById('customizer-qty-display').innerText = customizerQty;
 
             // Show/Hide catering-specific customizer fields
             const cateringFields = document.getElementById('catering-customizer-fields');
@@ -1070,109 +1292,127 @@
                     // Pre-fill default catering values
                     cateringQuantities = {
                         classic_black: 0,
-                        dirty_chai: 0,
-                        caramel_latte: 0,
-                        french_vanilla: 0,
-                        vanilla_latte: 30
+                        dirty_chai_reg: 0,
+                        dirty_chai_oat: 0,
+                        caramel_latte_reg: 0,
+                        caramel_latte_oat: 0,
+                        french_vanilla_reg: 0,
+                        french_vanilla_oat: 0,
+                        vanilla_latte_reg: 30,
+                        vanilla_latte_oat: 0,
+                        vanilla_matcha_reg: 0,
+                        vanilla_matcha_oat: 0
                     };
                     
                     // Reset UI display values
                     Object.keys(cateringQuantities).forEach(flavorId => {
                         const qtyEl = document.getElementById(`cat-qty-${flavorId}`);
                         if (qtyEl) qtyEl.innerText = cateringQuantities[flavorId];
-                        
-                        const milkBox = document.getElementById(`cat-milk-box-${flavorId}`);
-                        if (milkBox) {
-                            if (cateringQuantities[flavorId] > 0 && flavorId !== 'classic_black') {
-                                milkBox.classList.remove('hidden');
-                            } else {
-                                milkBox.classList.add('hidden');
-                            }
-                        }
                     });
                     
                     updateCateringState();
                 } else {
                     cateringFields.classList.add('hidden');
-                    updateCateringState(); // reset add-to-order-btn text state
                 }
             }
 
-            // Show/Hide standard modifiers
-            const milkContainer = document.getElementById('milk-customizer-container');
-            if (milkContainer) {
-                if (isCatering) milkContainer.classList.add('hidden');
-                else {
+            // Show/Hide bundle-specific customizer fields
+            const bundleFields = document.getElementById('bundle-customizer-fields');
+            if (bundleFields) {
+                if (isBundle) {
+                    bundleFields.classList.remove('hidden');
+                    bundleQuantities = {
+                        classic_black: 0,
+                        dirty_chai_reg: 0,
+                        dirty_chai_oat: 0,
+                        caramel_latte_reg: 0,
+                        caramel_latte_oat: 0,
+                        french_vanilla_reg: 0,
+                        french_vanilla_oat: 0,
+                        vanilla_latte_reg: 0,
+                        vanilla_latte_oat: 0,
+                        vanilla_matcha_reg: 0,
+                        vanilla_matcha_oat: 0
+                    };
+                    Object.keys(bundleQuantities).forEach(flavorId => {
+                        const qtyEl = document.getElementById(`bun-qty-${flavorId}`);
+                        if (qtyEl) qtyEl.innerText = bundleQuantities[flavorId];
+                    });
+                    updateBundleState();
+                } else {
+                    bundleFields.classList.add('hidden');
+                }
+            }
+
+            // Show/Hide single product fields and configure counters
+            const singleFields = document.getElementById('single-customizer-fields');
+            if (singleFields) {
+                if (!isCatering && !isBundle) {
+                    singleFields.classList.remove('hidden');
+                    
+                    // Reset values (Default to 1 REG bottle)
+                    singleRegQty = 1;
+                    singleOatQty = 0;
+                    
+                    document.getElementById('single-qty-reg').innerText = singleRegQty;
+                    document.getElementById('single-qty-oat').innerText = singleOatQty;
+                    document.getElementById('single-drink-name-label').innerText = selectedProduct.name;
+                    
                     const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
-                    if (isBlack) milkContainer.classList.add('hidden');
-                    else milkContainer.classList.remove('hidden');
+                    const regContainer = document.getElementById('single-reg-counter-container');
+                    const oatContainer = document.getElementById('single-oat-counter-container');
+                    
+                    if (isBlack) {
+                        oatContainer.classList.add('hidden');
+                        regContainer.querySelector('span').innerText = 'Black';
+                    } else {
+                        oatContainer.classList.remove('hidden');
+                        regContainer.querySelector('span').innerText = 'Reg';
+                    }
+                } else {
+                    singleFields.classList.add('hidden');
                 }
             }
 
             const espContainer = document.getElementById('espresso-options-container');
-            const espWrapper = espContainer?.parentElement;
+            const espWrapper = document.getElementById('espresso-customizer-container');
             if (espWrapper) {
-                if (isCatering) espWrapper.classList.add('hidden');
+                if (isCatering || isBundle) espWrapper.classList.add('hidden');
                 else {
                     espWrapper.classList.remove('hidden');
                     const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
                     customEspresso = "Standard";
                     if (isBlack) {
                         espContainer.innerHTML = `
-                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (2oz)</button>
+                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Light (2oz)</button>
                             <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (3oz)</button>
-                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Extra (4oz)</button>
+                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Extra (4oz)</button>
                         `;
                     } else {
                         espContainer.innerHTML = `
-                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50">Light (1oz)</button>
+                            <button type="button" onclick="setEspressoOption('Light')" id="esp-light" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Light (1oz)</button>
                             <button type="button" onclick="setEspressoOption('Standard')" id="esp-std" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Standard (2oz)</button>
-                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow">Extra (3oz)</button>
+                            <button type="button" onclick="setEspressoOption('Extra')" id="esp-extra" class="py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-455 hover:bg-gray-50">Extra (3oz)</button>
                         `;
                     }
                 }
             }
-
-            // Expose customizer
-            document.getElementById('flavor-customizer').classList.remove('hidden');
-            document.getElementById('flavor-customizer').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            // Expose customizer modal overlay
+            document.getElementById('flavor-customizer-overlay').classList.remove('hidden');
         }
 
-        function setMilkOption(opt) {
-            customMilk = opt;
-            const btnReg = document.getElementById('milk-reg');
-            const btnOat = document.getElementById('milk-oat');
-            if (!btnReg || !btnOat) return;
-
-            const milkStock = selectedProduct?.options?.milk_stock;
-            const isGrabMode = orderMode === 'grab';
-            let isRegSoldOut = isGrabMode && milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null && milkStock['Regular Milk'] <= 0;
-            let isOatSoldOut = isGrabMode && milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null && milkStock['Oat Milk'] <= 0;
-
-            if (opt === 'Regular') {
-                if (!isRegSoldOut) {
-                    btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
-                }
-                if (!isOatSoldOut) {
-                    btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
-                }
-            } else {
-                if (!isRegSoldOut) {
-                    btnReg.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-gray-200 text-gray-405 hover:bg-gray-50";
-                }
-                if (!isOatSoldOut) {
-                    btnOat.className = "py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all border border-brand-dark bg-brand-dark text-white shadow";
-                }
-            }
-
-            // Cap customizerQty if it exceeds the new milk option's stock limit
-            if (isGrabMode && milkStock) {
-                const maxStock = opt === 'Regular' ? milkStock['Regular Milk'] : milkStock['Oat Milk'];
-                if (maxStock !== null && maxStock !== undefined && customizerQty > maxStock) {
-                    customizerQty = Math.max(1, maxStock);
-                    document.getElementById('customizer-qty-display').innerText = customizerQty;
-                    showToast(`Capped quantity to ${maxStock} based on available ${opt} stock.`, 'error');
-                }
+        function adjustSingleFlavorQty(type, delta) {
+            if (!selectedProduct) return;
+            const isBlack = selectedProduct.name.toLowerCase().includes('classic black') || selectedProduct.name.toLowerCase().includes('negro');
+            
+            if (type === 'reg') {
+                singleRegQty = Math.max(0, singleRegQty + delta);
+                document.getElementById('single-qty-reg').innerText = singleRegQty;
+            } else if (type === 'oat') {
+                if (isBlack) return;
+                singleOatQty = Math.max(0, singleOatQty + delta);
+                document.getElementById('single-qty-oat').innerText = singleOatQty;
             }
         }
 
@@ -1192,39 +1432,30 @@
 
         function closeCustomizer() {
             selectedProduct = null;
-            const customizer = document.getElementById('flavor-customizer');
-            if (customizer) customizer.classList.add('hidden');
+            const overlay = document.getElementById('flavor-customizer-overlay');
+            if (overlay) overlay.classList.add('hidden');
             renderProducts(); // clear active card highlights
         }
 
         function adjustCateringFlavorQty(flavorId, delta) {
-            cateringQuantities[flavorId] = Math.max(0, cateringQuantities[flavorId] + delta);
+            cateringQuantities[flavorId] = Math.max(0, (cateringQuantities[flavorId] || 0) + delta);
             
             const qtyEl = document.getElementById(`cat-qty-${flavorId}`);
             if (qtyEl) qtyEl.innerText = cateringQuantities[flavorId];
-            
-            const milkBox = document.getElementById(`cat-milk-box-${flavorId}`);
-            if (milkBox) {
-                if (cateringQuantities[flavorId] > 0 && flavorId !== 'classic_black') {
-                    milkBox.classList.remove('hidden');
-                } else {
-                    milkBox.classList.add('hidden');
-                }
-            }
             
             updateCateringState();
         }
 
         function updateCateringState() {
             const totalBottles = Object.values(cateringQuantities).reduce((a, b) => a + b, 0);
-            let rate = 4.50;
-            if (totalBottles >= 500) rate = 3.20;
-            else if (totalBottles >= 250) rate = 3.50;
-            else if (totalBottles >= 200) rate = 3.60;
-            else if (totalBottles >= 150) rate = 3.80;
-            else if (totalBottles >= 100) rate = 4.00;
-            else if (totalBottles >= 75) rate = 4.20;
-            else if (totalBottles >= 50) rate = 4.40;
+            let rate = 5.50;
+            if (totalBottles >= 500) rate = 4.20;
+            else if (totalBottles >= 250) rate = 4.50;
+            else if (totalBottles >= 200) rate = 4.60;
+            else if (totalBottles >= 150) rate = 4.80;
+            else if (totalBottles >= 100) rate = 5.00;
+            else if (totalBottles >= 75) rate = 5.20;
+            else if (totalBottles >= 50) rate = 5.40;
             const totalPrice = rate * totalBottles;
 
             const isCatering = selectedProduct?.id === 'catering_event_pack';
@@ -1289,25 +1520,84 @@
             if (!selectedProduct) return;
 
             const isCatering = selectedProduct.id === 'catering_event_pack';
+            const isBundle = selectedProduct.id === '83d571c7-5aa8-4efb-b649-0ee286dd463d';
             let basePrice = parseFloat(selectedProduct.price);
-            let surcharge = (!isCatering && customMilk === 'Oat Milk') ? 1.00 : 0;
+            let surcharge = (!isCatering && !isBundle && customMilk === 'Oat Milk') ? 1.00 : 0;
             let unitPrice = basePrice + surcharge;
 
-            if (isCatering) {
+            if (isBundle) {
                 const nameMap = {
                     classic_black: 'Classic Black Americano',
                     dirty_chai: 'Dirty Chai Latte',
                     caramel_latte: 'Rich Caramel Latte',
                     french_vanilla: 'French Vanilla Latte',
-                    vanilla_latte: 'Sweet Vanilla Latte'
+                    vanilla_latte: 'Sweet Vanilla Latte',
+                    vanilla_matcha: 'Vanilla Matcha'
                 };
 
                 const singleSelections = [];
-                Object.keys(cateringQuantities).forEach(flavorId => {
-                    const flavorQty = cateringQuantities[flavorId];
+                Object.keys(bundleQuantities).forEach(key => {
+                    const flavorQty = bundleQuantities[key];
                     if (flavorQty > 0) {
+                        let flavorId = key;
+                        let milk = 'Regular';
+                        if (key.endsWith('_reg')) {
+                            flavorId = key.replace('_reg', '');
+                            milk = 'Regular';
+                        } else if (key.endsWith('_oat')) {
+                            flavorId = key.replace('_oat', '');
+                            milk = 'Oat Milk';
+                        }
                         const flavorName = nameMap[flavorId];
-                        const milk = flavorId === 'classic_black' ? 'Regular' : (document.getElementById(`cat-milk-${flavorId}`)?.value || 'Regular');
+                        for (let i = 0; i < flavorQty; i++) {
+                            singleSelections.push({
+                                flavor: flavorName,
+                                milk: milk,
+                                espresso: 'Standard'
+                            });
+                        }
+                    }
+                });
+
+                const totalBottles = singleSelections.length;
+                if (totalBottles !== 5) {
+                    showToast("Please select exactly 5 bottles for the bundle.", "error");
+                    return;
+                }
+
+                cart.push({
+                    product_id: '83d571c7-5aa8-4efb-b649-0ee286dd463d',
+                    name: '5 Flavor Bundle',
+                    selections: singleSelections,
+                    qty: 1,
+                    unitPrice: 25.00,
+                    total: 25.00,
+                    bottles: 5
+                });
+            } else if (isCatering) {
+                const nameMap = {
+                    classic_black: 'Classic Black Americano',
+                    dirty_chai: 'Dirty Chai Latte',
+                    caramel_latte: 'Rich Caramel Latte',
+                    french_vanilla: 'French Vanilla Latte',
+                    vanilla_latte: 'Sweet Vanilla Latte',
+                    vanilla_matcha: 'Vanilla Matcha'
+                };
+
+                const singleSelections = [];
+                Object.keys(cateringQuantities).forEach(key => {
+                    const flavorQty = cateringQuantities[key];
+                    if (flavorQty > 0) {
+                        let flavorId = key;
+                        let milk = 'Regular';
+                        if (key.endsWith('_reg')) {
+                            flavorId = key.replace('_reg', '');
+                            milk = 'Regular';
+                        } else if (key.endsWith('_oat')) {
+                            flavorId = key.replace('_oat', '');
+                            milk = 'Oat Milk';
+                        }
+                        const flavorName = nameMap[flavorId];
                         for (let i = 0; i < flavorQty; i++) {
                             singleSelections.push({
                                 flavor: flavorName,
@@ -1325,14 +1615,14 @@
                 }
 
                 // Calculate price based on N-bottles tier rates
-                let rate = 4.50;
-                if (totalBottles >= 500) rate = 3.20;
-                else if (totalBottles >= 250) rate = 3.50;
-                else if (totalBottles >= 200) rate = 3.60;
-                else if (totalBottles >= 150) rate = 3.80;
-                else if (totalBottles >= 100) rate = 4.00;
-                else if (totalBottles >= 75) rate = 4.20;
-                else if (totalBottles >= 50) rate = 4.40;
+                let rate = 5.50;
+                if (totalBottles >= 500) rate = 4.20;
+                else if (totalBottles >= 250) rate = 4.50;
+                else if (totalBottles >= 200) rate = 4.60;
+                else if (totalBottles >= 150) rate = 4.80;
+                else if (totalBottles >= 100) rate = 5.00;
+                else if (totalBottles >= 75) rate = 5.20;
+                else if (totalBottles >= 50) rate = 5.40;
                 const totalPrice = rate * totalBottles;
 
                 // Push catering package to cart as single item
@@ -1346,44 +1636,82 @@
                     bottles: totalBottles
                 });
             } else {
-                // Search if matching configuration already exists in cart to increment quantity
-                const matchingIndex = cart.findIndex(item => 
-                    item.product_id === selectedProduct.id && 
-                    item.selections[0].milk === customMilk &&
-                    item.selections[0].espresso === customEspresso
-                );
+                if (singleRegQty === 0 && singleOatQty === 0) {
+                    showToast("Please select at least 1 bottle.", "error");
+                    return;
+                }
 
-                if (matchingIndex > -1) {
-                    cart[matchingIndex].qty += customizerQty;
-                    cart[matchingIndex].bottles = cart[matchingIndex].qty;
-                    cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
-                } else {
-                    const singleSelections = Array.from({ length: 1 }, () => ({
-                        flavor: selectedProduct.name,
-                        milk: customMilk,
-                        espresso: customEspresso
-                    }));
+                // Add REG items if selected
+                if (singleRegQty > 0) {
+                    const matchingIndex = cart.findIndex(item => 
+                        item.product_id === selectedProduct.id && 
+                        item.selections[0].milk === 'Regular' &&
+                        item.selections[0].espresso === customEspresso
+                    );
 
-                    cart.push({
-                        product_id: selectedProduct.id,
-                        name: selectedProduct.name,
-                        selections: singleSelections,
-                        qty: customizerQty,
-                        unitPrice: unitPrice,
-                        total: unitPrice * customizerQty,
-                        bottles: customizerQty
-                    });
+                    if (matchingIndex > -1) {
+                        cart[matchingIndex].qty += singleRegQty;
+                        cart[matchingIndex].bottles = cart[matchingIndex].qty;
+                        cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
+                    } else {
+                        const singleSelections = Array.from({ length: 1 }, () => ({
+                            flavor: selectedProduct.name,
+                            milk: 'Regular',
+                            espresso: customEspresso
+                        }));
+
+                        cart.push({
+                            product_id: selectedProduct.id,
+                            name: selectedProduct.name,
+                            selections: singleSelections,
+                            qty: singleRegQty,
+                            unitPrice: basePrice,
+                            total: basePrice * singleRegQty,
+                            bottles: singleRegQty
+                        });
+                    }
+                }
+
+                // Add OAT items if selected (+$1.00 surcharge)
+                if (singleOatQty > 0) {
+                    const oatUnitPrice = basePrice + 1.00;
+                    const matchingIndex = cart.findIndex(item => 
+                        item.product_id === selectedProduct.id && 
+                        item.selections[0].milk === 'Oat Milk' &&
+                        item.selections[0].espresso === customEspresso
+                    );
+
+                    if (matchingIndex > -1) {
+                        cart[matchingIndex].qty += singleOatQty;
+                        cart[matchingIndex].bottles = cart[matchingIndex].qty;
+                        cart[matchingIndex].total = cart[matchingIndex].unitPrice * cart[matchingIndex].qty;
+                    } else {
+                        const singleSelections = Array.from({ length: 1 }, () => ({
+                            flavor: selectedProduct.name,
+                            milk: 'Oat Milk',
+                            espresso: customEspresso
+                        }));
+
+                        cart.push({
+                            product_id: selectedProduct.id,
+                            name: selectedProduct.name,
+                            selections: singleSelections,
+                            qty: singleOatQty,
+                            unitPrice: oatUnitPrice,
+                            total: oatUnitPrice * singleOatQty,
+                            bottles: singleOatQty
+                        });
+                    }
                 }
             }
 
             showToast(`${selectedProduct.name} added to cart!`, 'success');
             updateCartUI();
 
-            // Clear selected product state and hide customizer
+            // Clear selected product state and hide customizer overlay
             selectedProduct = null;
-            document.getElementById('flavor-customizer').classList.add('hidden');
+            document.getElementById('flavor-customizer-overlay').classList.add('hidden');
             renderProducts(); // Remove highlights
-
             showCheckoutView();
         }
 
@@ -1391,11 +1719,13 @@
             const container = document.getElementById('cart-container');
             const list = document.getElementById('cart-items-list');
             const checkCard = document.getElementById('checkout-card');
+            const contactCard = document.getElementById('contact-details-card');
             const cateringDetailsBox = document.getElementById('catering-details-box');
 
             if (cart.length === 0) {
                 container.classList.add('hidden');
                 checkCard.classList.add('hidden');
+                contactCard.classList.add('hidden');
                 cateringDetailsBox.classList.add('hidden');
                 
                 // Show menu view and hide checkout view automatically
@@ -1408,33 +1738,31 @@
 
             // Expose catering schedules input box if catering pack is added
             const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
-            const grabBtn = document.getElementById('mode-grab');
             if (hasCatering) {
                 cateringDetailsBox.classList.remove('hidden');
-                if (orderMode !== 'preorder') {
-                    setOrderMode('preorder');
-                    showToast("Event Catering requires Pre-Order delivery.", "success");
-                }
-                if (grabBtn) {
-                    grabBtn.disabled = true;
-                    grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all opacity-40 cursor-not-allowed text-gray-405";
-                }
             } else {
                 cateringDetailsBox.classList.add('hidden');
-                if (grabBtn) {
-                    grabBtn.disabled = false;
-                    // Keep styling consistent with setOrderMode expectations
-                    if (orderMode === 'grab') {
-                        grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
-                    } else {
-                        grabBtn.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
+            }
+
+            // Enable or disable delivery option button based on total bottles in cart
+            const totalBottles = cart.reduce((sum, item) => sum + item.bottles, 0);
+            const delBtn = document.getElementById('ful-delivery');
+            if (delBtn) {
+                if (totalBottles >= 30) {
+                    delBtn.disabled = false;
+                    delBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                } else {
+                    delBtn.disabled = true;
+                    delBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    if (selectedFulfillmentType === 'delivery') {
+                        setFulfillmentType('pickup');
                     }
                 }
             }
 
-            // Dynamically calculate the active volume discount trigger (excluding catering packs)
+            // Dynamically calculate the active volume discount trigger (excluding catering packs and bundles)
             const normalBottlesCount = cart.reduce((sum, item) => {
-                if (item.product_id === 'catering_event_pack') return sum;
+                if (item.product_id === 'catering_event_pack' || item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') return sum;
                 return sum + item.qty;
             }, 0);
 
@@ -1463,7 +1791,7 @@
 
             // Recalculate unit price for each item inside cart incorporating dynamic volume discounts
             cart.forEach(item => {
-                if (item.product_id === 'catering_event_pack') return;
+                if (item.product_id === 'catering_event_pack' || item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') return;
 
                 // Determine base standard product price
                 let basePrice = 6.00;
@@ -1487,6 +1815,7 @@
                 const sel = item.selections[0];
                 const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
                 const isCatering = item.product_id === 'catering_event_pack';
+                const isBundle = item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d';
                 
                 let descText = "";
                 if (isCatering) {
@@ -1498,6 +1827,15 @@
                     });
                     const summary = Object.entries(counts).map(([label, qty]) => `${qty}x ${label}`).join(', ');
                     descText = `Catering Batch • ${item.selections.length} Bottles (${summary})`;
+                } else if (isBundle) {
+                    const counts = {};
+                    item.selections.forEach(s => {
+                        const baseName = s.flavor.replace(' Sweet', '').replace(' Rich', '').replace(' Honduran', '').replace(' Classic', '').replace(' Dirty', '').replace(' French', '').replace(' Latte', '').replace(' Americano', '').trim();
+                        const label = s.milk === 'Oat Milk' ? `${baseName} (Oat)` : baseName;
+                        counts[label] = (counts[label] || 0) + 1;
+                    });
+                    const summary = Object.entries(counts).map(([label, qty]) => `${qty}x ${label}`).join(', ');
+                    descText = `5-Drink Bundle • (${summary})`;
                 } else {
                     descText = isBlack ? `${sel.espresso} Strength` : `${sel.milk} • ${sel.espresso} Strength`;
                 }
@@ -1547,7 +1885,7 @@
                 if (freeRedeemedInCurrent > 0) {
                     let flatCartPrices = [];
                     cart.forEach(item => {
-                        if (item.product_id === 'catering_event_pack') return;
+                        if (item.product_id === 'catering_event_pack' || item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') return;
                         for (let q = 0; q < item.qty; q++) {
                             flatCartPrices.push(item.unitPrice);
                         }
@@ -1563,8 +1901,13 @@
 
             container.classList.remove('hidden');
             checkCard.classList.remove('hidden');
+            contactCard.classList.remove('hidden');
 
-            updatePricing(volDiscountPerBottle, normalBottlesCount, stampSavings, freeRedeemedInCurrent);
+            activeVolDiscount = volDiscountPerBottle;
+            activeBottleCount = normalBottlesCount;
+            activeStampSavings = stampSavings;
+            activeFreeRedeemedCount = freeRedeemedInCurrent;
+            updatePricing();
             updateHubTracker();
         }
 
@@ -1591,26 +1934,26 @@
             updateCartUI();
         }
 
-        function updatePricing(volDiscount = 0, bottleCount = 0, stampSavings = 0, freeRedeemedCount = 0) {
+        function updatePricing() {
             let subtotal = cart.reduce((sum, item) => sum + item.total, 0);
             
             // Subtract stamp savings from the subtotal before percent discounts are applied
-            let paidSubtotal = Math.max(0, subtotal - stampSavings);
+            let paidSubtotal = Math.max(0, subtotal - activeStampSavings);
             let total = paidSubtotal;
 
             let breakdownHtml = "";
-            let savings = stampSavings;
+            let savings = activeStampSavings;
 
             // Display Volume Discount savings if active
-            if (volDiscount > 0 && bottleCount > 0) {
-                const volSavings = volDiscount * bottleCount;
-                breakdownHtml += `<p class="flex justify-between"><span>Volume Discount ($${volDiscount.toFixed(2)}/bottle):</span><span class="text-green-400 font-bold">-$${volSavings.toFixed(2)}</span></p>`;
+            if (activeVolDiscount > 0 && activeBottleCount > 0) {
+                const volSavings = activeVolDiscount * activeBottleCount;
+                breakdownHtml += `<p class="flex justify-between"><span>Volume Discount ($${activeVolDiscount.toFixed(2)}/bottle):</span><span class="text-green-400 font-bold">-$${volSavings.toFixed(2)}</span></p>`;
                 savings += volSavings;
             }
 
             // Display Stamp Savings if active
-            if (stampSavings > 0) {
-                breakdownHtml += `<p class="flex justify-between"><span>Stamp Reward (${freeRedeemedCount} Free Bottle${freeRedeemedCount > 1 ? 's' : ''}):</span><span class="text-green-400 font-bold">-$${stampSavings.toFixed(2)}</span></p>`;
+            if (activeStampSavings > 0) {
+                breakdownHtml += `<p class="flex justify-between"><span>Stamp Reward (${activeFreeRedeemedCount} Free Bottle${activeFreeRedeemedCount > 1 ? 's' : ''}):</span><span class="text-green-400 font-bold">-$${activeStampSavings.toFixed(2)}</span></p>`;
             }
 
             // Apply 10% Weekly Subscription Discount to the remaining paid subtotal
@@ -1629,10 +1972,34 @@
                 breakdownHtml += `<p class="flex justify-between"><span>Promo Code (${validatedPromo}):</span><span class="text-green-400 font-bold">-$${promoSavings.toFixed(2)}</span></p>`;
             }
 
+            // Add delivery fee if custom delivery selected
+            if (selectedFulfillmentType === 'delivery' && calculatedDeliveryFee > 0) {
+                total += calculatedDeliveryFee;
+                breakdownHtml += `<p class="flex justify-between border-t border-white/5 pt-1 mt-1"><span>Delivery Fee (Ontario Base):</span><span class="text-brand-gold font-bold">+$${calculatedDeliveryFee.toFixed(2)}</span></p>`;
+            }
+
+            // Calculate total bottles in the cart
+            let totalBottles = 0;
+            cart.forEach(item => {
+                if (item.product_id === 'catering_event_pack') {
+                    totalBottles += item.selections.length * item.qty;
+                } else if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                    totalBottles += 5 * item.qty;
+                } else {
+                    totalBottles += item.qty;
+                }
+            });
+
+            // Insulated cooler bag fee is automatically priced in: $15 for every 30 bottles
+            const insulatedBagQty = Math.floor(totalBottles / 30);
+            if (insulatedBagQty > 0) {
+                breakdownHtml += `<p class="flex justify-between"><span>Insulated Cooler Bag & Ice Packs (x${insulatedBagQty}):</span><span class="text-brand-gold font-bold">Included</span></p>`;
+            }
+
             const breakdownEl = document.getElementById('pricing-breakdown');
             if (breakdownHtml) {
                 breakdownEl.innerHTML = `
-                    <p class="flex justify-between border-b border-white/5 pb-1"><span>Cart Subtotal:</span><span>$${(subtotal + (volDiscount * bottleCount)).toFixed(2)}</span></p>
+                    <p class="flex justify-between border-b border-white/5 pb-1"><span>Cart Subtotal:</span><span>$${(subtotal + (activeVolDiscount * activeBottleCount)).toFixed(2)}</span></p>
                     ${breakdownHtml}
                     <p class="flex justify-between font-bold text-brand-gold pt-0.5"><span>Total Saved:</span><span>$${savings.toFixed(2)}</span></p>
                 `;
@@ -1787,32 +2154,62 @@
                 showToast("Please enter your name and phone number.");
                 return;
             }
-            if (!selectedLocationId) {
-                showToast("Location not set. Please reload the page.");
-                return;
+
+            if (selectedFulfillmentType === 'hub') {
+                if (!selectedLocationId) {
+                    showToast("Please select a Workplace Hub location.");
+                    return;
+                }
+            } else if (selectedFulfillmentType === 'delivery') {
+                if (!selectedDeliveryAddress || !isDeliveryAddressVerified) {
+                    showToast("Please enter and verify your delivery address.");
+                    return;
+                }
             }
+
+            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
+            const customLabelInput = document.getElementById('catering-custom-label');
+            const customLabelMessage = customLabelInput ? customLabelInput.value.trim() : "";
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const notesTag = orderMode === 'preorder' 
-                ? (isSubscription ? `[PRE-ORDER SUBSCRIPTION FOR ${selectedDate}]` : `[PRE-ORDER FOR ${selectedDate}]`) 
-                : '[SELF-CHECKOUT]';
+            const notesTag = `[ORDER: ${selectedFulfillmentType.toUpperCase()}]`;
+
+            // Calculate total bottles in order
+            let totalBottles = 0;
+            cart.forEach(item => {
+                if (item.product_id === 'catering_event_pack') {
+                    totalBottles += item.selections.length * item.qty;
+                } else if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                    totalBottles += 5 * item.qty;
+                } else {
+                    totalBottles += item.qty;
+                }
+            });
+
+            // Insulated cooler bag fee is automatically priced in: $15 for every 30 bottles
+            const insulatedBagQty = Math.floor(totalBottles / 30);
+            const bagFeeVal = insulatedBagQty * 15.00;
                 
             let desc = cart.map(item => {
                 const sel = item.selections[0];
                 const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
                 const isCatering = item.product_id === 'catering_event_pack';
+                const isBundle = item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d';
                 
                 if (isCatering) return `${item.qty}x ${item.name} (${item.selections.length} bottles)`;
+                if (isBundle) {
+                    const bundleSummary = item.selections.map(s => s.flavor).join(' + ');
+                    return `${item.qty}x ${item.name} (${bundleSummary})`;
+                }
                 return isBlack ? `${item.qty}x ${item.name} (${sel.espresso})` : `${item.qty}x ${item.name} (${sel.milk}, ${sel.espresso})`;
             }).join(', ');
 
             let selfCheckoutNotes = `${notesTag} Stripe checkout. Items: ${desc}.`;
 
             // Append catering details to notes
-            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
             if (hasCatering) {
                 const eventDate = document.getElementById('cust-event-date').value;
                 const eventSetup = document.getElementById('cust-event-setup').value;
@@ -1824,6 +2221,7 @@
                 }
                 const selDate = new Date(eventDate);
                 const minDate = new Date();
+                minDate.setHours(0, 0, 0, 0);
                 minDate.setDate(minDate.getDate() + 3);
                 if (selDate < minDate) {
                     showToast("Catering events require at least 3-day advanced notice.", "error");
@@ -1832,6 +2230,16 @@
                     return;
                 }
                 selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;
+                if (insulatedBagQty > 0) {
+                    selfCheckoutNotes += `\n[CATERING OPTION] Insulated Cooler Bag & Ice Packs (x${insulatedBagQty}) included (Priced-in)`;
+                }
+                if (customLabelMessage) {
+                    selfCheckoutNotes += `\n[CUSTOM LABELS] Message: "${customLabelMessage}"`;
+                }
+            }
+
+            if (selectedFulfillmentType === 'delivery') {
+                selfCheckoutNotes += `\n[DELIVERY DETAILS] Address: ${selectedDeliveryAddress} | Fee: $${calculatedDeliveryFee.toFixed(2)}`;
             }
 
             try {
@@ -1842,13 +2250,18 @@
                         name, 
                         email,
                         phone, 
-                        location_id: selectedLocationId, 
+                        location_id: selectedFulfillmentType === 'hub' ? selectedLocationId : null, 
                         items: cart, 
                         notes: selfCheckoutNotes,
                         promo_code: validatedPromo,
                         is_subscription: isSubscription,
-                        delivery_fee_applied: 0,
-                        preorder_date: orderMode === 'preorder' ? selectedDate : null
+                        delivery_fee: selectedFulfillmentType === 'delivery' ? calculatedDeliveryFee : 0,
+                        fulfillment_type: selectedFulfillmentType,
+                        delivery_address: selectedFulfillmentType === 'delivery' ? selectedDeliveryAddress : null,
+                        preorder_date: selectedDate,
+                        insulated_bag: insulatedBagQty > 0,
+                        insulated_bag_qty: insulatedBagQty,
+                        custom_label_message: customLabelMessage
                     })
                 });
                 const data = await res.json();
@@ -1860,9 +2273,7 @@
             } catch (e) {
                 showToast("Stripe Checkout Error: " + e.message);
                 btn.disabled = false;
-                btn.innerHTML = orderMode === 'preorder' 
-                    ? 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>' 
-                    : 'Pay via ApplePay / Card <i class="fas fa-credit-card ml-1.5"></i>';
+                btn.innerHTML = 'Place Pre-Order <i class="fas fa-credit-card ml-1.5"></i>';
             }
         }
 
@@ -1879,37 +2290,69 @@
                 showToast("Please enter your name and phone number.");
                 return;
             }
-            if (!selectedLocationId) {
-                showToast("Location error. Please reload the page.");
-                return;
+
+            if (selectedFulfillmentType === 'hub') {
+                if (!selectedLocationId) {
+                    showToast("Please select a Workplace Hub location.");
+                    return;
+                }
+            } else if (selectedFulfillmentType === 'delivery') {
+                if (!selectedDeliveryAddress || !isDeliveryAddressVerified) {
+                    showToast("Please enter and verify your delivery address.");
+                    return;
+                }
             }
+
             if (!receiptBase64) {
                 showToast("Please upload a screenshot of your transfer as proof of payment.", "error");
                 return;
             }
 
+            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
+            const customLabelInput = document.getElementById('catering-custom-label');
+            const customLabelMessage = customLabelInput ? customLabelInput.value.trim() : "";
+
+            // Calculate total bottles in order
+            let totalBottles = 0;
+            cart.forEach(item => {
+                if (item.product_id === 'catering_event_pack') {
+                    totalBottles += item.selections.length * item.qty;
+                } else if (item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                    totalBottles += 5 * item.qty;
+                } else {
+                    totalBottles += item.qty;
+                }
+            });
+
+            // Insulated cooler bag fee is automatically priced in: $15 for every 30 bottles
+            const insulatedBagQty = Math.floor(totalBottles / 30);
+            const bagFeeVal = insulatedBagQty * 15.00;
+
             let totalVal = cart.reduce((sum, item) => sum + item.total, 0);
             if (isSubscription) totalVal = totalVal * 0.90;
             if (validatedPromo && !isSubscription) totalVal = totalVal * 0.95;
+            if (selectedFulfillmentType === 'delivery') totalVal += calculatedDeliveryFee;
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const notesTag = orderMode === 'preorder'
-                ? (isSubscription ? `[PRE-ORDER SUBSCRIPTION PAY: ${method.toUpperCase()} FOR ${selectedDate}]` : `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}]`)
-                : `[SELF-CHECKOUT PAY: ${method.toUpperCase()}]`;
+            const notesTag = `[ORDER: ${selectedFulfillmentType.toUpperCase()} PAY: ${method.toUpperCase()}]`;
 
             let desc = cart.map(item => {
                 const sel = item.selections[0];
                 const isBlack = item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro');
                 const isCatering = item.product_id === 'catering_event_pack';
+                const isBundle = item.product_id === '83d571c7-5aa8-4efb-b649-0ee286dd463d';
                 
                 if (isCatering) return `${item.qty}x ${item.name} (${item.selections.length} bottles)`;
+                if (isBundle) {
+                    const bundleSummary = item.selections.map(s => s.flavor).join(' + ');
+                    return `${item.qty}x ${item.name} (${bundleSummary})`;
+                }
                 return isBlack ? `${item.qty}x ${item.name} (${sel.espresso})` : `${item.qty}x ${item.name} (${sel.milk}, ${sel.espresso})`;
             }).join(', ');
 
             let selfCheckoutNotes = `${notesTag} Items: ${desc}.`;
 
             // Append catering details to notes
-            const hasCatering = cart.some(item => item.product_id === 'catering_event_pack');
             if (hasCatering) {
                 const eventDate = document.getElementById('cust-event-date').value;
                 const eventSetup = document.getElementById('cust-event-setup').value;
@@ -1919,12 +2362,23 @@
                 }
                 const selDate = new Date(eventDate);
                 const minDate = new Date();
+                minDate.setHours(0, 0, 0, 0);
                 minDate.setDate(minDate.getDate() + 3);
                 if (selDate < minDate) {
                     showToast("Catering events require at least 3-day advanced notice.", "error");
                     return;
                 }
                 selfCheckoutNotes += `\n[EVENT DETAILS] Date: ${eventDate} | Setup: ${eventSetup}`;
+                if (insulatedBagQty > 0) {
+                    selfCheckoutNotes += `\n[CATERING OPTION] Insulated Cooler Bag & Ice Packs (x${insulatedBagQty}) included (Priced-in)`;
+                }
+                if (customLabelMessage) {
+                    selfCheckoutNotes += `\n[CUSTOM LABELS] Message: "${customLabelMessage}"`;
+                }
+            }
+
+            if (selectedFulfillmentType === 'delivery') {
+                selfCheckoutNotes += `\n[DELIVERY DETAILS] Address: ${selectedDeliveryAddress} | Fee: $${calculatedDeliveryFee.toFixed(2)}`;
             }
 
             try {
@@ -1934,15 +2388,21 @@
                     body: JSON.stringify({
                         customer_name: name,
                         customer_phone: phone,
-                        location_id: selectedLocationId,
+                        location_id: selectedFulfillmentType === 'hub' ? selectedLocationId : null,
                         total: totalVal,
                         selections: { 
                             cart: cart, 
                             payment_method: method.toLowerCase(), 
                             status: 'pending_verification', 
                             is_subscription: isSubscription,
-                            preorder_date: orderMode === 'preorder' ? selectedDate : null,
-                            email: email || ''
+                            preorder_date: selectedDate,
+                            email: email || '',
+                            fulfillment_type: selectedFulfillmentType,
+                            delivery_address: selectedFulfillmentType === 'delivery' ? selectedDeliveryAddress : null,
+                            delivery_fee: selectedFulfillmentType === 'delivery' ? calculatedDeliveryFee : 0,
+                            insulated_bag: insulatedBagQty > 0,
+                            insulated_bag_qty: insulatedBagQty,
+                            custom_label_message: customLabelMessage
                         },
                         notes: selfCheckoutNotes,
                         receiptBase64: receiptBase64
@@ -1979,6 +2439,163 @@
                 }
             } catch (e) {
                 showToast("Connection error logging checkout.");
+            }
+        }
+
+        function adjustBundleFlavorQty(flavorId, delta) {
+            const currentTotal = Object.values(bundleQuantities).reduce((a, b) => a + b, 0);
+            if (delta > 0 && currentTotal >= 5) {
+                showToast("Your 5 flavor bundle is already full!", "error");
+                return;
+            }
+            bundleQuantities[flavorId] = Math.max(0, (bundleQuantities[flavorId] || 0) + delta);
+            
+            const qtyEl = document.getElementById(`bun-qty-${flavorId}`);
+            if (qtyEl) qtyEl.innerText = bundleQuantities[flavorId];
+            
+            updateBundleState();
+        }
+
+        function updateBundleState() {
+            const totalSelected = Object.values(bundleQuantities).reduce((a, b) => a + b, 0);
+            const totEl = document.getElementById('bundle-total-bottles');
+            if (totEl) totEl.innerText = `${totalSelected} / 5 selection`;
+            
+            const addBtn = document.getElementById('add-to-order-btn');
+            if (selectedProduct?.id === '83d571c7-5aa8-4efb-b649-0ee286dd463d') {
+                if (addBtn) {
+                    if (totalSelected !== 5) {
+                        addBtn.disabled = true;
+                        addBtn.innerHTML = `Choose exactly 5 bottles (Selected: ${totalSelected}) <i class="fas fa-info-circle ml-1"></i>`;
+                        addBtn.className = "w-full bg-gray-300 text-gray-500 font-black py-4 rounded-xl cursor-not-allowed uppercase tracking-wider text-[9px]";
+                    } else {
+                        addBtn.disabled = false;
+                        addBtn.innerHTML = `Add 5 Flavor Bundle to Order ($25.00) <i class="fas fa-plus ml-1"></i>`;
+                        addBtn.className = "w-full bg-brand-brown text-white font-black py-4 rounded-xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]";
+                    }
+                }
+            }
+        }
+
+        function setFulfillmentType(type) {
+            selectedFulfillmentType = type;
+            const btnPickup = document.getElementById('ful-pickup');
+            const btnHub = document.getElementById('ful-hub');
+            const btnDelivery = document.getElementById('ful-delivery');
+            const helper = document.getElementById('fulfillment-helper-text');
+            const hubContainer = document.getElementById('hub-selection-container');
+            const customDeliveryContainer = document.getElementById('custom-delivery-container');
+
+            // Reset styling
+            const inactiveClass = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
+            const activeClass = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
+
+            if (btnPickup) btnPickup.className = type === 'pickup' ? activeClass : inactiveClass;
+            if (btnHub) btnHub.className = type === 'hub' ? activeClass : inactiveClass;
+            if (btnDelivery) btnDelivery.className = type === 'delivery' ? activeClass : inactiveClass;
+
+            if (type === 'pickup') {
+                if (helper) helper.innerText = "Pick up your order directly from our kitchen in Ontario, CA.";
+                if (hubContainer) hubContainer.classList.add('hidden');
+                if (customDeliveryContainer) customDeliveryContainer.classList.add('hidden');
+                calculatedDeliveryFee = 0;
+            } else if (type === 'hub') {
+                if (helper) helper.innerText = "Captain Rico will drop your labeled bottle off at your workplace location.";
+                if (hubContainer) hubContainer.classList.remove('hidden');
+                if (customDeliveryContainer) customDeliveryContainer.classList.add('hidden');
+                calculatedDeliveryFee = 0;
+            } else if (type === 'delivery') {
+                if (helper) helper.innerText = "We'll deliver your catering batch directly to your event address (within 75 miles of Ontario, CA).";
+                if (hubContainer) hubContainer.classList.add('hidden');
+                if (customDeliveryContainer) customDeliveryContainer.classList.remove('hidden');
+            }
+
+            updatePricing();
+        }
+
+        function syncLocationSelect(val) {
+            selectedLocationId = val;
+            const selectHidden = document.getElementById('cust-location');
+            if (selectHidden) {
+                selectHidden.value = val;
+            }
+            updateHubTracker();
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3958.8; // Radius of the Earth in miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        async function verifyCaliDeliveryAddress() {
+            const addr = document.getElementById('cust-delivery-address').value.trim();
+            if (!addr) {
+                showToast("Please enter a delivery address.");
+                return;
+            }
+            const verifyBtn = document.getElementById('verify-address-btn');
+            verifyBtn.disabled = true;
+            verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Verifying...';
+            
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addr)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        const distance = calculateDistance(34.06334, -117.65089, lat, lon);
+                        
+                        if (distance > 75) {
+                            showToast(`Address is ${distance.toFixed(1)} miles away. Max radius is 75 miles.`, 'error');
+                            document.getElementById('delivery-fee-info').innerHTML = `
+                                <span class="text-red-500 font-bold">Out of delivery range (${distance.toFixed(1)} miles). Max 75 miles.</span>
+                            `;
+                            calculatedDeliveryFee = 0;
+                            isDeliveryAddressVerified = false;
+                            selectedDeliveryAddress = null;
+                        } else {
+                            // Delivery fee: $20.00 base + $1.50 per mile
+                            const fee = 20.00 + (distance * 1.50);
+                            calculatedDeliveryFee = parseFloat(fee.toFixed(2));
+                            isDeliveryAddressVerified = true;
+                            selectedDeliveryAddress = addr;
+                            
+                            showToast(`Address verified! Distance: ${distance.toFixed(1)} miles.`, 'success');
+                            document.getElementById('delivery-fee-info').innerHTML = `
+                                <span class="text-green-600 font-bold">✓ Verified (${distance.toFixed(1)} miles) • Delivery Fee: $${calculatedDeliveryFee.toFixed(2)}</span>
+                            `;
+                        }
+                    } else {
+                        showToast("Address not found. Please try a more specific address.", "error");
+                        calculatedDeliveryFee = 35.00;
+                        isDeliveryAddressVerified = true;
+                        selectedDeliveryAddress = addr;
+                        document.getElementById('delivery-fee-info').innerHTML = `
+                            <span class="text-amber-600 font-semibold">⚠️ Address lookup failed. Flat fee of $35.00 applied.</span>
+                        `;
+                    }
+                } else {
+                    throw new Error("Nominatim fetch failed");
+                }
+            } catch (e) {
+                console.error(e);
+                calculatedDeliveryFee = 35.00;
+                isDeliveryAddressVerified = true;
+                selectedDeliveryAddress = addr;
+                document.getElementById('delivery-fee-info').innerHTML = `
+                    <span class="text-amber-600 font-semibold">⚠️ Connection issue. Flat fee of $35.00 applied.</span>
+                `;
+            } finally {
+                verifyBtn.disabled = false;
+                verifyBtn.innerHTML = 'Verify';
+                updatePricing();
             }
         }
 
@@ -2036,6 +2653,12 @@
                 toast.classList.add('translate-y-[-20px]', 'opacity-0');
                 setTimeout(() => { toast.remove(); }, 500);
             }, 4000);
+        }
+        function updateLabelCharCounter(el) {
+            const counter = document.getElementById('label-char-counter');
+            if (counter) {
+                counter.innerText = `${el.value.length} / 55 chars`;
+            }
         }
 
         init();

@@ -336,7 +336,8 @@
                     const catLower = cat.toLowerCase();
                     
                     // --- REINFORCED CATEGORIZATION (Combos first) ---
-                    if (catLower === 'combos' || catLower === 'combo' || catLower.includes('paquete') || itemName.includes('combo') || itemName.includes('paquete')) cat = 'Combos';
+                    if (catLower === 'popular') cat = '🔥 Más Vendidos';
+                    else if (catLower === 'combos' || catLower === 'combo' || catLower.includes('paquete') || itemName.includes('combo') || itemName.includes('paquete')) cat = 'Combos';
                     else if (catLower === 'retail' || catLower.includes('deportes')) cat = 'Deportes';
                     else if (catLower === 'hot_drinks' || catLower === 'coffee' || catLower.includes('caliente')) cat = 'Café';
                     else if (catLower === 'cold_drinks' || catLower === 'drinks' || catLower.includes('helada')) cat = 'Heladas';
@@ -348,7 +349,7 @@
                     categories[cat].push(item);
                 });
 
-                const categoryOrder = ['Combos', 'Deportes', 'Comida', 'Café', 'Heladas', 'Postres', 'Menú Secreto', 'Otros'];
+                const categoryOrder = ['🔥 Más Vendidos', 'Combos', 'Deportes', 'Comida', 'Café', 'Heladas', 'Postres', 'Menú Secreto', 'Otros'];
                 const sortedCategories = Object.keys(categories).sort((a, b) => {
                     let indexA = categoryOrder.indexOf(a);
                     let indexB = categoryOrder.indexOf(b);
@@ -378,7 +379,7 @@
                         const isCombo = category === 'Combos';
                         const isBooking = item.id.startsWith('sports_court') || item.id.startsWith('event_');
                         const cardClass = isCombo ? "item-card rounded-[2rem] bg-white/5 border border-gold/30 overflow-hidden flex flex-col group active:scale-95 transition-all shadow-xl" : "item-card rounded-[2rem] bg-white/5 border border-white/5 overflow-hidden flex flex-col group active:scale-95 transition-all";
-                        const clickAction = isBooking ? `openBooking('${item.id}')` : `openModifier('${item.id}')`;
+                        const clickAction = isBooking ? `window.openBooking('${item.id}')` : `window.openModifier('${item.id}')`;
                         const btnLabel = isBooking ? 'Reservar' : 'Agregar';
                         
                         // --- STATUS ENGINE: Price Preview ---
@@ -490,7 +491,7 @@
             sections.forEach(section => observer.observe(section));
         }
 
-        function openModifier(id) {
+        window.openModifier = (id) => {
             currentItem = menuItems.find(i => i.id === id);
             const relevantGroups = itemModGroups.filter(img => img.item_id === id).sort((a,b)=>a.display_order - b.display_order).map(img => img.group_id);
             
@@ -517,7 +518,7 @@
                     <div class="grid grid-cols-2 gap-3">`;
                 options.forEach(opt => {
                     const sel = currentMods[groupId].includes(opt.id) ? 'border-gold bg-gold/10 text-gold' : 'border-white/10 bg-white/5 text-white/60';
-                    html += `<button onclick="toggleMod('${group.id}', '${opt.id}')" id="mbtn-${opt.id}" class="mod-btn p-5 rounded-[1.5rem] border font-bold text-xs text-center transition-all ${sel}">${opt.name}</button>`;
+                    html += `<button onclick="window.toggleMod('${group.id}', '${opt.id}')" id="mbtn-${opt.id}" class="mod-btn p-5 rounded-[1.5rem] border font-bold text-xs text-center transition-all ${sel}">${opt.name}</button>`;
                 });
                 html += `</div></div>`;
             });
@@ -559,7 +560,7 @@
             updateModPrice();
         };
 
-        function toggleMod(gid, oid) {
+        window.toggleMod = (gid, oid) => {
             currentMods[gid] = [oid];
             const options = modOptions.filter(o => o.group_id === gid);
             options.forEach(opt => {

@@ -62,7 +62,13 @@ export default async function handler(req, res) {
     }
 
     const host = req.headers.host || '';
-    const isLocal = host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('::1');
+    const isLocal = host.startsWith('localhost') || 
+                    host.startsWith('127.0.0.1') || 
+                    host.startsWith('::1') ||
+                    /^192\.168\./.test(host) ||
+                    /^10\./.test(host) ||
+                    /^172\.(1[6-9]|2[0-9]|3[01])\./.test(host) ||
+                    /^169\.254\./.test(host);
     if (!isLocal) {
         return res.status(403).json({ error: 'Access Denied: Private Terminal API' });
     }
@@ -75,7 +81,7 @@ export default async function handler(req, res) {
         try {
             const stats = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
             const nowSec = Date.now() / 1000;
-            if (nowSec - stats.last_update > 60) {
+            if (nowSec - stats.last_update > 300) {
                 stats.status = 'offline';
             }
             
@@ -264,7 +270,23 @@ export default async function handler(req, res) {
         }
         try {
             const list = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-            const now = Date.now() / 1000;
+            
+            // Timezone offset query parameter in minutes (passed from client)
+            const tzOffset = parseInt(req.query.tzOffset || 0);
+            const nowLocalSec = (Date.now() / 1000) - tzOffset * 60;
+            const clientNowDate = new Date(nowLocalSec * 1000);
+            
+            const year = clientNowDate.getUTCFullYear();
+            const month = clientNowDate.getUTCMonth();
+            const date = clientNowDate.getUTCDate();
+            
+            const localTodayStartSec = Date.UTC(year, month, date) / 1000;
+            const localYesterdayStartSec = localTodayStartSec - 86400;
+            
+            const dayOfWeek = clientNowDate.getUTCDay(); // 0 = Sunday
+            const localWeekStartSec = localTodayStartSec - dayOfWeek * 86400;
+            
+            const localMonthStartSec = Date.UTC(year, month, 1) / 1000;
             
             const calcStats = (trades) => {
                 const total = trades.length;
@@ -280,16 +302,31 @@ export default async function handler(req, res) {
                 return { total, wins, losses, winRate, netReturn };
             };
             
-            const hourTrades = list.filter(t => now - t.timestamp <= 3600);
-            const dayTrades = list.filter(t => now - t.timestamp <= 86400);
-            const weekTrades = list.filter(t => now - t.timestamp <= 604800);
-            const monthTrades = list.filter(t => now - t.timestamp <= 2592000);
+            const todayTrades = list.filter(t => {
+                const localTimeSec = t.timestamp - tzOffset * 60;
+                return localTimeSec >= localTodayStartSec;
+            });
+            
+            const yesterdayTrades = list.filter(t => {
+                const localTimeSec = t.timestamp - tzOffset * 60;
+                return localTimeSec >= localYesterdayStartSec && localTimeSec < localTodayStartSec;
+            });
+            
+            const weekTrades = list.filter(t => {
+                const localTimeSec = t.timestamp - tzOffset * 60;
+                return localTimeSec >= localWeekStartSec;
+            });
+            
+            const monthTrades = list.filter(t => {
+                const localTimeSec = t.timestamp - tzOffset * 60;
+                return localTimeSec >= localMonthStartSec;
+            });
             
             return res.status(200).json({
-                hour: calcStats(hourTrades),
-                day: calcStats(dayTrades),
-                week: calcStats(weekTrades),
-                month: calcStats(monthTrades),
+                hour: calcStats(todayTrades),        // mapped to hour card for 'today'
+                day: calcStats(yesterdayTrades),    // mapped to day card for 'yesterday'
+                week: calcStats(weekTrades),        // mapped to week card for 'this week'
+                month: calcStats(monthTrades),      // mapped to month card for 'this month'
                 historic: calcStats(list)
             });
         } catch (e) {
@@ -329,6 +366,99 @@ export default async function handler(req, res) {
             cachedTrendingTime = nowMs;
             
             return res.status(200).json(results);
+        } catch (e) {
+            return res.status(500).json({ error: e.message });
+        }
+    }
+    else if (endpoint === 'evaluate') {
+        const { tokenAddress } = req.query;
+        if (!tokenAddress || !tokenAddress.startsWith('0x') || tokenAddress.length !== 42) {
+            return res.status(400).json({ error: 'Invalid contract address' });
+        }
+        
+        try {
+            const data = await httpsGet(`https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`);
+            const pairs = data.pairs || [];
+            const robinhoodPairs = pairs.filter(p => p.chainId === 'robinhood');
+            
+            if (robinhoodPairs.length === 0) {
+                return res.status(200).json({
+                    recommendation: 'NO BUY',
+                    reasons: ['❌ No Robinhood Chain trading pair found on DexScreener.'],
+                    score: -5,
+                    details: {
+                        name: 'Unknown',
+                        symbol: 'UNKNOWN',
+                        liquidity: 0,
+                        volume: 0,
+                        fdv: 0
+                    }
+                });
+            }
+            
+            const pair = robinhoodPairs.reduce((best, current) => {
+                const bestLiq = best.liquidity?.usd || 0;
+                const curLiq = current.liquidity?.usd || 0;
+                return curLiq > bestLiq ? current : best;
+            }, robinhoodPairs[0]);
+            
+            const liq = pair.liquidity?.usd || 0;
+            const vol = pair.volume?.h24 || 0;
+            const fdv = pair.fdv || 0;
+            const change1h = pair.priceChange?.h1 || 0;
+            const change24h = pair.priceChange?.h24 || 0;
+            
+            const reasons = [];
+            let score = 0;
+            
+            if (liq >= 5000) {
+                score += 2;
+                reasons.push('✅ Healthy Liquidity: $' + Math.round(liq).toLocaleString() + ' is above safety floor ($5,000).');
+            } else if (liq >= 1000) {
+                score += 1;
+                reasons.push('⚠️ Moderate Liquidity: $' + Math.round(liq).toLocaleString() + ' carries medium slippage risk.');
+            } else {
+                score -= 3;
+                reasons.push('❌ Critical Liquidity: $' + Math.round(liq).toLocaleString() + ' is extremely thin. High slippage/rug risk.');
+            }
+            
+            if (vol >= 3000) {
+                score += 1;
+                reasons.push('✅ Active Trading: 24h volume is $' + Math.round(vol).toLocaleString() + '.');
+            } else {
+                reasons.push('⚠️ Low Activity: 24h volume is only $' + Math.round(vol).toLocaleString() + '.');
+            }
+            
+            if (change24h > 150) {
+                score -= 1;
+                reasons.push('⚠️ Overextended: Up ' + change24h + '% in 24h. High chance of pullback.');
+            } else if (change1h > 10) {
+                score += 1;
+                reasons.push('✅ Strong Momentum: Price rose ' + change1h + '% in the last hour.');
+            } else if (change24h < -35) {
+                score -= 2;
+                reasons.push('❌ Heavy Sell Pressure: Down ' + change24h + '% in 24h.');
+            } else {
+                reasons.push('ℹ️ Stable Trend: Price action is relatively steady.');
+            }
+            
+            const recommendation = score >= 2 ? 'BUY' : 'NO BUY';
+            
+            return res.status(200).json({
+                recommendation,
+                reasons,
+                score,
+                details: {
+                    name: pair.baseToken?.name || 'Unknown',
+                    symbol: pair.baseToken?.symbol || 'UNKNOWN',
+                    liquidity: liq,
+                    volume: vol,
+                    fdv: fdv,
+                    change1h,
+                    change24h,
+                    pairUrl: pair.url
+                }
+            });
         } catch (e) {
             return res.status(500).json({ error: e.message });
         }

@@ -64,10 +64,13 @@
             <i class="fas fa-user-shield text-blue-600"></i> Admin Dashboard
             <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full border border-blue-200">v2.6.3</span>
             <div class="ml-auto flex gap-2">
+                <button onclick="window.location.href='/os'" class="bg-gray-200 text-gray-700 text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-gray-300 transition border border-gray-300">
+                    <i class="fas fa-home mr-2"></i> Menú OS
+                </button>
                 <button onclick="startGuide()" class="bg-amber-100 text-amber-700 text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-amber-200 transition border border-amber-200">
                     <i class="fas fa-book-open mr-2"></i> System Guide
                 </button>
-                <button onclick="window.location.href='/onboarding.html'" class="bg-indigo-600 text-white text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20">
+                <button onclick="window.location.href='/onboarding'" class="bg-indigo-600 text-white text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-indigo-700 transition shadow-lg shadow-indigo-600/20">
                     <i class="fas fa-rocket mr-2"></i> Launch New Business
                 </button>
                 <button onclick="logout()" class="bg-gray-200 text-gray-600 text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-gray-300 transition">
@@ -1706,6 +1709,7 @@
                 if (ordersRes.ok) {
                     const ordersData = await ordersRes.json();
                     const allOrders = ordersData.orders || [];
+                    window.currentOrders = allOrders;
                     
                     // Filter for today's orders in Honduras
                     const hnDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Tegucigalpa', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -1723,6 +1727,7 @@
                         const row = document.createElement('tr');
                         const statusColors = {
                             'pending': 'bg-yellow-100 text-yellow-800',
+                            'awaiting_transfer_approval': 'bg-purple-100 text-purple-800 animate-pulse',
                             'paid': 'bg-blue-100 text-blue-800',
                             'partial_paid': 'bg-orange-100 text-orange-800',
                             'completed': 'bg-green-100 text-green-800',
@@ -1734,9 +1739,14 @@
                         const isMembership = order.items.some(i => i.id === 'vip_membership');
                         
                         let actionsHtml = '';
-                        if (order.status === 'pending') {
+                        if (order.status === 'pending' || order.status === 'awaiting_transfer_approval') {
+                            let transferBtn = '';
+                            if (order.notes && order.notes.includes('[TRANSFER_IMAGE:')) {
+                                transferBtn = `<button onclick="viewTransferImage('${order.id}')" class="bg-purple-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-purple-700">Ver Transf.</button>`;
+                            }
                             actionsHtml = `
                                 <div class="flex gap-2 justify-end">
+                                    ${transferBtn}
                                     <button onclick="approveOrder('${order.id}', '${order.order_number}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-blue-700">Approve</button>
                                     <button onclick="rejectOrder('${order.id}', '${order.order_number}', '${order.customers?.phone || ''}', '${order.customers?.name || ''}')" class="bg-red-500 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-red-600">Reject</button>
                                 </div>
@@ -2064,6 +2074,135 @@
             
             document.getElementById('guide-next-btn').innerText = currentGuideStep === guideSteps.length - 1 ? "Finish Walkthrough" : "Next Step";
         }
+
+        let activeReviewOrderId = null;
+        let activeReviewOrderNum = null;
+
+        window.viewTransferImage = (orderId) => {
+            const order = (window.currentOrders || []).find(o => o.id === orderId);
+            if (!order) return;
+            
+            activeReviewOrderId = orderId;
+            activeReviewOrderNum = order.order_number;
+            document.getElementById('review-order-number').innerText = `Orden #${order.order_number}`;
+            
+            // Extract from notes
+            const notes = order.notes || '';
+            const imgMatch = notes.match(/\[TRANSFER_IMAGE:\s*([^\]]+)\]/);
+            const refMatch = notes.match(/\[TRANSFER_REF:\s*([^\]]+)\]/);
+            const statusMatch = notes.match(/\[AI_STATUS:\s*([^\]]+)\]/);
+            const reportMatch = notes.match(/\[AI_REPORT:\s*(\{.+?\})\]/);
+            
+            const imageUrl = imgMatch ? imgMatch[1].trim() : '';
+            const refNum = refMatch ? refMatch[1].trim() : 'No proveído';
+            const aiStatus = statusMatch ? statusMatch[1].trim() : 'pending';
+            
+            document.getElementById('review-screenshot-img').src = imageUrl;
+            document.getElementById('review-ref-num').innerText = refNum;
+            
+            // Update AI audit display fields
+            const badge = document.getElementById('review-ai-badge');
+            badge.className = "px-2 py-0.5 rounded text-[8px] font-black uppercase";
+            if (aiStatus === 'valid') {
+                badge.innerText = "VÁLIDO ✅";
+                badge.classList.add('bg-green-100', 'text-green-800');
+            } else if (aiStatus === 'suspicious') {
+                badge.innerText = "SOSPECHOSO ⚠️";
+                badge.classList.add('bg-orange-100', 'text-orange-800');
+            } else if (aiStatus === 'invalid') {
+                badge.innerText = "INVÁLIDO ❌";
+                badge.classList.add('bg-red-100', 'text-red-800');
+            } else {
+                badge.innerText = "PENDIENTE ⏳";
+                badge.classList.add('bg-yellow-100', 'text-yellow-800');
+            }
+            
+            // Extract report fields
+            let bankName = 'No Identificado';
+            let parsedAmount = 'No Identificado';
+            let reasonText = 'Auditoría inteligente pendiente de ejecución o carga fallida.';
+            
+            if (reportMatch) {
+                try {
+                    const parsedReport = JSON.parse(reportMatch[1]);
+                    bankName = parsedReport.bank || 'No Identificado';
+                    parsedAmount = parsedReport.amount ? `L. ${parsedReport.amount.toFixed(2)}` : 'No Identificado';
+                    reasonText = parsedReport.reason || 'Sin detalles adicionales.';
+                } catch(e) { console.error(e); }
+            }
+            
+            document.getElementById('review-bank-name').innerText = bankName;
+            document.getElementById('review-amount').innerText = parsedAmount;
+            document.getElementById('review-ai-reason').innerText = reasonText;
+            
+            document.getElementById('transfer-review-modal').classList.remove('hidden');
+        };
+
+        window.closeTransferReviewModal = () => {
+            document.getElementById('transfer-review-modal').classList.add('hidden');
+            activeReviewOrderId = null;
+            activeReviewOrderNum = null;
+        };
+
+        window.approveTransferFromReview = async () => {
+            if (!activeReviewOrderId) return;
+            if (confirm(`¿Confirmas aprobar el pago por transferencia de la orden #${activeReviewOrderNum}?`)) {
+                await approveOrder(activeReviewOrderId, activeReviewOrderNum);
+                closeTransferReviewModal();
+            }
+        };
+
+        window.rejectTransferFromReview = async () => {
+            if (!activeReviewOrderId) return;
+            const order = (window.currentOrders || []).find(o => o.id === activeReviewOrderId);
+            await rejectOrder(activeReviewOrderId, activeReviewOrderNum, order?.customers?.phone || '', order?.customers?.name || '');
+            closeTransferReviewModal();
+        };
+    </script>
+
+    <!-- TRANSFER SCREENSHOT REVIEW MODAL -->
+    <div id="transfer-review-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-[250] p-6">
+        <div class="bg-white rounded-3xl w-full max-w-md p-6 flex flex-col space-y-6 shadow-2xl relative">
+            <button onclick="closeTransferReviewModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition-all">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center space-y-1">
+                <h3 class="font-black text-lg text-gray-800 uppercase tracking-tight">Revisión de Transferencia</h3>
+                <p id="review-order-number" class="text-xs font-mono text-gray-400">Orden #000000</p>
+            </div>
+            
+            <!-- Screenshot display -->
+            <div class="relative w-full h-64 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+                <img id="review-screenshot-img" src="" class="w-full h-full object-contain">
+            </div>
+            
+            <!-- AI Auditor Report & Manual details -->
+            <div class="bg-gray-50 border border-gray-150 p-4 rounded-2xl space-y-3">
+                <div class="flex items-center gap-2">
+                    <span id="review-ai-badge" class="px-2 py-0.5 rounded text-[8px] font-black uppercase">Pendiente</span>
+                    <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest">Auditoría AI de Comprobante</p>
+                </div>
+                
+                <div class="space-y-1.5 text-xs text-gray-600">
+                    <p><strong>N° Referencia:</strong> <span id="review-ref-num" class="font-mono font-bold">---</span></p>
+                    <p><strong>Banco Emisor:</strong> <span id="review-bank-name" class="font-bold">---</span></p>
+                    <p><strong>Monto Comprobante:</strong> <span id="review-amount" class="font-bold">L. 0.00</span></p>
+                    <p id="review-ai-reason" class="text-[10px] text-gray-500 italic mt-2 border-t border-gray-200 pt-1.5 leading-relaxed">Ejecutando validación...</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="approveTransferFromReview()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md">
+                    Aprobar Pago
+                </button>
+                <button onclick="rejectTransferFromReview()" class="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-all shadow-md">
+                    Rechazar
+                </button>
+            </div>
+        </div>
+    </div>
+
 <!-- MANAGE INGREDIENTS MODAL -->
 <div id="manage-ingredients-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
     <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col max-h-[90vh]">

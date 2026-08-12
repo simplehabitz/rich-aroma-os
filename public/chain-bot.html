@@ -559,22 +559,22 @@
         <!-- Segmented Win Rates panel -->
         <div style="grid-column: span 3; display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-top: -10px; margin-bottom: 24px;">
             <div class="glass-panel" id="card-hour" style="padding: 12px 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s;" onclick="selectTimeframe('hour')">
-                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">1-HOUR WIN RATE</div>
+                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">TODAY'S WIN RATE</div>
                 <div class="stat-value" id="winrate-hour" style="font-size: 20px; margin-bottom: 2px;">0%</div>
                 <div class="stat-sub" id="sub-hour" style="font-size: 11px;">0 W / 0 L (0.00 WETH)</div>
             </div>
             <div class="glass-panel" id="card-day" style="padding: 12px 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s;" onclick="selectTimeframe('day')">
-                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">24-HOUR WIN RATE</div>
+                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">YESTERDAY'S WIN RATE</div>
                 <div class="stat-value" id="winrate-day" style="font-size: 20px; margin-bottom: 2px;">0%</div>
                 <div class="stat-sub" id="sub-day" style="font-size: 11px;">0 W / 0 L (0.00 WETH)</div>
             </div>
             <div class="glass-panel" id="card-week" style="padding: 12px 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s;" onclick="selectTimeframe('week')">
-                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">7-DAY WIN RATE</div>
+                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">THIS WEEK'S WIN RATE</div>
                 <div class="stat-value" id="winrate-week" style="font-size: 20px; margin-bottom: 2px;">0%</div>
                 <div class="stat-sub" id="sub-week" style="font-size: 11px;">0 W / 0 L (0.00 WETH)</div>
             </div>
             <div class="glass-panel" id="card-month" style="padding: 12px 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 100px; cursor: pointer; border: 1px solid var(--border-color); transition: all 0.2s;" onclick="selectTimeframe('month')">
-                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">30-DAY WIN RATE</div>
+                <div class="panel-title" style="margin-bottom: 4px; justify-content: center; font-size: 11px;">THIS MONTH'S WIN RATE</div>
                 <div class="stat-value" id="winrate-month" style="font-size: 20px; margin-bottom: 2px;">0%</div>
                 <div class="stat-sub" id="sub-month" style="font-size: 11px;">0 W / 0 L (0.00 WETH)</div>
             </div>
@@ -1167,7 +1167,7 @@
         // Fetch and populate segmented win rates
         async function fetchPerformance() {
             try {
-                const response = await fetch('/api/chain-bot/performance');
+                const response = await fetch(`/api/chain-bot/performance?tzOffset=${new Date().getTimezoneOffset()}`);
                 const data = await response.json();
                 
                 const ethPrice = window.globalEthPrice || 1784.66;

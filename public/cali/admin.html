@@ -802,8 +802,33 @@
                             <span class="font-black font-mono text-gray-800">$${parseFloat(o.total).toFixed(2)}</span>
                         </td>
                         <td class="px-8 py-6">
-                            <div class="text-[10px] font-bold text-gray-700">${o.cali_locations?.name || 'Custom Drop'}</div>
-                            <div class="text-[9px] text-gray-400 uppercase tracking-tighter">${o.cali_locations?.city || ''}</div>
+                            ${(() => {
+                                const mode = o.selections?.fulfillment_type || (o.preorder_date ? 'hub' : 'pickup');
+                                if (mode === 'delivery') {
+                                    return `
+                                        <div class="text-[10px] font-bold text-brand-brown flex items-center gap-1">
+                                            <i class="fas fa-truck text-[9px]"></i> DELIVERY
+                                        </div>
+                                        <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.delivery_address || ''}">
+                                            ${o.selections?.delivery_address || 'Address N/A'}
+                                        </div>
+                                    `;
+                                } else if (mode === 'hub') {
+                                    return `
+                                        <div class="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                                            <i class="fas fa-building text-[9px]"></i> HUB
+                                        </div>
+                                        <div class="text-[9px] text-gray-400 uppercase tracking-tighter">${o.cali_locations?.name || 'Hub Drop'}</div>
+                                    `;
+                                } else {
+                                    return `
+                                        <div class="text-[10px] font-bold text-gray-700 flex items-center gap-1">
+                                            <i class="fas fa-store text-[9px]"></i> PICKUP
+                                        </div>
+                                        <div class="text-[9px] text-gray-400 uppercase tracking-tighter">Kitchen (Ontario)</div>
+                                    `;
+                                }
+                            })()}
                         </td>
                         <td class="px-8 py-6">
                             <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.1em] border ${statusClass}">
@@ -867,8 +892,26 @@
 
                             <div class="flex items-center justify-between text-xs pt-1">
                                 <div>
-                                    <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Drop Point</span>
-                                    <span class="font-bold text-gray-700">${o.cali_locations?.name || 'Custom Drop'}</span>
+                                    <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Fulfillment</span>
+                                    ${(() => {
+                                        const mode = o.selections?.fulfillment_type || (o.preorder_date ? 'hub' : 'pickup');
+                                        if (mode === 'delivery') {
+                                            return `
+                                                <span class="font-bold text-brand-brown"><i class="fas fa-truck text-[9px] mr-1"></i> DELIVERY</span>
+                                                <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.delivery_address || ''}">
+                                                    ${o.selections?.delivery_address || 'Address N/A'}
+                                                </div>
+                                            `;
+                                        } else if (mode === 'hub') {
+                                            return `
+                                                <span class="font-bold text-gray-700"><i class="fas fa-building text-[9px] mr-1"></i> HUB: ${o.cali_locations?.name || 'Hub Drop'}</span>
+                                            `;
+                                        } else {
+                                            return `
+                                                <span class="font-bold text-gray-700"><i class="fas fa-store text-[9px] mr-1"></i> PICKUP (Kitchen)</span>
+                                            `;
+                                        }
+                                    })()}
                                 </div>
                                 <div class="text-right">
                                     <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total</span>

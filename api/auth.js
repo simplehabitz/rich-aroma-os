@@ -1,7 +1,7 @@
 // api/auth.js
 const { supabase } = require('./lib/supabase');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -58,8 +58,24 @@ export default async function handler(req, res) {
             const cleanEmail = email ? email.toLowerCase() : null;
 
             if (cleanPhone) {
-                const { data } = await supabase.from('customers').select('id').eq('phone', cleanPhone).single();
-                if (data) return res.status(400).json({ error: 'Phone already registered' });
+                const { data } = await supabase.from('customers').select('id, tags').eq('phone', cleanPhone).maybeSingle();
+                if (data) {
+                    if (data.tags && data.tags.includes('pending_onboarding')) {
+                        // This is a pending onboarding profile. Let's update it!
+                        const { data: updated, error: updErr } = await supabase.from('customers').update({
+                            name,
+                            email: cleanEmail,
+                            pin: finalPin,
+                            password: type === 'email' ? secret : null,
+                            referral_code: req.body.referredBy || null,
+                            tags: (data.tags || []).filter(t => t !== 'pending_onboarding')
+                        }).eq('id', data.id).select().single();
+                        
+                        if (updErr) throw updErr;
+                        return res.json({ success: true, user: updated });
+                    }
+                    return res.status(400).json({ error: 'Phone already registered' });
+                }
             }
 
             // Generate a unique random ID (C-XXXXXX)
@@ -74,7 +90,8 @@ export default async function handler(req, res) {
                 points: 0,
                 tier: 'bronze',
                 pin: finalPin,
-                password: type === 'email' ? secret : null
+                password: type === 'email' ? secret : null,
+                referral_code: req.body.referredBy || null
             };
 
             const { data, error } = await supabase.from('customers').insert(newUser).select().single();

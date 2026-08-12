@@ -963,6 +963,7 @@
     let modOptions = [];
     let itemModGroups = [];
     let cart = [];
+    let acceptedPayments = {};
     
     let isCombineMode = false;
     let selectedOrderIds = [];
@@ -1144,6 +1145,17 @@
     let pendingVerifications = [];
     let kitchenPollInterval = null;
     let currentResId = 'rich-aroma';
+    try {
+        const savedEmp = localStorage.getItem('ra_kitchen_emp');
+        if (savedEmp) {
+            const parsed = JSON.parse(savedEmp);
+            if (parsed && parsed.restaurant_id) {
+                currentResId = parsed.restaurant_id;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to parse dynamic restaurant_id:", e);
+    }
 
     function getWhatsAppLink(rawPhone) {
         if (!rawPhone) return "";
@@ -1300,6 +1312,7 @@
                 modGroups = data.modGroups || [];
                 modOptions = data.modOptions || [];
                 itemModGroups = data.itemModGroups || [];
+                acceptedPayments = data.acceptedPayments || {};
                 console.log(` Loaded ${menu.length} items.`);
             }
         } catch (e) {
@@ -1462,7 +1475,7 @@
         try {
             updateCleanFeedUI(); // Sync UI
             const v = Date.now();
-            const res = await fetch(`/api/orders?restaurantId=rich-aroma&v=${v}`, {
+            const res = await fetch(`/api/orders?restaurantId=${currentResId}&v=${v}`, {
                 headers: { 
                     'Authorization': 'Bearer EMP-admin',
                     'Cache-Control': 'no-cache',
@@ -2834,18 +2847,39 @@ function openTenderModal() {
     initPosTimeSlots();
     const calc = calculateTotalWithRule();
 
-    document.getElementById('tender-due').innerText = `L. ${calc.total.toFixed(2)}`;        document.getElementById('tender-received').value = '';
+    document.getElementById('tender-due').innerText = `L. ${calc.total.toFixed(2)}`;
+        document.getElementById('tender-received').value = '';
         document.getElementById('tender-change').innerText = 'L. 0.00';
         
+        const btnCash = document.getElementById('btn-tender-cash');
+        const btnCard = document.getElementById('btn-tender-card');
+        const btnTransfer = document.getElementById('btn-tender-transfer');
         const btnRico = document.getElementById('btn-tender-rico');
-        if (window.loadedCustomer) {
-            btnRico.classList.remove('hidden');
-            document.getElementById('rico-available-msg').innerText = `Balance: L. ${(parseFloat(window.loadedCustomer.rico_balance) || 0).toFixed(2)}`;
-        } else {
-            btnRico.classList.add('hidden');
+
+        if (btnCash) {
+            const hasCash = acceptedPayments.cash !== false;
+            btnCash.classList.toggle('hidden', !hasCash);
+        }
+        if (btnCard) {
+            const hasCard = !!acceptedPayments.card;
+            btnCard.classList.toggle('hidden', !hasCard);
+        }
+        if (btnTransfer) {
+            const hasTransfer = !!acceptedPayments.transfer;
+            btnTransfer.classList.toggle('hidden', !hasTransfer);
+        }
+        if (btnRico) {
+            if (window.loadedCustomer && acceptedPayments.rico !== false) {
+                btnRico.classList.remove('hidden');
+                document.getElementById('rico-available-msg').innerText = `Balance: L. ${(parseFloat(window.loadedCustomer.rico_balance) || 0).toFixed(2)}`;
+            } else {
+                btnRico.classList.add('hidden');
+            }
         }
         
-        setTender('cash');
+        // Default to first visible or cash
+        const defaultMethod = acceptedPayments.cash !== false ? 'cash' : (acceptedPayments.card ? 'card' : (acceptedPayments.transfer ? 'transfer' : 'cash'));
+        setTender(defaultMethod);
         document.getElementById('tender-modal').classList.remove('hidden');
     }
 
@@ -3301,6 +3335,18 @@ function openTenderModal() {
         if (!data || !data.id) return;
         currentCustomerId = data.id;
         window.loadedCustomer = data;
+        
+        let stampsCount = 0;
+        if ('stamps' in data) {
+            stampsCount = parseInt(data.stamps) || 0;
+        } else {
+            const tags = Array.isArray(data.tags) ? data.tags : [];
+            const stampTag = tags.find(t => t.startsWith('stamps:'));
+            if (stampTag) {
+                stampsCount = parseInt(stampTag.split(':')[1]) || 0;
+            }
+        }
+
         document.getElementById('cust-lookup-ui').classList.add('hidden');
         const profile = document.getElementById('cust-profile');
 
@@ -3345,9 +3391,12 @@ function openTenderModal() {
                 <div class="flex justify-between items-start pt-1">
                     <div class="overflow-hidden mr-2">
                         <div class="font-black text-blue-900 truncate text-sm uppercase tracking-tighter"> ${data.name || 'Cliente'}</div>
-                        <div class="flex gap-2 mt-1">
+                        <div class="flex gap-2 mt-1 flex-wrap">
                             <div class="text-[9px] font-black text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-full uppercase">L. ${(parseFloat(data.rico_balance) || 0).toFixed(0)} Cash</div>
                             <div class="text-[9px] font-black text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-full uppercase">${data.points || 0} pts</div>
+                            <div class="text-[9px] font-black ${stampsCount >= 9 ? 'animate-pulse text-emerald-700 bg-emerald-200 border border-emerald-300' : 'text-emerald-600 bg-emerald-100/50'} px-2 py-0.5 rounded-full uppercase">
+                                <i class="fas fa-mug-hot mr-1"></i>${stampsCount}/10 Sellos
+                            </div>
                         </div>
                     </div>
                     <button onclick="clearCustomer()" class="w-8 h-8 rounded-xl bg-white/50 text-blue-900/20 flex items-center justify-center hover:text-red-500 transition-all border border-blue-100 shadow-sm"><i class="fas fa-times text-xs"></i></button>

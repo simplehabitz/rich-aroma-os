@@ -230,6 +230,23 @@
             <button onclick="openCustomReload()" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 font-bold text-sm text-white/70 hover:bg-white/10 transition">Otro Monto</button>
         </div>
 
+        <!-- Tarjeta de Sellos Digital (Buy 9 get 10th free) -->
+        <div class="glass-card rounded-3xl p-6 bg-gradient-to-br from-charcoal to-[#111]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Mi Tarjeta de Café ☕</h3>
+                <span class="text-xs bg-gold/10 px-3 py-1 rounded-full border border-gold/20 text-gold font-bold">10º GRATIS</span>
+            </div>
+            <p class="text-white/60 text-xs mb-4">Acumula 10 sellos en tus compras de café o bebidas y obtén un premio especial.</p>
+            
+            <div id="stamp-grid" class="grid grid-cols-5 gap-3 my-4">
+                <!-- Sellos dinámicos -->
+            </div>
+            
+            <p class="text-[10px] text-white/40 uppercase font-black text-center mt-2" id="stamp-status-text">
+                Cargando sellos...
+            </p>
+        </div>
+
         <!-- Rico Rewards Section -->
         <div class="glass-card rounded-3xl p-6 bg-gradient-to-br from-charcoal to-[#111]">
             <div class="flex justify-between items-center mb-6">
@@ -365,15 +382,28 @@
             }
 
             try {
-                const res = await fetch(`/api/customer/profile?phone=${encodeURIComponent(phone)}`);
+                const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8083' : '';
+                const res = await fetch(`${baseUrl}/api/customer/profile?phone=${encodeURIComponent(phone)}`);
                 if (res.ok) {
                     currentCustomer = await res.json();
+                    localStorage.setItem('ra_customer_data', JSON.stringify(currentCustomer));
                     renderProfile();
                 } else {
-                    window.location.href = '/profile/index.html';
+                    const savedData = localStorage.getItem('ra_customer_data');
+                    if (savedData) {
+                        currentCustomer = JSON.parse(savedData);
+                        renderProfile();
+                    } else {
+                        window.location.href = '/profile/index.html';
+                    }
                 }
             } catch (e) {
-                console.error(e);
+                console.error("Profile load failed, trying localStorage fallback:", e);
+                const savedData = localStorage.getItem('ra_customer_data');
+                if (savedData) {
+                    currentCustomer = JSON.parse(savedData);
+                    renderProfile();
+                }
             }
         }
 
@@ -419,7 +449,8 @@
 
             try {
                 const base64String = await compressImage(file, 800, 0.6); // Aggressive compression for avatar
-                const res = await fetch('/api/store?action=customer_update_photo', {
+                const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8083' : '';
+                const res = await fetch(`${baseUrl}/api/store?action=customer_update_photo`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -453,6 +484,41 @@
             const totalCash = parseFloat(currentCustomer.cash_balance) || parseFloat(currentCustomer.rico_balance) || 0;
             document.getElementById('user-balance').innerText = `L ${totalCash.toFixed(2)}`;
             document.getElementById('rewards-points').innerText = currentCustomer.points || 0;
+
+            // --- STAMP CARD RENDER ---
+            let stampsCount = 0;
+            if ('stamps' in currentCustomer) {
+                stampsCount = parseInt(currentCustomer.stamps) || 0;
+            } else {
+                const tags = Array.isArray(currentCustomer.tags) ? currentCustomer.tags : [];
+                const stampTag = tags.find(t => t.startsWith('stamps:'));
+                if (stampTag) {
+                    stampsCount = parseInt(stampTag.split(':')[1]) || 0;
+                }
+            }
+
+            const stampGrid = document.getElementById('stamp-grid');
+            if (stampGrid) {
+                let gridHtml = '';
+                for (let i = 1; i <= 10; i++) {
+                    const isFilled = i <= stampsCount;
+                    gridHtml += `
+                        <div class="aspect-square rounded-2xl flex items-center justify-center border-2 transition-all duration-300 ${
+                            isFilled 
+                                ? 'bg-gold/20 border-gold text-gold scale-105 shadow-[0_0_15px_rgba(201,166,107,0.3)]' 
+                                : 'bg-black/20 border-white/10 text-white/10'
+                        }">
+                            <i class="fas fa-mug-hot ${isFilled ? 'animate-pulse text-xl' : 'text-sm'}"></i>
+                        </div>
+                    `;
+                }
+                stampGrid.innerHTML = gridHtml;
+            }
+            
+            const statusTextEl = document.getElementById('stamp-status-text');
+            if (statusTextEl) {
+                statusTextEl.innerText = `${stampsCount} de 10 sellos acumulados`;
+            }
 
             // --- TIER DETECTION ---
             const tags = Array.isArray(currentCustomer.tags) ? currentCustomer.tags : [];
@@ -490,16 +556,9 @@
                 document.getElementById('vip-card-cash').innerText = `L ${totalCash.toFixed(2)}`;
                 document.getElementById('vip-card-points').innerText = currentCustomer.points || 0;
                 
-                // Drink Streak
-                const rawStreak = currentCustomer.drink_streak || 0;
-                const progress = rawStreak % 7;
-                if (progress === 6) {
-                    document.getElementById('vip-card-streak').innerText = "¡GRATIS!";
-                    document.getElementById('vip-card-streak').classList.add('text-green-600');
-                } else {
-                    document.getElementById('vip-card-streak').innerText = `${progress}/6`;
-                    document.getElementById('vip-card-streak').classList.remove('text-green-600');
-                }
+                // Stamps Counter (Punch Card)
+                document.getElementById('vip-card-streak').innerText = `${stampsCount}/10`;
+                document.getElementById('vip-card-streak').classList.remove('text-green-600');
 
                 // Photo Logic
                 const photoEl = document.getElementById('card-photo');
@@ -535,15 +594,16 @@
             }
 
             if (!confirm(`¿Canjear ${cost} puntos por esta recompensa?`)) return;
-try {
-    const res = await fetch('/api/staff?action=claim_reward', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ customerId: currentCustomer.id, points, rewardName: `Exchange: L ${cash}` })
-    });
 
-    if (res.ok) {
-                        cost: cost
+            try {
+                const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8083' : '';
+                const res = await fetch(`${baseUrl}/api/staff?action=claim_reward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        customerId: currentCustomer.id, 
+                        points: cost, 
+                        rewardName: `Canje: ${prizeId}` 
                     })
                 });
 
@@ -617,7 +677,8 @@ try {
                 if (reloadAmount >= 1000) bonus = reloadAmount * 0.10;
                 else if (reloadAmount >= 500) bonus = reloadAmount * 0.05;
 
-                const res = await fetch('/api/topup', {
+                const baseUrl = window.location.protocol === 'file:' ? 'http://localhost:8083' : '';
+                const res = await fetch(`${baseUrl}/api/topup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
