@@ -92,7 +92,7 @@ module.exports = async (req, res) => {
             return res.json({ success: true, seller_name: seller.name, discount_percent: 5 });
         }
  
-        // 3b. GET DIGITAL STAMPS
+        // 3b. GET DIGITAL STAMPS & SHIFT STREAKS
         if (req.method === 'GET' && action === 'get_stamps') {
             const { phone } = req.query;
             if (!phone) return res.status(400).json({ error: 'Phone parameter is required' });
@@ -102,11 +102,12 @@ module.exports = async (req, res) => {
             
             const { data: pastOrders, error } = await supabase
                 .from('cali_orders')
-                .select('selections')
+                .select('selections, created_at')
                 .eq('customer_phone', phone)
-                .in('status', ['paid', 'confirmed', 'delivered']);
+                .in('status', ['paid', 'confirmed', 'delivered'])
+                .order('created_at', { ascending: false });
                 
-            if (error) throw error;
+            if (error && error.code !== '42703') throw error;
             
             let totalBottles = 0;
             let totalFreeRedeemed = 0;
@@ -134,13 +135,148 @@ module.exports = async (req, res) => {
             const currentStamps = paidBottles % 9;
             const earnedFree = Math.floor(paidBottles / 9) - totalFreeRedeemed;
             
+            // Calculate consecutive weekly order streak
+            let streakWeeks = 0;
+            if (pastOrders && pastOrders.length > 0) {
+                const orderDates = pastOrders.map(o => new Date(o.created_at || Date.now()));
+                const getWeekKey = (d) => {
+                    const date = new Date(d.getTime());
+                    date.setHours(0, 0, 0, 0);
+                    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+                    const week1 = new Date(date.getFullYear(), 0, 4);
+                    const wNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+                    return `${date.getFullYear()}-W${wNum}`;
+                };
+                const weeks = [...new Set(orderDates.map(d => getWeekKey(d)))];
+                streakWeeks = weeks.length;
+            }
+            
             return res.json({
                 total_bottles: totalBottles,
                 total_free_redeemed: totalFreeRedeemed,
                 paid_bottles: paidBottles >= 0 ? paidBottles : 0,
                 stamps: currentStamps >= 0 ? currentStamps : 0,
-                earned_free: earnedFree >= 0 ? earnedFree : 0
+                earned_free: earnedFree >= 0 ? earnedFree : 0,
+                streak_weeks: streakWeeks
             });
+        }
+
+        // 3c. GET CALI COFFEE CARD BALANCE (30-Day FIFO Expiration)
+        if (req.method === 'GET' && action === 'get_credits') {
+            const { phone } = req.query;
+            if (!phone) return res.status(400).json({ error: 'Phone parameter is required' });
+
+            try {
+                const now = new Date().toISOString();
+                // Get unexpired loads + bonus
+                const { data: loads, error: loadErr } = await supabase
+                    .from('cali_credit_transactions')
+                    .select('amount')
+                    .eq('phone', phone)
+                    .in('type', ['load', 'bonus'])
+                    .gt('expires_at', now);
+
+                if (loadErr && loadErr.code === '42P01') {
+                    // Table not created yet
+                    return res.json({ phone, balance: 0.00, has_pin: false });
+                }
+
+                // Get all spends
+                const { data: spends } = await supabase
+                    .from('cali_credit_transactions')
+                    .select('amount')
+                    .eq('phone', phone)
+                    .eq('type', 'spend');
+
+                const totalLoaded = (loads || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+                const totalSpent = (spends || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+                const activeBalance = Math.max(0, totalLoaded - totalSpent);
+
+                // Check if user has PIN configured
+                const { data: userProfile } = await supabase
+                    .from('cali_credits')
+                    .select('pin_hash')
+                    .eq('phone', phone)
+                    .maybeSingle();
+
+                return res.json({
+                    phone,
+                    balance: parseFloat(activeBalance.toFixed(2)),
+                    has_pin: !!(userProfile && userProfile.pin_hash)
+                });
+            } catch (err) {
+                console.warn("[Cali Credits] Table query fallback:", err.message);
+                return res.json({ phone, balance: 0.00, has_pin: false });
+            }
+        }
+
+        // 3d. SET OR UPDATE CALI COFFEE CARD PASSCODE
+        if (req.method === 'POST' && action === 'set_pin') {
+            const { phone, pin } = req.body || {};
+            if (!phone || !pin || pin.toString().length !== 4) {
+                return res.status(400).json({ error: 'Phone and 4-digit PIN are required' });
+            }
+
+            try {
+                const { error } = await supabase
+                    .from('cali_credits')
+                    .upsert({ 
+                        phone, 
+                        pin_hash: pin.toString().trim(), 
+                        updated_at: new Date().toISOString() 
+                    }, { onConflict: 'phone' });
+
+                if (error) throw error;
+                return res.json({ success: true, message: 'PIN saved successfully' });
+            } catch (err) {
+                console.error("[Cali Credits] Save PIN error:", err);
+                return res.status(500).json({ error: err.message });
+            }
+        }
+
+        // 3e. LOAD PREPAID CREDITS (30-Day Expiration)
+        if (req.method === 'POST' && action === 'load_credits') {
+            const { phone, amount, pin, description, orderId } = req.body || {};
+            const loadAmount = parseFloat(amount);
+            if (!phone || isNaN(loadAmount) || loadAmount <= 0) {
+                return res.status(400).json({ error: 'Invalid load parameters' });
+            }
+
+            try {
+                // If pin is provided, save or update pin
+                if (pin && pin.toString().length === 4) {
+                    await supabase
+                        .from('cali_credits')
+                        .upsert({ 
+                            phone, 
+                            pin_hash: pin.toString().trim(), 
+                            updated_at: new Date().toISOString() 
+                        }, { onConflict: 'phone' });
+                }
+
+                // Calculate 30-day expiration date
+                const expiresAt = new Date();
+                expiresAt.setDate(expiresAt.getDate() + 30);
+
+                const { data: tx, error } = await supabase
+                    .from('cali_credit_transactions')
+                    .insert({
+                        phone,
+                        amount: loadAmount,
+                        type: 'load',
+                        description: description || 'Prepaid Balance Load ($30-Day Expiry)',
+                        order_id: orderId || null,
+                        expires_at: expiresAt.toISOString()
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                return res.json({ success: true, transaction: tx, expires_at: expiresAt.toISOString() });
+            } catch (err) {
+                console.error("[Cali Credits] Load error:", err);
+                return res.status(500).json({ error: err.message });
+            }
         }
 
         // 4. ADMIN CHECK
@@ -606,13 +742,67 @@ module.exports = async (req, res) => {
             if (selections && selections.custom_label_message) {
                 updatedNotes += `\n[CUSTOM LABELS] Message: "${selections.custom_label_message}"`;
             }
+
+            let initialStatus = 'pending';
+            if (selections && selections.payment_method === 'cali_coffee_card') {
+                const phone = customer_phone || '';
+                const pin = selections.pin ? selections.pin.toString().trim() : '';
+                
+                // 1. Verify PIN
+                const { data: userProfile } = await supabase
+                    .from('cali_credits')
+                    .select('pin_hash')
+                    .eq('phone', phone)
+                    .maybeSingle();
+                    
+                if (!userProfile || !userProfile.pin_hash || userProfile.pin_hash !== pin) {
+                    return res.status(400).json({ error: 'Invalid or missing 4-digit Coffee Card PIN' });
+                }
+                
+                // 2. Check active unexpired balance
+                const now = new Date().toISOString();
+                const { data: loads } = await supabase
+                    .from('cali_credit_transactions')
+                    .select('amount')
+                    .eq('phone', phone)
+                    .in('type', ['load', 'bonus'])
+                    .gt('expires_at', now);
+
+                const { data: spends } = await supabase
+                    .from('cali_credit_transactions')
+                    .select('amount')
+                    .eq('phone', phone)
+                    .eq('type', 'spend');
+
+                const totalLoaded = (loads || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+                const totalSpent = (spends || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+                const activeBalance = Math.max(0, totalLoaded - totalSpent);
+                
+                if (activeBalance < calculatedTotal) {
+                    return res.status(400).json({ error: `Insufficient Coffee Card balance (Available: $${activeBalance.toFixed(2)})` });
+                }
+                
+                // 3. Record spend transaction
+                await supabase.from('cali_credit_transactions').insert({
+                    phone,
+                    amount: calculatedTotal,
+                    type: 'spend',
+                    description: `Order Checkout Payment`,
+                    order_id: null
+                });
+                
+                updatedNotes += `\n[PAYMENT] Paid with Cali Coffee Card ($${calculatedTotal.toFixed(2)})`;
+                initialStatus = 'paid';
+            } else if (selections && (selections.payment_method === 'zelle' || selections.payment_method === 'venmo')) {
+                updatedNotes += `\n[PAYMENT: ${selections.payment_method.toUpperCase()}] Sender: ${selections.payment_reference || 'N/A'}`;
+            }
             
             const { data, error } = await supabase.from('cali_orders').insert({
                 customer_name: customer_name || 'Guest',
                 customer_phone: customer_phone || '',
                 location_id: location_id === 'home' ? null : location_id,
                 total: calculatedTotal,
-                status: 'pending',
+                status: initialStatus,
                 selections: updatedSelections,
                 notes: updatedNotes
             }).select().single();

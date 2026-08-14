@@ -569,21 +569,44 @@
                     <!-- Kaiser Daily Route Selection (Shown only when Kaiser Route selected) -->
                     <div id="kaiser-route-container" class="space-y-3 hidden animate-fade-in">
                         <div>
-                            <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Select Kaiser Hospital Drop-off</label>
+                            <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Select Kaiser Hospital Drop-off ($0 Free Hub Fee)</label>
                             <select id="kaiser-hospital-select" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-xs focus:border-brand-brown outline-none">
-                                <option value="Kaiser Fontana (Fontana Medical Center) - 9:00 AM">Kaiser Fontana (Fontana Medical Center) - 9:00 AM</option>
-                                <option value="Kaiser Ontario (Ontario Medical Center) - 9:30 AM">Kaiser Ontario (Ontario Medical Center) - 9:30 AM</option>
-                                <option value="Kaiser Riverside (Riverside Medical Center) - 10:15 AM">Kaiser Riverside (Riverside Medical Center) - 10:15 AM</option>
+                                <option value="Kaiser Fontana (Fontana Medical Center)">Kaiser Fontana (Fontana Medical Center) • 9961 Sierra Ave</option>
+                                <option value="Kaiser Ontario (Ontario Medical Center)">Kaiser Ontario (Ontario Medical Center) • 2295 S Vineyard Ave</option>
+                                <option value="Kaiser Baldwin Park (Baldwin Park Medical Center)">Kaiser Baldwin Park (Medical Center) • 1011 Baldwin Park Blvd</option>
+                                <option value="Kaiser Riverside (Riverside Medical Center)">Kaiser Riverside (Riverside Medical Center) • 10800 Magnolia Ave</option>
+                                <option value="Kaiser Downey (Downey Medical Center)">Kaiser Downey (Downey Medical Center) • 9333 Imperial Hwy</option>
                             </select>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Department / Unit</label>
-                                <input type="text" id="kaiser-dept" placeholder="e.g. ICU, Emergency Room" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Shift Day (Mon - Sat)</label>
+                                <select id="kaiser-shift-day" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none">
+                                    <option value="Monday">Monday</option>
+                                    <option value="Tuesday">Tuesday</option>
+                                    <option value="Wednesday">Wednesday</option>
+                                    <option value="Thursday">Thursday</option>
+                                    <option value="Friday">Friday</option>
+                                    <option value="Saturday">Saturday</option>
+                                </select>
                             </div>
                             <div>
-                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Drop-off Instructions</label>
-                                <input type="text" id="kaiser-instructions" placeholder="e.g. Leave at front desk" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Shift Window</label>
+                                <select id="kaiser-shift-window" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none">
+                                    <option value="Day Shift Change (6:30 AM - 7:30 AM)">Day Shift Change (6:30 AM - 7:30 AM)</option>
+                                    <option value="Morning Break (9:00 AM - 10:00 AM)" selected>Morning Break (9:00 AM - 10:00 AM)</option>
+                                    <option value="Night Shift Change (6:00 PM - 7:30 PM)">Night Shift Change (6:00 PM - 7:30 PM)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Department / Station</label>
+                                <input type="text" id="kaiser-dept" placeholder="e.g. ICU, ER Station, Phlebotomy" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
+                            </div>
+                            <div>
+                                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider mb-1">Drop-off Notes</label>
+                                <input type="text" id="kaiser-instructions" placeholder="e.g. Breakroom fridge, front desk" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-3 py-2.5 text-xs focus:border-brand-brown outline-none transition-all">
                             </div>
                         </div>
                     </div>
@@ -668,14 +691,37 @@
                     <p id="hub-tracker-msg" class="text-[9px] text-white/60 leading-relaxed italic"></p>
                 </div>
 
-                <!-- Payment Tabs -->
+                <!-- Payment Tabs (Stripe / Apple Pay, Cali Coffee Card, Venmo, Zelle) -->
                 <div class="space-y-3">
                     <label class="block text-[8px] font-black uppercase text-white/30 tracking-wider text-center">Select Payment Method</label>
-                    <div class="grid grid-cols-3 gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
-                        <button onclick="setPaymentTab('stripe')" id="tab-stripe" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow">Stripe / Pay</button>
-                        <button onclick="setPaymentTab('venmo')" id="tab-venmo" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40">Venmo</button>
-                        <button onclick="setPaymentTab('zelle')" id="tab-zelle" class="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/40">Zelle</button>
+                    <div class="grid grid-cols-4 gap-1 bg-white/5 p-1 rounded-2xl border border-white/10">
+                        <button onclick="setPaymentTab('stripe')" id="tab-stripe" class="py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow">Card/Pay</button>
+                        <button onclick="setPaymentTab('coffee_card')" id="tab-coffee_card" class="py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all text-white/40">Card ☕</button>
+                        <button onclick="setPaymentTab('venmo')" id="tab-venmo" class="py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all text-white/40">Venmo</button>
+                        <button onclick="setPaymentTab('zelle')" id="tab-zelle" class="py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all text-white/40">Zelle</button>
                     </div>
+                </div>
+
+                <!-- Coffee Card Form Block (Prepaid Balance + PIN) -->
+                <div id="form-coffee_card" class="hidden space-y-4 animate-fade-in text-center">
+                    <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-2">
+                        <p class="text-[9px] text-white/60 uppercase tracking-widest font-black">Cali Coffee Card Balance</p>
+                        <p class="text-2xl font-black text-brand-gold font-mono" id="coffee-card-balance-display">$0.00</p>
+                        <p id="coffee-card-expiry-hint" class="text-[7.5px] text-white/40 italic">Credits valid for 30 days from load date</p>
+                    </div>
+                    
+                    <div class="space-y-2 text-left">
+                        <label class="block text-[8px] font-black uppercase text-white/40 tracking-wider">Enter 4-Digit Passcode (PIN)</label>
+                        <input type="password" id="coffee-card-pin" maxlength="4" placeholder="••••" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-center text-lg font-mono tracking-widest focus:border-brand-gold outline-none transition-colors">
+                        <div class="flex justify-between items-center px-1">
+                            <span class="text-[7.5px] text-white/30">Set or use your security PIN</span>
+                            <button type="button" onclick="openForgotPinSMS()" class="text-[7.5px] text-brand-gold hover:underline font-bold">Forgot PIN?</button>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="processCoffeeCardCheckout()" id="coffee-card-pay-btn" class="w-full gold-shimmer text-brand-dark font-black py-4 rounded-xl shadow-lg hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider text-[10px]">
+                        Pay with Cali Coffee Card <i class="fas fa-mug-hot ml-1.5"></i>
+                    </button>
                 </div>
 
                 <!-- Stripe Form Block -->
@@ -858,6 +904,43 @@
             vanilla_matcha_oat: 0
         };
 
+        let creditsData = { balance: 0, has_pin: false };
+
+        async function fetchCredits() {
+            const phoneVal = document.getElementById('cust-phone').value.trim();
+            const digits = phoneVal.replace(/\D/g, '');
+            const balDisplay = document.getElementById('coffee-card-balance-display');
+            const tabCoffeeCard = document.getElementById('tab-coffee_card');
+            
+            if (digits.length >= 10) {
+                try {
+                    const res = await fetch(`/api/cali?action=get_credits&phone=${encodeURIComponent(phoneVal)}`);
+                    if (res.ok) {
+                        creditsData = await res.json();
+                        if (balDisplay) balDisplay.innerText = `$${parseFloat(creditsData.balance || 0).toFixed(2)}`;
+                        if (tabCoffeeCard) {
+                            if (creditsData.balance > 0) {
+                                tabCoffeeCard.innerHTML = `Card ($${creditsData.balance.toFixed(0)})`;
+                                tabCoffeeCard.classList.add('text-brand-gold', 'font-black');
+                            } else {
+                                tabCoffeeCard.innerHTML = `Card ☕`;
+                                tabCoffeeCard.classList.remove('text-brand-gold', 'font-black');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error loading credits:", e);
+                }
+            } else {
+                creditsData = { balance: 0, has_pin: false };
+                if (balDisplay) balDisplay.innerText = `$0.00`;
+                if (tabCoffeeCard) {
+                    tabCoffeeCard.innerHTML = `Card ☕`;
+                    tabCoffeeCard.classList.remove('text-brand-gold', 'font-black');
+                }
+            }
+        }
+
         async function fetchStamps() {
             const phoneVal = document.getElementById('cust-phone').value.trim();
             const digits = phoneVal.replace(/\D/g, '');
@@ -873,10 +956,11 @@
                     console.error("Error loading stamps:", e);
                 }
             } else {
-                stampsData = { total_bottles: 0, total_free_redeemed: 0, paid_bottles: 0, stamps: 0, earned_free: 0 };
+                stampsData = { total_bottles: 0, total_free_redeemed: 0, paid_bottles: 0, stamps: 0, earned_free: 0, streak_weeks: 0 };
                 renderStampCard();
                 updateCartUI();
             }
+            fetchCredits();
         }
 
         function renderStampCard() {
@@ -968,14 +1052,17 @@
             
             grid.innerHTML = gridHtml;
             
-            // Helper text
+            // Helper text & Shift Streak
+            const streakWeeks = stampsData.streak_weeks || 0;
+            const streakBanner = streakWeeks > 0 ? `<div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-full text-[8.5px] font-black uppercase tracking-wider"><span>🔥 ${streakWeeks}-Week Shift Streak</span>${streakWeeks >= 3 ? '<span class="bg-amber-500 text-white px-1.5 py-0.5 rounded-full text-[7px]">BONUS ACTIVE</span>' : ''}</div><br>` : '';
+
             if (freeRedeemedInCurrent > 0) {
-                helper.innerHTML = `🎉 <strong>Awesome!</strong> You are redeeming <strong>${freeRedeemedInCurrent} FREE bottle${freeRedeemedInCurrent > 1 ? 's' : ''}</strong> in this order!`;
+                helper.innerHTML = `${streakBanner}🎉 <strong>Awesome!</strong> You are redeeming <strong>${freeRedeemedInCurrent} FREE bottle${freeRedeemedInCurrent > 1 ? 's' : ''}</strong> in this order!`;
             } else if (isGiftEarned) {
-                helper.innerHTML = `🎉 <strong>Stamp Reward Unlocked!</strong> You have a FREE bottle ready to claim. Add a bottle to your order to apply it!`;
+                helper.innerHTML = `${streakBanner}🎉 <strong>Stamp Reward Unlocked!</strong> You have a FREE bottle ready to claim. Add a bottle to your order to apply it!`;
             } else {
                 const remaining = 9 - stampsAfter;
-                helper.innerHTML = `Stamps progress: <strong>${stampsBefore}</strong>. Adding this order makes it <strong>${stampsBefore + currentPaid}</strong>. Buy <strong>${remaining}</strong> more for a free bottle!`;
+                helper.innerHTML = `${streakBanner}Stamps progress: <strong>${stampsBefore}</strong>. Adding this order makes it <strong>${stampsBefore + currentPaid}</strong>. Buy <strong>${remaining}</strong> more for a free bottle!`;
             }
         }
 
@@ -2163,18 +2250,118 @@
 
         function setPaymentTab(tab) {
             paymentTab = tab;
-            const tabs = ['stripe', 'venmo', 'zelle'];
+            const tabs = ['stripe', 'coffee_card', 'venmo', 'zelle'];
             tabs.forEach(t => {
                 const btn = document.getElementById(`tab-${t}`);
                 const form = document.getElementById(`form-${t}`);
-                if (t === tab) {
-                    btn.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow";
-                    form.classList.remove('hidden');
-                } else {
-                    btn.className = "py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all text-white/45 hover:text-white transition-all";
-                    form.classList.add('hidden');
+                if (btn) {
+                    if (t === tab) {
+                        btn.className = "py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all bg-white/10 text-white shadow";
+                        if (form) form.classList.remove('hidden');
+                    } else {
+                        btn.className = "py-2 rounded-xl text-[7.5px] font-black uppercase tracking-wider transition-all text-white/45 hover:text-white transition-all";
+                        if (form) form.classList.add('hidden');
+                    }
                 }
             });
+        }
+
+        async function processCoffeeCardCheckout() {
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const email = document.getElementById('cust-email').value;
+            const pin = document.getElementById('coffee-card-pin').value.trim();
+            const btn = document.getElementById('coffee-card-pay-btn');
+
+            if (cart.length === 0) {
+                showToast("Please add items to your order first.");
+                return;
+            }
+            if (!name || !phone) {
+                showToast("Please enter your name and phone number.");
+                return;
+            }
+            if (!pin || pin.length !== 4) {
+                showToast("Please enter your 4-digit Coffee Card Passcode (PIN).", "error");
+                return;
+            }
+
+            if (selectedFulfillmentType === 'hub') {
+                if (!selectedLocationId) {
+                    showToast("Please select a Workplace Hub location.");
+                    return;
+                }
+            } else if (selectedFulfillmentType === 'delivery') {
+                if (!selectedDeliveryAddress || !isDeliveryAddressVerified) {
+                    showToast("Please enter and verify your delivery address.");
+                    return;
+                }
+            } else if (selectedFulfillmentType === 'kaiser_route') {
+                const hospital = document.getElementById('kaiser-hospital-select').value;
+                const dept = document.getElementById('kaiser-dept').value.trim();
+                if (!hospital || !dept) {
+                    showToast("Please select your hospital and enter your Department/Unit.");
+                    return;
+                }
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Authorizing...';
+
+            try {
+                const payload = {
+                    customer_name: name,
+                    customer_phone: phone,
+                    customer_email: email,
+                    location_id: selectedLocationId || 'home',
+                    order_date: document.getElementById('preorder-date-picker').value,
+                    notes: `[CALI COFFEE CARD ORDER] Paid with prepaid balance`,
+                    selections: {
+                        cart: cart,
+                        fulfillment_type: selectedFulfillmentType,
+                        payment_method: 'cali_coffee_card',
+                        pin: pin,
+                        kaiser_hospital: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-hospital-select').value : null,
+                        kaiser_shift_day: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-shift-day').value : null,
+                        kaiser_shift_window: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-shift-window').value : null,
+                        kaiser_department: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-dept').value.trim() : null,
+                        kaiser_instructions: selectedFulfillmentType === 'kaiser_route' ? document.getElementById('kaiser-instructions').value.trim() : null,
+                        delivery_address: selectedFulfillmentType === 'delivery' ? selectedDeliveryAddress : null,
+                        delivery_fee: selectedFulfillmentType === 'delivery' ? calculatedDeliveryFee : 0
+                    }
+                };
+
+                const res = await fetch('/api/cali?action=order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Payment failed");
+
+                showToast("🎉 Order Placed & Paid via Coffee Card!", "success");
+                cart = [];
+                updateCartUI();
+                fetchCredits();
+                fetchStamps();
+                
+                setTimeout(() => {
+                    alert("Order Confirmed! Your bottle delivery has been scheduled. Thank you!");
+                    showMenuView();
+                }, 800);
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Pay with Cali Coffee Card <i class="fas fa-mug-hot ml-1.5"></i>';
+            }
+        }
+
+        function openForgotPinSMS() {
+            const phoneVal = document.getElementById('cust-phone').value.trim() || '';
+            const msg = encodeURIComponent(`Hi Rich Aroma! I forgot my Cali Coffee Card PIN for phone: ${phoneVal}. Please help me reset it.`);
+            window.location.href = `sms:9095551234?body=${msg}`;
         }
 
         function handleReceiptUpload(input, type) {
