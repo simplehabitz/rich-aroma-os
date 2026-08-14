@@ -55,9 +55,11 @@
                 <img src="/logo.jpg" alt="Rich Aroma" class="h-8 w-8 rounded-full border border-gray-100 shadow-sm">
                 <span class="font-serif font-bold text-md tracking-tight uppercase">Rich Aroma</span>
             </div>
-            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-wider border border-emerald-100">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                Artisan Portal
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="openCoffeePassModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-dark text-brand-gold text-[8px] font-black uppercase tracking-wider shadow-sm hover:scale-105 active:scale-95 transition-all border border-brand-gold/30">
+                    <i class="fas fa-credit-card text-[9px]"></i>
+                    <span>Coffee Pass</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -793,7 +795,95 @@
 
             </div>
         </div>
-    </main>
+    <!-- Coffee Pass & Rewards Modal -->
+    <div id="coffee-pass-modal" class="hidden fixed inset-0 bg-brand-dark/90 backdrop-blur-md flex items-center justify-center z-[110] p-4 animate-fade-in">
+        <div class="bg-brand-dark border border-white/10 w-full max-w-sm p-6 rounded-[2.5rem] text-white shadow-2xl relative space-y-5 max-h-[90vh] overflow-y-auto no-scrollbar">
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-brand-gold/20 flex items-center justify-center text-brand-gold text-xs">
+                        <i class="fas fa-mug-hot"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xs font-black uppercase tracking-wider text-white">Cali Coffee Pass</h3>
+                        <p class="text-[7.5px] text-white/40 uppercase tracking-widest">Kaiser Shift-Saver Member</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCoffeePassModal()" class="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/60 hover:text-white transition-all text-xs">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- 1. LOCKED VIEW (Phone + PIN prompt) -->
+            <div id="pass-locked-view" class="space-y-4 text-left">
+                <p class="text-[9px] text-white/60 leading-relaxed">
+                    Enter your phone number & 4-digit PIN to securely view your private balance, shift streaks, and delivery history.
+                </p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-[8px] font-black uppercase text-white/40 tracking-wider mb-1">Phone Number</label>
+                        <input type="tel" id="pass-auth-phone" placeholder="(909) 000-0000" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-xs font-mono focus:border-brand-gold outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[8px] font-black uppercase text-white/40 tracking-wider mb-1">4-Digit Passcode (PIN)</label>
+                        <input type="password" id="pass-auth-pin" maxlength="4" placeholder="••••" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-center text-sm font-mono tracking-widest focus:border-brand-gold outline-none">
+                    </div>
+                    <div class="flex justify-between items-center text-[7.5px] text-white/40 px-1">
+                        <span>Private & PIN protected</span>
+                        <button type="button" onclick="openForgotPinSMS()" class="text-brand-gold hover:underline font-bold">Forgot PIN?</button>
+                    </div>
+                </div>
+                <button type="button" onclick="unlockCoffeePass()" id="pass-unlock-btn" class="w-full gold-shimmer text-brand-dark font-black py-3.5 rounded-xl shadow-lg hover:scale-[1.01] active:scale-95 transition-all uppercase tracking-wider text-[9px]">
+                    Unlock My Coffee Pass <i class="fas fa-lock-open ml-1"></i>
+                </button>
+            </div>
+
+            <!-- 2. UNLOCKED DASHBOARD VIEW -->
+            <div id="pass-unlocked-view" class="hidden space-y-4 text-center animate-fade-in">
+                <!-- Prepaid Balance -->
+                <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-1.5 text-left relative overflow-hidden">
+                    <div class="flex justify-between items-start">
+                        <span class="text-[8px] font-black uppercase tracking-widest text-white/40">Available Balance</span>
+                        <span id="pass-unlocked-days" class="text-[7.5px] font-bold text-amber-400 bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 rounded-full">Valid for 30 Days</span>
+                    </div>
+                    <p class="text-3xl font-black text-brand-gold font-mono tracking-tight" id="pass-unlocked-balance">$0.00</p>
+                    <p class="text-[7.5px] text-white/40 italic">Prepaid credits rollover with every load</p>
+                </div>
+
+                <!-- Shift Streak & Loyalty Stamps -->
+                <div class="bg-white/5 rounded-2xl p-4 border border-white/10 space-y-3 text-left">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="text-[8px] font-black uppercase tracking-widest text-white/40">Shift Loyalty</p>
+                            <h4 class="text-[10px] font-bold text-white">Buy 9, Get 10th FREE</h4>
+                        </div>
+                        <span id="pass-unlocked-streak" class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">🔥 1-Week Streak</span>
+                    </div>
+                    <div class="grid grid-cols-5 gap-1.5 pt-1" id="pass-unlocked-stamp-grid">
+                        <!-- 10 stamp icons -->
+                    </div>
+                </div>
+
+                <!-- Order History -->
+                <div class="space-y-2 text-left">
+                    <p class="text-[8px] font-black uppercase tracking-widest text-white/40">Recent Deliveries</p>
+                    <div id="pass-unlocked-history" class="space-y-2 max-h-36 overflow-y-auto no-scrollbar">
+                        <!-- Loaded history items -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="lockCoffeePass()" class="flex-1 bg-white/10 hover:bg-white/15 text-white/70 py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all">
+                        <i class="fas fa-lock mr-1"></i> Lock Pass
+                    </button>
+                    <button type="button" onclick="closeCoffeePassModal(); showCheckoutView();" class="flex-1 gold-shimmer text-brand-dark py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider shadow hover:scale-[1.01] transition-all">
+                        Order Now <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Success Splash Modal -->
     <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/98 backdrop-blur-xl flex items-center justify-center z-[100] p-4">
@@ -1052,17 +1142,14 @@
             
             grid.innerHTML = gridHtml;
             
-            // Helper text & Shift Streak
-            const streakWeeks = stampsData.streak_weeks || 0;
-            const streakBanner = streakWeeks > 0 ? `<div class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-600 rounded-full text-[8.5px] font-black uppercase tracking-wider"><span>🔥 ${streakWeeks}-Week Shift Streak</span>${streakWeeks >= 3 ? '<span class="bg-amber-500 text-white px-1.5 py-0.5 rounded-full text-[7px]">BONUS ACTIVE</span>' : ''}</div><br>` : '';
-
+            // Helper text (Public stamp progress only)
             if (freeRedeemedInCurrent > 0) {
-                helper.innerHTML = `${streakBanner}🎉 <strong>Awesome!</strong> You are redeeming <strong>${freeRedeemedInCurrent} FREE bottle${freeRedeemedInCurrent > 1 ? 's' : ''}</strong> in this order!`;
+                helper.innerHTML = `🎉 <strong>Awesome!</strong> You are redeeming <strong>${freeRedeemedInCurrent} FREE bottle${freeRedeemedInCurrent > 1 ? 's' : ''}</strong> in this order!`;
             } else if (isGiftEarned) {
-                helper.innerHTML = `${streakBanner}🎉 <strong>Stamp Reward Unlocked!</strong> You have a FREE bottle ready to claim. Add a bottle to your order to apply it!`;
+                helper.innerHTML = `🎉 <strong>Stamp Reward Unlocked!</strong> You have a FREE bottle ready to claim. Add a bottle to your order to apply it!`;
             } else {
                 const remaining = 9 - stampsAfter;
-                helper.innerHTML = `${streakBanner}Stamps progress: <strong>${stampsBefore}</strong>. Adding this order makes it <strong>${stampsBefore + currentPaid}</strong>. Buy <strong>${remaining}</strong> more for a free bottle!`;
+                helper.innerHTML = `Stamps progress: <strong>${stampsBefore}</strong>. Adding this order makes it <strong>${stampsBefore + currentPaid}</strong>. Buy <strong>${remaining}</strong> more for a free bottle!`;
             }
         }
 
@@ -2359,9 +2446,147 @@
         }
 
         function openForgotPinSMS() {
-            const phoneVal = document.getElementById('cust-phone').value.trim() || '';
+            const phoneVal = document.getElementById('cust-phone').value.trim() || document.getElementById('pass-auth-phone')?.value.trim() || '';
             const msg = encodeURIComponent(`Hi Rich Aroma! I forgot my Cali Coffee Card PIN for phone: ${phoneVal}. Please help me reset it.`);
             window.location.href = `sms:9095551234?body=${msg}`;
+        }
+
+        function openCoffeePassModal() {
+            const modal = document.getElementById('coffee-pass-modal');
+            if (!modal) return;
+            
+            const savedPhone = localStorage.getItem('cali_pass_phone') || document.getElementById('cust-phone')?.value.trim() || '';
+            const savedPin = localStorage.getItem('cali_pass_pin') || '';
+            
+            const phoneInput = document.getElementById('pass-auth-phone');
+            const pinInput = document.getElementById('pass-auth-pin');
+            if (phoneInput && savedPhone) phoneInput.value = savedPhone;
+            if (pinInput && savedPin) pinInput.value = savedPin;
+            
+            modal.classList.remove('hidden');
+            
+            if (savedPhone && savedPin && savedPin.length === 4) {
+                unlockCoffeePass(true);
+            } else {
+                document.getElementById('pass-locked-view').classList.remove('hidden');
+                document.getElementById('pass-unlocked-view').classList.add('hidden');
+            }
+        }
+
+        function closeCoffeePassModal() {
+            const modal = document.getElementById('coffee-pass-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        async function unlockCoffeePass(isAuto = false) {
+            const phone = document.getElementById('pass-auth-phone').value.trim();
+            const pin = document.getElementById('pass-auth-pin').value.trim();
+            const btn = document.getElementById('pass-unlock-btn');
+            
+            if (!phone || !pin || pin.length !== 4) {
+                if (!isAuto) showToast("Please enter your phone and 4-digit PIN.", "error");
+                return;
+            }
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Verifying PIN...';
+            }
+            
+            try {
+                const res = await fetch('/api/cali?action=get_pass_details', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, pin })
+                });
+                
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "PIN verification failed");
+                
+                localStorage.setItem('cali_pass_phone', phone);
+                localStorage.setItem('cali_pass_pin', pin);
+                
+                const checkoutPhone = document.getElementById('cust-phone');
+                if (checkoutPhone && !checkoutPhone.value) {
+                    checkoutPhone.value = phone;
+                    fetchStamps();
+                }
+                
+                document.getElementById('pass-unlocked-balance').innerText = `$${data.balance.toFixed(2)}`;
+                document.getElementById('pass-unlocked-days').innerText = `Valid for ${data.days_remaining} Days`;
+                
+                const streakEl = document.getElementById('pass-unlocked-streak');
+                if (streakEl) {
+                    if (data.streak_weeks > 0) {
+                        streakEl.innerText = `🔥 ${data.streak_weeks}-Week Shift Streak`;
+                        streakEl.classList.remove('hidden');
+                    } else {
+                        streakEl.innerText = `Start a Streak!`;
+                    }
+                }
+                
+                const stampGrid = document.getElementById('pass-unlocked-stamp-grid');
+                if (stampGrid) {
+                    let gridHtml = "";
+                    for (let i = 1; i <= 10; i++) {
+                        if (i === 10) {
+                            gridHtml += `<div class="w-7 h-7 rounded-full flex items-center justify-center border border-dashed border-brand-gold bg-brand-gold/10 text-brand-gold text-[9px] font-bold"><i class="fas fa-gift"></i></div>`;
+                        } else if (i <= data.stamps) {
+                            gridHtml += `<div class="w-7 h-7 rounded-full flex items-center justify-center border border-brand-gold bg-brand-gold text-brand-dark text-[9px] font-bold"><i class="fas fa-mug-hot"></i></div>`;
+                        } else {
+                            gridHtml += `<div class="w-7 h-7 rounded-full flex items-center justify-center border border-white/20 bg-white/5 text-white/30 text-[9px] font-bold"><i class="fas fa-mug-hot"></i></div>`;
+                        }
+                    }
+                    stampGrid.innerHTML = gridHtml;
+                }
+                
+                const historyEl = document.getElementById('pass-unlocked-history');
+                if (historyEl) {
+                    if (data.orders && data.orders.length > 0) {
+                        historyEl.innerHTML = data.orders.map(o => {
+                            const dateStr = new Date(o.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            const loc = o.hospital ? o.hospital.split('(')[0] : 'Pick Up';
+                            const statusColor = o.status === 'delivered' ? 'text-emerald-400' : 'text-brand-gold';
+                            return `
+                                <div class="bg-white/5 border border-white/5 rounded-xl p-2.5 flex justify-between items-center text-[8.5px]">
+                                    <div>
+                                        <div class="font-bold text-white">${loc}</div>
+                                        <div class="text-white/40 text-[7.5px]">${dateStr} • ${o.items_count} bottles</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-mono font-bold text-white">$${parseFloat(o.total || 0).toFixed(2)}</div>
+                                        <div class="${statusColor} uppercase text-[7px] font-black tracking-wider">${o.status}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        historyEl.innerHTML = `<p class="text-[8px] text-white/40 italic py-2 text-center">No past orders yet. Place your first route drop-off!</p>`;
+                    }
+                }
+                
+                document.getElementById('pass-locked-view').classList.add('hidden');
+                document.getElementById('pass-unlocked-view').classList.remove('hidden');
+                
+            } catch (err) {
+                if (!isAuto) showToast(err.message, "error");
+                document.getElementById('pass-locked-view').classList.remove('hidden');
+                document.getElementById('pass-unlocked-view').classList.add('hidden');
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Unlock My Coffee Pass <i class="fas fa-lock-open ml-1"></i>';
+                }
+            }
+        }
+
+        function lockCoffeePass() {
+            localStorage.removeItem('cali_pass_phone');
+            localStorage.removeItem('cali_pass_pin');
+            document.getElementById('pass-auth-pin').value = '';
+            document.getElementById('pass-locked-view').classList.remove('hidden');
+            document.getElementById('pass-unlocked-view').classList.add('hidden');
+            showToast("Coffee Pass locked on this device.", "info");
         }
 
         function handleReceiptUpload(input, type) {

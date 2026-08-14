@@ -279,6 +279,113 @@ module.exports = async (req, res) => {
             }
         }
 
+        // 3f. GET PRIVATE COFFEE PASS DETAILS (Requires PIN Verification)
+        if (req.method === 'POST' && action === 'get_pass_details') {
+            const { phone, pin } = req.body || {};
+            if (!phone || !pin) return res.status(400).json({ error: 'Phone and PIN are required' });
+
+            // 1. Verify PIN
+            const { data: userProfile } = await supabase
+                .from('cali_credits')
+                .select('pin_hash')
+                .eq('phone', phone)
+                .maybeSingle();
+
+            if (!userProfile || !userProfile.pin_hash || userProfile.pin_hash !== pin.toString().trim()) {
+                return res.status(401).json({ error: 'Invalid PIN. Please check or reset your 4-digit passcode.' });
+            }
+
+            // 2. Query Balance & Expiry
+            const now = new Date().toISOString();
+            const { data: loads } = await supabase
+                .from('cali_credit_transactions')
+                .select('amount, expires_at, created_at')
+                .eq('phone', phone)
+                .in('type', ['load', 'bonus'])
+                .gt('expires_at', now)
+                .order('expires_at', { ascending: true });
+
+            const { data: spends } = await supabase
+                .from('cali_credit_transactions')
+                .select('amount')
+                .eq('phone', phone)
+                .eq('type', 'spend');
+
+            const totalLoaded = (loads || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+            const totalSpent = (spends || []).reduce((sum, row) => sum + parseFloat(row.amount || 0), 0);
+            const activeBalance = Math.max(0, totalLoaded - totalSpent);
+
+            let daysRemaining = 30;
+            if (loads && loads.length > 0) {
+                const earliestExpiry = new Date(loads[0].expires_at);
+                const diffTime = earliestExpiry.getTime() - new Date().getTime();
+                daysRemaining = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+            }
+
+            // 3. Query Past Orders for History & Streaks
+            const { data: pastOrders } = await supabase
+                .from('cali_orders')
+                .select('id, total, status, created_at, selections, notes')
+                .eq('customer_phone', phone)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            // Calculate Bottles & Stamps
+            let totalBottles = 0;
+            let totalFreeRedeemed = 0;
+            if (pastOrders) {
+                for (const order of pastOrders) {
+                    const cart = order.selections?.cart || [];
+                    const freeInOrder = parseInt(order.selections?.free_bottles_redeemed || 0);
+                    totalFreeRedeemed += freeInOrder;
+                    for (const item of cart) {
+                        if (item.product_id === 'catering_event_pack') continue;
+                        if (typeof item.bottles === 'number') totalBottles += item.bottles;
+                        else {
+                            const qty = parseInt(item.qty || 1);
+                            const selectionsCount = Array.isArray(item.selections) ? item.selections.length : 1;
+                            totalBottles += selectionsCount * qty;
+                        }
+                    }
+                }
+            }
+            const paidBottles = Math.max(0, totalBottles - totalFreeRedeemed);
+            const currentStamps = paidBottles % 9;
+
+            // Calculate Weekly Streak
+            let streakWeeks = 0;
+            if (pastOrders && pastOrders.length > 0) {
+                const getWeekKey = (d) => {
+                    const date = new Date(d.getTime());
+                    date.setHours(0, 0, 0, 0);
+                    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+                    const week1 = new Date(date.getFullYear(), 0, 4);
+                    const wNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+                    return `${date.getFullYear()}-W${wNum}`;
+                };
+                const weeks = [...new Set(pastOrders.map(o => getWeekKey(new Date(o.created_at || Date.now()))))];
+                streakWeeks = weeks.length;
+            }
+
+            return res.json({
+                success: true,
+                balance: parseFloat(activeBalance.toFixed(2)),
+                days_remaining: daysRemaining,
+                stamps: currentStamps,
+                streak_weeks: streakWeeks,
+                orders: (pastOrders || []).map(o => ({
+                    id: o.id,
+                    date: o.created_at,
+                    total: o.total,
+                    status: o.status,
+                    fulfillment: o.selections?.fulfillment_type || 'pickup',
+                    hospital: o.selections?.kaiser_hospital || null,
+                    dept: o.selections?.kaiser_department || null,
+                    items_count: (o.selections?.cart || []).reduce((s, i) => s + (parseInt(i.qty) || 1), 0)
+                }))
+            });
+        }
+
         // 4. ADMIN CHECK
         const auth = req.headers.authorization;
         const isAdmin = auth && (auth.includes('EMP-admin') || auth.includes('TEST_TOKEN_ADMIN') || auth.includes('Bearer 3620'));
