@@ -257,16 +257,87 @@ module.exports = async function handler(req, res) {
             return res.json({ success: true, url: publicUrl });
         }
 
+        // --- 4.1 Merchant Ledger & Payouts ---
+        if (action === 'admin_merchant_balances' && req.method === 'GET') {
+            try {
+                const { data: restaurants } = await supabase.from('restaurants').select('id, name, status').neq('id', 'rich-aroma');
+                const { data: ledger } = await supabase.from('quimieats_ledger').select('*');
+
+                const balances = (restaurants || []).map(res => {
+                    const resLedger = (ledger || []).filter(l => l.restaurant_id === res.id);
+                    const netAmount = resLedger.reduce((sum, l) => sum + parseFloat(l.amount), 0);
+                    
+                    return {
+                        id: res.id,
+                        name: res.name,
+                        status: res.status,
+                        balance: netAmount,
+                        ledger_rows: resLedger.length
+                    };
+                });
+
+                return res.json(balances);
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'admin_create_ledger_entry' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { restaurantId, amount, type, description } = req.body;
+            if (!restaurantId || amount === undefined || !type) {
+                return res.status(400).json({ error: "Missing parameters" });
+            }
+
+            try {
+                // 1. Insert ledger entry
+                const { data: entry, error } = await supabase.from('quimieats_ledger').insert({
+                    restaurant_id: restaurantId,
+                    amount: parseFloat(amount),
+                    type: type,
+                    status: 'settled',
+                    customer_id: 'platform_admin',
+                    order_id: description || null
+                }).select().single();
+
+                if (error) throw error;
+
+                // 2. Fetch new balance to see if we should toggle merchant status
+                const { data: allLedger } = await supabase.from('quimieats_ledger').select('amount').eq('restaurant_id', restaurantId);
+                const newBalance = (allLedger || []).reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
+                // Auto toggle status if balance is above/below the credit limit threshold
+                if (newBalance >= 0) {
+                    await supabase.from('restaurants').update({ status: 'active' }).eq('id', restaurantId);
+                } else if (newBalance < -100) {
+                    await supabase.from('restaurants').update({ status: 'suspended' }).eq('id', restaurantId);
+                }
+
+                return res.json({ success: true, entry, balance: newBalance });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
         // --- QUIMIEATS PARTNERS ---
         if (action === 'quimieats_active' && req.method === 'GET') {
             try {
-                const [rRes, rLeads] = await Promise.all([
+                const [rRes, rLeads, rLedger] = await Promise.all([
                     supabase.from('restaurants').select('*'),
-                    supabase.from('quimieats_leads').select('*')
+                    supabase.from('quimieats_leads').select('*'),
+                    supabase.from('quimieats_ledger').select('restaurant_id, amount')
                 ]);
                 
                 const restaurants = rRes.data || [];
                 const leads = rLeads.data || [];
+                const ledger = rLedger.data || [];
+
+                // Calculate balances
+                const balances = {};
+                ledger.forEach(entry => {
+                    if (!balances[entry.restaurant_id]) balances[entry.restaurant_id] = 0;
+                    balances[entry.restaurant_id] += parseFloat(entry.amount);
+                });
 
                 const final = [];
                 const seen = new Set();
@@ -281,35 +352,51 @@ module.exports = async function handler(req, res) {
 
                 // Gather all source data in a unified format
                 const rawRecords = [
-                    ...restaurants.map(r => ({
-                        id: r.id,
-                        lead_id: null,
-                        name: r.name,
-                        logo_url: r.logo_url || '',
-                        phone: r.contact_phone || '',
-                        category: r.category || 'restaurante'
-                    })),
+                    ...restaurants.map(r => {
+                        const bal = balances[r.id] !== undefined ? balances[r.id] : 0;
+                        const isSuspended = r.status === 'suspended' || r.status === 'inactive' || bal < -100;
+                        
+                        return {
+                            id: r.id,
+                            lead_id: null,
+                            name: r.name,
+                            logo_url: r.logo_url || '',
+                            phone: r.contact_phone || '',
+                            category: r.category || 'restaurante',
+                            in_person_onboarding: r.settings?.in_person_onboarding || false,
+                            plan: r.settings?.plan || 'trial',
+                            status: isSuspended ? 'suspended' : r.status,
+                            balance: bal
+                        };
+                    }),
                     ...leads.map(l => ({
                         id: 'lead_' + l.id,
                         lead_id: l.id,
                         name: l.restaurant_name,
                         logo_url: l.logo_url || '',
                         phone: l.phone || '',
-                        category: l.category || 'restaurante'
+                        category: l.category || 'restaurante',
+                        in_person_onboarding: false,
+                        plan: 'lead',
+                        status: 'active',
+                        balance: 0
                     }))
                 ];
 
                 // Map elite rules
                 eliteRules.forEach(rule => {
                     const match = rawRecords.find(rec => rec.name.toLowerCase().includes(rule.match.toLowerCase()));
-                    if (match) {
+                    if (match && match.status === 'active') {
                         final.push({
                             id: rule.id,
                             lead_id: match.lead_id,
                             name: rule.name,
                             logo_url: match.logo_url,
                             contact_phone: match.phone,
-                            category: match.category
+                            category: match.category,
+                            in_person_onboarding: match.in_person_onboarding || false,
+                            plan: match.plan || 'trial',
+                            balance: match.balance
                         });
                         seen.add(rule.id);
                         seen.add(match.id);
@@ -318,14 +405,17 @@ module.exports = async function handler(req, res) {
 
                 // 2. Append all other records dynamically
                 rawRecords.forEach(rec => {
-                    if (!seen.has(rec.id) && !seen.has('lead_' + rec.lead_id) && rec.name) {
+                    if (!seen.has(rec.id) && !seen.has('lead_' + rec.lead_id) && rec.name && rec.status === 'active') {
                         final.push({
                             id: rec.id,
                             lead_id: rec.lead_id,
                             name: rec.name,
                             logo_url: rec.logo_url,
                             contact_phone: rec.phone,
-                            category: rec.category
+                            category: rec.category,
+                            in_person_onboarding: rec.in_person_onboarding || false,
+                            plan: rec.plan || 'trial',
+                            balance: rec.balance
                         });
                         seen.add(rec.id);
                     }

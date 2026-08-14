@@ -1094,7 +1094,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_plan') {
-            const { restaurant_id, plan } = req.body || {};
+            const { restaurant_id, plan, in_person_onboarding } = req.body || {};
             if (!restaurant_id || !plan) return res.status(400).json({ error: "Missing parameters" });
 
             // Fetch current settings
@@ -1103,6 +1103,7 @@ module.exports = async (req, res) => {
 
             const settings = resData?.settings || {};
             settings.plan = plan;
+            settings.in_person_onboarding = !!in_person_onboarding;
             if (plan === 'basic') {
                 settings.trial_end = null;
             } else {
@@ -1114,7 +1115,7 @@ module.exports = async (req, res) => {
             const { error: updateErr } = await supabase.from('restaurants').update({ settings }).eq('id', restaurant_id);
             if (updateErr) return res.status(500).json({ error: updateErr.message });
 
-            return res.json({ success: true, plan });
+            return res.json({ success: true, plan, in_person_onboarding: settings.in_person_onboarding });
         }
 
         if (action === 'restaurant_info') {

@@ -232,6 +232,25 @@ module.exports = async function handler(req, res) {
             return res.json({ success: true, payout });
         }
 
+        if (action === 'admin_create_ledger_entry' && req.method === 'POST') {
+            const { restaurantId, amount, type, description } = req.body;
+            if (!restaurantId || amount === undefined || !type) {
+                return res.status(400).json({ error: "Missing parameters" });
+            }
+
+            const { data: entry, error } = await supabase.from('quimieats_ledger').insert({
+                restaurant_id: restaurantId,
+                amount: parseFloat(amount),
+                type: type,
+                status: 'pending',
+                customer_id: 'platform_admin',
+                order_id: description || null
+            }).select().single();
+
+            if (error) throw error;
+            return res.json({ success: true, entry });
+        }
+
         // --- 5. Admin Actions ---
         const isAdminAction = action.startsWith('admin_');
         if (isAdminAction) {

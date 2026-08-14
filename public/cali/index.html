@@ -479,6 +479,42 @@
                                 <span id="label-char-counter" class="text-[8px] text-gray-400 font-bold uppercase tracking-wider">0 / 55 chars</span>
                             </div>
                             <input type="text" id="catering-custom-label" maxlength="55" oninput="updateLabelCharCounter(this)" placeholder="e.g. Happy 30th Birthday Alex! (Max 55 characters)" class="w-full bg-gray-50 border border-gray-150 rounded-xl px-3 py-2.5 text-xs focus:border-brand-brown focus:bg-white outline-none transition-all">
+                            
+                            <!-- Dynamic Live Label Sticker Preview -->
+                            <div class="mt-4 p-4 bg-gray-50/50 border border-gray-100 rounded-[2rem] flex flex-col items-center select-none">
+                                <span class="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-3">Live Sticker Preview (Vertical Bottle Fit)</span>
+                                
+                                <div class="w-[180px] h-[340px] bg-white rounded-2xl border border-gray-250 shadow-md p-4 flex flex-col justify-between text-black font-sans relative overflow-hidden">
+                                    <!-- Rotated Flavor Header -->
+                                    <div class="flex flex-col items-center text-center mt-2">
+                                        <span class="font-serif font-bold text-xl text-black leading-tight">Vanilla</span>
+                                        <span class="font-sans text-[7.5px] font-bold text-black tracking-[0.15em] uppercase mt-0.5">Latte</span>
+                                    </div>
+
+                                    <!-- Middle Section: Logo and Ingredients -->
+                                    <div class="flex flex-col items-center space-y-2 my-2 text-center">
+                                        <!-- Mini Logo Icon -->
+                                        <div class="w-10 h-10 border border-black rounded-full flex items-center justify-center font-serif text-[10px] font-bold">
+                                            R☕A
+                                        </div>
+                                        <div class="text-[6.5px] font-bold uppercase tracking-wider">Morning Brew</div>
+                                        <div class="text-[6px] text-gray-600 leading-normal">
+                                            milk<br>espresso<br>vanilla syrup
+                                        </div>
+                                    </div>
+
+                                    <!-- Bottom Section: Custom Message & Footer -->
+                                    <div class="flex flex-col items-center space-y-1.5 border-t border-dashed border-gray-200 pt-2 text-center w-full">
+                                        <!-- Custom Message -->
+                                        <div class="text-[8.5px] font-serif italic text-gray-400 leading-tight px-1 max-h-12 overflow-hidden break-words text-center w-full min-h-[16px]" id="preview-custom-message">
+                                            *Your custom message here*
+                                        </div>
+                                        
+                                        <!-- Footer Info -->
+                                        <div class="text-[5.5px] font-bold text-gray-400 tracking-wider uppercase mt-1">@richaromacoffee</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2754,6 +2790,18 @@
             const counter = document.getElementById('label-char-counter');
             if (counter) {
                 counter.innerText = `${el.value.length} / 55 chars`;
+            }
+            const previewEl = document.getElementById('preview-custom-message');
+            if (previewEl) {
+                const text = el.value.trim();
+                previewEl.innerText = text ? `"${text}"` : '*Your custom message here*';
+                if (text) {
+                    previewEl.classList.remove('text-gray-400', 'italic');
+                    previewEl.classList.add('text-black', 'font-black');
+                } else {
+                    previewEl.classList.remove('text-black', 'font-black');
+                    previewEl.classList.add('text-gray-400', 'italic');
+                }
             }
         }
 

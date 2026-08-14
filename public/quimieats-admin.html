@@ -119,6 +119,7 @@
                                 <th class="p-8">Negocio</th>
                                 <th class="p-8">Categoría</th>
                                 <th class="p-8">Contacto</th>
+                                <th class="p-8 text-right">Saldo</th>
                                 <th class="p-8 text-right">Acción</th>
                             </tr>
                         </thead>
@@ -535,6 +536,32 @@
             </div>
         </div>
     </div>
+ 
+    <!-- TOPUP MODAL -->
+    <div id="topup-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center z-[1000] p-6">
+        <div class="glass bg-[#121214] p-10 rounded-[3rem] max-w-md w-full space-y-6 border border-white/10 shadow-2xl">
+            <h3 class="text-2xl font-black uppercase tracking-tighter text-white">Registrar Recarga / Abono</h3>
+            <input type="hidden" id="topup-res-id">
+            <div class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2 block">Negocio Seleccionado</label>
+                    <input type="text" id="topup-res-name" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none text-white/50 font-bold" readonly>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2 block">Monto a Recargar (Lempiras)</label>
+                    <input type="number" id="topup-amount" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-cyan-500 font-bold text-white text-lg" placeholder="500">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2 block">Referencia / Comprobante (Opcional)</label>
+                    <input type="text" id="topup-ref" class="w-full bg-white/5 border border-white/10 p-5 rounded-2xl outline-none focus:border-cyan-500 font-bold text-white text-xs" placeholder="BAC Transferencia #12345">
+                </div>
+            </div>
+            <div class="flex gap-4 pt-4">
+                <button onclick="closeModal('topup-modal')" class="w-1/2 py-5 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all">Cancelar</button>
+                <button onclick="submitTopup()" id="submit-topup-btn" class="w-1/2 py-5 bg-green-500 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-green-500/20 active:scale-95 transition-all">Abonar Saldo</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         let currentPin = '';
@@ -543,6 +570,59 @@
 
         function openAddDriver() { document.getElementById('add-driver-modal').classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function openTopup(id, name) {
+            document.getElementById('topup-res-id').value = id;
+            document.getElementById('topup-res-name').value = name;
+            document.getElementById('topup-amount').value = '';
+            document.getElementById('topup-ref').value = '';
+            document.getElementById('topup-modal').classList.remove('hidden');
+        }
+
+        async function submitTopup() {
+            const resId = document.getElementById('topup-res-id').value;
+            const amountVal = document.getElementById('topup-amount').value;
+            const refVal = document.getElementById('topup-ref').value;
+
+            if (!amountVal || isNaN(parseFloat(amountVal)) || parseFloat(amountVal) <= 0) {
+                return alert("Por favor ingrese un monto válido mayor a 0.");
+            }
+
+            const btn = document.getElementById('submit-topup-btn');
+            btn.innerText = "PROCESANDO...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin?action=admin_create_ledger_entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('quimieats_admin_pin')}`
+                    },
+                    body: JSON.stringify({
+                        restaurantId: resId,
+                        amount: parseFloat(amountVal),
+                        type: 'topup',
+                        description: refVal || 'Abono Manual'
+                    })
+                });
+
+                if (res.ok) {
+                    alert("✅ Recarga acreditada con éxito.");
+                    closeModal('topup-modal');
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + err.error);
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de conexión");
+            } finally {
+                btn.innerText = "ABONAR SALDO";
+                btn.disabled = false;
+            }
+        }
 
         async function saveDriver() {
             const btn = document.getElementById('save-driver-btn');
@@ -1171,7 +1251,10 @@
                                 ${r.logo_url ? `<img src="${r.logo_url}" class="w-full h-full object-cover">` : '<i class="fas fa-store text-white/10 text-xs"></i>'}
                             </div>
                             <div>
-                                <div class="font-black uppercase tracking-tight text-sm">${r.name}</div>
+                                <div class="font-black uppercase tracking-tight text-sm flex items-center gap-2">
+                                    <span>${r.name}</span>
+                                    ${r.in_person_onboarding ? `<span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider flex items-center gap-1" title="Solicitó Acompañamiento en Persona"><i class="fas fa-handshake"></i> L. 2,500</span>` : ''}
+                                </div>
                                 <div class="text-[8px] font-black text-cyan/60 uppercase tracking-widest">${r.id}</div>
                             </div>
                         </div>
@@ -1180,7 +1263,11 @@
                     <td class="p-8">
                         <a href="https://wa.me/${r.contact_phone}" target="_blank" class="text-cyan-400 font-bold text-xs underline">${r.contact_phone}</a>
                     </td>
+                    <td class="p-8 text-right font-mono font-bold text-xs ${r.balance < 0 ? 'text-red-400' : 'text-green-400'}">
+                        L. ${parseFloat(r.balance || 0).toFixed(2)}
+                    </td>
                     <td class="p-8 text-right flex items-center justify-end gap-3">
+                        <button onclick="openTopup('${r.id}', '${r.name}')" class="text-[10px] font-black uppercase text-green-400 hover:text-green-300 transition-all"><i class="fas fa-wallet mr-1"></i> Recargar</button>
                         <button onclick="deletePartner('${r.id}', '${r.name}')" class="text-[10px] font-black uppercase text-red-400/20 hover:text-red-400 transition-all"><i class="fas fa-trash-alt mr-1"></i> Eliminar</button>
                         <button onclick="openEdit(${i})" class="text-[10px] font-black uppercase text-white/20 hover:text-white transition-all">Editar</button>
                         <button onclick="goToRestaurantMenu('${r.id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-300">Productos <i class="fas fa-external-link-alt ml-1"></i></button>

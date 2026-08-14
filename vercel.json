@@ -207,6 +207,10 @@
       "dest": "/api/v2-menu.js"
     },
     {
+      "src": "/api/promos",
+      "dest": "/api/promos.js"
+    },
+    {
       "src": "/api/orders/(.*)/customer-confirm",
       "dest": "/api/store.js?action=customer_confirm_delivery&id=$1"
     },

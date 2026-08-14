@@ -508,13 +508,43 @@
                         <td class="py-4 font-mono font-bold">L. ${parseFloat(b.balance).toFixed(2)}</td>
                         <td class="py-4 text-xs text-gray-400">L. ${parseFloat(b.withdrawal_fee).toFixed(2)}</td>
                         <td class="py-4 text-right font-mono font-black text-gold">L. ${parseFloat(b.eligible_payout).toFixed(2)}</td>
-                        <td class="py-4 text-right"><button onclick="processPayout('${b.id}', ${b.eligible_payout}, '${b.name}')" class="bg-dark text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">Pagar</button></td>
+                        <td class="py-4 text-right flex items-center justify-end gap-2">
+                            <button onclick="processPayout('${b.id}', ${b.eligible_payout}, '${b.name}')" class="bg-dark text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider">Pagar</button>
+                            <button onclick="chargeMerchant('${b.id}', '${b.name}')" class="border border-dark hover:bg-dark hover:text-white px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all">Cobrar</button>
+                        </td>
                     </tr>`).join('');
             } catch (e) { body.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-error">Error</td></tr>`; }
         }
 
+        async function chargeMerchant(id, name) {
+            const amountStr = prompt(`Cobrar Tarifa a: ${name}\nIngrese el monto en Lempiras (use signo NEGATIVO para cobros/cargos, positivo para abonos. Ej: -2500 para setup, -3500 para anualidad):`);
+            if (!amountStr) return;
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount)) return alert("Monto inválido");
+
+            const description = prompt("Concepto o Descripción del cobro (ej: setup_walkthrough, anualidad_elite):");
+            if (!description) return;
+
+            const pin = localStorage.getItem('ra_staff_pin') || '4574';
+            try {
+                const res = await fetch('/api/staff?action=admin_create_ledger_entry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
+                    body: JSON.stringify({ restaurantId: id, amount: amount, type: 'fee', description: description })
+                });
+
+                if (res.ok) {
+                    alert("Ajuste de saldo registrado con éxito");
+                    loadMerchantBalances();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + (err.error || "No se pudo registrar"));
+                }
+            } catch(e) { alert("Error de red"); }
+        }
+
         async function processPayout(id, amount, name) {
-            if (!confirm(`¿Pagar L. ${amount.toFixed(2)} a ${name}?`)) return;
+            if (!confirm(`¿Confirmar pago de L. ${amount.toFixed(2)} a ${name}?`)) return;
             const pin = localStorage.getItem('ra_staff_pin') || '4574';
             await fetch('/api/staff?action=admin_process_payout', {
                 method: 'POST',

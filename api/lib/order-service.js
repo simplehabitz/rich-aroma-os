@@ -212,8 +212,8 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
         // QuimiEats Commission Note
         if (!isPos && targetResId !== 'rich-aroma') {
-            const commission = parseFloat(dbOrder.total) * 0.10;
-            const ledgerNote = `[LEDGER: type=commission, amount=-${commission.toFixed(2)}, status=pending]`;
+            const commission = parseFloat(dbOrder.total) * 0.08;
+            const ledgerNote = `[LEDGER: type=commission, amount=-${commission.toFixed(2)}, status=settled]`;
             dbOrder.notes = (dbOrder.notes || '') + " " + ledgerNote;
         }
 
@@ -270,6 +270,49 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             }
         }
         if (error) throw error;
+
+        // 4.5 Record automated QuimiEats commission and perform credit limit check
+        if (!isPos && targetResId !== 'rich-aroma') {
+            (async () => {
+                try {
+                    const commissionAmt = parseFloat(dbOrder.total) * 0.08;
+                    
+                    // A. Insert into ledger (commission debit)
+                    await supabase.from('quimieats_ledger').insert({
+                        restaurant_id: targetResId,
+                        amount: -commissionAmt,
+                        type: 'commission',
+                        status: 'settled',
+                        customer_id: finalCustomerId || 'client',
+                        order_id: data.id
+                    });
+
+                    // B. Credit order total to merchant if paid via platform-held channels (rico_balance, transfer)
+                    const isPlatformHeld = paymentMethod === 'rico_balance' || paymentMethod === 'rico_cash' || paymentMethod === 'transfer';
+                    if (isPlatformHeld) {
+                        await supabase.from('quimieats_ledger').insert({
+                            restaurant_id: targetResId,
+                            amount: parseFloat(dbOrder.total),
+                            type: 'order_credit',
+                            status: 'settled',
+                            customer_id: finalCustomerId || 'client',
+                            order_id: data.id
+                        });
+                    }
+
+                    // B. Query new balance to see if they exceed limit
+                    const { data: ledgerRows } = await supabase.from('quimieats_ledger').select('amount').eq('restaurant_id', targetResId);
+                    const bal = (ledgerRows || []).reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
+                    // C. Auto-suspend restaurant if balance < -100
+                    if (bal < -100) {
+                        await supabase.from('restaurants').update({ status: 'suspended' }).eq('id', targetResId);
+                    }
+                } catch (e) {
+                    console.error("[OrderService] Automated commission deduction error:", e);
+                }
+            })();
+        }
 
         // 5. Post-Order Background Tasks
         (async () => {

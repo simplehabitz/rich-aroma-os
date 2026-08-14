@@ -130,6 +130,22 @@
                         Activar Plan Básico (Comisión)
                     </button>
                 </div>
+
+                <!-- In-Person Support Addon -->
+                <div class="p-5 rounded-3xl border border-cyan/20 bg-cyan/5 flex flex-col justify-between space-y-4 text-left">
+                    <div class="flex items-start gap-4">
+                        <input type="checkbox" id="chk-in-person" class="w-6 h-6 rounded border-white/10 bg-white/5 accent-cyan cursor-pointer mt-1">
+                        <div class="flex-1">
+                            <h3 class="font-black text-sm text-cyan uppercase tracking-tight flex items-center gap-1.5">
+                                <i class="fas fa-handshake"></i> Acompañamiento en Persona 💬
+                            </h3>
+                            <p class="text-[9px] text-white/50 leading-relaxed mt-1">
+                                ¿Necesitas ayuda para subir tus platillos, modificadores y combos? Un administrador local te visitará en persona, digitalizará todo tu menú y capacitará a tu personal cara a cara.
+                            </p>
+                            <p class="text-[10px] text-white font-black font-mono mt-2">L 2,500 <span class="text-[8px] text-white/40 font-bold uppercase tracking-normal">(Pago único en efectivo/transferencia al finalizar)</span></p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -299,11 +315,14 @@
             btn.innerText = "SELECCIONANDO...";
             btn.disabled = true;
 
+            const chkInPerson = document.getElementById('chk-in-person');
+            const in_person_onboarding = chkInPerson ? chkInPerson.checked : false;
+
             try {
                 const response = await fetch('/api/store?action=partner_update_plan', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ restaurant_id: resId, plan })
+                    body: JSON.stringify({ restaurant_id: resId, plan, in_person_onboarding })
                 });
                 
                 const data = await response.json();
