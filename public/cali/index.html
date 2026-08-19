@@ -503,13 +503,14 @@
                         </div>
                     </div>
 
-                    <!-- Pure Black Row (For Classic Black) -->
-                    <div id="modal-row-black" class="hidden flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                    <!-- Pure Black / Americano Row (No Milk) -->
+                    <div id="modal-row-black" class="hidden flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-200">
                         <div class="flex items-center gap-2.5">
                             <span class="text-xl">☕</span>
                             <div>
-                                <p class="font-serif font-bold text-xs text-brand-dark">Classic Black (Pure Espresso)</p>
-                                <p class="font-mono font-bold text-[10px] text-brand-brown">$5.00 each</p>
+                                <p class="font-serif font-bold text-xs text-brand-dark" id="modal-black-row-title">Pure Espresso (No Milk)</p>
+                                <p class="text-[9px] text-gray-500 font-medium">No Milk • 100% Single-Origin Honduran Roast</p>
+                                <p class="font-mono font-bold text-[10px] text-brand-brown mt-0.5">$5.00 each</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
@@ -1050,14 +1051,20 @@
             updateCartUI();
         }
 
+        function isDrinkAmericanoOrBlack(p) {
+            if (!p) return false;
+            const name = (typeof p === 'string' ? p : (p.name || p.id || '')).toLowerCase();
+            return name.includes('classic black') || name.includes('americano');
+        }
+
         function renderDrinksGrid() {
             const grid = document.getElementById('drinks-grid');
             const productsList = (currentMenuCategory === 'hot') ? HOT_PRODUCTS : FLYER_PRODUCTS;
 
             grid.innerHTML = productsList.map(p => {
-                const isBlack = p.name.toLowerCase().includes('classic black');
+                const isBlack = isDrinkAmericanoOrBlack(p);
                 const isHot = p.is_hot;
-                const tagDisplay = isHot ? (isBlack ? "Pure Hot 3oz Espresso" : "Fresh Steamed Milk or Oat") : (isBlack ? "Pure 3oz Espresso" : "Milk or Oat Milk");
+                const tagDisplay = isHot ? (isBlack ? "Pure Hot 3oz Espresso • No Milk" : "Fresh Steamed Milk or Oat") : (isBlack ? "Pure 3oz Espresso • No Milk" : "Milk or Oat Milk");
 
                 return `
                 <div class="bg-white rounded-3xl p-4 border border-brand-brown/15 shadow-sm hover:shadow-md transition-all flex flex-col justify-between text-center relative group">
@@ -1113,7 +1120,7 @@
             if (!prod) return;
 
             currentCustomDrink = prod;
-            const isBlack = prod.name.toLowerCase().includes('classic black');
+            const isBlack = isDrinkAmericanoOrBlack(prod);
 
             document.getElementById('modal-drink-img').src = prod.image;
             document.getElementById('modal-drink-name').innerText = prod.name;
@@ -1121,11 +1128,15 @@
             const rowWhole = document.getElementById('modal-row-whole');
             const rowOat = document.getElementById('modal-row-oat');
             const rowBlack = document.getElementById('modal-row-black');
+            const rowBlackTitle = document.getElementById('modal-black-row-title');
 
             if (isBlack) {
                 rowWhole.classList.add('hidden');
                 rowOat.classList.add('hidden');
                 rowBlack.classList.remove('hidden');
+                if (rowBlackTitle) {
+                    rowBlackTitle.innerText = prod.is_hot ? "Hot Americano (No Milk • Pure Hot Espresso)" : "Classic Black Americano (No Milk • Pure Espresso)";
+                }
                 customizerQty = { whole: 0, oat: 0, black: 1 };
                 selectedEspresso = "3oz (strong)";
                 selectModalEspresso("3oz (strong)");
@@ -1154,7 +1165,7 @@
 
         function updateCustomizerUI() {
             if (!currentCustomDrink) return;
-            const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
+            const isBlack = isDrinkAmericanoOrBlack(currentCustomDrink);
             const isHot = currentCustomDrink.is_hot;
 
             document.getElementById('customizer-qty-whole').innerText = customizerQty.whole;
@@ -1194,7 +1205,7 @@
 
         function confirmAddCustomizerDrinks() {
             if (!currentCustomDrink) return;
-            const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
+            const isBlack = isDrinkAmericanoOrBlack(currentCustomDrink);
             const isHot = currentCustomDrink.is_hot;
 
             let addedCount = 0;
@@ -1206,7 +1217,7 @@
                     is_hot: isHot,
                     selections: [{
                         flavor: currentCustomDrink.name,
-                        milk: 'None (Black)',
+                        milk: 'No Milk (Pure Espresso)',
                         espresso: selectedEspresso
                     }],
                     qty: customizerQty.black,
