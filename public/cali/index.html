@@ -229,11 +229,30 @@
                 <!-- Injected dynamically -->
             </div>
 
+            <!-- Cold-Chain Freshness Disclaimer Box for Catering -->
+            <div id="catering-freshness-box" class="hidden bg-blue-50/80 border border-blue-200 rounded-2xl p-3.5 space-y-1.5 text-left">
+                <div class="flex items-center gap-2 text-blue-900 font-bold text-xs">
+                    <i class="fas fa-snowflake text-blue-600 text-sm"></i>
+                    <span>Cold-Chain Stability & Freshness Kit (+$15.00)</span>
+                </div>
+                <p class="text-[9px] text-blue-700 leading-relaxed">
+                    Includes a heavy-duty insulated thermal bag with 2 reusable frozen ice packs to ensure optimal temperature stability and chilled freshness upon arrival (stays cold 6+ hours • yours to keep!).
+                </p>
+            </div>
+
             <!-- Pricing Summary -->
             <div class="bg-brand-cream/80 rounded-2xl p-4 border border-brand-brown/15 space-y-2">
                 <div class="flex justify-between items-center text-xs">
                     <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Total Bottles</span>
                     <span id="cart-bottles-count" class="font-bold text-brand-dark">0</span>
+                </div>
+                <div id="summary-bag-row" class="hidden flex justify-between items-center text-xs">
+                    <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Insulated Bag & Ice Packs Kit</span>
+                    <span class="font-bold text-brand-dark">$15.00</span>
+                </div>
+                <div id="summary-delivery-row" class="hidden flex justify-between items-center text-xs">
+                    <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]" id="delivery-fee-label">Hand Delivery (from Chino)</span>
+                    <span id="summary-delivery-amount" class="font-bold text-brand-dark">$20.00</span>
                 </div>
                 <div class="flex justify-between items-baseline pt-2 border-t border-brand-brown/15">
                     <span class="font-serif font-black text-sm text-brand-dark">Total to Pay</span>
@@ -247,6 +266,20 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="text" id="cust-name" placeholder="Full Name" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                     <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
+                </div>
+
+                <!-- Delivery Address Inputs (Visible for Catering or Pre-Order Drops) -->
+                <div id="delivery-address-container" class="space-y-2 pt-1">
+                    <p class="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center justify-between">
+                        <span>Delivery Address (Up to 50 Miles from Chino, CA)</span>
+                        <span class="text-brand-brown font-bold text-[8px]">$20 base (10 mi) + $1.25/mi</span>
+                    </p>
+                    <input type="text" id="cust-address" placeholder="Street Address (e.g. 14000 Central Ave)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="cust-city" placeholder="City (e.g. Ontario, Irvine)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all" oninput="calculateDeliveryDistance()">
+                        <input type="text" id="cust-zip" placeholder="Zip Code (e.g. 91710)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all" oninput="calculateDeliveryDistance()">
+                    </div>
+                    <div id="delivery-quote-badge" class="hidden text-[9px] font-bold p-2.5 rounded-xl border transition-all"></div>
                 </div>
             </div>
 
@@ -1269,6 +1302,90 @@
         }
 
         // ==============================================
+        // DELIVERY & DISTANCE CALCULATOR (From Chino, CA)
+        // ==============================================
+        let calculatedDeliveryDistance = 8; // default local
+        let calculatedDeliveryFee = 20.00;
+
+        const SOCAL_CITY_MILES = {
+            'chino': 2,
+            'chino hills': 5,
+            'ontario': 6,
+            'montclair': 7,
+            'pomona': 8,
+            'eastvale': 8,
+            'norco': 12,
+            'claremont': 10,
+            'rancho cucamonga': 14,
+            'corona': 15,
+            'fontana': 16,
+            'brea': 18,
+            'riverside': 22,
+            'fullerton': 22,
+            'anaheim': 24,
+            'orange': 26,
+            'placentia': 20,
+            'yorba linda': 16,
+            'irvine': 35,
+            'pasadena': 34,
+            'los angeles': 38,
+            'dtla': 38,
+            'glendale': 40,
+            'long beach': 42,
+            'costa mesa': 38,
+            'newport beach': 42,
+            'santa ana': 28,
+            'torrance': 48
+        };
+
+        function calculateDeliveryDistance() {
+            const city = (document.getElementById('cust-city')?.value || '').trim().toLowerCase();
+            const zip = (document.getElementById('cust-zip')?.value || '').trim();
+            const badge = document.getElementById('delivery-quote-badge');
+
+            let miles = 8; // default local
+
+            if (city && SOCAL_CITY_MILES[city]) {
+                miles = SOCAL_CITY_MILES[city];
+            } else if (zip) {
+                const zNum = parseInt(zip, 10);
+                if (zNum >= 91708 && zNum <= 91710) miles = 3;
+                else if (zNum >= 91761 && zNum <= 91764) miles = 7;
+                else if (zNum >= 91765 && zNum <= 91768) miles = 9;
+                else if (zNum >= 91730 && zNum <= 91739) miles = 14;
+                else if (zNum >= 92878 && zNum <= 92883) miles = 15;
+                else if (zNum >= 92801 && zNum <= 92808) miles = 24;
+                else if (zNum >= 92602 && zNum <= 92620) miles = 35;
+                else if (zNum >= 90001 && zNum <= 90099) miles = 38;
+                else if (zNum >= 91101 && zNum <= 91109) miles = 34;
+                else miles = 15;
+            }
+
+            calculatedDeliveryDistance = miles;
+
+            if (miles <= 10) {
+                calculatedDeliveryFee = 20.00;
+            } else if (miles <= 50) {
+                calculatedDeliveryFee = 20.00 + ((miles - 10) * 1.25);
+            } else {
+                calculatedDeliveryFee = 20.00 + (40 * 1.25);
+            }
+
+            if (badge) {
+                badge.classList.remove('hidden');
+                if (miles <= 50) {
+                    badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200";
+                    badge.innerHTML = `📍 Approx. <strong>${miles} miles</strong> from Chino • Delivery: <strong>$${calculatedDeliveryFee.toFixed(2)}</strong> ($20 base for 10 mi + ${miles > 10 ? (miles - 10) + ' extra mi @ $1.25' : 'included'})`;
+                } else {
+                    badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-800 border-amber-200";
+                    badge.innerHTML = `⚠️ Approx. <strong>${miles} miles</strong> from Chino (exceeds 50-mile standard zone). Please contact us for custom long-distance delivery.`;
+                }
+            }
+
+            updateCartUI();
+        }
+
+        // ==============================================
         // CART UI & MANAGEMENT
         // ==============================================
         function updateCartUI() {
@@ -1278,7 +1395,7 @@
             const headerCount = document.getElementById('header-cart-count');
 
             const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
-            const totalAmount = cart.reduce((sum, i) => sum + i.total, 0);
+            const totalDrinksAmount = cart.reduce((sum, i) => sum + i.total, 0);
 
             if (cart.length === 0) {
                 cartSection.classList.add('hidden');
@@ -1290,12 +1407,43 @@
             headerCount.innerText = totalBottles;
             headerCount.classList.remove('hidden');
 
+            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const isDelivery = orderMode === 'preorder' || hasCatering;
+
+            const freshnessBox = document.getElementById('catering-freshness-box');
+            const bagRow = document.getElementById('summary-bag-row');
+            const deliveryRow = document.getElementById('summary-delivery-row');
+            const addrContainer = document.getElementById('delivery-address-container');
+
+            const coolerBagFee = hasCatering ? 15.00 : 0.00;
+            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+
+            if (hasCatering) {
+                freshnessBox.classList.remove('hidden');
+                bagRow.classList.remove('hidden');
+            } else {
+                freshnessBox.classList.add('hidden');
+                bagRow.classList.add('hidden');
+            }
+
+            if (isDelivery) {
+                deliveryRow.classList.remove('hidden');
+                addrContainer.classList.remove('hidden');
+                document.getElementById('summary-delivery-amount').innerText = `$${deliveryFee.toFixed(2)}`;
+                document.getElementById('delivery-fee-label').innerText = `Hand Delivery (${calculatedDeliveryDistance} mi from Chino)`;
+            } else {
+                deliveryRow.classList.add('hidden');
+                addrContainer.classList.add('hidden');
+            }
+
+            const grandTotal = totalDrinksAmount + coolerBagFee + deliveryFee;
+
             document.getElementById('sticky-cart-qty').innerText = totalBottles;
-            document.getElementById('sticky-cart-total').innerText = `$${totalAmount.toFixed(2)}`;
+            document.getElementById('sticky-cart-total').innerText = `$${grandTotal.toFixed(2)}`;
             stickyBar.classList.remove('hidden');
 
             document.getElementById('cart-bottles-count').innerText = `${totalBottles} bottles`;
-            document.getElementById('cart-total-display').innerText = `$${totalAmount.toFixed(2)}`;
+            document.getElementById('cart-total-display').innerText = `$${grandTotal.toFixed(2)}`;
 
             list.innerHTML = cart.map((item, idx) => {
                 let descText = "";
@@ -1390,6 +1538,9 @@
         async function handleStripeCheckout() {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
+            const address = document.getElementById('cust-address')?.value.trim() || '';
+            const city = document.getElementById('cust-city')?.value.trim() || '';
+            const zip = document.getElementById('cust-zip')?.value.trim() || '';
             const btn = document.getElementById('stripe-submit-btn');
 
             if (cart.length === 0) {
@@ -1401,6 +1552,14 @@
                 return;
             }
 
+            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const isDelivery = orderMode === 'preorder' || hasCatering;
+
+            if (isDelivery && !address) {
+                showToast("Please enter your delivery street address.");
+                return;
+            }
+
             localStorage.setItem('cali_pay_name', name);
             localStorage.setItem('cali_pay_phone', phone);
 
@@ -1408,8 +1567,26 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const notesTag = orderMode === 'preorder' ? `[PRE-ORDER FOR ${selectedDate}]` : '[FRIDGE-PICKUP]';
+            const coolerBagFee = hasCatering ? 15.00 : 0.00;
+            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+
+            const notesTag = hasCatering 
+                ? `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`
+                : (isDelivery ? `[PRE-ORDER DROP FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}` : '[FRIDGE-PICKUP]');
+
             const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront.`;
+
+            // Prepare items array including packaging & delivery line items for Stripe
+            const finalStripeItems = [...cart];
+            if (coolerBagFee > 0) {
+                finalStripeItems.push({
+                    name: "Insulated Bag + 2 Ice Packs Kit",
+                    qty: 1,
+                    unitPrice: coolerBagFee,
+                    total: coolerBagFee,
+                    bottles: 0
+                });
+            }
 
             try {
                 const res = await fetch('/api/checkout', {
@@ -1420,11 +1597,11 @@
                         email: localStorage.getItem('cali_pay_email') || "",
                         phone,
                         location_id: selectedLocationId,
-                        items: cart,
+                        items: finalStripeItems,
                         notes: selfCheckoutNotes,
                         is_subscription: false,
-                        delivery_fee_applied: 0,
-                        preorder_date: orderMode === 'preorder' ? selectedDate : null
+                        delivery_fee_applied: deliveryFee,
+                        preorder_date: isDelivery ? selectedDate : null
                     })
                 });
 
@@ -1444,6 +1621,9 @@
         async function handleManualCheckout(method) {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
+            const address = document.getElementById('cust-address')?.value.trim() || '';
+            const city = document.getElementById('cust-city')?.value.trim() || '';
+            const zip = document.getElementById('cust-zip')?.value.trim() || '';
 
             if (cart.length === 0) {
                 showToast("Please add drinks to your order first.");
@@ -1454,12 +1634,26 @@
                 return;
             }
 
+            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const isDelivery = orderMode === 'preorder' || hasCatering;
+
+            if (isDelivery && !address) {
+                showToast("Please enter your delivery street address.");
+                return;
+            }
+
             localStorage.setItem('cali_pay_name', name);
             localStorage.setItem('cali_pay_phone', phone);
 
-            const totalVal = cart.reduce((sum, item) => sum + item.total, 0);
+            const totalDrinks = cart.reduce((sum, item) => sum + item.total, 0);
+            const coolerBagFee = hasCatering ? 15.00 : 0.00;
+            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+            const grandTotal = totalDrinks + coolerBagFee + deliveryFee;
+
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const notesTag = orderMode === 'preorder' ? `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}]` : `[FRIDGE-PICKUP PAY: ${method.toUpperCase()}]`;
+            const notesTag = hasCatering 
+                ? `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`
+                : (isDelivery ? `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}` : `[FRIDGE-PICKUP PAY: ${method.toUpperCase()}]`);
 
             try {
                 const res = await fetch('/api/cali?action=create_self_checkout_order', {
@@ -1469,12 +1663,16 @@
                         customer_name: name,
                         customer_phone: phone,
                         location_id: selectedLocationId,
-                        total: totalVal,
+                        total: grandTotal,
                         selections: {
                             cart: cart,
+                            cooler_bag_fee: coolerBagFee,
+                            delivery_fee: deliveryFee,
+                            delivery_address: `${address}, ${city} ${zip}`,
+                            delivery_distance_miles: calculatedDeliveryDistance,
                             payment_method: method.toLowerCase(),
                             status: 'pending_verification',
-                            preorder_date: orderMode === 'preorder' ? selectedDate : null
+                            preorder_date: isDelivery ? selectedDate : null
                         },
                         notes: `${notesTag} Order from Main Storefront.`
                     })
