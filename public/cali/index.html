@@ -696,7 +696,11 @@
                 btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-450 hover:text-brand-dark";
                 btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
                 helperText.innerText = "Order single bottles or bundles in advance for delivery.";
-                dateRow.class        // Customizer State
+                dateRow.classList.remove('hidden');
+            }
+        }
+
+        // Customizer State
         let customizerQty = { whole: 1, oat: 0, black: 1 };
 
         function openDrinkCustomizer(productId) {
