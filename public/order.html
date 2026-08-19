@@ -647,10 +647,26 @@
                 </div>
                 <!-- Address field for delivery -->
                 <div id="check-address-ui" class="hidden space-y-4 animate-in slide-in-from-top-2 duration-300">
+                    <div>
+                        <label class="text-[9px] font-black text-gold uppercase tracking-widest block mb-2">Barrio o Colonia (Quimistán)</label>
+                        <select id="check-barrio" class="w-full bg-[#1A1A1C] border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-gold">
+                            <option value="Barrio El Centro">Barrio El Centro</option>
+                            <option value="Barrio San José">Barrio San José</option>
+                            <option value="Barrio Buenos Aires">Barrio Buenos Aires</option>
+                            <option value="Barrio El Bosque">Barrio El Bosque</option>
+                            <option value="Barrio La Pita">Barrio La Pita</option>
+                            <option value="Barrio La Cruz">Barrio La Cruz</option>
+                            <option value="Colonia Los Maestros">Colonia Los Maestros</option>
+                            <option value="Aldea Camalote">Aldea Camalote</option>
+                            <option value="Pinalejo Centro">Pinalejo Centro</option>
+                            <option value="Aldea Milpa Arriba">Aldea Milpa Arriba</option>
+                            <option value="Otro Sector">Otro Sector (especificar abajo)</option>
+                        </select>
+                    </div>
                     <div class="flex gap-2">
                         <button onclick="window.getLocation()" id="loc-btn" class="flex-1 bg-gold/10 border border-gold/20 p-4 rounded-2xl text-gold flex items-center justify-center gap-3 transition-all active:scale-95">
                             <i class="fas fa-location-arrow"></i>
-                            <span class="text-[10px] font-black uppercase">Compartir Ubicación</span>
+                            <span class="text-[10px] font-black uppercase">Compartir Ubicación GPS</span>
                         </button>
                         <button id="loc-clear" onclick="window.clearLocation()" class="hidden w-12 bg-white/5 border border-white/10 rounded-2xl text-white/40 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
                     </div>
@@ -659,7 +675,7 @@
                         <div><p class="text-[8px] font-black text-white/30 uppercase">Distancia Estimada</p><p id="dist-val" class="text-xs font-black text-white">0.0 miles</p></div>
                         <div class="text-right"><p class="text-[8px] font-black text-white/30 uppercase">Costo de Envío</p><p id="fee-val" class="text-xs font-black text-gold">L 35.00</p></div>
                     </div>
-                    <textarea id="check-address" placeholder="Instrucciones adicionales (Casa, Color, Referencia...)" class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold min-h-[80px]"></textarea>
+                    <textarea id="check-address" placeholder="Punto de referencia exacto (Color de casa, frente a pulpería, portón...)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white text-xs outline-none focus:border-gold min-h-[70px]"></textarea>
                 </div>
             </div>
 
@@ -668,8 +684,8 @@
                 <div class="grid grid-cols-3 gap-2">
                     <button onclick="window.setPayment('cash')" id="pbtn-cash" class="p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all">
                         <i class="fas fa-money-bill-wave text-lg"></i>
-                        <span class="text-[8px] font-black uppercase text-center">Pagar en Caja</span>
-                        <p class="text-[6px] font-black text-white/40 uppercase tracking-tighter">Efectivo / POS</p>
+                        <span class="text-[8px] font-black uppercase text-center">Efectivo</span>
+                        <p class="text-[6px] font-black text-white/40 uppercase tracking-tighter">Contra Entrega</p>
                     </button>
                     <button onclick="window.setPayment('transfer')" id="pbtn-transfer" class="p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all">
                         <i class="fas fa-university text-lg"></i>
@@ -680,6 +696,16 @@
                         <span class="text-[8px] font-black uppercase text-center">Rico Cash</span>
                         <p id="check-rico-val" class="text-[7px] font-mono text-gold/60 mt-auto">L 0.00</p>
                     </button>
+                </div>
+                <!-- Cash change calculation -->
+                <div id="check-cash-ui" class="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-2">
+                    <label class="text-[9px] font-black text-gold uppercase tracking-widest block">¿Con cuánto billete pagarás? (Para llevar cambio)</label>
+                    <select id="check-cash-change" class="w-full bg-[#1A1A1C] border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-gold">
+                        <option value="Exacto">Pago exacto (No necesito cambio)</option>
+                        <option value="L. 100">Billete de L. 100</option>
+                        <option value="L. 200">Billete de L. 200</option>
+                        <option value="L. 500">Billete de L. 500</option>
+                    </select>
                 </div>
                 <!-- Bank info for transfer -->
                 <div id="check-bank-ui" class="hidden p-6 bg-gold/5 border border-gold/10 rounded-[2rem] space-y-4 animate-in slide-in-from-top-2 duration-300">

@@ -1163,6 +1163,7 @@
                 document.getElementById('profile-level-val').innerText = level;
                 
                 if (window.syncClaims) window.syncClaims();
+                if (userPhone) loadCustomerStampCards(userPhone);
 
                 // Render POS phone linking status
                 const linkContainer = document.getElementById('link-pos-container');
@@ -1437,6 +1438,135 @@
         function copyAddress() {
             navigator.clipboard.writeText(userWallet);
             alert('Dirección copiada al portapapeles!');
+        }
+
+        // --- DIGITAL STAMP LOYALTY CARDS (RESTAURANT SPECIFIC) ---
+        function renderStampCardHtml(card, showRedeemBtn = true) {
+            const current = card.stamps_count || 0;
+            const goal = card.stamps_goal || 6;
+            const rewards = card.rewards_earned || 0;
+            
+            let stampDots = '';
+            for (let i = 0; i < goal; i++) {
+                if (i < current) {
+                    stampDots += `<div class="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-orange-400 text-white flex items-center justify-center text-xs shadow-md animate-in zoom-in">⭐</div>`;
+                } else {
+                    stampDots += `<div class="w-7 h-7 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-[10px] text-gray-300 font-bold">${i + 1}</div>`;
+                }
+            }
+
+            return `
+                <div class="bg-gradient-to-br from-white to-orange-50/40 border border-orange-200/80 rounded-2xl p-4 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-orange-100 border border-orange-200 flex items-center justify-center text-sm overflow-hidden font-bold text-orange-600">
+                                ${card.logo_url ? `<img src="${card.logo_url}" class="w-full h-full object-cover">` : '🍽️'}
+                            </div>
+                            <div>
+                                <h5 class="font-black text-xs uppercase tracking-tight text-gray-800">${card.restaurant_name}</h5>
+                                <p class="text-[8px] text-gray-400 font-bold uppercase">${card.reward_description || 'Premio de Lealtad'}</p>
+                            </div>
+                        </div>
+                        <span class="text-[9px] font-black text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">${current} / ${goal} Sellos</span>
+                    </div>
+
+                    <!-- Stamp Dots Row -->
+                    <div class="flex items-center justify-between gap-1.5 pt-1 px-1">
+                        ${stampDots}
+                    </div>
+
+                    ${rewards > 0 && showRedeemBtn ? `
+                        <div class="pt-2 border-t border-orange-100 flex justify-between items-center bg-amber-50/50 -mx-4 -mb-4 p-3 rounded-b-2xl">
+                            <div>
+                                <p class="text-[8px] font-black uppercase text-amber-700">¡Premio Listo!</p>
+                                <p class="text-[8px] text-gray-500">${rewards} disponible(s)</p>
+                            </div>
+                            <button onclick="redeemStampReward('${card.restaurant_id}', ${card.id})" class="bg-amber-500 hover:bg-amber-600 text-white font-black text-[9px] uppercase tracking-wider px-3 py-1.5 rounded-xl shadow-md active:scale-95 transition-all">
+                                🎁 Canjear Ahora
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        async function loadCustomerStampCards(phone) {
+            const container = document.getElementById('customer-stamp-cards-list');
+            if (!container) return;
+            try {
+                const res = await fetch(`/api/store?action=get_customer_stamp_cards&phone=${encodeURIComponent(phone)}`);
+                const data = await res.json();
+                if (data.cards && data.cards.length > 0) {
+                    container.innerHTML = data.cards.map(c => renderStampCardHtml(c, true)).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="bg-gray-50 border border-gray-150 p-4 rounded-2xl text-center space-y-1">
+                            <p class="text-xs font-bold text-gray-700">Aún no tienes sellos activos</p>
+                            <p class="text-[9px] text-gray-400">Pide en tus restaurantes favoritos y acumula sellos automáticamente.</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("Error loading stamp cards:", e);
+                container.innerHTML = `<div class="text-[9px] text-gray-400 italic">No se pudieron cargar los sellos.</div>`;
+            }
+        }
+
+        async function checkGuestStamps() {
+            const input = document.getElementById('quick-stamp-phone');
+            const results = document.getElementById('guest-stamp-results');
+            if (!input || !results) return;
+            const phone = input.value.trim();
+            if (!phone || phone.replace(/\D/g, '').length < 8) {
+                return alert("Por favor ingresa un número de teléfono válido de 8 dígitos.");
+            }
+
+            results.classList.remove('hidden');
+            results.innerHTML = `<p class="text-[9px] text-orange-600 font-bold animate-pulse text-center py-2">Consultando tus tarjetas...</p>`;
+
+            try {
+                const res = await fetch(`/api/store?action=get_customer_stamp_cards&phone=${encodeURIComponent(phone)}`);
+                const data = await res.json();
+                if (data.cards && data.cards.length > 0) {
+                    results.innerHTML = `
+                        <div class="space-y-2 pt-2">
+                            <p class="text-[9px] font-black uppercase text-gray-600 tracking-wider">Tus Tarjetas en Quimistán:</p>
+                            ${data.cards.map(c => renderStampCardHtml(c, false)).join('')}
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = `
+                        <div class="bg-white border border-gray-200 p-3 rounded-xl text-center">
+                            <p class="text-[10px] font-bold text-gray-700">No encontramos sellos con este número.</p>
+                            <p class="text-[8px] text-gray-400 mt-0.5">¡Haz tu primer pedido hoy para comenzar tu tarjeta de sellos!</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("Guest stamp check error", e);
+                results.innerHTML = `<p class="text-[9px] text-red-500 text-center">Error al consultar el servidor.</p>`;
+            }
+        }
+
+        async function redeemStampReward(restaurantId, cardId) {
+            if (!confirm("¿Deseas canjear tu recompensa de lealtad en este negocio?")) return;
+            try {
+                const res = await fetch('/api/store?action=redeem_stamp_reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cardId, restaurantId, phone: userPhone })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "🎉 ¡Premio canjeado con éxito! Muestra esta confirmación al restaurante.");
+                    if (userPhone) loadCustomerStampCards(userPhone);
+                } else {
+                    alert(`Error: ${data.error || 'No se pudo canjear la recompensa'}`);
+                }
+            } catch (e) {
+                console.error("Redeem error:", e);
+                alert("Error de red al procesar el canje.");
+            }
         }
 
         // --- Card Top Up Simulation ---
@@ -3069,6 +3199,19 @@
                             <input type="text" id="otp-input" placeholder="••••••" maxlength="6" oninput="verifyOTP()" class="w-full tracking-[1.5em] text-center font-mono font-bold bg-[#ffffff] border border-orange-200 rounded-xl py-3 text-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                         </div>
                     </div>
+
+                    <!-- Quick Stamp Card Check for Guests -->
+                    <div class="mt-4 pt-4 border-t border-gray-100 bg-orange-50/30 p-4 rounded-2xl border border-orange-100/50">
+                        <span class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-1.5 flex items-center gap-1">
+                            ⭐ Consultar mis Tarjetas de Sellos
+                        </span>
+                        <p class="text-[9px] text-gray-500 mb-2 leading-tight">Ingresa tu número de WhatsApp para ver los sellos y premios que has acumulado en tus restaurantes favoritos.</p>
+                        <div class="flex gap-2">
+                            <input type="tel" id="quick-stamp-phone" placeholder="WhatsApp (ej. 99824574)" class="flex-1 bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <button onclick="checkGuestStamps()" class="bg-orange-500 text-white font-black text-[10px] uppercase tracking-wider px-4 py-2 rounded-xl shadow-md active:scale-95 transition-all">Ver Sellos</button>
+                        </div>
+                        <div id="guest-stamp-results" class="mt-3 space-y-2 hidden"></div>
+                    </div>
                 </div>
             </div>
 
@@ -3129,6 +3272,19 @@
                     <span class="block text-[9px] font-black text-gray-400 uppercase tracking-widest">Mis Cupones y Premios</span>
                     <div id="profile-claims-list" class="space-y-2 max-h-[140px] overflow-y-auto pr-1">
                         <div class="text-[10px] text-gray-400 italic">No tienes cupones activos. ¡Gira la ruleta en tus tiendas favoritas!</div>
+                    </div>
+                </div>
+
+                <!-- Restaurant Digital Stamp Cards Section -->
+                <div class="space-y-3 border-t border-gray-100 pt-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-gray-800 uppercase tracking-widest flex items-center gap-1.5">
+                            ⭐ Tarjetas de Sellos (Por Restaurante)
+                        </span>
+                        <span class="text-[8px] bg-orange-100 text-orange-600 font-black px-2 py-0.5 rounded-full uppercase">Lealtad Directa</span>
+                    </div>
+                    <div id="customer-stamp-cards-list" class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                        <div class="text-[10px] text-gray-400 italic py-2">Cargando tus tarjetas de sellos...</div>
                     </div>
                 </div>
 

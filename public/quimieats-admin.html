@@ -11,7 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; background: #0A0A0B; color: white; }
         .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .cyan-glow { box-shadow: 0 0 20px rgba(0, 242, 255, 0.15); }
+        .orange-glow { box-shadow: 0 0 25px rgba(249, 115, 22, 0.25); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         
         /* Fix for White-on-White Dropdowns */
@@ -35,10 +35,10 @@
     <!-- LOGIN OVERLAY -->
     <div id="login-modal" class="fixed inset-0 bg-[#0A0A0B] z-[500] flex flex-col items-center justify-center p-6 text-center">
         <div class="max-w-xs w-full space-y-8">
-            <div class="w-24 h-24 bg-cyan-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-cyan-500/20 shadow-[0_0_40px_rgba(0,242,255,0.1)]">
-                <i class="fas fa-shield-alt text-cyan-400 text-3xl"></i>
+            <div class="w-24 h-24 bg-orange-500/10 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-orange-500/30 shadow-[0_0_40px_rgba(249,115,22,0.2)]">
+                <i class="fas fa-shield-alt text-orange-500 text-3xl"></i>
             </div>
-            <h1 class="text-3xl font-black uppercase tracking-tighter text-white">QuimiEats Master</h1>
+            <h1 class="text-3xl font-black uppercase tracking-tighter text-white">Quimi<span class="text-orange-500">Eats</span> Master</h1>
             <p class="text-white/40 text-xs font-bold uppercase tracking-widest">Ingrese su PIN de Acceso</p>
             
             <div class="grid grid-cols-3 gap-4" id="pin-pad">
@@ -59,14 +59,29 @@
         
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-                <h1 class="text-4xl font-black uppercase tracking-tighter text-cyan-400">Panel de Control</h1>
+                <h1 class="text-4xl font-black uppercase tracking-tighter text-orange-500">Panel de Control</h1>
                 <p class="text-white/40 font-bold uppercase tracking-[0.3em] text-[10px] mt-1">QuimiEats Marketplace Engine</p>
             </div>
-            <div class="flex gap-3">
-                <button onclick="openQuickAdd()" class="bg-cyan-500 text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-cyan-500/20 hover:scale-105 transition-all">
+            <div class="flex items-center gap-3 flex-wrap">
+                <!-- Ecosystem Hub Quick Navigator -->
+                <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-3 rounded-2xl">
+                    <i class="fas fa-compass text-orange-400 text-xs"></i>
+                    <select onchange="if(this.value) window.open(this.value, '_blank')" class="bg-transparent text-xs font-bold text-white outline-none cursor-pointer">
+                        <option value="" class="bg-[#1A1A1C]">⚡ Ir a Página del Ecosistema...</option>
+                        <option value="/quimieats.html" class="bg-[#1A1A1C]">📱 Marketplace QuimiEats (Cliente)</option>
+                        <option value="/order.html" class="bg-[#1A1A1C]">🛒 Menú de Pedidos Online</option>
+                        <option value="/partner.html" class="bg-[#1A1A1C]">👨‍🍳 Portal de Socios / Restaurantes</option>
+                        <option value="/dev-hub.html" class="bg-[#1A1A1C]">🛠️ Dev Hub & Simulador Móvil</option>
+                        <option value="/driver-portal.html" class="bg-[#1A1A1C]">🛵 Portal de Motoristas (Drivers)</option>
+                        <option value="/kitchen.html" class="bg-[#1A1A1C]">🍳 KDS Pantalla de Cocina</option>
+                        <option value="/pos.html" class="bg-[#1A1A1C]">☕ Rich Aroma POS</option>
+                        <option value="/admin.html" class="bg-[#1A1A1C]">📊 Admin Rich Aroma OS</option>
+                    </select>
+                </div>
+                <button onclick="openQuickAdd()" class="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-orange-500/25 hover:scale-105 transition-all">
                     + Nuevo Negocio
                 </button>
-                <button onclick="logout()" class="w-12 h-12 rounded-2xl glass flex items-center justify-center text-white/40 hover:text-white transition-all">
+                <button onclick="logout()" class="w-12 h-12 rounded-2xl glass flex items-center justify-center text-white/40 hover:text-white transition-all" title="Cerrar Sesión">
                     <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
@@ -90,18 +105,41 @@
 
         <!-- Navigation Tabs -->
         <div class="flex gap-4 border-b border-white/10 pb-2 overflow-x-auto no-scrollbar">
-            <button onclick="switchTab('partners')" id="tab-partners" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 border-b-2 border-cyan-400 text-cyan-400">Socios</button>
+            <button onclick="switchTab('partners')" id="tab-partners" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 border-b-2 border-orange-500 text-orange-500">Socios</button>
             <button onclick="switchTab('promos')" id="tab-promos" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Promos/Ads</button>
             <button onclick="switchTab('products')" id="tab-products" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Productos</button>
             <button onclick="switchTab('reservations')" id="tab-reservations" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Reservas</button>
             <button onclick="switchTab('drivers')" id="tab-drivers" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Drivers</button>
             <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Ventas / P&L</button>
             <button onclick="switchTab('orders')" id="tab-orders" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Pedidos</button>
+            <button onclick="switchTab('customers')" id="tab-customers" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">👥 Clientes & Soporte</button>
             <button onclick="switchTab('sims')" id="tab-sims" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Simulaciones</button>
         </div>
 
         <!-- PARTNERS VIEW -->
         <div id="view-partners" class="space-y-10">
+
+            <!-- PENDING COMMISSION TOPUPS SECTION -->
+            <div id="pending-topups-card" class="hidden p-6 md:p-8 bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-transparent border border-orange-500/30 rounded-[2.5rem] space-y-4">
+                <div class="flex justify-between items-center flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl shadow-lg shadow-orange-500/10">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-black uppercase tracking-tight text-white flex items-center gap-2">
+                                Comprobantes por Aprobar <span id="pending-topups-badge" class="bg-orange-500 text-white text-[9px] px-2.5 py-0.5 rounded-full font-black">0</span>
+                            </h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest">Restaurantes que enviaron transferencias para recarga de saldo</p>
+                        </div>
+                    </div>
+                    <button onclick="loadPendingTopups()" class="text-xs font-bold text-orange-400 hover:text-orange-300"><i class="fas fa-sync-alt mr-1"></i> Actualizar</button>
+                </div>
+                <div id="pending-topups-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Injected dynamically -->
+                </div>
+            </div>
+
             <section class="space-y-6">
                 <div class="flex justify-between items-center px-4">
                     <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Listado de Socios</h2>
@@ -109,7 +147,7 @@
                         <i class="fas fa-trash-alt mr-2"></i> Eliminar Seleccionados (<span id="bulk-count">0</span>)
                     </button>
                 </div>
-                <div class="glass rounded-[3rem] overflow-hidden">
+                <div class="glass rounded-[2rem] md:rounded-[3rem] overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-white/5 text-[10px] uppercase font-black tracking-[0.2em] text-white/30 border-b border-white/5">
                             <tr>
@@ -138,7 +176,7 @@
                     <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Publicidad Pagada</h2>
                     <button onclick="openPromoModal()" class="bg-cyan-500 text-black px-6 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest">+ Nueva Promo</button>
                 </div>
-                <div class="glass rounded-[3rem] overflow-hidden">
+                <div class="glass rounded-[2rem] md:rounded-[3rem] overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-white/5 text-[10px] uppercase font-black tracking-[0.2em] text-white/30 border-b border-white/5">
                             <tr>
@@ -204,7 +242,7 @@
                     <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Flota de Repartidores</h2>
                     <button onclick="openAddDriver()" class="bg-white text-black px-6 py-3 rounded-xl font-black uppercase text-[9px] tracking-widest">+ Nuevo Driver</button>
                 </div>
-                <div class="glass rounded-[3rem] overflow-hidden">
+                <div class="glass rounded-[2rem] md:rounded-[3rem] overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-white/5 text-[10px] uppercase font-black tracking-[0.2em] text-white/30 border-b border-white/5">
                             <tr>
@@ -234,7 +272,7 @@
                     <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Agenda y Citas</h2>
                     <button onclick="loadReservations()" class="text-white/20 hover:text-cyan-400 transition-colors"><i class="fas fa-sync-alt text-xs"></i></button>
                 </div>
-                <div class="glass rounded-[3rem] overflow-hidden">
+                <div class="glass rounded-[2rem] md:rounded-[3rem] overflow-x-auto">
                     <table class="w-full text-left">
                         <thead class="bg-white/5 text-[10px] uppercase font-black tracking-[0.2em] text-white/30 border-b border-white/5">
                             <tr>
@@ -286,7 +324,44 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+        <!-- CUSTOMERS & SUPPORT VIEW -->
+        <div id="view-customers" class="hidden space-y-8">
+            <section class="space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 px-4">
+                    <div>
+                        <h2 class="text-xl font-black uppercase tracking-tight text-white/80">Directorio de Clientes & Soporte</h2>
+                        <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">Busca usuarios, actualiza números de teléfono y resetea PINs de acceso</p>
+                    </div>
+                    <div class="flex items-center gap-3 w-full md:w-auto">
+                        <div class="relative flex-1 md:w-72">
+                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-xs"></i>
+                            <input type="text" id="cust-search-input" oninput="searchCustomers(this.value)" placeholder="Buscar por nombre o teléfono..." class="w-full bg-white/5 border border-white/10 pl-10 pr-4 py-3 rounded-2xl text-xs text-white outline-none focus:border-orange-500 font-bold">
+                        </div>
+                        <button onclick="openNewCustomerModal()" class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest shrink-0 shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                            + Nuevo Cliente
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass rounded-[2rem] md:rounded-[3rem] overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-white/5 text-[10px] uppercase font-black tracking-[0.2em] text-white/30 border-b border-white/5">
+                            <tr>
+                                <th class="p-8">Cliente</th>
+                                <th class="p-8">Teléfono / WhatsApp</th>
+                                <th class="p-8">PIN de Acceso</th>
+                                <th class="p-8 text-right">Saldo Rico Cash</th>
+                                <th class="p-8 text-right">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customers-table" class="divide-y divide-white/5">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
         <!-- SIMULATIONS VIEW -->
         <div id="view-sims" class="hidden space-y-10">
             <section class="space-y-6">
@@ -563,13 +638,290 @@
         </div>
     </div>
 
+    <!-- RECEIPT REVIEW MODAL -->
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-[#0A0A0B]/95 backdrop-blur-xl z-[400] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+        <div class="glass w-full max-w-lg rounded-[3rem] p-6 md:p-8 space-y-6 shadow-2xl border border-orange-500/30">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black uppercase text-white">Revisar Comprobante</h3>
+                    <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Verifica la transferencia antes de acreditar el saldo</p>
+                </div>
+                <button onclick="closeModal('receipt-modal')" class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Receipt Photo Container -->
+            <div class="w-full h-72 md:h-80 bg-black/60 rounded-2xl border border-white/10 overflow-hidden flex items-center justify-center p-2">
+                <img id="rm-img" src="" class="w-full h-full object-contain">
+            </div>
+
+            <!-- Details Box -->
+            <div class="p-5 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/50 font-bold uppercase">Restaurante:</span>
+                    <span id="rm-res-name" class="text-sm font-black text-white">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/50 font-bold uppercase">Monto a Acreditar:</span>
+                    <span id="rm-amount" class="text-xl font-black text-green-400 font-mono">L. 0.00</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/50 font-bold uppercase">Banco y Referencia:</span>
+                    <span id="rm-bank" class="text-xs font-mono text-white/80">--</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-white/50 font-bold uppercase">Fecha de Envío:</span>
+                    <span id="rm-date" class="text-xs font-mono text-white/50">--</span>
+                </div>
+            </div>
+
+            <input type="hidden" id="rm-topup-id">
+            <input type="hidden" id="rm-res-id">
+            <input type="hidden" id="rm-raw-amount">
+            <input type="hidden" id="rm-raw-bank">
+            <input type="hidden" id="rm-raw-ref">
+
+            <!-- Action Buttons -->
+            <div class="flex gap-3 pt-2">
+                <button onclick="rejectPendingTopup()" id="btn-reject-topup" class="w-1/3 py-4 bg-red-500/20 text-red-400 border border-red-500/30 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-500 hover:text-white transition-all">
+                    Rechazar
+                </button>
+                <button onclick="approvePendingTopup()" id="btn-approve-topup" class="w-2/3 py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-black rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-green-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle text-sm"></i> Aprobar y Acreditar Saldo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOMER EDIT / RESET PIN MODAL -->
+    <div id="customer-edit-modal" class="hidden fixed inset-0 bg-[#0A0A0B]/95 backdrop-blur-xl z-[400] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+        <div class="glass w-full max-w-md rounded-[3rem] p-6 md:p-8 space-y-6 shadow-2xl border border-orange-500/30">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black uppercase text-white">Editar Perfil & PIN</h3>
+                    <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Soporte al cliente / Actualización de datos</p>
+                </div>
+                <button onclick="closeModal('customer-edit-modal')" class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <input type="hidden" id="ce-id">
+
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Nombre del Cliente</label>
+                    <input type="text" id="ce-name" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-orange-500 font-bold text-sm">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Número de WhatsApp (Actualizar Teléfono)</label>
+                    <input type="tel" id="ce-phone" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-orange-500 font-mono font-bold text-sm">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">PIN de Acceso / Contraseña (Reset)</label>
+                    <input type="text" id="ce-pin" maxlength="6" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-orange-400 outline-none focus:border-orange-500 font-mono font-black text-xl tracking-[0.3em] text-center" placeholder="1234">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Saldo Rico Cash (Lps.)</label>
+                    <input type="number" id="ce-balance" step="0.01" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-green-400 outline-none focus:border-orange-500 font-mono font-bold text-lg">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeModal('customer-edit-modal')" class="w-1/3 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white">Cancelar</button>
+                <button onclick="saveCustomerEdit()" id="btn-save-customer" class="w-2/3 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-orange-500/20 active:scale-95 transition-all">
+                    Guardar Cambios 💾
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW CUSTOMER MODAL -->
+    <div id="new-customer-modal" class="hidden fixed inset-0 bg-[#0A0A0B]/95 backdrop-blur-xl z-[400] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+        <div class="glass w-full max-w-md rounded-[3rem] p-6 md:p-8 space-y-6 shadow-2xl border border-orange-500/30">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="text-xl font-black uppercase text-white">+ Nuevo Cliente</h3>
+                    <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Crea una cuenta de cliente manualmente</p>
+                </div>
+                <button onclick="closeModal('new-customer-modal')" class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center text-white/40 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Nombre Completo</label>
+                    <input type="text" id="nc-name" placeholder="ej. María Castillo" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-orange-500 font-bold text-sm">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Teléfono / WhatsApp (Obligatorio)</label>
+                    <input type="tel" id="nc-phone" placeholder="99887766" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-orange-500 font-mono font-bold text-sm">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">PIN de Acceso (Opcional - Default 1234)</label>
+                    <input type="text" id="nc-pin" maxlength="6" placeholder="1234" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-orange-400 outline-none focus:border-orange-500 font-mono font-black text-lg tracking-[0.2em] text-center">
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black uppercase tracking-widest text-white/40 block">Saldo Rico Cash Inicial (Lps.)</label>
+                    <input type="number" id="nc-balance" placeholder="0.00" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-green-400 outline-none focus:border-orange-500 font-mono font-bold text-lg">
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button onclick="closeModal('new-customer-modal')" class="w-1/3 py-4 text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white">Cancelar</button>
+                <button onclick="submitNewCustomer()" id="btn-create-customer" class="w-2/3 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-orange-500/20 active:scale-95 transition-all">
+                    Registrar Cliente 🚀
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentPin = '';
         let staffUser = null;
         let activePartners = [];
+        let pendingTopups = [];
+        let allCustomers = [];
 
         function openAddDriver() { document.getElementById('add-driver-modal').classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        async function loadPendingTopups() {
+            const container = document.getElementById('pending-topups-container');
+            const badge = document.getElementById('pending-topups-badge');
+            const card = document.getElementById('pending-topups-card');
+            if (!container) return;
+
+            try {
+                const res = await fetch('/api/admin?action=get_pending_topups', {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('quimieats_admin_pin')}` }
+                });
+                const data = await res.json();
+                pendingTopups = data.topups || [];
+
+                if (pendingTopups.length === 0) {
+                    card.classList.add('hidden');
+                    return;
+                }
+
+                card.classList.remove('hidden');
+                badge.innerText = pendingTopups.length;
+
+                container.innerHTML = pendingTopups.map((t, idx) => `
+                    <div class="p-4 bg-black/40 border border-white/10 rounded-2xl flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div onclick="openReviewReceipt(${idx})" class="w-14 h-14 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 cursor-pointer group relative">
+                                <img src="${t.receipt_url}" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all text-white text-xs"><i class="fas fa-search-plus"></i></div>
+                            </div>
+                            <div>
+                                <span class="font-black text-sm text-white block uppercase tracking-tight">${t.restaurant_name}</span>
+                                <span class="text-green-400 font-mono font-black text-sm block">L. ${parseFloat(t.amount || 0).toFixed(2)}</span>
+                                <span class="text-[9px] text-white/40 font-mono">${t.bank_name || 'Banco'} ${t.reference_number ? '• #' + t.reference_number : ''}</span>
+                            </div>
+                        </div>
+                        <button onclick="openReviewReceipt(${idx})" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl font-black uppercase text-[9px] tracking-wider transition-all shadow-md">
+                            Revisar <i class="fas fa-arrow-right ml-1"></i>
+                        </button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function openReviewReceipt(idx) {
+            const t = pendingTopups[idx];
+            if (!t) return;
+
+            document.getElementById('rm-topup-id').value = t.id;
+            document.getElementById('rm-res-id').value = t.restaurant_id;
+            document.getElementById('rm-raw-amount').value = t.amount;
+            document.getElementById('rm-raw-bank').value = t.bank_name || '';
+            document.getElementById('rm-raw-ref').value = t.reference_number || '';
+
+            document.getElementById('rm-img').src = t.receipt_url;
+            document.getElementById('rm-res-name').innerText = t.restaurant_name;
+            document.getElementById('rm-amount').innerText = `L. ${parseFloat(t.amount).toFixed(2)}`;
+            document.getElementById('rm-bank').innerText = `${t.bank_name || 'Banco'} ${t.reference_number ? '• #' + t.reference_number : ''}`;
+            document.getElementById('rm-date').innerText = new Date(t.created_at).toLocaleString();
+
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        async function approvePendingTopup() {
+            const topupId = document.getElementById('rm-topup-id').value;
+            const restaurantId = document.getElementById('rm-res-id').value;
+            const amount = document.getElementById('rm-raw-amount').value;
+            const bankName = document.getElementById('rm-raw-bank').value;
+            const referenceNumber = document.getElementById('rm-raw-ref').value;
+
+            const btn = document.getElementById('btn-approve-topup');
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Acreditando...`;
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/admin?action=approve_commission_topup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('quimieats_admin_pin')}`
+                    },
+                    body: JSON.stringify({
+                        topupId,
+                        restaurantId,
+                        amount: parseFloat(amount),
+                        bankName,
+                        referenceNumber
+                    })
+                });
+
+                if (res.ok) {
+                    alert("✅ ¡Recarga aprobada y saldo acreditado con éxito!");
+                    closeModal('receipt-modal');
+                    loadPendingTopups();
+                    loadData();
+                } else {
+                    const err = await res.json();
+                    alert("Error al aprobar: " + (err.error || "Desconocido"));
+                }
+            } catch(e) {
+                console.error(e);
+                alert("Error de conexión");
+            } finally {
+                btn.innerHTML = `<i class="fas fa-check-circle text-sm"></i> Aprobar y Acreditar Saldo`;
+                btn.disabled = false;
+            }
+        }
+
+        async function rejectPendingTopup() {
+            const topupId = document.getElementById('rm-topup-id').value;
+            const reason = prompt("Indica el motivo de rechazo (ej. Comprobante no legible, monto incorrecto):", "Comprobante no coincide con depósito bancario");
+            if (reason === null) return;
+
+            try {
+                const res = await fetch('/api/admin?action=reject_commission_topup', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('quimieats_admin_pin')}`
+                    },
+                    body: JSON.stringify({ topupId, reason })
+                });
+
+                if (res.ok) {
+                    alert("Comprobante rechazado.");
+                    closeModal('receipt-modal');
+                    loadPendingTopups();
+                } else {
+                    alert("Error al procesar rechazo.");
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
 
         function openTopup(id, name) {
             document.getElementById('topup-res-id').value = id;
@@ -783,13 +1135,13 @@
         function switchTab(t) {
             document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(b => {
-                b.classList.remove('border-b-2', 'border-cyan-400', 'text-cyan-400');
+                b.classList.remove('border-b-2', 'border-orange-500', 'text-orange-500', 'border-cyan-400', 'text-cyan-400');
                 b.classList.add('text-white/40');
             });
 
             document.getElementById(`view-${t}`).classList.remove('hidden');
             document.getElementById(`tab-${t}`).classList.remove('text-white/40');
-            document.getElementById(`tab-${t}`).classList.add('border-b-2', 'border-cyan-400', 'text-cyan-400');
+            document.getElementById(`tab-${t}`).classList.add('border-b-2', 'border-orange-500', 'text-orange-500');
             
             if (t === 'partners') loadData();
             if (t === 'promos') loadPromos();
@@ -798,6 +1150,184 @@
             if (t === 'sales') loadSalesStats();
             if (t === 'reservations') loadReservations();
             if (t === 'orders') loadGlobalOrders();
+            if (t === 'customers') loadCustomers();
+        }
+
+        // --- CUSTOMERS & SUPPORT LOGIC ---
+        async function loadCustomers(searchQuery = '') {
+            const tbody = document.getElementById('customers-table');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="5" class="p-12 text-center text-white/20 italic"><i class="fas fa-spinner fa-spin mr-2"></i> Cargando directorio de clientes...</td></tr>';
+
+            try {
+                const token = localStorage.getItem('quimieats_admin_pin');
+                const url = searchQuery ? `/api/admin?action=list_customers&q=${encodeURIComponent(searchQuery)}` : '/api/admin?action=list_customers';
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                allCustomers = data.customers || [];
+                renderCustomersTable(allCustomers);
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="5" class="p-12 text-center text-red-400 italic">Error al cargar clientes</td></tr>';
+            }
+        }
+
+        function renderCustomersTable(customers) {
+            const tbody = document.getElementById('customers-table');
+            if (!tbody) return;
+
+            if (!customers || customers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-16 text-center text-white/20 uppercase font-black tracking-widest text-xs">No se encontraron clientes</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = customers.map(c => {
+                const phone = c.phone || '';
+                const cleanPhone = phone.replace(/\D/g, '');
+                const waLink = cleanPhone ? (cleanPhone.startsWith('504') ? `https://wa.me/${cleanPhone}` : `https://wa.me/504${cleanPhone}`) : '#';
+                const balance = parseFloat(c.rico_balance) || 0;
+                const pin = c.pin || '••••';
+
+                return `
+                    <tr class="hover:bg-white/[0.02] transition-colors">
+                        <td class="p-8">
+                            <div class="font-black text-white text-sm">${c.name || 'Cliente Sin Nombre'}</div>
+                            <div class="text-[9px] text-white/30 font-mono mt-0.5">ID: ${c.id}</div>
+                        </td>
+                        <td class="p-8">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs font-bold text-white/80">${phone || 'Sin número'}</span>
+                                ${cleanPhone ? `
+                                    <a href="${waLink}" target="_blank" class="w-7 h-7 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 flex items-center justify-center text-xs transition-all" title="Abrir WhatsApp">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                ` : ''}
+                            </div>
+                        </td>
+                        <td class="p-8">
+                            <span class="px-3 py-1 bg-white/5 border border-white/10 rounded-xl font-mono font-black text-orange-400 text-xs tracking-wider">
+                                🔑 ${pin}
+                            </span>
+                        </td>
+                        <td class="p-8 text-right font-mono font-black text-green-400 text-sm">
+                            L. ${balance.toFixed(2)}
+                        </td>
+                        <td class="p-8 text-right space-x-2">
+                            <button onclick='openEditCustomer(${JSON.stringify(c).replace(/'/g, "&apos;")})' class="bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
+                                <i class="fas fa-edit mr-1"></i> Editar / Reset PIN
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        let searchTimeout = null;
+        function searchCustomers(q) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadCustomers(q);
+            }, 300);
+        }
+
+        function openEditCustomer(c) {
+            document.getElementById('ce-id').value = c.id;
+            document.getElementById('ce-name').value = c.name || '';
+            document.getElementById('ce-phone').value = c.phone || '';
+            document.getElementById('ce-pin').value = c.pin || '';
+            document.getElementById('ce-balance').value = parseFloat(c.rico_balance) || 0;
+            document.getElementById('customer-edit-modal').classList.remove('hidden');
+        }
+
+        async function saveCustomerEdit() {
+            const id = document.getElementById('ce-id').value;
+            const name = document.getElementById('ce-name').value;
+            const phone = document.getElementById('ce-phone').value;
+            const pin = document.getElementById('ce-pin').value;
+            const rico_balance = document.getElementById('ce-balance').value;
+
+            const btn = document.getElementById('btn-save-customer');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Guardando...`;
+            btn.disabled = true;
+
+            try {
+                const token = localStorage.getItem('quimieats_admin_pin');
+                const res = await fetch('/api/admin?action=update_customer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ id, name, phone, pin, rico_balance })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ Cliente actualizado con éxito");
+                    closeModal('customer-edit-modal');
+                    loadCustomers();
+                } else {
+                    alert("Error: " + (data.error || "No se pudo actualizar"));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            } finally {
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+            }
+        }
+
+        function openNewCustomerModal() {
+            document.getElementById('nc-name').value = '';
+            document.getElementById('nc-phone').value = '';
+            document.getElementById('nc-pin').value = '1234';
+            document.getElementById('nc-balance').value = '';
+            document.getElementById('new-customer-modal').classList.remove('hidden');
+        }
+
+        async function submitNewCustomer() {
+            const name = document.getElementById('nc-name').value;
+            const phone = document.getElementById('nc-phone').value;
+            const pin = document.getElementById('nc-pin').value;
+            const initial_balance = document.getElementById('nc-balance').value;
+
+            if (!phone) return alert("Por favor ingresa el número de teléfono/WhatsApp.");
+
+            const btn = document.getElementById('btn-create-customer');
+            const ogText = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Registrando...`;
+            btn.disabled = true;
+
+            try {
+                const token = localStorage.getItem('quimieats_admin_pin');
+                const res = await fetch('/api/admin?action=create_customer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ name, phone, pin, initial_balance })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert("✅ Cliente registrado con éxito");
+                    closeModal('new-customer-modal');
+                    loadCustomers();
+                } else {
+                    alert("Error: " + (data.error || "No se pudo crear el cliente"));
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de conexión");
+            } finally {
+                btn.innerHTML = ogText;
+                btn.disabled = false;
+            }
         }
 
         // --- PROMO LOGIC ---
@@ -1045,6 +1575,9 @@
                 const newLeadsCount = (leads || []).filter(l => l.status === 'new').length;
                 document.getElementById('stat-leads').innerText = newLeadsCount;
 
+                // 3. Load Pending Transfer Receipts
+                loadPendingTopups();
+
             } catch (e) { 
                 console.error("loadData error:", e);
             }
@@ -1266,11 +1799,12 @@
                     <td class="p-8 text-right font-mono font-bold text-xs ${r.balance < 0 ? 'text-red-400' : 'text-green-400'}">
                         L. ${parseFloat(r.balance || 0).toFixed(2)}
                     </td>
-                    <td class="p-8 text-right flex items-center justify-end gap-3">
+                    <td class="p-8 text-right flex items-center justify-end gap-3 flex-wrap">
+                        <a href="/order.html?restaurantId=${r.id}" target="_blank" class="text-[10px] font-black uppercase text-amber-400 hover:text-amber-300 transition-all flex items-center gap-1"><i class="fas fa-eye"></i> Vista Previa</a>
+                        <button onclick="goToRestaurantMenu('${r.id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-300"><i class="fas fa-utensils mr-1"></i> Menú</button>
+                        <button onclick="openEdit(${i})" class="text-[10px] font-black uppercase text-white/40 hover:text-white transition-all"><i class="fas fa-edit mr-1"></i> Editar</button>
                         <button onclick="openTopup('${r.id}', '${r.name}')" class="text-[10px] font-black uppercase text-green-400 hover:text-green-300 transition-all"><i class="fas fa-wallet mr-1"></i> Recargar</button>
-                        <button onclick="deletePartner('${r.id}', '${r.name}')" class="text-[10px] font-black uppercase text-red-400/20 hover:text-red-400 transition-all"><i class="fas fa-trash-alt mr-1"></i> Eliminar</button>
-                        <button onclick="openEdit(${i})" class="text-[10px] font-black uppercase text-white/20 hover:text-white transition-all">Editar</button>
-                        <button onclick="goToRestaurantMenu('${r.id}')" class="text-[10px] font-black uppercase text-cyan-400 hover:text-cyan-300">Productos <i class="fas fa-external-link-alt ml-1"></i></button>
+                        <button onclick="deletePartner('${r.id}', '${r.name}')" class="text-[10px] font-black uppercase text-red-400/30 hover:text-red-400 transition-all"><i class="fas fa-trash-alt mr-1"></i> Eliminar</button>
                     </td>
                 </tr>
             `).join('');

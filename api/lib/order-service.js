@@ -257,19 +257,27 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
         if (error) {
             const errorMsg = error.message || '';
+            console.warn("[OrderService] First insert try error:", errorMsg);
+            const fallbackOrder = { ...dbOrder };
+            
             if (errorMsg.includes('delivery_pin') || errorMsg.includes('delivery_status') || errorMsg.includes('driver_id')) {
-                console.warn("[OrderService] DB schema missing delivery columns. Retrying with fallback...");
-                const fallbackOrder = { ...dbOrder };
                 delete fallbackOrder.delivery_pin;
                 delete fallbackOrder.delivery_status;
                 delete fallbackOrder.driver_id;
-                
-                const retry = await supabase.from('orders').insert(fallbackOrder).select().single();
-                data = retry.data;
-                error = retry.error;
             }
+            if (errorMsg.includes('orders_restaurant_id_fkey')) {
+                fallbackOrder.notes = (fallbackOrder.notes || '') + ` [ORIGINAL_RESTAURANT: ${targetResId}]`;
+                fallbackOrder.restaurant_id = 'rich-aroma';
+            }
+            
+            const retry = await supabase.from('orders').insert(fallbackOrder).select().single();
+            data = retry.data;
+            error = retry.error;
         }
-        if (error) throw error;
+        if (error) {
+            console.error("[OrderService] Order Creation Failed:", error);
+            throw error;
+        }
 
         // 4.5 Record automated QuimiEats commission and perform credit limit check
         if (!isPos && targetResId !== 'rich-aroma') {
@@ -320,8 +328,8 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             if (finalCustomerId) {
                 await awardPoints(finalCustomerId, dbOrder.total, paymentMethod, supabase);
             }
-            // Digital Stamp Card Logic (Coffee/Bebidas category)
-            if (finalCustomerId) {
+            // Digital Stamp Card Logic (Rich Aroma Coffee/Bebidas category)
+            if (finalCustomerId && targetResId === 'rich-aroma') {
                 try {
                     const coffeeItemsCount = (dbOrder.items || []).reduce((sum, item) => {
                         const cat = (item.category || '').toLowerCase();
@@ -382,6 +390,65 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
                     console.error("[StampCard] Failed to process stamps:", stampErr);
                 }
             }
+
+            // --- Restaurant-Specific Digital Stamp Card Logic (QuimiEats Marketplace) ---
+            const targetPhone = cleanPhone || (customer ? customer.phone : null);
+            if (targetPhone && targetResId) {
+                try {
+                    const { data: resInfo } = await supabase.from('restaurants')
+                        .select('loyalty_enabled, loyalty_stamp_goal, loyalty_reward_text')
+                        .eq('id', targetResId)
+                        .maybeSingle();
+
+                    const isLoyaltyEnabled = resInfo ? (resInfo.loyalty_enabled !== false) : true;
+                    const stampGoal = resInfo?.loyalty_stamp_goal || 6;
+                    const rewardText = resInfo?.loyalty_reward_text || '1 Producto Gratis';
+
+                    if (isLoyaltyEnabled) {
+                        const { data: card } = await supabase.from('restaurant_loyalty_cards')
+                            .select('*')
+                            .eq('restaurant_id', targetResId)
+                            .eq('customer_phone', targetPhone)
+                            .maybeSingle();
+
+                        let currentStamps = card ? (card.stamps_count || 0) : 0;
+                        let earnedRewards = card ? (card.rewards_earned || 0) : 0;
+                        let newStamps = currentStamps + 1; // 1 order = 1 stamp
+                        let newRewards = earnedRewards;
+
+                        if (newStamps >= stampGoal) {
+                            newRewards += Math.floor(newStamps / stampGoal);
+                            newStamps = newStamps % stampGoal;
+                        }
+
+                        if (card) {
+                            await supabase.from('restaurant_loyalty_cards').update({
+                                customer_id: finalCustomerId || card.customer_id,
+                                stamps_count: newStamps,
+                                stamps_goal: stampGoal,
+                                rewards_earned: newRewards,
+                                reward_description: rewardText,
+                                updated_at: new Date().toISOString()
+                            }).eq('id', card.id);
+                        } else {
+                            await supabase.from('restaurant_loyalty_cards').insert({
+                                restaurant_id: targetResId,
+                                customer_phone: targetPhone,
+                                customer_id: finalCustomerId,
+                                stamps_count: newStamps,
+                                stamps_goal: stampGoal,
+                                rewards_earned: newRewards,
+                                reward_description: rewardText,
+                                updated_at: new Date().toISOString()
+                            });
+                        }
+                        console.log(`[RestaurantLoyalty] Stamp added for ${targetPhone} at ${targetResId}. Now: ${newStamps}/${stampGoal} (Rewards: ${newRewards})`);
+                    }
+                } catch (rLoyaltyErr) {
+                    console.error("[RestaurantLoyalty] Failed to process restaurant stamp card:", rLoyaltyErr);
+                }
+            }
+
             // Inventory (Rich Aroma Only)
             if (targetResId === 'rich-aroma') {
                 await deductInventoryForOrder(dbOrder.items, supabase);

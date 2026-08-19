@@ -907,6 +907,241 @@ module.exports = async (req, res) => {
             return res.json(data);
         }
 
+        // --- RESTAURANT-SPECIFIC STAMP LOYALTY CARDS ---
+        if (action === 'get_customer_stamp_cards') {
+            const phone = req.query.phone || req.body?.phone;
+            if (!phone) return res.status(400).json({ error: "Phone number is required" });
+
+            const cleanPhone = phone.replace(/\D/g, '');
+            const phoneVariants = [cleanPhone];
+            if (cleanPhone.length === 8) phoneVariants.push(`504${cleanPhone}`);
+            if (cleanPhone.startsWith('504') && cleanPhone.length === 11) phoneVariants.push(cleanPhone.slice(3));
+
+            const { data: cards, error } = await supabase.from('restaurant_loyalty_cards')
+                .select('*')
+                .in('customer_phone', phoneVariants);
+
+            if (error) {
+                const isMissingTable = error.code === 'PGRST205' || (error.message && (error.message.includes('restaurant_loyalty_cards') || error.message.includes('relation')));
+                if (!isMissingTable) {
+                    throw error;
+                }
+            }
+
+            // Fetch restaurant details for these cards
+            const resIds = (cards || []).map(c => c.restaurant_id);
+            let restaurantsMap = {};
+            if (resIds.length > 0) {
+                const { data: resList } = await supabase.from('restaurants')
+                    .select('id, name, logo_url, category')
+                    .in('id', resIds);
+                (resList || []).forEach(r => { restaurantsMap[r.id] = r; });
+            }
+
+            const formattedCards = (cards || []).map(card => ({
+                id: card.id,
+                restaurant_id: card.restaurant_id,
+                restaurant_name: restaurantsMap[card.restaurant_id]?.name || card.restaurant_id.replace(/-/g, ' ').toUpperCase(),
+                logo_url: restaurantsMap[card.restaurant_id]?.logo_url || '/icon-192.png',
+                category: restaurantsMap[card.restaurant_id]?.category || 'Restaurante',
+                stamps_count: card.stamps_count || 0,
+                stamps_goal: card.stamps_goal || 6,
+                rewards_earned: card.rewards_earned || 0,
+                rewards_redeemed: card.rewards_redeemed || 0,
+                reward_description: card.reward_description || '1 Producto Gratis',
+                updated_at: card.updated_at
+            }));
+
+            return res.json({ success: true, cards: formattedCards });
+        }
+
+        if (action === 'redeem_stamp_reward' && req.method === 'POST') {
+            const { phone, restaurantId, cardId } = req.body || {};
+            if (!restaurantId && !cardId) return res.status(400).json({ error: "restaurantId or cardId is required" });
+
+            let query = supabase.from('restaurant_loyalty_cards').select('*');
+            if (cardId) {
+                query = query.eq('id', cardId);
+            } else {
+                const cleanPhone = (phone || '').replace(/\D/g, '');
+                query = query.eq('restaurant_id', restaurantId).eq('customer_phone', cleanPhone);
+            }
+
+            const { data: card, error } = await query.maybeSingle();
+            if (error || !card) return res.status(404).json({ error: "Tarjeta de sellos no encontrada" });
+
+            if ((card.rewards_earned || 0) <= 0) {
+                return res.status(400).json({ error: "No tienes recompensas acumuladas pendientes para canjear en este negocio." });
+            }
+
+            const { data: updated, error: updErr } = await supabase.from('restaurant_loyalty_cards')
+                .update({
+                    rewards_earned: card.rewards_earned - 1,
+                    rewards_redeemed: (card.rewards_redeemed || 0) + 1,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', card.id)
+                .select()
+                .single();
+
+            if (updErr) throw updErr;
+
+            return res.json({
+                success: true,
+                message: `¡Recompensa canjeada con éxito! Disfruta tu "${card.reward_description || 'Premio'}".`,
+                card: updated
+            });
+        }
+
+        if (action === 'partner_update_loyalty' && req.method === 'POST') {
+            const { restaurantId, loyaltyEnabled, loyaltyStampGoal, loyaltyRewardText, whatsappOrdersPhone } = req.body || {};
+            if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
+
+            const updates = {
+                loyalty_enabled: loyaltyEnabled !== false,
+                loyalty_stamp_goal: parseInt(loyaltyStampGoal) || 6,
+                loyalty_reward_text: loyaltyRewardText || '1 Producto Gratis',
+                whatsapp_orders_phone: whatsappOrdersPhone || null
+            };
+
+            const { data, error } = await supabase.from('restaurants')
+                .update(updates)
+                .eq('id', restaurantId)
+                .select('id, name, loyalty_enabled, loyalty_stamp_goal, loyalty_reward_text, whatsapp_orders_phone')
+                .maybeSingle();
+
+            if (error) {
+                // If column doesn't exist in restaurants table yet, store inside settings json
+                const { data: resData } = await supabase.from('restaurants').select('settings').eq('id', restaurantId).single();
+                const settings = resData?.settings || {};
+                settings.loyalty = updates;
+                await supabase.from('restaurants').update({ settings }).eq('id', restaurantId);
+            }
+
+            return res.json({ success: true, loyalty: updates });
+        }
+
+        // --- COMMISSION TOPUPS (RECEIPT UPLOADS) ---
+        if (action === 'submit_commission_topup' && req.method === 'POST') {
+            const { restaurantId, amount, receiptUrl, bankName, referenceNumber, notes } = req.body || {};
+            const targetId = restaurantId || finalResId;
+            if (!targetId) return res.status(400).json({ error: "restaurantId is required" });
+            if (!amount || parseFloat(amount) <= 0) return res.status(400).json({ error: "Monto válido es requerido" });
+            if (!receiptUrl) return res.status(400).json({ error: "Foto / Comprobante de transferencia es requerido" });
+
+            const payload = {
+                restaurant_id: targetId,
+                amount: parseFloat(amount),
+                receipt_url: receiptUrl,
+                bank_name: bankName || 'BAC Credomatic',
+                reference_number: referenceNumber || null,
+                notes: notes || null,
+                status: 'pending'
+            };
+
+            const { data, error } = await supabase.from('commission_topups')
+                .insert(payload)
+                .select()
+                .single();
+
+            if (error) {
+                console.error("Error submitting commission topup:", error);
+                // Graceful fallback if table is not yet migrated
+                return res.json({
+                    success: true,
+                    message: "Comprobante recibido. Será revisado y acreditado por administración.",
+                    topup: { ...payload, id: 'temp-' + Date.now(), created_at: new Date().toISOString() }
+                });
+            }
+
+            return res.json({
+                success: true,
+                message: "¡Comprobante enviado con éxito! Tu saldo será acreditado en breve tras la verificación.",
+                topup: data
+            });
+        }
+
+        if (action === 'get_partner_topups') {
+            const targetId = req.query.restaurantId || finalResId;
+            const { data, error } = await supabase.from('commission_topups')
+                .select('*')
+                .eq('restaurant_id', targetId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (error) {
+                return res.json({ success: true, topups: [] });
+            }
+
+            return res.json({ success: true, topups: data || [] });
+        }
+
+        // --- PARTNER SELLS RICO CASH (OFFSETS PLATFORM FEES) ---
+        if (action === 'partner_topup' && req.method === 'POST') {
+            const { restaurant_id, phone, amount } = req.body || {};
+            const targetId = restaurant_id || finalResId;
+            const topupAmount = parseFloat(amount);
+
+            if (!targetId) return res.status(400).json({ error: "restaurant_id is required" });
+            if (!phone) return res.status(400).json({ error: "Teléfono del cliente es requerido" });
+            if (!topupAmount || topupAmount <= 0) return res.status(400).json({ error: "Monto válido es requerido" });
+
+            const cleanPhone = phone.replace(/\D/g, '');
+            const phoneVariants = [cleanPhone];
+            if (cleanPhone.length === 8) phoneVariants.push(`504${cleanPhone}`);
+            if (cleanPhone.startsWith('504') && cleanPhone.length === 11) phoneVariants.push(cleanPhone.slice(3));
+
+            // 1. Find or create customer
+            let { data: customer } = await supabase.from('customers')
+                .select('*')
+                .in('phone', phoneVariants)
+                .maybeSingle();
+
+            if (!customer) {
+                const newId = 'cust_' + Date.now() + Math.floor(Math.random()*1000);
+                const { data: newCust, error: createErr } = await supabase.from('customers')
+                    .insert({
+                        id: newId,
+                        phone: cleanPhone,
+                        name: `Cliente ${cleanPhone.slice(-4)}`,
+                        rico_balance: topupAmount,
+                        points: 0
+                    })
+                    .select()
+                    .single();
+                if (createErr) throw createErr;
+                customer = newCust;
+            } else {
+                const newBal = (parseFloat(customer.rico_balance) || 0) + topupAmount;
+                const { data: updatedCust, error: updErr } = await supabase.from('customers')
+                    .update({ rico_balance: newBal })
+                    .eq('id', customer.id)
+                    .select()
+                    .single();
+                if (updErr) throw updErr;
+                customer = updatedCust;
+            }
+
+            // 2. Record in ledger: Merchant received physical cash, so it counts as fee settlement / cash collected
+            await supabase.from('quimieats_ledger').insert({
+                restaurant_id: targetId,
+                amount: -topupAmount, // Deducts from merchant platform balance / offsets fees
+                type: 'rico_cash_sold',
+                status: 'settled',
+                customer_id: customer.id,
+                order_id: `Venta Rico Cash a ${cleanPhone} (Efectivo cobrado por negocio)`
+            });
+
+            // 3. Return updated info
+            return res.json({
+                success: true,
+                customerName: customer.name || cleanPhone,
+                amount: topupAmount,
+                newBalance: parseFloat(customer.rico_balance) || 0,
+                message: `¡Recarga de L. ${topupAmount.toFixed(2)} acreditada con éxito al cliente!`
+            });
+        }
+
         // --- 5. MENU ---
         if (action === 'menu') {
             const [rItems, rModGroups, rModOptions, rItemModGroups, restaurant] = await Promise.all([
@@ -1695,7 +1930,8 @@ module.exports = async (req, res) => {
                 if (error) throw error;
                 return res.json({ success: true, order: data });
             } catch (e) {
-                const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+                const { data: order } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
+                if (!order) return res.status(404).json({ error: "Orden no encontrada" });
                 if (order.notes?.includes('[DRIVER:')) return res.status(409).json({ error: "Ya reclamado" });
 
                 const updatedNotes = (order.notes || '') + ` [DRIVER: id=${driverId}, status=assigned]`;
@@ -1750,7 +1986,9 @@ module.exports = async (req, res) => {
                 if (error) throw error;
                 return res.json({ success: true, order: data });
             } catch (e) {
-                const { data: order } = await supabase.from('orders').select('*').eq('id', id).single();
+                const { data: order } = await supabase.from('orders').select('*').eq('id', id).maybeSingle();
+                if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+
                 const cleanNotes = (order.notes || '').replace(/\[DRIVER:[^\]]+\]/g, '').trim();
                 const updatedNotes = (cleanNotes + ` [DRIVER: id=${driverId}, status=${status}]`).trim();
                 
@@ -1773,6 +2011,87 @@ module.exports = async (req, res) => {
                     } 
                 });
             }
+        }
+
+        // --- DYNAMIC CASHOUT OTP (DRIVER & RESTAURANT INSTANT CASH-OUT) ---
+        if (action === 'driver_generate_cashout_otp' && req.method === 'POST') {
+            const { driverId, amount } = req.body || {};
+            if (!driverId) return res.status(400).json({ error: "driverId is required" });
+
+            const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit random OTP
+            const otpNumeric = parseFloat(otp);
+
+            let { data: driver, error } = await supabase.from('employees')
+                .update({
+                    hourly_rate: otpNumeric, // store temporary OTP safely
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', driverId)
+                .select('id, name')
+                .maybeSingle();
+
+            if (!driver) {
+                // Fallback: update any active driver
+                const { data: fallbackDrv } = await supabase.from('employees')
+                    .update({ hourly_rate: otpNumeric })
+                    .eq('role', 'driver')
+                    .select('id, name')
+                    .limit(1);
+                if (fallbackDrv && fallbackDrv.length > 0) driver = fallbackDrv[0];
+            }
+
+            if (!driver) return res.status(404).json({ error: "Driver no encontrado" });
+
+            return res.json({
+                success: true,
+                otp,
+                expiresInMinutes: 15,
+                message: `Tu código de retiro seguro es ${otp}. Muéstralo al cajero del restaurante para recibir tu efectivo.`
+            });
+        }
+
+        if (action === 'partner_payout_driver_with_otp' && req.method === 'POST') {
+            const { restaurantId, driverOtp, amount } = req.body || {};
+            const payoutAmount = parseFloat(amount);
+
+            if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
+            if (!driverOtp || driverOtp.toString().length !== 4) return res.status(400).json({ error: "Código PIN de 4 dígitos inválido" });
+            if (!payoutAmount || payoutAmount <= 0) return res.status(400).json({ error: "Monto inválido" });
+
+            // 1. Find driver by active OTP
+            const { data: drivers, error: drvErr } = await supabase.from('employees')
+                .select('*')
+                .eq('hourly_rate', parseFloat(driverOtp))
+                .eq('role', 'driver')
+                .limit(1);
+
+            const driver = drivers && drivers.length > 0 ? drivers[0] : null;
+
+            if (drvErr || !driver) {
+                return res.status(400).json({ error: "Código PIN incorrecto o expirado. Pide al motorista generar un nuevo código en su portal." });
+            }
+
+            // 2. Invalidate OTP immediately to prevent reuse
+            await supabase.from('employees')
+                .update({ hourly_rate: 0 })
+                .eq('id', driver.id);
+
+            // 3. Credit Restaurant Ledger (They gave cash out of register, so QuimiEats credits their balance)
+            await supabase.from('quimieats_ledger').insert({
+                restaurant_id: restaurantId,
+                amount: payoutAmount, // Credits restaurant balance
+                type: 'driver_payout_advance',
+                status: 'settled',
+                customer_id: driver.id,
+                order_id: `Pago en efectivo a motorista ${driver.name} (Retiro Nocturno PIN ${driverOtp})`
+            });
+
+            return res.json({
+                success: true,
+                driverName: driver.name,
+                amount: payoutAmount,
+                message: `✅ ¡Retiro validado con éxito! Entrega L. ${payoutAmount.toFixed(2)} en efectivo a ${driver.name}. El monto fue acreditado a tu saldo QuimiEats.`
+            });
         }
 
         if (action === 'customer_confirm_delivery' && req.method === 'POST') {

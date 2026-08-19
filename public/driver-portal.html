@@ -25,12 +25,15 @@
 </head>
 <body class="min-h-screen flex flex-col p-6">
 
-    <header class="flex justify-between items-center mb-8">
+    <header class="flex justify-between items-center mb-6">
         <div>
             <h1 class="text-2xl font-black uppercase tracking-tighter">Repartidores</h1>
             <p id="driver-name" class="text-[9px] text-gold font-bold uppercase tracking-widest">Inicie Sesión</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
+            <button onclick="generateCashoutOtp()" class="bg-gradient-to-r from-emerald-500 to-green-600 text-black px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-lg active:scale-95 transition-all">
+                <i class="fas fa-money-bill-wave"></i> Retirar Saldo
+            </button>
             <button onclick="window.location.href='/os'" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-white/40 hover:bg-white/10 transition-all"><i class="fas fa-home"></i></button>
             <button onclick="logout()" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white/5 text-white/20"><i class="fas fa-sign-out-alt"></i></button>
         </div>
@@ -46,6 +49,29 @@
         <div class="py-20 text-center text-white/10 italic text-sm">Cargando pedidos...</div>
     </main>
 
+    <!-- CASHOUT OTP DISPLAY MODAL -->
+    <div id="otp-modal" class="hidden fixed inset-0 z-[100] bg-dark/95 backdrop-blur-3xl flex items-center justify-center p-6">
+        <div class="max-w-xs w-full glass rounded-[3rem] p-8 space-y-6 text-center border border-emerald-500/30">
+            <div class="w-20 h-20 bg-emerald-500/10 text-emerald-400 rounded-3xl flex items-center justify-center mx-auto text-3xl border border-emerald-500/20">
+                <i class="fas fa-key"></i>
+            </div>
+            <div class="space-y-1">
+                <h3 class="text-xl font-black uppercase text-white">PIN de Retiro</h3>
+                <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">Muestra este código al cajero del restaurante</p>
+            </div>
+            
+            <div class="p-6 bg-black/60 rounded-3xl border border-white/10">
+                <span id="display-otp-code" class="text-5xl font-black font-mono tracking-[0.3em] text-emerald-400">----</span>
+            </div>
+
+            <p class="text-[8px] text-white/30 font-mono">Válido por 15 minutos • De un solo uso</p>
+
+            <button onclick="document.getElementById('otp-modal').classList.add('hidden')" class="w-full bg-white/10 hover:bg-white/20 text-white py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest transition-all">
+                Cerrar
+            </button>
+        </div>
+    </div>
+
     <!-- LOGIN MODAL -->
     <div id="login-modal" class="fixed inset-0 z-[100] bg-dark flex items-center justify-center p-8 backdrop-blur-3xl">
         <div class="max-w-xs w-full space-y-10 text-center">
@@ -59,6 +85,26 @@
     <script>
         let currentDriver = null;
         let activeTab = 'available';
+
+        async function generateCashoutOtp() {
+            if (!currentDriver) return alert("Inicia sesión primero");
+            try {
+                const res = await fetch('/api/store?action=driver_generate_cashout_otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ driverId: currentDriver.id })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('display-otp-code').innerText = data.otp;
+                    document.getElementById('otp-modal').classList.remove('hidden');
+                } else {
+                    alert(data.error || "No se pudo generar el PIN");
+                }
+            } catch(e) {
+                alert("Error de conexión");
+            }
+        }
 
         window.onload = () => {
             const saved = localStorage.getItem('ra_driver_session');

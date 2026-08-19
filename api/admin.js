@@ -319,6 +319,173 @@ module.exports = async function handler(req, res) {
             }
         }
 
+        // --- COMMISSION TOPUPS (ADMIN REVIEW & APPROVAL) ---
+        if (action === 'get_pending_topups' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const { data: topups, error } = await supabase.from('commission_topups')
+                    .select('*')
+                    .eq('status', 'pending')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    return res.json({ success: true, topups: [] });
+                }
+
+                // Enrich with restaurant details
+                const resIds = (topups || []).map(t => t.restaurant_id);
+                let resMap = {};
+                if (resIds.length > 0) {
+                    const { data: resList } = await supabase.from('restaurants')
+                        .select('id, name, logo_url, contact_phone')
+                        .in('id', resIds);
+                    (resList || []).forEach(r => { resMap[r.id] = r; });
+                }
+
+                const enriched = (topups || []).map(t => ({
+                    ...t,
+                    restaurant_name: resMap[t.restaurant_id]?.name || t.restaurant_id,
+                    restaurant_logo: resMap[t.restaurant_id]?.logo_url || null,
+                    restaurant_phone: resMap[t.restaurant_id]?.contact_phone || null
+                }));
+
+                return res.json({ success: true, topups: enriched });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'approve_commission_topup' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { topupId, restaurantId, amount, bankName, referenceNumber } = req.body || {};
+            if (!topupId || !restaurantId || !amount) {
+                return res.status(400).json({ error: "Missing parameters" });
+            }
+
+            try {
+                // 1. Mark topup approved
+                await supabase.from('commission_topups')
+                    .update({
+                        status: 'approved',
+                        reviewed_at: new Date().toISOString(),
+                        reviewed_by: 'admin'
+                    })
+                    .eq('id', topupId);
+
+                // 2. Insert into ledger
+                const desc = `Transferencia ${bankName || 'Banco'} ${referenceNumber ? '#' + referenceNumber : ''}`.trim();
+                await supabase.from('quimieats_ledger').insert({
+                    restaurant_id: restaurantId,
+                    amount: parseFloat(amount),
+                    type: 'topup',
+                    status: 'settled',
+                    customer_id: 'platform_admin',
+                    order_id: desc
+                });
+
+                // 3. Reactivate restaurant if it was suspended
+                const { data: allLedger } = await supabase.from('quimieats_ledger').select('amount').eq('restaurant_id', restaurantId);
+                const newBalance = (allLedger || []).reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
+                if (newBalance >= 0) {
+                    await supabase.from('restaurants').update({ status: 'active' }).eq('id', restaurantId);
+                }
+
+                return res.json({ success: true, message: "Recarga aprobada y saldo acreditado con éxito", newBalance });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'reject_commission_topup' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { topupId, reason } = req.body || {};
+            if (!topupId) return res.status(400).json({ error: "topupId is required" });
+
+            try {
+                await supabase.from('commission_topups')
+                    .update({
+                        status: 'rejected',
+                        notes: reason || 'Rechazado por administración',
+                        reviewed_at: new Date().toISOString(),
+                        reviewed_by: 'admin'
+                    })
+                    .eq('id', topupId);
+
+                return res.json({ success: true, message: "Comprobante marcado como rechazado" });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        // --- CUSTOMER & USER SUPPORT MANAGEMENT ---
+        if (action === 'list_customers' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const query = (req.query.q || '').trim();
+            try {
+                let dbQuery = supabase.from('customers').select('*').order('created_at', { ascending: false }).limit(50);
+                if (query) {
+                    dbQuery = dbQuery.or(`name.ilike.%${query}%,phone.ilike.%${query}%`);
+                }
+                const { data, error } = await dbQuery;
+                if (error) throw error;
+                return res.json({ success: true, customers: data || [] });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'update_customer' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { id, name, phone, pin, rico_balance } = req.body || {};
+
+            try {
+                const updates = {};
+                if (name !== undefined) updates.name = name;
+                if (phone !== undefined) updates.phone = phone.replace(/\D/g, '');
+                if (pin !== undefined) updates.pin = pin;
+                if (rico_balance !== undefined) updates.rico_balance = parseFloat(rico_balance);
+
+                let query = supabase.from('customers').update(updates);
+                if (id) query = query.eq('id', id);
+                else if (phone) query = query.eq('phone', phone.replace(/\D/g, ''));
+
+                const { data, error } = await query.select().maybeSingle();
+
+                if (error) throw error;
+                return res.json({ success: true, customer: data, message: "Cliente actualizado con éxito" });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'create_customer' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { name, phone, pin, initial_balance } = req.body || {};
+            if (!phone) return res.status(400).json({ error: "Teléfono es requerido" });
+
+            try {
+                const cleanPhone = phone.replace(/\D/g, '');
+                const newId = 'cust_' + Date.now() + Math.floor(Math.random()*1000);
+                const { data, error } = await supabase.from('customers')
+                    .insert({
+                        id: newId,
+                        name: name || `Cliente ${cleanPhone.slice(-4)}`,
+                        phone: cleanPhone,
+                        pin: pin || '1234',
+                        rico_balance: parseFloat(initial_balance) || 0,
+                        points: 0
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                return res.json({ success: true, customer: data, message: "Cliente registrado con éxito" });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
         // --- QUIMIEATS PARTNERS ---
         if (action === 'quimieats_active' && req.method === 'GET') {
             try {

@@ -779,6 +779,21 @@
             const bookingItem = cart.find(i => i.scheduledFor);
             const finalSchedule = bookingItem ? bookingItem.scheduledFor : (scheduleVal === 'asap' ? null : scheduleVal);
 
+            const barrioVal = document.getElementById('check-barrio')?.value || '';
+            const addressVal = document.getElementById('check-address')?.value.trim() || '';
+            const cashChangeVal = document.getElementById('check-cash-change')?.value || '';
+            const tableVal = document.getElementById('check-table')?.value.trim() || '';
+
+            let orderNotes = `Cliente: ${name} [${fulfillmentType.toUpperCase()}]`;
+            if (tableVal) orderNotes += ` | MESA: ${tableVal}`;
+            if (fulfillmentType === 'delivery') {
+                if (barrioVal) orderNotes += ` | BARRIO: ${barrioVal}`;
+                if (addressVal) orderNotes += ` | REF: ${addressVal}`;
+            }
+            if (currentSelectedPayment === 'cash' && cashChangeVal) {
+                orderNotes += ` | CAMBIO: ${cashChangeVal}`;
+            }
+
             const payload = {
                 items: Object.values(itemsMap), subtotal, tax: 0, discount: 0, total: subtotal, 
                 paymentMethod: currentSelectedPayment,
@@ -786,7 +801,7 @@
                 restaurantId: resId,
                 guestPhone: phone,
                 scheduledFor: finalSchedule,
-                notes: `Mobile: ${name} (${fulfillmentType})` + (document.getElementById('check-table').value ? ` MESA: ${document.getElementById('check-table').value}` : "")
+                notes: orderNotes
             };
             if(currentCustomer) payload.customerId = currentCustomer.id;
 
@@ -891,6 +906,39 @@
                         <div class="flex justify-between items-center pt-4">
                             <span class="text-white/40 text-[10px] font-black uppercase">Total</span>
                             <span class="text-white text-xl font-black italic">L ${total}</span>
+                        </div>
+                    `;
+
+                    // Generate WhatsApp ticket dispatch link
+                    const currentResName = (window.globalRestaurantName || activeOrder.restaurant_id || 'QuimiEats').toUpperCase();
+                    let waSummary = `¡Hola! He realizado el pedido #${activeOrder.order_number || activeOrder.id.slice(-4)} en ${currentResName} vía QuimiEats 🚀\n\n`;
+                    items.forEach(item => {
+                        waSummary += `• ${item.qty}x ${item.name} (L. ${(parseFloat(item.finalPrice || item.price || 0) * (item.qty || 1)).toFixed(2)})\n`;
+                        if (item.mods && item.mods.length) {
+                            waSummary += `   ↳ ${item.mods.map(m=>m.name).join(', ')}\n`;
+                        }
+                    });
+                    waSummary += `\n💰 Total: L. ${total}\n💳 Pago: ${(activeOrder.payment_method || '').toUpperCase()}\n📍 Entrega: ${(activeOrder.fulfillment || '').toUpperCase()}\n`;
+                    if (activeOrder.notes) waSummary += `📝 Notas: ${activeOrder.notes}\n`;
+                    waSummary += `\nID: ${activeOrder.id}`;
+
+                    const waUrl = `https://wa.me/50495998188?text=${encodeURIComponent(waSummary)}`;
+
+                    list.innerHTML += `
+                        <div class="mt-4 pt-4 border-t border-white/10 space-y-3">
+                            <div class="bg-gold/10 border border-gold/20 p-3 rounded-2xl flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">⭐</span>
+                                    <div>
+                                        <p class="text-[9px] font-black uppercase text-gold">Tarjeta de Sellos Digital</p>
+                                        <p class="text-[8px] text-white/60">¡Has sumado +1 sello en este negocio!</p>
+                                    </div>
+                                </div>
+                                <span class="text-[9px] font-black text-gold uppercase bg-gold/20 px-2 py-1 rounded-lg">QuimiEats</span>
+                            </div>
+                            <a href="${waUrl}" target="_blank" class="flex items-center justify-center gap-2 w-full py-3.5 bg-[#25D366] text-black font-black text-[11px] uppercase tracking-wider rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all">
+                                <i class="fab fa-whatsapp text-sm"></i> Enviar Pedido a Cocina (WhatsApp)
+                            </a>
                         </div>
                     `;
                 } else {
