@@ -188,7 +188,7 @@
 
             // 3. Kitchen Option (Cooks, Baristas or Admins)
             if (isAdmin || role.includes('barista') || role.includes('cook') || role.includes('cocina')) {
-                const hubPath = window.location.hostname.includes('quimieats.com') ? '/hub' : '/kitchen';
+                const hubPath = '/kitchen.html';
                 const kitchenTitle = isPartner ? 'Pantalla de Cocina (KDS)' : 'Order Hub';
                 const kitchenSub = isPartner ? 'Pedidos en Preparación' : 'Gestión de Pedidos';
                 html += `
