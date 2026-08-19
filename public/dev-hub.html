@@ -3,248 +3,381 @@
 <head>
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuimiEats Dev Hub & Live Simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuimiEats | Ecosystem Control Hub & Multi-Portal Viewer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    colors: { gold: '#C9A66B', dark: '#0A0A0B', charcoal: '#16161A', cyan: '#00F2FF' }
+                    colors: {
+                        orange: {
+                            500: '#F97316',
+                            600: '#EA580C'
+                        },
+                        gold: '#F59E0B',
+                        dark: '#0A0A0B',
+                        charcoal: '#141417',
+                        cyan: '#00F2FF'
+                    }
                 }
             }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
         body { background-color: #0A0A0B; color: white; font-family: 'Outfit', sans-serif; }
-        .glass { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .device-shadow { box-shadow: 0 25px 50px -12px rgba(0, 242, 255, 0.15); }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(20, 20, 23, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.06); }
+        .device-shadow { box-shadow: 0 25px 60px -15px rgba(249, 115, 22, 0.2); }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col hide-scroll">
+<body class="min-h-screen flex flex-col bg-[#0A0A0B] text-white">
 
-    <!-- Top Navigation -->
-    <header class="w-full px-8 py-4 border-b border-white/5 bg-charcoal/40 backdrop-blur-md flex justify-between items-center z-50 shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-xl bg-cyan/15 border border-cyan/35 flex items-center justify-center text-cyan text-sm"><i class="fas fa-terminal"></i></div>
+    <!-- Top Header Navigation -->
+    <header class="w-full px-6 md:px-10 py-5 border-b border-white/10 bg-charcoal/80 backdrop-blur-xl flex flex-col sm:flex-row justify-between items-center gap-4 z-50 sticky top-0">
+        <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xl shadow-lg shadow-orange-500/20">
+                <i class="fas fa-cubes"></i>
+            </div>
             <div>
-                <h1 class="text-md font-black uppercase tracking-tight">QUIMIEATS <span class="text-cyan">DEV HUB</span></h1>
-                <p class="text-[9px] text-white/40 font-bold uppercase tracking-wider">Simulador de Ecosistema Integrado</p>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-lg font-black uppercase tracking-tight text-white">QUIMIEATS <span class="text-orange-500">ECOSYSTEM HUB</span></h1>
+                    <span class="bg-green-500/20 text-green-400 text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-green-500/30">ONLINE</span>
+                </div>
+                <p class="text-[10px] text-white/40 font-bold uppercase tracking-wider">Centro de Control de Todos los Portales y Vistas de Usuario</p>
             </div>
         </div>
-        
-        <div class="flex items-center gap-4">
-            <!-- Partner Target Selector -->
-            <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-2xl">
-                <label class="text-[9px] font-black uppercase text-white/40 tracking-wider">Perfil de Prueba:</label>
-                <select id="sim-partner-select" onchange="syncSimulatorPartner(this.value)" class="bg-transparent text-xs font-bold text-white outline-none cursor-pointer">
-                    <option value="dental-arita" class="bg-charcoal text-white">Dentista: Centro Dental Arita</option>
-                    <option value="rich-aroma" class="bg-charcoal text-white">Restaurante: Rich Aroma Cafe</option>
-                </select>
-            </div>
-            
-            <button onclick="reloadSimulators()" class="p-2 bg-white/5 border border-white/10 text-white/70 hover:text-white rounded-xl active:scale-95 transition-all text-xs" title="Recargar simuladores"><i class="fas fa-redo-alt"></i></button>
+
+        <!-- View Mode Switcher -->
+        <div class="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10">
+            <button onclick="setViewMode('cards')" id="mode-btn-cards" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md">
+                <i class="fas fa-th-large mr-1.5"></i> Directorio de Portales
+            </button>
+            <button onclick="setViewMode('simulator')" id="mode-btn-simulator" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white">
+                <i class="fas fa-mobile-alt mr-1.5"></i> Simulador Multi-Dispositivo
+            </button>
         </div>
     </header>
 
-    <!-- Main Workspace -->
-    <main class="flex-1 flex overflow-hidden min-h-0">
-        <!-- Sidebar Controls -->
-        <aside class="w-80 border-r border-white/5 bg-charcoal/20 p-6 space-y-6 overflow-y-auto hide-scroll shrink-0">
-            <!-- Quick Presets -->
-            <div class="glass p-5 rounded-3xl space-y-4">
-                <p class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-id-card"></i> Credenciales de Acceso</p>
-                
-                <div class="space-y-3">
-                    <!-- Preset Dental -->
-                    <div onclick="syncSimulatorPartner('dental-arita')" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl cursor-pointer transition-all text-left">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-white">Dr. Oscar Arita 🦷</span>
-                            <span class="bg-cyan/15 text-cyan text-[7px] font-black uppercase px-2 py-0.5 rounded">Servicio</span>
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-10">
+
+        <!-- ================================================================= -->
+        <!-- VIEW 1: CARDS DIRECTORY WITH CREDENTIALS & DIRECT ACCESS LINKS    -->
+        <!-- ================================================================= -->
+        <div id="view-cards" class="space-y-10">
+            
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <h2 class="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+                    Los 7 Portales de <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-400">QuimiEats</span>
+                </h2>
+                <p class="text-xs text-white/50 font-bold uppercase tracking-wider">
+                    Selecciona cualquier portal para abrirlo en vivo con sus credenciales de prueba
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- 1. Master & Field Admin -->
+                <div class="glass p-7 rounded-[2.5rem] border border-orange-500/30 hover:border-orange-500/60 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl shadow-lg shadow-orange-500/10">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <span class="bg-orange-500/20 text-orange-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-orange-500/30">Super & Field Admin</span>
                         </div>
-                        <p class="text-[9px] text-white/40 font-mono mt-1">ID: dental-arita <br> PIN: 1234</p>
-                    </div>
-
-                    <!-- Preset Cafe -->
-                    <div onclick="syncSimulatorPartner('rich-aroma')" class="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl cursor-pointer transition-all text-left">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold text-white">Rich Aroma Cafe ☕</span>
-                            <span class="bg-orange-500/15 text-orange-400 text-[7px] font-black uppercase px-2 py-0.5 rounded">Comida</span>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Consola de Administración</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Control de socios, motoristas, soporte y finanzas</p>
                         </div>
-                        <p class="text-[9px] text-white/40 font-mono mt-1">ID: rich-aroma <br> PIN: 1234</p>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Panel completo en teléfono para tu operadora: alta de restaurantes, reset de contraseñas, aprobación de comprobantes bancarios y métricas de ventas.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN de Acceso:</span>
+                                <span class="font-mono text-orange-400 font-bold">4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/quimieats-admin.html</span>
+                            </div>
+                        </div>
+                        <a href="/quimieats-admin.html" target="_blank" class="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                            Abrir Consola Admin <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
                     </div>
                 </div>
-            </div>
 
-            <!-- Instant Actions -->
-            <div class="glass p-5 rounded-3xl space-y-4">
-                <p class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-bolt"></i> Simular Interacciones</p>
-                <div class="space-y-2">
-                    <button onclick="triggerMockBooking()" id="btn-mock-booking" class="w-full py-3 bg-cyan text-dark font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-cyan/90 transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fas fa-calendar-plus"></i> Inyectar Cita Creada
+                <!-- 2. Restaurant Merchant Portal -->
+                <div class="glass p-7 rounded-[2.5rem] border border-cyan/20 hover:border-cyan/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-cyan/15 text-cyan flex items-center justify-center text-xl shadow-lg shadow-cyan/10">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <span class="bg-cyan/15 text-cyan text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-cyan/30">Business Admin</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Portal de Restaurante</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Gestión de menú, pedidos y billetera</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Recepción de pedidos con timbre sonoro, despacho a cocina, venta de Rico Cash, pago a motoristas con PIN y subida de comprobantes.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Restaurante / PIN:</span>
+                                <span class="font-mono text-cyan font-bold">tacos-el-rey / 4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/partner.html</span>
+                            </div>
+                        </div>
+                        <a href="/partner.html" target="_blank" class="w-full py-3.5 bg-cyan hover:bg-cyan/90 text-dark rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan/20 active:scale-95 transition-all">
+                            Abrir Portal Socio <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. Driver Delivery Portal -->
+                <div class="glass p-7 rounded-[2.5rem] border border-amber-500/20 hover:border-amber-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/10">
+                                <i class="fas fa-motorcycle"></i>
+                            </div>
+                            <span class="bg-amber-500/15 text-amber-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-amber-500/30">Motoristas</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Portal de Repartidores</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Reclamo de órdenes, PIN de entrega y retiro</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            App móvil para motoristas: reclamar entregas, chat WhatsApp con cliente, validación de PIN en puerta y generación de código de retiro de saldo.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN Driver Prueba:</span>
+                                <span class="font-mono text-amber-400 font-bold">4247 o 9999</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/driver-portal.html</span>
+                            </div>
+                        </div>
+                        <a href="/driver-portal.html" target="_blank" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-black rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                            Abrir Portal Motorista <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 4. Customer Storefront & Live Tracker -->
+                <div class="glass p-7 rounded-[2.5rem] border border-emerald-500/20 hover:border-emerald-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/10">
+                                <i class="fas fa-shopping-bag"></i>
+                            </div>
+                            <span class="bg-emerald-500/15 text-emerald-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-emerald-500/30">Clientes</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Menú y Tracker en Vivo</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Catálogo, combos, checkout y seguimiento</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Experiencia del comprador: selección de sabores, eliminación de ingredientes, cálculo de cambio COD, tarjeta de sellos y seguimiento en tiempo real.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Restaurante Demo:</span>
+                                <span class="font-mono text-emerald-400 font-bold">Tacos El Rey</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/order.html?restaurantId=tacos-el-rey</span>
+                            </div>
+                        </div>
+                        <a href="/order.html?restaurantId=tacos-el-rey" target="_blank" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                            Ver Menú de Cliente <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 5. Kitchen KDS Display -->
+                <div class="glass p-7 rounded-[2.5rem] border border-red-500/20 hover:border-red-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-red-500/15 text-red-400 flex items-center justify-center text-xl shadow-lg shadow-red-500/10">
+                                <i class="fas fa-fire-burner"></i>
+                            </div>
+                            <span class="bg-red-500/15 text-red-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-red-500/30">Cocineros / KDS</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Pantalla KDS Cocina</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Tickets de comandas y avance de preparación</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Diseñado para tablets en cocina: muestra comandas con ingredientes eliminados en rojo brillante, selector de sabores y botón "Listo".
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Modo:</span>
+                                <span class="font-mono text-red-400 font-bold">Pantalla Completa KDS</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/kitchen.html</span>
+                            </div>
+                        </div>
+                        <a href="/kitchen.html" target="_blank" class="w-full py-3.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                            Abrir KDS Cocina <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 6. In-Store POS Cashier -->
+                <div class="glass p-7 rounded-[2.5rem] border border-blue-500/20 hover:border-blue-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 flex items-center justify-center text-xl shadow-lg shadow-blue-500/10">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                            <span class="bg-blue-500/15 text-blue-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-blue-500/30">Cajero / Barra</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Caja POS Presencial</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Cobro rápido en mostrador y cierre de turno</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Punto de venta táctil para pedidos en caja, cobro en efectivo o Rico Cash escaneando teléfono del cliente y control de turnos.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN Staff:</span>
+                                <span class="font-mono text-blue-400 font-bold">1234 o 4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/pos.html</span>
+                            </div>
+                        </div>
+                        <a href="/pos.html" target="_blank" class="w-full py-3.5 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                            Abrir Caja POS <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- VIEW 2: MULTI-DEVICE INTERACTIVE SIMULATOR (SPLIT SCREEN)        -->
+        <!-- ================================================================= -->
+        <div id="view-simulator" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-charcoal/60 p-5 rounded-3xl border border-white/10">
+                <div>
+                    <h3 class="text-lg font-black uppercase text-white">Simulador de Pantallas en Vivo</h3>
+                    <p class="text-[10px] text-white/40 font-bold uppercase tracking-wider">Prueba los 3 roles principales interactuando simultáneamente</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="reloadAllFrames()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all">
+                        <i class="fas fa-sync-alt mr-1.5"></i> Recargar Pantallas
                     </button>
-                    
-                    <button onclick="triggerMockOrder()" id="btn-mock-order" class="w-full py-3 bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fas fa-utensils"></i> Inyectar Pedido Comida
-                    </button>
-                </div>
-                <p class="text-[8px] text-white/30 text-center leading-normal">Los botones crean registros de prueba directos en la base de datos de Supabase para gatillar las alertas sonoras y vistas del KDS/Calendario.</p>
-            </div>
-
-            <!-- Directory Grid -->
-            <div class="glass p-5 rounded-3xl space-y-3">
-                <p class="text-[10px] font-black text-white/40 uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-folder-open"></i> Enlaces directos</p>
-                <div class="grid grid-cols-1 gap-2 text-left">
-                    <a href="/onboarding" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Registro Socio</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
-                    <a href="/socios" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Landing Socios</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
-                    <a href="/quimieats-admin.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Consola Admin</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
-                    <a href="/driver-portal.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Portal Motoristas</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
-                    <a href="/kitchen.html" target="_blank" class="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-white/70 hover:text-white flex justify-between items-center transition-all"><span>Pantalla KDS Cocina</span><i class="fas fa-external-link-alt text-[9px]"></i></a>
                 </div>
             </div>
-        </aside>
 
-        <!-- Simulated Device Viewports -->
-        <section class="flex-1 p-6 flex justify-center items-center gap-8 bg-dark relative overflow-y-auto">
-            <!-- Simulated Device 1: Customer PWA -->
-            <div class="flex flex-col items-center gap-2">
-                <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-mobile-alt"></i> QuimiEats Cliente PWA</span>
+            <!-- 3 Frame Split-Screen Matrix -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 
-                <!-- Phone Wrapper Frame -->
-                <div class="w-[375px] h-[720px] bg-charcoal rounded-[3.5rem] border-8 border-white/10 p-1 relative overflow-hidden device-shadow">
-                    <!-- Top Notch -->
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/10 rounded-b-2xl z-50 flex items-center justify-center">
-                        <div class="w-12 h-1 bg-black rounded-full mb-1"></div>
+                <!-- 1. Customer Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-shopping-cart"></i> 1. Cliente (Storefront)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-white/10 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full h-full border-0"></iframe>
                     </div>
-                    
-                    <!-- Content Iframe -->
-                    <iframe id="iframe-customer" src="/quimieats.html?id=dental-arita" class="w-full h-full bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
                 </div>
-            </div>
 
-            <!-- Simulated Device 2: Partner OS -->
-            <div class="flex flex-col items-center gap-2">
-                <span class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5"><i class="fas fa-tablet-alt"></i> Partner OS (POS / Calendario)</span>
-                
-                <!-- Tablet/Desktop Wrapper Frame -->
-                <div class="w-[375px] h-[720px] bg-charcoal rounded-[3.5rem] border-8 border-white/10 p-1 relative overflow-hidden device-shadow">
-                    <!-- Top Notch -->
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-5 bg-white/10 rounded-b-2xl z-50 flex items-center justify-center">
-                        <div class="w-12 h-1 bg-black rounded-full mb-1"></div>
+                <!-- 2. Restaurant Portal Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-store"></i> 2. Restaurante (Partner)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-cyan/30 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-partner" src="/partner.html" class="w-full h-full border-0"></iframe>
                     </div>
-                    
-                    <!-- Content Iframe -->
-                    <iframe id="iframe-partner" src="/partner-os.html" class="w-full h-full bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
                 </div>
+
+                <!-- 3. Driver Portal Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-motorcycle"></i> 3. Motorista (Driver)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-amber-500/30 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-driver" src="/driver-portal.html" class="w-full h-full border-0"></iframe>
+                    </div>
+                </div>
+
             </div>
-        </section>
+        </div>
+
     </main>
 
-    <!-- Dev Scripts -->
+    <!-- Footer -->
+    <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-white/30 font-bold uppercase tracking-widest">
+        QuimiEats Platform OS • Quimistán, Santa Bárbara, Honduras 🇭🇳
+    </footer>
+
     <script>
-        function syncSimulatorPartner(partnerId) {
-            document.getElementById('sim-partner-select').value = partnerId;
-            
-            const customerIframe = document.getElementById('iframe-customer');
-            const partnerIframe = document.getElementById('iframe-partner');
-            
-            customerIframe.src = `/quimieats.html?id=${partnerId}`;
-            // If they sync, we force reload frames
-            partnerIframe.src = `/partner-os.html`;
-        }
+        function setViewMode(mode) {
+            const btnCards = document.getElementById('mode-btn-cards');
+            const btnSim = document.getElementById('mode-btn-simulator');
+            const viewCards = document.getElementById('view-cards');
+            const viewSim = document.getElementById('view-simulator');
 
-        function reloadSimulators() {
-            document.getElementById('iframe-customer').contentWindow.location.reload();
-            document.getElementById('iframe-partner').contentWindow.location.reload();
-        }
-
-        async function triggerMockBooking() {
-            const btn = document.getElementById('btn-mock-booking');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Inyectando...';
-
-            try {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                const dateStr = tomorrow.toISOString().split('T')[0];
-
-                const payload = {
-                    items: [{ name: "Cita Previa: Consulta General", price: 0, qty: 1 }],
-                    total: 0,
-                    subtotal: 0,
-                    discount: 0,
-                    paymentMethod: 'cash',
-                    customerId: '0xSIMULATED_CLIENT',
-                    status: 'pending_booking',
-                    restaurantId: 'dental-arita',
-                    scheduled_for: `${dateStr} 09:00 AM`,
-                    notes: '[FULFILLMENT: booking] [MOTIVO: Consulta General] Creado desde Simulador Dev Hub',
-                    fulfillment: 'booking'
-                };
-
-                const res = await fetch('/api/store?action=orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    alert("¡Cita de prueba inyectada con éxito! Revisa la vista del calendario en el simulador derecho.");
-                } else {
-                    alert("No se pudo inyectar la cita de prueba.");
-                }
-            } catch(e) {
-                console.error(e);
-                alert("Error de red.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+            if (mode === 'cards') {
+                viewCards.classList.remove('hidden');
+                viewSim.classList.add('hidden');
+                btnCards.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md";
+                btnSim.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white";
+            } else {
+                viewCards.classList.add('hidden');
+                viewSim.classList.remove('hidden');
+                btnCards.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white";
+                btnSim.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md";
             }
         }
 
-        async function triggerMockOrder() {
-            const btn = document.getElementById('btn-mock-order');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i> Inyectando...';
-
-            try {
-                const payload = {
-                    items: [{ name: "Baleada Sencilla", price: 25, qty: 2 }, { name: "Café Americano 8oz", price: 35, qty: 1 }],
-                    total: 85,
-                    subtotal: 85,
-                    discount: 0,
-                    paymentMethod: 'cash',
-                    customerId: '0xSIMULATED_CLIENT',
-                    status: 'pending',
-                    restaurantId: 'rich-aroma',
-                    fulfillment: 'carryout',
-                    notes: 'Creado desde Simulador Dev Hub'
-                };
-
-                const res = await fetch('/api/store?action=orders', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    alert("¡Pedido de prueba inyectada con éxito! Revisa la cola de órdenes en el simulador derecho.");
-                } else {
-                    alert("No se pudo inyectar el pedido de prueba.");
-                }
-            } catch(e) {
-                console.error(e);
-                alert("Error de red.");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            }
+        function reloadAllFrames() {
+            document.getElementById('frame-cust').contentWindow.location.reload();
+            document.getElementById('frame-partner').contentWindow.location.reload();
+            document.getElementById('frame-driver').contentWindow.location.reload();
         }
     </script>
 </body>
