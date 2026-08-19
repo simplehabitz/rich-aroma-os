@@ -81,25 +81,36 @@
     <!-- Main Container Matching Flyer -->
     <main class="max-w-xl mx-auto px-4 py-6 space-y-8">
         
-        <!-- Flyer Title Header -->
-        <div class="text-center space-y-2 relative pt-2">
-            <!-- Subtle Coffee Bean Decor -->
-            <div class="flex items-center justify-center gap-3 text-brand-brown/80 mb-1">
-                <i class="fas fa-mug-hot text-2xl text-brand-brown"></i>
+        <!-- Menu Category Switcher (Bottles vs Fresh Hot Bar) -->
+        <div class="bg-white rounded-3xl p-1.5 border border-brand-brown/15 shadow-sm">
+            <div class="grid grid-cols-2 gap-1.5 bg-gray-100 p-1 rounded-2xl border border-gray-200">
+                <button type="button" onclick="setMenuCategory('bottles')" id="tab-cat-bottles" class="py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow flex items-center justify-center gap-1.5">
+                    <span>❄️</span> Bottled Coffee
+                </button>
+                <button type="button" onclick="setMenuCategory('hot')" id="tab-cat-hot" class="py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-gray-500 hover:text-brand-dark flex items-center justify-center gap-1.5">
+                    <span>☕</span> Fresh Hot Bar <span class="text-[8px] bg-amber-500/20 text-amber-800 font-bold px-1.5 py-0.5 rounded-full border border-amber-500/30">6am-3pm</span>
+                </button>
             </div>
-            <h1 class="font-serif font-black text-4xl sm:text-5xl text-brand-dark tracking-tight">
+        </div>
+
+        <!-- Flyer / Menu Header -->
+        <div class="text-center space-y-2 relative pt-1">
+            <div class="flex items-center justify-center gap-3 text-brand-brown/80 mb-1">
+                <i id="header-menu-icon" class="fas fa-mug-hot text-2xl text-brand-brown"></i>
+            </div>
+            <h1 id="header-menu-title" class="font-serif font-black text-4xl sm:text-5xl text-brand-dark tracking-tight">
                 Choose Your Drink
             </h1>
-            <p class="text-[10px] sm:text-xs font-black uppercase tracking-[0.25em] text-brand-brown">
+            <p id="header-menu-subtitle" class="text-[10px] sm:text-xs font-black uppercase tracking-[0.25em] text-brand-brown">
                 Premium Bottled Coffee • 12 OZ
             </p>
-            <p class="text-[11px] text-gray-500 font-medium italic max-w-sm mx-auto">
+            <p id="header-menu-desc" class="text-[11px] text-gray-500 font-medium italic max-w-sm mx-auto">
                 Artisanal brewed chilled espresso from 100% single-origin Honduras beans.
             </p>
         </div>
 
-        <!-- Order Mode Toggle (Fridge Pickup vs Pre-Order) -->
-        <div class="bg-white rounded-3xl p-3 border border-brand-brown/15 shadow-sm space-y-2">
+        <!-- Order Mode Toggle for Bottles (Fridge Pickup vs Pre-Order Drop) -->
+        <div id="bottles-mode-container" class="bg-white rounded-3xl p-3 border border-brand-brown/15 shadow-sm space-y-2">
             <div class="grid grid-cols-2 gap-2 bg-gray-50 p-1 rounded-2xl border border-gray-100">
                 <button type="button" onclick="setOrderMode('grab')" id="mode-grab" class="py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow">
                     <i class="fas fa-snowflake mr-1"></i> Fridge Pickup
@@ -117,15 +128,52 @@
             </p>
         </div>
 
-        <!-- 6 Signature Bottle Grid (2 Columns on Mobile, 3 Columns on Desktop) -->
+        <!-- Hot Bar 15-Minute Pickup Window Scheduler (Visible for Hot Drinks) -->
+        <div id="hot-pickup-scheduler" class="hidden bg-gradient-to-br from-[#2a1a12] via-brand-dark to-[#1a110d] text-white rounded-3xl p-5 border border-brand-gold/35 shadow-xl space-y-4 animate-fade-in">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-brand-gold/15 text-brand-gold flex items-center justify-center text-xl shrink-0 border border-brand-gold/40">
+                        ☕
+                    </div>
+                    <div>
+                        <span class="text-[8px] font-black uppercase tracking-widest text-brand-gold block">Pick Up Only • 6:00 AM – 3:00 PM</span>
+                        <h3 class="font-serif font-black text-base text-white">Order Ahead 15-Min Pickup Window</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Date & Slot Selectors -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div class="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-1">
+                    <label class="block text-[8px] font-black uppercase tracking-wider text-white/60">1. Select Pickup Date</label>
+                    <input type="date" id="hot-pickup-date" class="w-full bg-black/40 border border-white/20 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-brand-gold transition-all" onchange="generateHotPickupSlots()">
+                </div>
+                <div class="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-1">
+                    <label class="block text-[8px] font-black uppercase tracking-wider text-white/60">2. 15-Minute Pickup Slot</label>
+                    <select id="hot-pickup-slot-select" class="w-full bg-black/40 border border-white/20 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-brand-gold transition-all" onchange="selectHotPickupSlot(this.value)">
+                        <!-- Generated dynamically 6:00 AM - 3:00 PM -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Notice & Barista Guarantee -->
+            <div class="bg-black/30 rounded-2xl p-3 border border-white/10 flex items-start gap-2.5">
+                <i class="fas fa-clock text-brand-gold text-xs mt-0.5"></i>
+                <p class="text-[9px] text-white/80 leading-relaxed">
+                    <strong>Freshly Pulled Guarantee:</strong> Hot drinks are handcrafted right before your arrival so they are steaming hot when you pick up during your selected window at <strong>Rich Aroma Coffee Bar (Chino, CA)</strong>.
+                </p>
+            </div>
+        </div>
+
+        <!-- Drinks Grid (2 Columns on Mobile, 3 Columns on Desktop) -->
         <div id="drinks-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3.5 sm:gap-4">
-            <!-- Injected dynamically matching the flyer -->
+            <!-- Injected dynamically -->
         </div>
 
         <!-- ============================================== -->
         <!-- BUNDLES SECTION (Matching Flyer) -->
         <!-- ============================================== -->
-        <div class="space-y-4 pt-4">
+        <div id="bundles-section" class="space-y-4 pt-4">
             
             <!-- Ribbon Banner -->
             <div class="relative flex items-center justify-center">
@@ -693,19 +741,30 @@
     <!-- LOGIC & SCRIPTS -->
     <!-- ============================================== -->
     <script>
-        // Flyer drink definitions with fallbacks
         const FLYER_PRODUCTS = [
-            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", price: 6.00, tag: "Milk or Oat Milk", icon: "🍃", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_1786490434692_1786490434692.jpeg" },
-            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", price: 5.00, tag: "Pure 3oz Espresso", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1782005065541.jpeg" },
-            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", price: 6.00, tag: "Milk or Oat Milk", icon: "✨", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_b03751fd-1e87-4f6e-8557-c8b8bb9973fa_1778630672917.jpeg" },
-            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", price: 6.00, tag: "Milk or Oat Milk", icon: "🍯", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1775224187104.jpeg" },
+            { id: "02193b22-8fc8-4ca3-b6d8-f86a60db2a5f", name: "Vanilla Matcha", price: 6.00, tag: "Milk or Oat Milk", icon: "🍃", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_02193b22-8fc8-4ca3-b6d8-f86a60db2a5f_1775224095431.jpeg" },
+            { id: "1e89cf29-b690-48e0-bb15-05e836ee6805", name: "Classic Black", price: 5.00, tag: "Pure 3oz Espresso", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_1e89cf29-b690-48e0-bb15-05e836ee6805_1775224128522.jpeg" },
+            { id: "9bb00ca7-4c31-4091-bf96-2615ce68b4ad", name: "Dirty Chai", price: 6.00, tag: "Milk or Oat Milk", icon: "✨", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_9bb00ca7-4c31-4091-bf96-2615ce68b4ad_1775224157545.jpeg" },
+            { id: "8435d8e1-5db8-40fe-8f0f-f131a4e1d17d", name: "Caramel Latte", price: 6.00, tag: "Milk or Oat Milk", icon: "🍯", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_8435d8e1-5db8-40fe-8f0f-f131a4e1d17d_1775224185790.jpeg" },
             { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", price: 6.00, tag: "Milk or Oat Milk", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1775224214187.jpeg" },
             { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", price: 6.00, tag: "Milk or Oat Milk", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1775224242879.jpeg" }
         ];
 
+        const HOT_PRODUCTS = [
+            { id: "hot-caramel-latte", name: "Hot Caramel Latte", price: 6.00, tag: "Handcrafted Hot", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_8435d8e1-5db8-40fe-8f0f-f131a4e1d17d_1775224185790.jpeg", is_hot: true },
+            { id: "hot-french-vanilla", name: "Hot French Vanilla", price: 6.00, tag: "Handcrafted Hot", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1775224214187.jpeg", is_hot: true },
+            { id: "hot-vanilla-matcha", name: "Hot Vanilla Matcha", price: 6.00, tag: "Handcrafted Hot", icon: "🍃", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_02193b22-8fc8-4ca3-b6d8-f86a60db2a5f_1775224095431.jpeg", is_hot: true },
+            { id: "hot-dirty-chai", name: "Hot Dirty Chai", price: 6.00, tag: "Handcrafted Hot", icon: "✨", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_9bb00ca7-4c31-4091-bf96-2615ce68b4ad_1775224157545.jpeg", is_hot: true },
+            { id: "hot-classic-americano", name: "Hot Classic Americano", price: 5.00, tag: "Pure Hot Espresso", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_1e89cf29-b690-48e0-bb15-05e836ee6805_1775224128522.jpeg", is_hot: true },
+            { id: "hot-vanilla-latte", name: "Hot Vanilla Latte", price: 6.00, tag: "Handcrafted Hot", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1775224242879.jpeg", is_hot: true }
+        ];
+
         let allLocations = [];
         let selectedLocationId = "ont2";
+        let currentMenuCategory = "bottles"; // 'bottles' or 'hot'
         let orderMode = "grab"; // 'grab' or 'preorder'
+        let selectedHotPickupDate = "";
+        let selectedHotPickupSlot = "";
         let cart = [];
         let paymentMethod = "stripe";
         let lastOrderData = null;
@@ -739,6 +798,9 @@
                 picker.min = `${yyyy}-${mm}-${dd}`;
                 picker.value = `${yyyy}-${mm}-${dd}`;
             }
+
+            // Setup hot pickup scheduler
+            generateHotPickupSlots();
 
             // Render flyer grid
             renderDrinksGrid();
@@ -775,13 +837,145 @@
             }
         }
 
+        function setMenuCategory(cat) {
+            currentMenuCategory = cat;
+            const tabBottles = document.getElementById('tab-cat-bottles');
+            const tabHot = document.getElementById('tab-cat-hot');
+            const headerTitle = document.getElementById('header-menu-title');
+            const headerSub = document.getElementById('header-menu-subtitle');
+            const headerDesc = document.getElementById('header-menu-desc');
+            const bottlesMode = document.getElementById('bottles-mode-container');
+            const hotScheduler = document.getElementById('hot-pickup-scheduler');
+            const bundlesSection = document.getElementById('bundles-section');
+
+            if (cat === 'hot') {
+                tabBottles.className = "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-gray-500 hover:text-brand-dark flex items-center justify-center gap-1.5";
+                tabHot.className = "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow flex items-center justify-center gap-1.5";
+
+                headerTitle.innerText = "Fresh Hot Bar";
+                headerSub.innerText = "Handcrafted Hot Espresso • 6:00 AM – 3:00 PM";
+                headerDesc.innerText = "Freshly pulled Honduran espresso drinks. Pick up in scheduled 15-minute windows.";
+
+                bottlesMode.classList.add('hidden');
+                hotScheduler.classList.remove('hidden');
+                bundlesSection.classList.add('hidden');
+
+                generateHotPickupSlots();
+            } else {
+                tabBottles.className = "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow flex items-center justify-center gap-1.5";
+                tabHot.className = "py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all text-gray-500 hover:text-brand-dark flex items-center justify-center gap-1.5";
+
+                headerTitle.innerText = "Choose Your Drink";
+                headerSub.innerText = "Premium Bottled Coffee • 12 OZ";
+                headerDesc.innerText = "Artisanal brewed chilled espresso from 100% single-origin Honduras beans.";
+
+                bottlesMode.classList.remove('hidden');
+                hotScheduler.classList.add('hidden');
+                bundlesSection.classList.remove('hidden');
+            }
+
+            renderDrinksGrid();
+        }
+
+        function generateHotPickupSlots() {
+            const dateInput = document.getElementById('hot-pickup-date');
+            const selectEl = document.getElementById('hot-pickup-slot-select');
+            if (!dateInput || !selectEl) return;
+
+            // Default date if empty
+            if (!dateInput.value) {
+                const now = new Date();
+                const currentHour = now.getHours();
+                // If past 2:45 PM (14:45), default to tomorrow
+                if (currentHour >= 15 || (currentHour === 14 && now.getMinutes() > 45)) {
+                    now.setDate(now.getDate() + 1);
+                }
+                const yyyy = now.getFullYear();
+                const mm = String(now.getMonth() + 1).padStart(2, '0');
+                const dd = String(now.getDate()).padStart(2, '0');
+                dateInput.value = `${yyyy}-${mm}-${dd}`;
+                dateInput.min = `${yyyy}-${mm}-${dd}`;
+            }
+
+            selectedHotPickupDate = dateInput.value;
+
+            // Generate 15-min intervals from 06:00 to 15:00
+            const slots = [];
+            for (let hour = 6; hour <= 14; hour++) {
+                for (let min = 0; min < 60; min += 15) {
+                    const startH = hour;
+                    const startM = min;
+                    let endH = hour;
+                    let endM = min + 15;
+                    if (endM >= 60) {
+                        endH++;
+                        endM = 0;
+                    }
+
+                    const formatTime = (h, m) => {
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        const h12 = h % 12 === 0 ? 12 : (h % 12);
+                        const mStr = String(m).padStart(2, '0');
+                        return `${h12}:${mStr} ${ampm}`;
+                    };
+
+                    const label = `${formatTime(startH, startM)} - ${formatTime(endH, endM)}`;
+                    const value = `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+                    slots.push({ label, value, startH, startM });
+                }
+            }
+
+            // Check against current time if selected date is today
+            const now = new Date();
+            const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const isToday = (selectedHotPickupDate === todayStr);
+            const currentTotalMin = now.getHours() * 60 + now.getMinutes() + 15; // 15 min lead buffer
+
+            let optionsHtml = '';
+            let firstValidSlot = null;
+
+            slots.forEach(s => {
+                const slotTotalMin = s.startH * 60 + s.startM;
+                const isPast = isToday && (slotTotalMin < currentTotalMin);
+
+                if (!isPast) {
+                    if (!firstValidSlot) firstValidSlot = s.label;
+                    optionsHtml += `<option value="${s.label}">${s.label}</option>`;
+                }
+            });
+
+            if (!optionsHtml) {
+                optionsHtml = `<option value="">Hot bar closed for today (Select tomorrow above)</option>`;
+                selectedHotPickupSlot = "";
+            } else {
+                selectedHotPickupSlot = firstValidSlot;
+            }
+
+            selectEl.innerHTML = optionsHtml;
+            if (selectedHotPickupSlot) selectEl.value = selectedHotPickupSlot;
+        }
+
+        function selectHotPickupSlot(slot) {
+            selectedHotPickupSlot = slot;
+            updateCartUI();
+        }
+
         function renderDrinksGrid() {
             const grid = document.getElementById('drinks-grid');
-            grid.innerHTML = FLYER_PRODUCTS.map(p => {
+            const productsList = (currentMenuCategory === 'hot') ? HOT_PRODUCTS : FLYER_PRODUCTS;
+
+            grid.innerHTML = productsList.map(p => {
                 const isBlack = p.name.toLowerCase().includes('classic black');
-                const tagDisplay = isBlack ? "Pure 3oz Espresso" : "Milk or Oat Milk";
+                const isHot = p.is_hot;
+                const tagDisplay = isHot ? (isBlack ? "Pure Hot 3oz Espresso" : "Fresh Steamed Milk or Oat") : (isBlack ? "Pure 3oz Espresso" : "Milk or Oat Milk");
+
                 return `
                 <div class="bg-white rounded-3xl p-4 border border-brand-brown/15 shadow-sm hover:shadow-md transition-all flex flex-col justify-between text-center relative group">
+                    ${isHot ? `
+                    <div class="absolute top-3 left-3 bg-amber-500/15 border border-amber-500/30 text-amber-900 text-[8px] font-black uppercase px-2 py-0.5 rounded-full flex items-center gap-1 z-10">
+                        <i class="fas fa-mug-hot text-amber-700"></i> Hot Bar
+                    </div>
+                    ` : ''}
                     <div class="h-36 sm:h-40 w-full flex items-center justify-center mb-2 overflow-hidden">
                         <img src="${p.image}" alt="${p.name}" class="h-full max-h-36 sm:max-h-40 object-contain bottle-shadow group-hover:scale-105 transition-transform duration-300">
                     </div>
@@ -789,7 +983,7 @@
                         <h3 class="font-serif font-black text-xs sm:text-sm text-brand-dark leading-tight">${p.name}</h3>
                         <p class="font-mono font-black text-sm sm:text-base text-brand-brown">$${p.price.toFixed(2)}</p>
                         <p class="text-[8px] font-bold text-gray-400 uppercase tracking-wider flex items-center justify-center gap-1">
-                            ${isBlack ? '<i class="fas fa-coffee text-[7px]"></i>' : '<i class="fas fa-bottle-water text-[7px]"></i>'} ${tagDisplay}
+                            <i class="${isHot ? 'fas fa-mug-hot' : (isBlack ? 'fas fa-coffee' : 'fas fa-bottle-water')} text-[7px]"></i> ${tagDisplay}
                         </p>
                     </div>
                     <button type="button" onclick="openDrinkCustomizer('${p.id}')" class="mt-3 w-full bg-brand-cream hover:bg-brand-brown hover:text-white text-brand-dark border border-brand-brown/20 font-black py-2 rounded-xl text-[9px] uppercase tracking-wider transition-all shadow-xs">
@@ -824,7 +1018,8 @@
         let customizerQty = { whole: 1, oat: 0, black: 1 };
 
         function openDrinkCustomizer(productId) {
-            const prod = FLYER_PRODUCTS.find(p => p.id === productId);
+            const allProds = [...FLYER_PRODUCTS, ...HOT_PRODUCTS];
+            const prod = allProds.find(p => p.id === productId);
             if (!prod) return;
 
             currentCustomDrink = prod;
@@ -870,23 +1065,26 @@
         function updateCustomizerUI() {
             if (!currentCustomDrink) return;
             const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
+            const isHot = currentCustomDrink.is_hot;
 
             document.getElementById('customizer-qty-whole').innerText = customizerQty.whole;
             document.getElementById('customizer-qty-oat').innerText = customizerQty.oat;
             document.getElementById('customizer-qty-black').innerText = customizerQty.black;
 
-            const totalBottles = isBlack ? customizerQty.black : (customizerQty.whole + customizerQty.oat);
+            const totalItems = isBlack ? customizerQty.black : (customizerQty.whole + customizerQty.oat);
             const totalCost = isBlack ? (customizerQty.black * 5.00) : (customizerQty.whole * 6.00 + customizerQty.oat * 7.00);
 
             const btn = document.getElementById('btn-customizer-submit');
-            if (totalBottles > 0) {
+            const itemUnitLabel = isHot ? "Drink" : "Bottle";
+
+            if (totalItems > 0) {
                 btn.disabled = false;
                 btn.className = "w-full bg-brand-brown text-white font-black py-4 rounded-2xl shadow-lg hover:bg-brand-dark active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2 cursor-pointer";
-                btn.innerText = `Add ${totalBottles} Bottle${totalBottles > 1 ? 's' : ''} to Order • $${totalCost.toFixed(2)}`;
+                btn.innerText = `Add ${totalItems} ${itemUnitLabel}${totalItems > 1 ? 's' : ''} to Order • $${totalCost.toFixed(2)}`;
             } else {
                 btn.disabled = true;
                 btn.className = "w-full bg-gray-200 text-gray-400 font-black py-4 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px] cursor-not-allowed";
-                btn.innerText = "Select at least 1 bottle";
+                btn.innerText = `Select at least 1 ${itemUnitLabel.toLowerCase()}`;
             }
         }
 
@@ -907,6 +1105,7 @@
         function confirmAddCustomizerDrinks() {
             if (!currentCustomDrink) return;
             const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
+            const isHot = currentCustomDrink.is_hot;
 
             let addedCount = 0;
 
@@ -914,6 +1113,7 @@
                 cart.push({
                     product_id: currentCustomDrink.id,
                     name: currentCustomDrink.name,
+                    is_hot: isHot,
                     selections: [{
                         flavor: currentCustomDrink.name,
                         milk: 'None (Black)',
@@ -930,6 +1130,7 @@
                     cart.push({
                         product_id: currentCustomDrink.id,
                         name: `${currentCustomDrink.name} (Whole Milk)`,
+                        is_hot: isHot,
                         selections: [{
                             flavor: currentCustomDrink.name,
                             milk: 'Whole Milk',
@@ -946,6 +1147,7 @@
                     cart.push({
                         product_id: currentCustomDrink.id,
                         name: `${currentCustomDrink.name} (Oat Milk)`,
+                        is_hot: isHot,
                         selections: [{
                             flavor: currentCustomDrink.name,
                             milk: 'Oat Milk',
@@ -961,7 +1163,7 @@
             }
 
             if (addedCount > 0) {
-                showToast(`${addedCount} bottle${addedCount > 1 ? 's' : ''} added to your order!`, 'success');
+                showToast(`${addedCount} ${isHot ? 'hot drink' : 'bottle'}${addedCount > 1 ? 's' : ''} added to your order!`, 'success');
             }
 
             closeDrinkCustomizer();
@@ -1415,7 +1617,9 @@
             headerCount.classList.remove('hidden');
 
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
-            const isDelivery = orderMode === 'preorder' || hasCatering;
+            const hasHot = cart.some(i => i.is_hot);
+            const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
+            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
 
             // Calculate Mix & Match 5-Pack Discounts for individual bottle orders
             // (Every set of 5 individual bottles automatically saves $5.00)
@@ -1430,7 +1634,11 @@
             // Upsell banner logic
             const bannerEl = document.getElementById('bundle-upsell-banner');
             if (bannerEl) {
-                if (hasCatering) {
+                if (hasHot) {
+                    bannerEl.className = "p-3 rounded-2xl border bg-amber-500/15 text-amber-900 border-amber-500/40 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `☕ <strong>Fresh Hot Bar Pickup:</strong> ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}<br><span class="text-[9px] font-normal text-amber-800">Rich Aroma Coffee Bar (Chino, CA) • Ready fresh when you arrive!</span>`;
+                    bannerEl.classList.remove('hidden');
+                } else if (hasCatering) {
                     bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
                     bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (30+ Bottles)`;
                     bannerEl.classList.remove('hidden');
@@ -1455,7 +1663,7 @@
 
             const discountRow = document.getElementById('summary-discount-row');
             if (discountRow) {
-                if (autoBundleDiscount > 0) {
+                if (autoBundleDiscount > 0 && !hasHot) {
                     discountRow.classList.remove('hidden');
                     document.getElementById('summary-discount-label').innerText = `${autoBundlePacks}x 5-Pack Bundle Discount`;
                     document.getElementById('summary-discount-amount').innerText = `-$${autoBundleDiscount.toFixed(2)}`;
@@ -1496,7 +1704,7 @@
             document.getElementById('sticky-cart-total').innerText = `$${grandTotal.toFixed(2)}`;
             stickyBar.classList.remove('hidden');
 
-            document.getElementById('cart-bottles-count').innerText = `${totalBottles} bottles`;
+            document.getElementById('cart-bottles-count').innerText = `${totalBottles} items`;
             document.getElementById('cart-total-display').innerText = `$${grandTotal.toFixed(2)}`;
 
             list.innerHTML = cart.map((item, idx) => {
@@ -1508,7 +1716,7 @@
                     descText = `5-Pack (${item.selections[0].milk}) • ${flavorsSummary}`;
                 } else {
                     const sel = item.selections[0] || {};
-                    descText = `${sel.milk || 'Whole Milk'} • ${sel.espresso || '2oz'}`;
+                    descText = `${sel.milk || 'Whole Milk'} • ${sel.espresso || '2oz'}${item.is_hot ? ' • Handcrafted Hot' : ''}`;
                 }
 
                 const isBundleOrBulk = item.bottles >= 5;
@@ -1607,7 +1815,9 @@
             }
 
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
-            const isDelivery = orderMode === 'preorder' || hasCatering;
+            const hasHot = cart.some(i => i.is_hot);
+            const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
+            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -1630,15 +1840,20 @@
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
             const autoBundleDiscount = autoBundlePacks * 5.00;
 
-            const notesTag = hasCatering 
-                ? `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`
-                : (isDelivery ? `[PRE-ORDER DROP FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}` : '[FRIDGE-PICKUP]');
+            let notesTag = '[FRIDGE-PICKUP]';
+            if (hasHot) {
+                notesTag = `[HOT BAR PICKUP: ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
+            } else if (hasCatering) {
+                notesTag = `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
+            } else if (isDelivery) {
+                notesTag = `[PRE-ORDER DROP FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}`;
+            }
 
             const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`;
 
             // Prepare items array including packaging, bundle discount & delivery line items for Stripe
             const finalStripeItems = [...cart];
-            if (autoBundleDiscount > 0) {
+            if (autoBundleDiscount > 0 && !hasHot) {
                 finalStripeItems.push({
                     name: `5-Pack Mix & Match Bundle Discount (${autoBundlePacks}x 5-pack)`,
                     qty: 1,
@@ -1670,7 +1885,8 @@
                         notes: selfCheckoutNotes,
                         is_subscription: false,
                         delivery_fee_applied: deliveryFee,
-                        preorder_date: isDelivery ? selectedDate : null
+                        preorder_date: isDelivery ? selectedDate : (hasHot ? selectedHotPickupDate : null),
+                        hot_pickup_slot: hasHot ? selectedHotPickupSlot : null
                     })
                 });
 
@@ -1704,7 +1920,9 @@
             }
 
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
-            const isDelivery = orderMode === 'preorder' || hasCatering;
+            const hasHot = cart.some(i => i.is_hot);
+            const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
+            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -1719,16 +1937,22 @@
                 .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
                 .reduce((sum, i) => sum + (i.bottles || 1), 0);
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
-            const autoBundleDiscount = autoBundlePacks * 5.00;
+            const autoBundleDiscount = (!hasHot) ? (autoBundlePacks * 5.00) : 0;
 
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
             const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
             const grandTotal = Math.max(0, totalDrinks - autoBundleDiscount + coolerBagFee + deliveryFee);
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const notesTag = hasCatering 
-                ? `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`
-                : (isDelivery ? `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}` : `[FRIDGE-PICKUP PAY: ${method.toUpperCase()}]`);
+
+            let notesTag = `[FRIDGE-PICKUP PAY: ${method.toUpperCase()}]`;
+            if (hasHot) {
+                notesTag = `[HOT BAR PICKUP PAY: ${method.toUpperCase()} FOR ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
+            } else if (hasCatering) {
+                notesTag = `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
+            } else if (isDelivery) {
+                notesTag = `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}`;
+            }
 
             try {
                 const res = await fetch('/api/cali?action=create_self_checkout_order', {
@@ -1744,11 +1968,13 @@
                             bundle_discount: autoBundleDiscount,
                             cooler_bag_fee: coolerBagFee,
                             delivery_fee: deliveryFee,
-                            delivery_address: `${address}, ${city} ${zip}`,
+                            delivery_address: isDelivery ? `${address}, ${city} ${zip}` : 'Rich Aroma Bar (Chino, CA)',
                             delivery_distance_miles: calculatedDeliveryDistance,
+                            hot_pickup_date: hasHot ? selectedHotPickupDate : null,
+                            hot_pickup_slot: hasHot ? selectedHotPickupSlot : null,
                             payment_method: method.toLowerCase(),
                             status: 'pending_verification',
-                            preorder_date: isDelivery ? selectedDate : null
+                            preorder_date: isDelivery ? selectedDate : (hasHot ? selectedHotPickupDate : null)
                         },
                         notes: `${notesTag} Order from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`
                     })
