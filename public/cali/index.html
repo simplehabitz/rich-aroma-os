@@ -152,7 +152,7 @@
 
                     <div class="bg-brand-brown/5 rounded-2xl p-3 text-center border border-brand-brown/10 space-y-1">
                         <span class="font-serif font-black text-3xl text-brand-brown leading-none">$25</span>
-                        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Mix & Match Any 5 Milk Options!</p>
+                        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Mix & Match Any 5 Whole Milk Options!</p>
                     </div>
 
                     <button type="button" onclick="openBundleBuilder('milk')" class="w-full bg-brand-brown text-white font-black py-3.5 rounded-2xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-1.5">
@@ -753,8 +753,8 @@
             const btn = document.getElementById('btn-add-bundle');
 
             if (type === 'milk') {
-                titleEl.innerText = "Build Your 5-Pack (Regular Milk)";
-                subEl.innerText = "Milk Bundle • $25.00 ($5/bottle)";
+                titleEl.innerText = "Build Your 5-Pack (Whole Milk)";
+                subEl.innerText = "Whole Milk Bundle • $25.00 ($5/bottle)";
                 btn.innerText = "Select 5 Bottles to Add ($25)";
             } else {
                 titleEl.innerText = "Build Your 5-Pack (Oat Milk)";
@@ -781,7 +781,7 @@
                         <img src="${p.image}" class="w-8 h-8 object-contain">
                         <div>
                             <p class="font-serif font-bold text-xs text-brand-dark">${p.name}</p>
-                            <p class="text-[8px] text-gray-400 font-bold uppercase">${activeBundleType === 'oat' ? 'Oat Milk' : 'Regular Milk'}</p>
+                            <p class="text-[8px] text-gray-400 font-bold uppercase">${activeBundleType === 'oat' ? 'Oat Milk' : 'Whole Milk'}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
