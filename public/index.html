@@ -325,24 +325,74 @@
     </div>
 
     <!-- ============================================== -->
-    <!-- SINGLE DRINK CUSTOMIZER MODAL -->
+    <!-- MULTI-MILK DRINK CUSTOMIZER MODAL -->
     <!-- ============================================== -->
     <div id="drink-customizer-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-center justify-center z-[90] p-4 animate-fade-in" onclick="if(event.target === this) closeDrinkCustomizer()">
         <div class="bg-white max-w-sm w-full rounded-[2.5rem] p-6 shadow-2xl border border-brand-brown/20 space-y-5">
             <div class="flex justify-between items-start">
-                <div>
-                    <h3 id="modal-drink-name" class="font-serif font-black text-lg text-brand-dark">Vanilla Latte</h3>
-                    <p id="modal-drink-price" class="font-mono font-black text-base text-brand-brown">$6.00</p>
+                <div class="flex items-center gap-3">
+                    <img id="modal-drink-img" src="" class="w-12 h-12 object-contain bottle-shadow">
+                    <div>
+                        <h3 id="modal-drink-name" class="font-serif font-black text-lg text-brand-dark leading-tight">Vanilla Latte</h3>
+                        <p id="modal-drink-base-tag" class="text-[9px] font-bold text-gray-400 uppercase tracking-wider">12 oz Artisanal Espresso</p>
+                    </div>
                 </div>
                 <button type="button" onclick="closeDrinkCustomizer()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all"><i class="fas fa-times text-xs"></i></button>
             </div>
 
-            <!-- Milk Choice -->
-            <div id="modal-milk-section" class="space-y-2">
-                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Milk Choice</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button" onclick="selectModalMilk('Regular')" id="opt-milk-reg" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow">Regular Milk</button>
-                    <button type="button" onclick="selectModalMilk('Oat Milk')" id="opt-milk-oat" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50">Oat Milk (+$1)</button>
+            <!-- Multi-Milk Quantity Selector -->
+            <div class="space-y-2.5">
+                <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Quantities & Milk</label>
+                
+                <!-- Milk Options Container -->
+                <div id="modal-milk-rows" class="space-y-2">
+                    <!-- Whole Milk Row -->
+                    <div id="modal-row-whole" class="flex items-center justify-between p-3 rounded-2xl bg-brand-cream/80 border border-brand-brown/15">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🐮</span>
+                            <div>
+                                <p class="font-serif font-bold text-xs text-brand-dark">Whole Milk</p>
+                                <p class="font-mono font-bold text-[10px] text-brand-brown" id="price-label-whole">$6.00 each</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustCustomizerQty('whole', -1)" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">-</button>
+                            <span id="customizer-qty-whole" class="font-mono font-black text-sm w-6 text-center text-brand-dark">1</span>
+                            <button type="button" onclick="adjustCustomizerQty('whole', 1)" class="w-8 h-8 rounded-full bg-brand-dark text-white font-bold text-sm flex items-center justify-center hover:bg-brand-brown active:scale-95 transition-all">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Oat Milk Row -->
+                    <div id="modal-row-oat" class="flex items-center justify-between p-3 rounded-2xl bg-emerald-50/70 border border-emerald-600/15">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">🍃</span>
+                            <div>
+                                <p class="font-serif font-bold text-xs text-emerald-900">Oat Milk</p>
+                                <p class="font-mono font-bold text-[10px] text-emerald-700" id="price-label-oat">$7.00 each</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustCustomizerQty('oat', -1)" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">-</button>
+                            <span id="customizer-qty-oat" class="font-mono font-black text-sm w-6 text-center text-brand-dark">0</span>
+                            <button type="button" onclick="adjustCustomizerQty('oat', 1)" class="w-8 h-8 rounded-full bg-emerald-700 text-white font-bold text-sm flex items-center justify-center hover:bg-emerald-800 active:scale-95 transition-all">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Pure Black Row (For Classic Black) -->
+                    <div id="modal-row-black" class="hidden flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-200">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xl">☕</span>
+                            <div>
+                                <p class="font-serif font-bold text-xs text-brand-dark">Classic Black (Pure Espresso)</p>
+                                <p class="font-mono font-bold text-[10px] text-brand-brown">$5.00 each</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustCustomizerQty('black', -1)" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-sm flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">-</button>
+                            <span id="customizer-qty-black" class="font-mono font-black text-sm w-6 text-center text-brand-dark">1</span>
+                            <button type="button" onclick="adjustCustomizerQty('black', 1)" class="w-8 h-8 rounded-full bg-brand-dark text-white font-bold text-sm flex items-center justify-center hover:bg-brand-brown active:scale-95 transition-all">+</button>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -350,15 +400,15 @@
             <div class="space-y-2">
                 <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Espresso Strength</label>
                 <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="selectModalEspresso('1oz (light)')" id="opt-esp-light" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500">1oz Light</button>
-                    <button type="button" onclick="selectModalEspresso('2oz (standard)')" id="opt-esp-std" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow">2oz Standard</button>
-                    <button type="button" onclick="selectModalEspresso('3oz (strong)')" id="opt-esp-strong" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500">3oz Strong</button>
+                    <button type="button" onclick="selectModalEspresso('1oz (light)')" id="opt-esp-light" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all">1oz Light</button>
+                    <button type="button" onclick="selectModalEspresso('2oz (standard)')" id="opt-esp-std" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow transition-all">2oz Standard</button>
+                    <button type="button" onclick="selectModalEspresso('3oz (strong)')" id="opt-esp-strong" class="py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all">3oz Strong</button>
                 </div>
             </div>
 
             <!-- Add to Order Button -->
-            <button type="button" onclick="confirmAddSingleDrink()" class="w-full bg-brand-brown text-white font-black py-4 rounded-2xl shadow-lg hover:bg-brand-dark transition-all uppercase tracking-wider text-[10px]">
-                Add to My Order <i class="fas fa-plus ml-1"></i>
+            <button type="button" onclick="confirmAddCustomizerDrinks()" id="btn-customizer-submit" class="w-full bg-brand-brown text-white font-black py-4 rounded-2xl shadow-lg hover:bg-brand-dark active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2">
+                Add to Order • $6.00
             </button>
         </div>
     </div>
@@ -646,11 +696,9 @@
                 btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-450 hover:text-brand-dark";
                 btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
                 helperText.innerText = "Order single bottles or bundles in advance for delivery.";
-                dateRow.classList.remove('hidden');
-            }
-        }
+                dateRow.class        // Customizer State
+        let customizerQty = { whole: 1, oat: 0, black: 1 };
 
-        // Customizer Logic
         function openDrinkCustomizer(productId) {
             const prod = FLYER_PRODUCTS.find(p => p.id === productId);
             if (!prod) return;
@@ -658,23 +706,30 @@
             currentCustomDrink = prod;
             const isBlack = prod.name.toLowerCase().includes('classic black');
 
+            document.getElementById('modal-drink-img').src = prod.image;
             document.getElementById('modal-drink-name').innerText = prod.name;
-            document.getElementById('modal-drink-price').innerText = `$${prod.price.toFixed(2)}`;
 
-            const milkSec = document.getElementById('modal-milk-section');
+            const rowWhole = document.getElementById('modal-row-whole');
+            const rowOat = document.getElementById('modal-row-oat');
+            const rowBlack = document.getElementById('modal-row-black');
+
             if (isBlack) {
-                milkSec.classList.add('hidden');
-                selectedMilk = "None (Black)";
+                rowWhole.classList.add('hidden');
+                rowOat.classList.add('hidden');
+                rowBlack.classList.remove('hidden');
+                customizerQty = { whole: 0, oat: 0, black: 1 };
                 selectedEspresso = "3oz (strong)";
                 selectModalEspresso("3oz (strong)");
             } else {
-                milkSec.classList.remove('hidden');
-                selectedMilk = "Regular";
+                rowWhole.classList.remove('hidden');
+                rowOat.classList.remove('hidden');
+                rowBlack.classList.add('hidden');
+                customizerQty = { whole: 1, oat: 0, black: 0 };
                 selectedEspresso = "2oz (standard)";
-                selectModalMilk("Regular");
                 selectModalEspresso("2oz (standard)");
             }
 
+            updateCustomizerUI();
             document.getElementById('drink-customizer-modal').classList.remove('hidden');
         }
 
@@ -683,22 +738,31 @@
             currentCustomDrink = null;
         }
 
-        function selectModalMilk(opt) {
-            selectedMilk = opt;
-            const btnReg = document.getElementById('opt-milk-reg');
-            const btnOat = document.getElementById('opt-milk-oat');
-            const priceEl = document.getElementById('modal-drink-price');
+        function adjustCustomizerQty(type, delta) {
+            customizerQty[type] = Math.max(0, (customizerQty[type] || 0) + delta);
+            updateCustomizerUI();
+        }
 
-            const basePrice = currentCustomDrink ? currentCustomDrink.price : 6.00;
-            const finalPrice = opt === 'Oat Milk' ? basePrice + 1.00 : basePrice;
-            priceEl.innerText = `$${finalPrice.toFixed(2)}`;
+        function updateCustomizerUI() {
+            if (!currentCustomDrink) return;
+            const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
 
-            if (opt === 'Regular') {
-                btnReg.className = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow";
-                btnOat.className = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50";
+            document.getElementById('customizer-qty-whole').innerText = customizerQty.whole;
+            document.getElementById('customizer-qty-oat').innerText = customizerQty.oat;
+            document.getElementById('customizer-qty-black').innerText = customizerQty.black;
+
+            const totalBottles = isBlack ? customizerQty.black : (customizerQty.whole + customizerQty.oat);
+            const totalCost = isBlack ? (customizerQty.black * 5.00) : (customizerQty.whole * 6.00 + customizerQty.oat * 7.00);
+
+            const btn = document.getElementById('btn-customizer-submit');
+            if (totalBottles > 0) {
+                btn.disabled = false;
+                btn.className = "w-full bg-brand-brown text-white font-black py-4 rounded-2xl shadow-lg hover:bg-brand-dark active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2 cursor-pointer";
+                btn.innerText = `Add ${totalBottles} Bottle${totalBottles > 1 ? 's' : ''} to Order • $${totalCost.toFixed(2)}`;
             } else {
-                btnReg.className = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50";
-                btnOat.className = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-emerald-700 bg-emerald-700 text-white shadow";
+                btn.disabled = true;
+                btn.className = "w-full bg-gray-200 text-gray-400 font-black py-4 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px] cursor-not-allowed";
+                btn.innerText = "Select at least 1 bottle";
             }
         }
 
@@ -708,34 +772,74 @@
             const btnS = document.getElementById('opt-esp-std');
             const btnE = document.getElementById('opt-esp-strong');
 
-            const inactive = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50";
-            const active = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow";
+            const inactive = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-gray-200 text-gray-500 hover:bg-gray-50 transition-all";
+            const active = "py-2.5 rounded-2xl text-[9px] font-black uppercase tracking-wider border border-brand-dark bg-brand-dark text-white shadow transition-all";
 
             btnL.className = opt === '1oz (light)' ? active : inactive;
             btnS.className = opt === '2oz (standard)' ? active : inactive;
             btnE.className = opt === '3oz (strong)' ? active : inactive;
         }
 
-        function confirmAddSingleDrink() {
+        function confirmAddCustomizerDrinks() {
             if (!currentCustomDrink) return;
+            const isBlack = currentCustomDrink.name.toLowerCase().includes('classic black');
 
-            const unitPrice = selectedMilk === 'Oat Milk' ? currentCustomDrink.price + 1.00 : currentCustomDrink.price;
-            
-            cart.push({
-                product_id: currentCustomDrink.id,
-                name: currentCustomDrink.name,
-                selections: [{
-                    flavor: currentCustomDrink.name,
-                    milk: selectedMilk,
-                    espresso: selectedEspresso
-                }],
-                qty: 1,
-                unitPrice: unitPrice,
-                total: unitPrice,
-                bottles: 1
-            });
+            let addedCount = 0;
 
-            showToast(`${currentCustomDrink.name} added to order!`, 'success');
+            if (isBlack && customizerQty.black > 0) {
+                cart.push({
+                    product_id: currentCustomDrink.id,
+                    name: currentCustomDrink.name,
+                    selections: [{
+                        flavor: currentCustomDrink.name,
+                        milk: 'None (Black)',
+                        espresso: selectedEspresso
+                    }],
+                    qty: customizerQty.black,
+                    unitPrice: 5.00,
+                    total: customizerQty.black * 5.00,
+                    bottles: customizerQty.black
+                });
+                addedCount += customizerQty.black;
+            } else {
+                if (customizerQty.whole > 0) {
+                    cart.push({
+                        product_id: currentCustomDrink.id,
+                        name: `${currentCustomDrink.name} (Whole Milk)`,
+                        selections: [{
+                            flavor: currentCustomDrink.name,
+                            milk: 'Whole Milk',
+                            espresso: selectedEspresso
+                        }],
+                        qty: customizerQty.whole,
+                        unitPrice: 6.00,
+                        total: customizerQty.whole * 6.00,
+                        bottles: customizerQty.whole
+                    });
+                    addedCount += customizerQty.whole;
+                }
+                if (customizerQty.oat > 0) {
+                    cart.push({
+                        product_id: currentCustomDrink.id,
+                        name: `${currentCustomDrink.name} (Oat Milk)`,
+                        selections: [{
+                            flavor: currentCustomDrink.name,
+                            milk: 'Oat Milk',
+                            espresso: selectedEspresso
+                        }],
+                        qty: customizerQty.oat,
+                        unitPrice: 7.00,
+                        total: customizerQty.oat * 7.00,
+                        bottles: customizerQty.oat
+                    });
+                    addedCount += customizerQty.oat;
+                }
+            }
+
+            if (addedCount > 0) {
+                showToast(`${addedCount} bottle${addedCount > 1 ? 's' : ''} added to your order!`, 'success');
+            }
+
             closeDrinkCustomizer();
             updateCartUI();
         }
@@ -838,7 +942,7 @@
                 for (let i = 0; i < qty; i++) {
                     selectionsList.push({
                         flavor: flavor,
-                        milk: activeBundleType === 'oat' ? 'Oat Milk' : 'Regular Milk',
+                        milk: activeBundleType === 'oat' ? 'Oat Milk' : 'Whole Milk',
                         espresso: '2oz (standard)'
                     });
                 }
@@ -846,7 +950,7 @@
 
             cart.push({
                 product_id: "83d571c7-5aa8-4efb-b649-0ee286dd463d",
-                name: activeBundleType === 'oat' ? "Bundle of 5 (Oat Milk)" : "Bundle of 5 (Milk)",
+                name: activeBundleType === 'oat' ? "Bundle of 5 (Oat Milk)" : "Bundle of 5 (Whole Milk)",
                 selections: selectionsList,
                 qty: 1,
                 unitPrice: bundlePrice,
@@ -868,7 +972,7 @@
             const stickyBar = document.getElementById('sticky-cart-bar');
             const headerCount = document.getElementById('header-cart-count');
 
-            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1) * (i.qty || 1), 0);
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
             const totalAmount = cart.reduce((sum, i) => sum + i.total, 0);
 
             if (cart.length === 0) {
@@ -895,8 +999,10 @@
                     descText = `5-Pack (${item.selections[0].milk}) • ${flavorsSummary}`;
                 } else {
                     const sel = item.selections[0] || {};
-                    descText = `${sel.milk || 'Regular'} • ${sel.espresso || '2oz'}`;
+                    descText = `${sel.milk || 'Whole Milk'} • ${sel.espresso || '2oz'}`;
                 }
+
+                const isBundle = item.bottles === 5;
 
                 return `
                 <div class="bg-gray-50 border border-gray-100 p-3 rounded-2xl flex justify-between items-center">
@@ -904,8 +1010,15 @@
                         <h4 class="font-serif font-bold text-xs text-brand-dark">${item.name}</h4>
                         <p class="text-[8px] text-brand-brown uppercase font-bold tracking-wider mt-0.5">${descText}</p>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <span class="font-mono font-black text-xs text-brand-dark">$${item.total.toFixed(2)}</span>
+                    <div class="flex items-center gap-2">
+                        ${!isBundle ? `
+                        <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-1.5 py-0.5 shadow-xs">
+                            <button type="button" onclick="adjustCartItemQty(${idx}, -1)" class="text-gray-500 hover:text-brand-dark font-bold text-xs px-1">-</button>
+                            <span class="font-mono font-black text-xs px-1">${item.qty || 1}</span>
+                            <button type="button" onclick="adjustCartItemQty(${idx}, 1)" class="text-gray-500 hover:text-brand-dark font-bold text-xs px-1">+</button>
+                        </div>
+                        ` : ''}
+                        <span class="font-mono font-black text-xs text-brand-dark min-w-10 text-right">$${item.total.toFixed(2)}</span>
                         <button type="button" onclick="removeCartItem(${idx})" class="w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><i class="fas fa-trash-alt text-[9px]"></i></button>
                     </div>
                 </div>
@@ -913,6 +1026,21 @@
             }).join('');
 
             cartSection.classList.remove('hidden');
+        }
+
+        function adjustCartItemQty(idx, delta) {
+            const item = cart[idx];
+            if (!item) return;
+
+            const newQty = (item.qty || 1) + delta;
+            if (newQty <= 0) {
+                cart.splice(idx, 1);
+            } else {
+                item.qty = newQty;
+                item.bottles = newQty;
+                item.total = item.unitPrice * newQty;
+            }
+            updateCartUI();
         }
 
         function removeCartItem(idx) {
