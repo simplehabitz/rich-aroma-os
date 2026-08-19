@@ -35,6 +35,14 @@
       "dest": "/public/admin.html"
     },
     {
+      "src": "/hub",
+      "dest": "/public/hub.html"
+    },
+    {
+      "src": "/ecosystem",
+      "dest": "/public/hub.html"
+    },
+    {
       "src": "/socios",
       "dest": "/public/socios.html"
     },
