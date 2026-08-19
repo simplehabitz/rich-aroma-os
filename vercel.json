@@ -415,7 +415,17 @@
     },
     {
       "src": "/cali/pay",
-      "dest": "/public/cali/pay.html"
+      "dest": "/public/cali/pay.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/cali/pay.html",
+      "dest": "/public/cali/pay.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     },
     {
       "src": "/api/cali/(.*)",
