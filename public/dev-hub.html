@@ -25,6 +25,25 @@
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
+    <script>
+        // Global Click Interceptor: Forces any link click to route strictly inside the onscreen phones
+        window.addEventListener('click', function(e) {
+            const a = e.target.closest('a');
+            if (a) {
+                const href = a.getAttribute('href');
+                if (href && href !== '#' && !href.startsWith('javascript:')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (href.includes('partner') || href.includes('kitchen') || href.includes('pos') || href.includes('onboarding') || href.includes('socios') || href.includes('admin') || href.includes('dashboard')) {
+                        openInPartnerPhone(href);
+                    } else {
+                        openInCustomerPhone(href);
+                    }
+                    return false;
+                }
+            }
+        }, true);
+    </script>
 </head>
 <body class="h-screen flex flex-col hide-scroll overflow-hidden">
 
