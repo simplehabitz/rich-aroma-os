@@ -182,6 +182,33 @@
                     </button>
                 </div>
 
+                <!-- Bundle 3: CATERING & EVENTS (30+ Bottles in 5-packs) -->
+                <div class="sm:col-span-2 bg-gradient-to-br from-brand-dark via-[#1e1511] to-[#2b1c15] text-white rounded-3xl p-5 sm:p-6 border border-brand-gold/30 shadow-lg space-y-4 relative overflow-hidden flex flex-col justify-between">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div class="flex items-center gap-3.5">
+                            <div class="w-13 h-13 rounded-full bg-brand-gold/15 text-brand-gold flex items-center justify-center text-2xl shrink-0 border border-brand-gold/30 ring-4 ring-brand-gold/10">
+                                <span>🎉</span>
+                            </div>
+                            <div>
+                                <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-gold/20 text-brand-gold text-[8px] font-black uppercase tracking-wider border border-brand-gold/30 mb-1">
+                                    Bulk & Events
+                                </div>
+                                <h3 class="font-serif font-black text-xl text-white leading-tight">Catering & Corporate Drops</h3>
+                                <p class="text-[10px] text-white/60 font-medium mt-0.5">Order any flavor in sets of 5 bottles • Minimum 30 bottles per order</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/10 rounded-2xl px-3.5 py-2 border border-white/15 text-left sm:text-right shrink-0">
+                            <span class="text-[8px] font-black uppercase tracking-wider text-brand-gold block">Starting at</span>
+                            <span class="font-mono font-black text-xl text-white">$5.00 <span class="text-[9px] font-normal text-white/60">/ btl</span></span>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="openCateringBuilder()" class="w-full bg-brand-gold text-brand-dark font-black py-4 rounded-2xl shadow hover:brightness-105 active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2">
+                        Build Catering Order (Min. 30 Bottles) <i class="fas fa-boxes-stacked ml-1"></i>
+                    </button>
+                </div>
+
             </div>
         </div>
 
@@ -442,6 +469,59 @@
             <button type="button" onclick="confirmAddBundle()" id="btn-add-bundle" disabled class="w-full bg-gray-200 text-gray-400 font-black py-4 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px]">
                 Select 5 Bottles to Add ($25)
             </button>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- CATERING & BULK BUILDER MODAL (Min 30 Bottles in 5-packs) -->
+    <!-- ============================================== -->
+    <div id="catering-builder-modal" class="hidden fixed inset-0 bg-brand-dark/85 backdrop-blur-md flex items-center justify-center z-[90] p-4 animate-fade-in" onclick="if(event.target === this) closeCateringBuilder()">
+        <div class="bg-white max-w-lg w-full rounded-[2.5rem] p-6 shadow-2xl border border-brand-brown/20 space-y-4 max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col justify-between">
+            
+            <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-2xl">🎉</span>
+                    <div>
+                        <h3 class="font-serif font-black text-lg text-brand-dark">Catering & Event 5-Packs</h3>
+                        <p class="text-[9px] font-bold text-brand-brown uppercase tracking-wider">Multiples of 5 • Min. 30 Bottles</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeCateringBuilder()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all"><i class="fas fa-times text-xs"></i></button>
+            </div>
+
+            <!-- Minimum 30 Progress Banner -->
+            <div class="bg-brand-cream p-3.5 rounded-2xl border border-brand-brown/15 space-y-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-[9px] font-black uppercase text-gray-500 tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-boxes-stacked text-brand-brown"></i> Catering Order Size
+                    </span>
+                    <span id="catering-count-indicator" class="font-mono font-black text-xs text-brand-brown">0 / 30 Bottles (0 packs)</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                    <div id="catering-progress-bar" class="bg-brand-brown h-2 rounded-full transition-all duration-300 w-0"></div>
+                </div>
+                <p id="catering-min-helper" class="text-[8px] font-bold text-amber-700 uppercase tracking-wider">
+                    ⚠️ Minimum 30 bottles required (add at least 6 packs of 5).
+                </p>
+            </div>
+
+            <!-- Flavors List for Catering -->
+            <div id="catering-flavors-list" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 no-scrollbar">
+                <!-- Injected dynamically -->
+            </div>
+
+            <!-- Live Summary & Add Button -->
+            <div class="pt-2 border-t border-gray-100 space-y-2.5">
+                <div class="flex justify-between items-center px-1 text-xs">
+                    <span class="text-[9px] font-black uppercase text-gray-400 tracking-wider">Catering Total</span>
+                    <span id="catering-total-price" class="font-mono font-black text-lg text-brand-dark">$0.00</span>
+                </div>
+
+                <button type="button" onclick="confirmAddCateringOrder()" id="btn-add-catering" disabled class="w-full bg-gray-200 text-gray-400 font-black py-4 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px] cursor-not-allowed">
+                    Select at least 30 Bottles (6 packs)
+                </button>
+            </div>
+
         </div>
     </div>
 
@@ -968,6 +1048,227 @@
         }
 
         // ==============================================
+        // CATERING & BULK BUILDER LOGIC (Min 30 Bottles)
+        // ==============================================
+        let cateringSelections = {}; // { [flavor]: { whole: packs, oat: packs, black: packs } }
+
+        function openCateringBuilder() {
+            cateringSelections = {};
+            FLYER_PRODUCTS.forEach(p => {
+                const isBlack = p.name.toLowerCase().includes('classic black');
+                if (isBlack) {
+                    cateringSelections[p.name] = { black: 0 };
+                } else {
+                    cateringSelections[p.name] = { whole: 0, oat: 0 };
+                }
+            });
+
+            renderCateringFlavors();
+            updateCateringUI();
+            document.getElementById('catering-builder-modal').classList.remove('hidden');
+        }
+
+        function closeCateringBuilder() {
+            document.getElementById('catering-builder-modal').classList.add('hidden');
+        }
+
+        function renderCateringFlavors() {
+            const list = document.getElementById('catering-flavors-list');
+            list.innerHTML = FLYER_PRODUCTS.map(p => {
+                const isBlack = p.name.toLowerCase().includes('classic black');
+                const sel = cateringSelections[p.name] || {};
+
+                if (isBlack) {
+                    const blackPacks = sel.black || 0;
+                    return `
+                    <div class="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-2">
+                        <div class="flex items-center gap-3">
+                            <img src="${p.image}" class="w-8 h-8 object-contain">
+                            <div>
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">${p.name}</h4>
+                                <p class="text-[8px] text-gray-400 font-bold uppercase">Pure Chilled Espresso</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-2 rounded-xl bg-white border border-gray-100">
+                            <div class="flex items-center gap-1.5 text-xs">
+                                <span>☕</span>
+                                <span class="font-bold text-[10px] text-brand-dark">5-Pack ($25)</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="adjustCateringPack('${p.name}', 'black', -1)" class="w-7 h-7 rounded-full bg-gray-100 text-gray-700 font-bold text-xs flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all">-</button>
+                                <span class="font-mono font-black text-xs min-w-16 text-center">${blackPacks} pk (${blackPacks * 5} btls)</span>
+                                <button type="button" onclick="adjustCateringPack('${p.name}', 'black', 1)" class="w-7 h-7 rounded-full bg-brand-dark text-white font-bold text-xs flex items-center justify-center hover:bg-brand-brown active:scale-95 transition-all">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    `;
+                }
+
+                const wholePacks = sel.whole || 0;
+                const oatPacks = sel.oat || 0;
+
+                return `
+                <div class="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 space-y-2.5">
+                    <div class="flex items-center gap-3">
+                        <img src="${p.image}" class="w-8 h-8 object-contain">
+                        <div>
+                            <h4 class="font-serif font-bold text-xs text-brand-dark">${p.name}</h4>
+                            <p class="text-[8px] text-gray-400 font-bold uppercase">Multiples of 5</p>
+                        </div>
+                    </div>
+
+                    <!-- Whole Milk 5-Pack Row -->
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-brand-cream/80 border border-brand-brown/15">
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <span>🐮</span>
+                            <span class="font-bold text-[10px] text-brand-dark">Whole Milk ($25 / 5pk)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustCateringPack('${p.name}', 'whole', -1)" class="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">-</button>
+                            <span class="font-mono font-black text-xs min-w-16 text-center">${wholePacks} pk (${wholePacks * 5} btls)</span>
+                            <button type="button" onclick="adjustCateringPack('${p.name}', 'whole', 1)" class="w-7 h-7 rounded-full bg-brand-dark text-white font-bold text-xs flex items-center justify-center hover:bg-brand-brown active:scale-95 transition-all">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Oat Milk 5-Pack Row -->
+                    <div class="flex items-center justify-between p-2 rounded-xl bg-emerald-50/70 border border-emerald-600/15">
+                        <div class="flex items-center gap-1.5 text-xs">
+                            <span>🍃</span>
+                            <span class="font-bold text-[10px] text-emerald-900">Oat Milk ($30 / 5pk)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustCateringPack('${p.name}', 'oat', -1)" class="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center hover:bg-gray-100 active:scale-95 transition-all">-</button>
+                            <span class="font-mono font-black text-xs min-w-16 text-center">${oatPacks} pk (${oatPacks * 5} btls)</span>
+                            <button type="button" onclick="adjustCateringPack('${p.name}', 'oat', 1)" class="w-7 h-7 rounded-full bg-emerald-700 text-white font-bold text-xs flex items-center justify-center hover:bg-emerald-800 active:scale-95 transition-all">+</button>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function adjustCateringPack(flavorName, type, delta) {
+            if (!cateringSelections[flavorName]) cateringSelections[flavorName] = {};
+            const current = cateringSelections[flavorName][type] || 0;
+            const updated = Math.max(0, current + delta);
+            cateringSelections[flavorName][type] = updated;
+
+            renderCateringFlavors();
+            updateCateringUI();
+        }
+
+        function updateCateringUI() {
+            let totalPacks = 0;
+            let totalPrice = 0;
+
+            for (const [flavor, types] of Object.entries(cateringSelections)) {
+                if (types.black) {
+                    totalPacks += types.black;
+                    totalPrice += types.black * 25.00;
+                }
+                if (types.whole) {
+                    totalPacks += types.whole;
+                    totalPrice += types.whole * 25.00;
+                }
+                if (types.oat) {
+                    totalPacks += types.oat;
+                    totalPrice += types.oat * 30.00;
+                }
+            }
+
+            const totalBottles = totalPacks * 5;
+            const countIndicator = document.getElementById('catering-count-indicator');
+            const progressBar = document.getElementById('catering-progress-bar');
+            const minHelper = document.getElementById('catering-min-helper');
+            const priceEl = document.getElementById('catering-total-price');
+            const btn = document.getElementById('btn-add-catering');
+
+            countIndicator.innerText = `${totalBottles} / 30 Bottles (${totalPacks} pack${totalPacks === 1 ? '' : 's'})`;
+            priceEl.innerText = `$${totalPrice.toFixed(2)}`;
+
+            const progressPct = Math.min(100, Math.round((totalBottles / 30) * 100));
+            progressBar.style.width = `${progressPct}%`;
+
+            if (totalBottles >= 30) {
+                progressBar.className = "bg-emerald-600 h-2 rounded-full transition-all duration-300";
+                minHelper.className = "text-[8px] font-bold text-emerald-700 uppercase tracking-wider";
+                minHelper.innerText = `✓ Minimum 30-bottle order unlocked! (${totalBottles} bottles selected)`;
+
+                btn.disabled = false;
+                btn.className = "w-full bg-brand-gold text-brand-dark font-black py-4 rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all uppercase tracking-wider text-[10px] cursor-pointer flex items-center justify-center gap-1.5";
+                btn.innerText = `Add Catering Order (${totalBottles} Bottles) • $${totalPrice.toFixed(2)}`;
+            } else {
+                progressBar.className = "bg-brand-brown h-2 rounded-full transition-all duration-300";
+                minHelper.className = "text-[8px] font-bold text-amber-700 uppercase tracking-wider";
+                const needed = 30 - totalBottles;
+                minHelper.innerText = `⚠️ Need ${needed} more bottle${needed > 1 ? 's' : ''} (${Math.ceil(needed / 5)} more pack${Math.ceil(needed / 5) > 1 ? 's' : ''}) to reach the 30-bottle minimum.`;
+
+                btn.disabled = true;
+                btn.className = "w-full bg-gray-200 text-gray-400 font-black py-4 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px] cursor-not-allowed";
+                btn.innerText = `Select at least 30 Bottles (${Math.ceil(needed / 5)} more 5-packs needed)`;
+            }
+        }
+
+        function confirmAddCateringOrder() {
+            let totalPacks = 0;
+            let totalPrice = 0;
+            const summaryList = [];
+            const selectionsList = [];
+
+            for (const [flavor, types] of Object.entries(cateringSelections)) {
+                if (types.black > 0) {
+                    totalPacks += types.black;
+                    totalPrice += types.black * 25.00;
+                    summaryList.push(`${types.black * 5}x ${flavor} (Pure)`);
+                    for (let i = 0; i < types.black * 5; i++) {
+                        selectionsList.push({ flavor: flavor, milk: 'None (Black)', espresso: '3oz (strong)' });
+                    }
+                }
+                if (types.whole > 0) {
+                    totalPacks += types.whole;
+                    totalPrice += types.whole * 25.00;
+                    summaryList.push(`${types.whole * 5}x ${flavor} (Whole Milk)`);
+                    for (let i = 0; i < types.whole * 5; i++) {
+                        selectionsList.push({ flavor: flavor, milk: 'Whole Milk', espresso: '2oz (standard)' });
+                    }
+                }
+                if (types.oat > 0) {
+                    totalPacks += types.oat;
+                    totalPrice += types.oat * 30.00;
+                    summaryList.push(`${types.oat * 5}x ${flavor} (Oat Milk)`);
+                    for (let i = 0; i < types.oat * 5; i++) {
+                        selectionsList.push({ flavor: flavor, milk: 'Oat Milk', espresso: '2oz (standard)' });
+                    }
+                }
+            }
+
+            const totalBottles = totalPacks * 5;
+            if (totalBottles < 30) {
+                showToast("Catering minimum is 30 bottles.");
+                return;
+            }
+
+            cart.push({
+                product_id: "catering-bulk-30",
+                name: `Catering Bulk Order (${totalBottles} Bottles)`,
+                selections: selectionsList,
+                qty: 1,
+                unitPrice: totalPrice,
+                total: totalPrice,
+                bottles: totalBottles,
+                cateringSummary: summaryList.join(', ')
+            });
+
+            // Switch to pre-order mode automatically for scheduled catering drops
+            setOrderMode('preorder');
+
+            showToast(`Catering Order of ${totalBottles} bottles added!`, 'success');
+            closeCateringBuilder();
+            updateCartUI();
+            scrollToCart();
+        }
+
+        // ==============================================
         // CART UI & MANAGEMENT
         // ==============================================
         function updateCartUI() {
@@ -998,7 +1299,9 @@
 
             list.innerHTML = cart.map((item, idx) => {
                 let descText = "";
-                if (item.bottles === 5) {
+                if (item.cateringSummary) {
+                    descText = item.cateringSummary;
+                } else if (item.bottles === 5) {
                     const flavorsSummary = item.selections.map(s => s.flavor).join(', ');
                     descText = `5-Pack (${item.selections[0].milk}) • ${flavorsSummary}`;
                 } else {
@@ -1006,7 +1309,7 @@
                     descText = `${sel.milk || 'Whole Milk'} • ${sel.espresso || '2oz'}`;
                 }
 
-                const isBundle = item.bottles === 5;
+                const isBundleOrBulk = item.bottles >= 5;
 
                 return `
                 <div class="bg-gray-50 border border-gray-100 p-3 rounded-2xl flex justify-between items-center">
@@ -1015,7 +1318,7 @@
                         <p class="text-[8px] text-brand-brown uppercase font-bold tracking-wider mt-0.5">${descText}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        ${!isBundle ? `
+                        ${!isBundleOrBulk ? `
                         <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-xl px-1.5 py-0.5 shadow-xs">
                             <button type="button" onclick="adjustCartItemQty(${idx}, -1)" class="text-gray-500 hover:text-brand-dark font-bold text-xs px-1">-</button>
                             <span class="font-mono font-black text-xs px-1">${item.qty || 1}</span>
