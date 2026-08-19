@@ -4,7 +4,7 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rich Aroma | Self-Checkout & Pre-Orders</title>
+    <title>Rich Aroma | Cali Bottled Distro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
@@ -56,9 +56,9 @@
                 <img src="/logo.jpg" alt="Rich Aroma" class="h-8 w-8 rounded-full border border-gray-100 shadow-sm">
                 <span class="font-serif font-bold text-md tracking-tight uppercase">Rich Aroma</span>
             </div>
-            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-wider border border-emerald-100">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                Honors Portal
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-gold/10 text-brand-brown text-[8px] font-black uppercase tracking-wider border border-brand-gold/30">
+                <span class="h-1.5 w-1.5 rounded-full bg-brand-gold animate-ping"></span>
+                Cali Distro
             </div>
         </div>
     </nav>
@@ -73,8 +73,8 @@
                 <div class="absolute bottom-0 right-0 w-32 h-32 bg-brand-brown rounded-full blur-2xl translate-x-1/2 translate-y-1/2"></div>
             </div>
             <div class="relative z-10">
-                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Honors Checkout</h1>
-                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Select your drink, pay instantly, and enjoy your fresh brew.</p>
+                <h1 class="text-3xl font-serif font-bold mb-2 tracking-tight text-brand-dark" id="hero-title">Rich Aroma Cali Distro</h1>
+                <p class="text-xs text-gray-500 font-medium leading-relaxed italic" id="hero-desc">Artisinally brewed espresso and signature lattes delivered fresh or available for pickup.</p>
             </div>
         </div>
 
@@ -128,7 +128,7 @@
                 <label class="block text-[8px] font-black uppercase text-gray-400 tracking-wider">Select Pre-order Date</label>
                 <input type="date" id="preorder-date-picker" class="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-bold text-brand-dark outline-none focus:border-brand-brown transition-all" onchange="updatePreorderHelperText()" required>
             </div>
-            <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Take your bottle directly from the honors fridge right now.</p>
+            <p id="mode-helper-text" class="text-[9px] text-gray-455 font-medium italic ml-1">Take your cold bottle directly from the fridge.</p>
         </div>
 
         <!-- 2. Choose Your Drink -->
@@ -330,7 +330,7 @@
 
                 <!-- Fulfillment Badge -->
                 <div id="receipt-mode-box" class="rounded-2xl p-3 text-center border text-[9px] bg-brand-cream/80 border-brand-brown/15">
-                    <p id="receipt-mode-title" class="font-black uppercase tracking-wider text-brand-brown text-[8px]">Honors Fridge Grab</p>
+                    <p id="receipt-mode-title" class="font-black uppercase tracking-wider text-brand-brown text-[8px]">Fridge Pickup</p>
                     <p id="receipt-mode-desc" class="text-gray-600 font-medium mt-0.5">Please take your cold bottle directly from the fridge.</p>
                 </div>
 
@@ -646,9 +646,9 @@
             if (mode === 'grab') {
                 btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
                 btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
-                helperText.innerText = "Take your bottle directly from the honors fridge right now.";
-                heroTitle.innerText = "Honors Checkout";
-                heroDesc.innerText = "Select your drink, pay instantly, and enjoy your fresh brew.";
+                helperText.innerText = "Take your cold bottle directly from the fridge.";
+                heroTitle.innerText = "Rich Aroma Cali Distro";
+                heroDesc.innerText = "Artisinally brewed espresso and signature lattes delivered fresh or available for pickup.";
                 
                 subFreqContainer.classList.add('hidden');
                 dateContainer.classList.add('hidden');
@@ -659,6 +659,7 @@
             } else {
                 btnGrab.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all text-gray-455 hover:text-brand-dark";
                 btnPre.className = "py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all bg-brand-dark text-white shadow";
+                heroTitle.innerText = "Rich Aroma Cali Distro";
                 heroDesc.innerText = "Order single bottles in advance for fresh delivery.";
                 
                 subFreqContainer.classList.remove('hidden');
@@ -1111,7 +1112,7 @@
                 orderObj = orderOrCode;
             } else {
                 orderObj = {
-                    id: orderOrCode || 'RA-HONORS',
+                    id: orderOrCode || 'RA-CALI',
                     created_at: new Date().toISOString(),
                     customer_name: localStorage.getItem('cali_pay_name') || 'Guest',
                     total: cart.reduce((sum, item) => sum + item.total, 0),
@@ -1126,7 +1127,7 @@
             lastOrderData = orderObj;
 
             // Format Code & Time
-            const rawId = orderObj.id || 'RA-HONORS';
+            const rawId = orderObj.id || 'RA-CALI';
             const displayCode = rawId.startsWith('RA-') ? rawId : `RA-${rawId.slice(0, 8).toUpperCase()}`;
             document.getElementById('receipt-code').innerText = displayCode;
             
@@ -1161,9 +1162,9 @@
                 modeTitle.className = "font-black uppercase tracking-wider text-brand-brown text-[8px]";
                 modeDesc.innerHTML = `Delivering on <strong>${dropDateStr}</strong> labeled with your name.`;
             } else {
-                modeTitle.innerText = "Honors Fridge Grab";
+                modeTitle.innerText = "Fridge Pickup";
                 modeTitle.className = "font-black uppercase tracking-wider text-emerald-600 text-[8px]";
-                modeDesc.innerText = "Please take your cold bottle directly from the honors fridge.";
+                modeDesc.innerText = "Please take your cold bottle directly from the fridge.";
             }
 
             // Render Items List

@@ -130,7 +130,7 @@ async function sendCustomerCaliReceipt(order, customerEmail) {
     const selections = order.selections || {};
     const cartItems = selections.cart || [];
     const isPreorder = !!selections.preorder_date;
-    const orderId = order.id ? (order.id.startsWith('RA-') ? order.id : `RA-${order.id.slice(0, 8).toUpperCase()}`) : 'RA-HONORS';
+    const orderId = order.id ? (order.id.startsWith('RA-') ? order.id : `RA-${order.id.slice(0, 8).toUpperCase()}`) : 'RA-CALI';
     const dateFormatted = new Date(order.created_at || Date.now()).toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
@@ -191,7 +191,7 @@ async function sendCustomerCaliReceipt(order, customerEmail) {
     } else {
         fulfillmentBadge = `
             <div style="background: #fdfaf6; border: 1px solid #e5e0d8; border-radius: 12px; padding: 14px; margin: 18px 0; text-align: center;">
-                <p style="margin: 0; font-size: 11px; font-weight: 800; color: #8b5a2b; text-transform: uppercase; letter-spacing: 1px;">Honors Fridge Grab</p>
+                <p style="margin: 0; font-size: 11px; font-weight: 800; color: #8b5a2b; text-transform: uppercase; letter-spacing: 1px;">Fridge Pickup</p>
                 <p style="margin: 4px 0 0 0; font-size: 13px; font-weight: 600; color: #120e0c;">Take your bottle directly from the fridge. Verified!</p>
             </div>
         `;
