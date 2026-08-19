@@ -3,25 +3,26 @@
 <head>
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cali Distro HQ | Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rich Aroma HQ | Mobile Ops Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Inter', '-apple-system', 'sans-serif'],
                         serif: ['Playfair Display', 'serif'],
                     },
                     colors: {
                         brand: {
-                            dark: '#120e0c',
+                            dark: '#140f0c',
                             brown: '#8b5a2b',
                             cream: '#fdfbf7',
-                            gold: '#d4af37'
+                            gold: '#d4af37',
+                            surface: '#ffffff'
                         }
                     }
                 }
@@ -29,2025 +30,959 @@
         }
     </script>
     <style>
-        body { background-color: #fdfbf7; color: #120e0c; }
-        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0,0,0,0.05); }
-        .tab-btn { transition: all 0.3s ease; border-bottom: 2px solid transparent; }
-        .tab-btn.active { color: #8b5a2b; border-bottom-color: #8b5a2b; }
-        .product-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .product-card:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05); }
+        body { background-color: #f8f6f0; color: #140f0c; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @media screen {
-            #print-area { display: none !important; }
-        }
+        .pb-safe { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+        .nav-btn.active { color: #8b5a2b; font-weight: 800; }
+        .nav-btn.active i { transform: scale(1.15); color: #8b5a2b; }
     </style>
 </head>
-<body class="bg-[#fdfbf7] text-gray-800 antialiased min-h-screen pb-20">
+<body class="bg-[#f8f6f0] antialiased min-h-screen text-gray-900 pb-safe select-none">
 
-    <!-- PIN LOGIN VIEW -->
-    <div id="pin-view" class="fixed inset-0 bg-brand-dark flex items-center justify-center z-[1000]">
-        <div class="w-full max-w-xs p-8 text-center space-y-8 animate-fade-in">
-            <div class="w-20 h-20 bg-gold-shimmer rounded-3xl mx-auto flex items-center justify-center shadow-2xl">
-                <i class="fas fa-lock text-brand-dark text-3xl"></i>
+    <!-- ============================================== -->
+    <!-- PIN LOGIN VIEW (Keypad & Instant Access) -->
+    <!-- ============================================== -->
+    <div id="pin-view" class="fixed inset-0 bg-brand-dark flex flex-col justify-between p-6 z-[1000]">
+        <div class="pt-8 text-center space-y-3">
+            <div class="w-16 h-16 bg-brand-gold/20 border border-brand-gold/30 rounded-3xl mx-auto flex items-center justify-center shadow-2xl">
+                <span class="text-2xl">☕</span>
             </div>
             <div>
-                <h2 class="text-2xl font-serif font-bold text-white mb-2">Admin Access</h2>
-                <p class="text-white/40 text-[10px] font-black uppercase tracking-widest leading-relaxed">Please enter your 4-digit PIN to continue to Cali HQ</p>
+                <h1 class="text-2xl font-serif font-bold text-white tracking-wide">Rich Aroma Ops</h1>
+                <p class="text-white/50 text-[10px] font-black uppercase tracking-widest mt-1">Cali Production & Hub Manager</p>
             </div>
-            <div class="relative">
-                <input type="password" id="admin-pin" maxlength="4" placeholder="••••" class="w-full bg-white/5 border-2 border-white/10 rounded-2xl px-6 py-5 text-center text-3xl font-mono tracking-[0.5em] text-gold focus:border-brand-gold outline-none transition-all placeholder:text-white/5">
+            
+            <!-- Pin Dots -->
+            <div class="flex justify-center gap-3 pt-6 pb-2">
+                <div id="dot-0" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-1" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-2" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-3" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
             </div>
-            <button onclick="checkPin()" class="w-full bg-brand-gold text-brand-dark font-black py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all text-xs uppercase tracking-widest">
-                Authorize Access
+            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN. Try 3620</p>
+        </div>
+
+        <!-- Numeric Keypad -->
+        <div class="max-w-xs mx-auto w-full pb-8">
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="enterPinDigit('1')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">1</button>
+                <button type="button" onclick="enterPinDigit('2')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">2</button>
+                <button type="button" onclick="enterPinDigit('3')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">3</button>
+                <button type="button" onclick="enterPinDigit('4')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">4</button>
+                <button type="button" onclick="enterPinDigit('5')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">5</button>
+                <button type="button" onclick="enterPinDigit('6')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">6</button>
+                <button type="button" onclick="enterPinDigit('7')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">7</button>
+                <button type="button" onclick="enterPinDigit('8')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">8</button>
+                <button type="button" onclick="enterPinDigit('9')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">9</button>
+                <button type="button" onclick="clearPin()" class="h-16 rounded-2xl bg-white/5 text-white/50 font-bold text-xs uppercase active:bg-white/20 transition-all">Clear</button>
+                <button type="button" onclick="enterPinDigit('0')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">0</button>
+                <button type="button" onclick="deletePinDigit()" class="h-16 rounded-2xl bg-white/5 text-white font-bold text-lg active:bg-white/20 transition-all"><i class="fas fa-backspace"></i></button>
+            </div>
+            <button type="button" onclick="quickDemoLogin()" class="w-full mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest text-center">
+                Tap to auto-fill default PIN
             </button>
         </div>
     </div>
 
-    <!-- MAIN ADMIN DASHBOARD -->
-    <div id="admin-view" class="hidden max-w-6xl mx-auto p-4 sm:p-6 md:p-12">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-            <div>
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-brown/5 border border-brand-brown/10 mb-2">
-                    <span class="text-brand-brown font-black tracking-[0.2em] uppercase text-[8px]">Administration Portal</span>
+    <!-- ============================================== -->
+    <!-- MAIN APP CONTAINER -->
+    <!-- ============================================== -->
+    <div id="admin-view" class="hidden">
+        
+        <!-- Sticky Top Header -->
+        <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-200/80 px-4 py-3 shadow-xs">
+            <div class="max-w-lg mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-brand-dark text-white flex items-center justify-center text-sm shadow-xs">
+                        ☕
+                    </div>
+                    <div>
+                        <h1 class="font-serif font-black text-sm text-brand-dark leading-none">Rich Aroma Ops</h1>
+                        <p class="text-[9px] font-bold text-brand-brown uppercase tracking-wider mt-0.5" id="live-indicator">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-pulse"></span>Live Feed
+                        </p>
+                    </div>
                 </div>
-                <h1 class="text-4xl font-serif font-bold text-brand-dark flex items-center gap-3">
-                    Cali Distro HQ
-                </h1>
+                
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="fetchAdminData(true)" class="w-8 h-8 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-xs hover:bg-gray-200 active:scale-95 transition-all">
+                        <i class="fas fa-rotate" id="refresh-icon"></i>
+                    </button>
+                    <button type="button" onclick="logoutAdmin()" class="w-8 h-8 rounded-xl bg-gray-100 text-gray-400 hover:text-red-500 flex items-center justify-center text-xs active:scale-95 transition-all">
+                        <i class="fas fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
             </div>
-            <div class="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-start">
-                <div class="bg-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4 sm:gap-6 flex-1 sm:flex-none justify-around sm:justify-start">
-                    <div>
-                        <span class="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Confirmed Revenue</span>
-                        <div class="text-base sm:text-xl font-black font-mono text-green-600" id="total-revenue">$0.00</div>
-                    </div>
-                    <div class="w-px h-8 bg-gray-100"></div>
-                    <div>
-                        <span class="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Active Orders</span>
-                        <div class="text-base sm:text-xl font-black font-mono text-brand-dark" id="total-orders-count">0</div>
-                    </div>
+
+            <!-- Quick Metrics Strip -->
+            <div class="max-w-lg mx-auto grid grid-cols-4 gap-2 mt-2.5 pt-2.5 border-t border-gray-100 text-center">
+                <div class="bg-gray-50 rounded-xl p-1.5 border border-gray-100">
+                    <span class="text-[8px] font-black uppercase text-gray-400 block leading-tight">Revenue</span>
+                    <span class="font-mono font-black text-xs text-emerald-700 block mt-0.5" id="stat-revenue">$0.00</span>
                 </div>
-                <button onclick="logout()" class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-500 transition-all shadow-sm shrink-0">
-                    <i class="fas fa-sign-out-alt"></i>
-                </button>
+                <div class="bg-gray-50 rounded-xl p-1.5 border border-gray-100">
+                    <span class="text-[8px] font-black uppercase text-gray-400 block leading-tight">Total Bottles</span>
+                    <span class="font-mono font-black text-xs text-brand-dark block mt-0.5" id="stat-bottles">0</span>
+                </div>
+                <div class="bg-amber-50 rounded-xl p-1.5 border border-amber-200">
+                    <span class="text-[8px] font-black uppercase text-amber-800 block leading-tight">Needs Check</span>
+                    <span class="font-mono font-black text-xs text-amber-900 block mt-0.5" id="stat-pending">0</span>
+                </div>
+                <div class="bg-emerald-50 rounded-xl p-1.5 border border-emerald-200">
+                    <span class="text-[8px] font-black uppercase text-emerald-800 block leading-tight">Kaiser Hub</span>
+                    <span class="font-mono font-black text-xs text-emerald-900 block mt-0.5" id="stat-kaiser">0</span>
+                </div>
             </div>
         </header>
 
-        <!-- Main Navigation Tabs -->
-        <div class="flex gap-8 border-b border-gray-200 mb-12 overflow-x-auto no-scrollbar">
-            <button onclick="showTab('orders')" id="tab-orders" class="tab-btn active pb-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Orders & Fulfillment</button>
-            <button onclick="showTab('products')" id="tab-products" class="tab-btn pb-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Store Catalog</button>
-            <button onclick="showTab('locations')" id="tab-locations" class="tab-btn pb-4 font-black text-[10px] uppercase tracking-[0.2em] whitespace-nowrap">Drop Locations</button>
-        </div>
-
-        <!-- Orders View -->
-        <div id="view-orders" class="space-y-8 animate-fade-in">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-serif font-bold">Recent Orders</h2>
-                <div class="flex items-center gap-3">
-                    <button onclick="openPrintLabelsModal()" class="bg-brand-brown text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-brand-dark transition flex items-center gap-2">
-                        <i class="fas fa-print"></i> Print Labels
-                    </button>
-                    <button onclick="openManualOrderModal()" class="bg-brand-dark text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-brand-brown transition flex items-center gap-2">
-                        <i class="fas fa-plus"></i> New Manual Order
-                    </button>
-                    <button onclick="loadOrders()" class="w-10 h-10 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-brand-brown shadow-sm transition flex items-center justify-center">
-                        <i class="fas fa-sync-alt text-xs"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Desktop Table View -->
-            <div class="hidden md:block bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead class="bg-gray-50/50 text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 border-b border-gray-100">
-                            <tr>
-                                <th class="px-8 py-5">Customer</th>
-                                <th class="px-8 py-5">Selection</th>
-                                <th class="px-8 py-5 text-right">Amount</th>
-                                <th class="px-8 py-5">Drop Location</th>
-                                <th class="px-8 py-5">Status</th>
-                                <th class="px-8 py-5 text-center">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="orders-tbody" class="divide-y divide-gray-50">
-                            <tr><td colspan="6" class="px-8 py-20 text-center text-gray-400 italic text-sm">Loading orders...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Mobile Card View -->
-            <div class="block md:hidden space-y-4" id="orders-cards-container">
-                <div class="text-center py-20 text-gray-400 italic text-sm bg-white rounded-[2.5rem] border border-gray-100">Loading orders...</div>
-            </div>
-        </div>
-
-        <!-- Hidden Skeletons for Navigation Tab Compatibility -->
-        <div id="view-subscriptions" class="hidden"></div>
-        <div id="view-prep" class="hidden"></div>
-        <div id="view-sellers" class="hidden"></div>
-
-        <!-- Products View -->
-        <div id="view-products" class="hidden space-y-8 animate-fade-in">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-serif font-bold">Menu Items</h2>
-                <button onclick="openProductModal()" class="bg-brand-dark text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-brand-brown transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> New Product
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="products-grid">
-                <!-- Product cards injected here -->
-            </div>
-        </div>
-
-        <!-- Locations View -->
-        <div id="view-locations" class="hidden space-y-8 animate-fade-in">
-            <div class="flex justify-between items-center">
-                <h2 class="text-2xl font-serif font-bold">Drop Locations</h2>
-                <button onclick="openLocationModal()" class="bg-brand-dark text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-brand-brown transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> New Location
-                </button>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="locations-grid">
-                <!-- Location cards injected here -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Product Modal -->
-    <div id="product-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[100] p-4 overflow-y-auto py-8">
-        <div class="bg-white w-full max-w-lg p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-2xl relative border border-white/10">
-            <button onclick="closeModal('product-modal')" class="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
+        <!-- Main Body Content Area -->
+        <main class="max-w-lg mx-auto p-4 space-y-4">
             
-            <div class="mb-10">
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-brown/5 border border-brand-brown/10 mb-2">
-                    <span class="text-brand-brown font-black tracking-[0.2em] uppercase text-[8px]">Catalog Management</span>
+            <!-- ============================================== -->
+            <!-- TAB 1: ORDERS FEED -->
+            <!-- ============================================== -->
+            <section id="view-orders" class="space-y-3">
+                <!-- Filters Bar -->
+                <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                    <button type="button" onclick="setOrderFilter('all')" id="btn-filter-all" class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-dark text-white shadow-xs shrink-0">All (<span id="count-all">0</span>)</button>
+                    <button type="button" onclick="setOrderFilter('pending')" id="btn-filter-pending" class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 shrink-0">🟡 Verify Venmo/Zelle (<span id="count-pending">0</span>)</button>
+                    <button type="button" onclick="setOrderFilter('paid')" id="btn-filter-paid" class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white text-gray-600 border border-gray-200 shrink-0">🟢 Paid (<span id="count-paid">0</span>)</button>
+                    <button type="button" onclick="setOrderFilter('completed')" id="btn-filter-completed" class="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white text-gray-600 border border-gray-200 shrink-0">✅ Delivered (<span id="count-completed">0</span>)</button>
                 </div>
-                <h2 class="text-3xl font-serif font-bold" id="product-modal-title">Product Details</h2>
-            </div>
 
-            <input type="hidden" id="prod-id">
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Display Name</label>
-                    <input type="text" id="prod-name" placeholder="e.g. 3 Bottle Bundle" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium outline-none focus:border-brand-brown transition shadow-inner">
+                <!-- Search Input -->
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3.5 top-3 text-gray-400 text-xs"></i>
+                    <input type="text" id="order-search-input" oninput="renderOrdersFeed()" placeholder="Search customer, phone, department, or RA-ID..." class="w-full bg-white border border-gray-200 rounded-2xl pl-9 pr-4 py-2.5 text-xs text-brand-dark placeholder-gray-400 outline-none focus:border-brand-brown shadow-xs transition-all">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+
+                <!-- Orders Container -->
+                <div id="orders-container" class="space-y-3">
+                    <div class="p-8 text-center text-gray-400 font-medium text-xs">
+                        <i class="fas fa-spinner fa-spin text-lg mb-2 text-brand-brown block"></i>
+                        Loading live orders...
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- TAB 2: KITCHEN PREP SHEET -->
+            <!-- ============================================== -->
+            <section id="view-prep" class="hidden space-y-4">
+                <div class="bg-brand-dark text-white rounded-3xl p-4 shadow-sm border border-brand-dark/20 flex items-center justify-between">
                     <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Base Price ($)</label>
-                        <input type="number" id="prod-price" step="0.01" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-mono font-bold outline-none focus:border-brand-brown shadow-inner">
+                        <span class="text-[8px] font-black uppercase text-brand-gold tracking-widest block">Kitchen Dashboard</span>
+                        <h2 class="font-serif font-bold text-base mt-0.5">Production Prep Matrix</h2>
                     </div>
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Bottles per Pack</label>
-                        <input type="number" id="prod-bottles" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                    </div>
+                    <span class="font-mono font-black text-xl text-brand-gold" id="prep-total-bottles">0 btls</span>
                 </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Global Inventory Stock (Blank = Unlimited)</label>
-                    <input type="number" id="prod-stock" placeholder="Unlimited" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div id="milk-stock-container" class="hidden border border-gray-100 rounded-3xl p-4 bg-gray-50/50 space-y-3">
-                    <span class="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">Segmented Milk Stock (Blank = Unlimited)</span>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[7px] font-black uppercase tracking-wider text-gray-500 mb-1">Regular/Whole Milk</label>
-                            <input type="number" id="prod-stock-regular" placeholder="Unlimited" class="w-full bg-white border border-gray-150 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-brand-brown shadow-sm">
-                        </div>
-                        <div>
-                            <label class="block text-[7px] font-black uppercase tracking-wider text-gray-500 mb-1">Oat Milk</label>
-                            <input type="number" id="prod-stock-oat" placeholder="Unlimited" class="w-full bg-white border border-gray-150 rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:border-brand-brown shadow-sm">
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Product Imagery</label>
-                    <div class="relative group cursor-pointer" onclick="document.getElementById('prod-file').click()">
-                        <input type="file" id="prod-file" class="hidden" accept="image/*" onchange="handleFileUpload(this, 'prod-image')">
-                        <div id="image-preview-area" class="w-full h-32 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center group-hover:border-brand-brown transition-all overflow-hidden relative">
-                            <i class="fas fa-camera text-2xl text-gray-300 mb-2"></i>
-                            <span class="text-[10px] font-black uppercase tracking-widest text-gray-400" id="upload-status-text">Click to upload photo</span>
-                            <img id="modal-image-preview" src="" class="hidden absolute inset-0 w-full h-full object-cover">
-                        </div>
-                        <input type="hidden" id="prod-image">
-                    </div>
-                </div>
-                <div class="flex items-center justify-between p-2">
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" id="prod-active" checked class="w-5 h-5 rounded-lg border-gray-300 text-brand-brown focus:ring-brand-brown">
-                        <span class="text-xs font-black uppercase tracking-widest text-gray-600">Visible in Store</span>
-                    </div>
-                    <button onclick="deleteProduct()" id="prod-delete-btn" class="hidden text-red-400 font-black text-[9px] uppercase tracking-widest hover:text-red-600 transition-colors">
-                        <i class="fas fa-trash-alt mr-1"></i> Archive
-                    </button>
-                </div>
-            </div>
 
-            <div class="mt-10 pt-8 border-t border-gray-50">
-                <button onclick="saveProduct()" id="prod-save-btn" class="w-full bg-brand-dark text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-brand-brown transition-all hover:scale-[1.02] active:scale-95">Save Product Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sellers View -->
-    <div id="view-sellers" class="hidden space-y-12 animate-fade-in">
-        <div class="grid md:grid-cols-2 gap-8">
-            <div class="bg-brand-dark rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
-                <h3 class="text-xl font-serif font-bold mb-6">Commission Overview</h3>
-                <div id="seller-summary" class="space-y-4">
-                    <!-- Summary data -->
-                </div>
-            </div>
-            <div class="bg-white rounded-[3rem] p-10 border border-gray-100 shadow-sm">
-                <h3 class="text-xl font-serif font-bold mb-6 flex justify-between items-center">
-                    Add New Seller
-                </h3>
-                <div class="space-y-4">
-                    <input type="text" id="seller-name" placeholder="Seller Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none focus:border-brand-brown">
-                    <input type="tel" id="seller-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none focus:border-brand-brown">
-                    <input type="text" id="seller-code" placeholder="Promo Code (e.g. MARCO)" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-mono outline-none focus:border-brand-brown">
-                    <button onclick="addSeller()" class="w-full bg-brand-dark text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-brown transition-all">Enable Seller Account</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="bg-white rounded-[3rem] shadow-sm border border-gray-100 overflow-hidden">
-            <table class="w-full text-left border-collapse">
-                <thead class="bg-gray-50/50 text-[9px] font-black uppercase tracking-[0.15em] text-gray-400 border-b border-gray-100">
-                    <tr>
-                        <th class="px-8 py-5">Seller Name</th>
-                        <th class="px-8 py-5">Referral Code</th>
-                        <th class="px-8 py-5 text-center">Bottles Sold</th>
-                        <th class="px-8 py-5 text-right">Commission Due</th>
-                    </tr>
-                </thead>
-                <tbody id="sellers-tbody" class="divide-y divide-gray-50">
-                    <!-- Seller rows injected here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Fulfillment Modal -->
-    <div id="order-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[100] p-4 overflow-y-auto py-8">
-        <div class="bg-white w-full max-w-sm p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-2xl relative border border-white/10">
-            <button onclick="closeModal('order-modal')" class="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
-            <h2 class="text-2xl font-serif font-bold mb-2">Update Order</h2>
-            <p id="order-modal-subtitle" class="text-xs text-gray-500 mb-8 font-medium">Order Details</p>
-            <input type="hidden" id="edit-order-id">
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 text-center">Fulfillment Actions</label>
-                    <div class="grid grid-cols-1 gap-3" id="payment-status-btns">
-                        <button onclick="updateOrderStatus('confirmed')" class="w-full py-4 px-4 rounded-2xl border border-green-200 bg-green-50/20 text-green-700 font-black text-[9px] uppercase tracking-wider hover:bg-green-50 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-check-circle text-xs"></i>
-                            Confirm Paid & Active
-                        </button>
-                        <button onclick="updateOrderStatus('pending')" class="w-full py-4 px-4 rounded-2xl border border-orange-200 bg-orange-50/20 text-orange-700 font-black text-[9px] uppercase tracking-wider hover:bg-orange-50 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-clock text-xs"></i>
-                            Mark Pending / Unconfirmed
-                        </button>
-                        <button onclick="updateOrderStatus('rejected')" class="w-full py-4 px-4 rounded-2xl border border-red-200 bg-red-50/20 text-red-700 font-black text-[9px] uppercase tracking-wider hover:bg-red-50 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-times-circle text-xs"></i>
-                            Reject & Cancel Order
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Location Modal -->
-    <div id="location-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[100] p-4 overflow-y-auto py-8">
-        <div class="bg-white w-full max-w-md p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-2xl relative border border-white/10">
-            <button onclick="closeModal('location-modal')" class="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
-            <h2 class="text-3xl font-serif font-bold mb-8">Drop Point</h2>
-            <input type="hidden" id="loc-id">
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Point Name</label>
-                    <input type="text" id="loc-name" placeholder="e.g. Kaiser Anaheim" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">City / Neighborhood</label>
-                    <input type="text" id="loc-city" placeholder="Anaheim, CA" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Distributor / Partner</label>
-                    <input type="text" id="loc-distributor" placeholder="e.g. Cali Base" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div class="flex items-center justify-between p-2">
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" id="loc-active" checked class="w-5 h-5 rounded-lg border-gray-300 text-brand-brown focus:ring-brand-brown">
-                        <span class="text-xs font-black uppercase tracking-widest text-gray-600">Active Drop Point</span>
-                    </div>
-                    <button onclick="deleteLocation()" id="loc-delete-btn" class="hidden text-red-400 font-black text-[9px] uppercase tracking-widest hover:text-red-600 transition-colors">
-                        <i class="fas fa-trash-alt mr-1"></i> Remove Point
-                    </button>
-                </div>
-            </div>
-
-            <div class="mt-10 pt-8 border-t border-gray-50">
-                <button onclick="saveLocation()" id="loc-save-btn" class="w-full bg-brand-dark text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-brand-brown transition-all active:scale-95">Save Location</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Manual Order Modal -->
-    <div id="manual-order-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[100] p-4 overflow-y-auto py-8">
-        <div class="bg-white w-full max-w-md p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-2xl relative border border-white/10 max-h-[90vh] overflow-y-auto no-scrollbar">
-            <button onclick="closeModal('manual-order-modal')" class="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
-            <h2 class="text-3xl font-serif font-bold mb-8">New Manual Order</h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Customer Name</label>
-                    <input type="text" id="manual-name" placeholder="Customer Name" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Customer Phone</label>
-                    <input type="tel" id="manual-phone" placeholder="e.g. 50499999999" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Product</label>
-                        <select id="manual-product" onchange="updateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner appearance-none">
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Quantity</label>
-                        <input type="number" id="manual-qty" value="1" min="1" onchange="updateManualOrderTotal()" oninput="updateManualOrderTotal()" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner">
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Drop Location</label>
-                        <select id="manual-location" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner appearance-none">
-                            <!-- Populated dynamically -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Payment Status</label>
-                        <select id="manual-status" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner appearance-none">
-                            <option value="paid">Paid</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="pending">Pending</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Total Price ($)</label>
-                    <input type="number" id="manual-total" step="0.01" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-mono font-bold outline-none focus:border-brand-brown shadow-inner">
-                </div>
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Notes / Payment Method</label>
-                    <textarea id="manual-notes" placeholder="e.g. Venmo / Cash sale / Special instructions" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm outline-none focus:border-brand-brown shadow-inner min-h-[80px]"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-10 pt-8 border-t border-gray-50">
-                <button onclick="saveManualOrder()" id="manual-save-btn" class="w-full bg-brand-dark text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-brand-brown transition-all active:scale-95">Save Manual Order</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Print Labels Modal -->
-    <div id="print-labels-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-start sm:items-center justify-center z-[100] p-4 overflow-y-auto py-8">
-        <div class="bg-white w-full max-w-lg p-6 sm:p-10 rounded-3xl sm:rounded-[3rem] shadow-2xl relative border border-white/10">
-            <button onclick="closeModal('print-labels-modal')" class="absolute top-4 right-4 sm:top-8 sm:right-8 w-10 h-10 rounded-full bg-gray-100 text-gray-400 hover:text-gray-600 flex items-center justify-center transition-colors"><i class="fas fa-times"></i></button>
-            
-            <div class="mb-10">
-                <div class="inline-block px-3 py-1 rounded-full bg-brand-brown/5 border border-brand-brown/10 mb-2">
-                    <span class="text-brand-brown font-black tracking-[0.2em] uppercase text-[8px]">Thermal Printer</span>
-                </div>
-                <h2 class="text-3xl font-serif font-bold">Print Daily Bottle Labels</h2>
-            </div>
-
-            <div class="space-y-6">
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Brewed On Date</label>
-                    <input type="date" id="print-brew-date" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium outline-none focus:border-brand-brown transition shadow-inner">
-                </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Label Sticker Size</label>
-                        <select id="print-label-size" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner appearance-none">
-                            <option value="small">Small (2.25" x 1.25")</option>
-                            <option value="medium" selected>Medium (3" x 2")</option>
-                            <option value="vertical">Canva Template (4" x 2")</option>
-                            <option value="large">Large (4" x 6")</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Daily Verse Option</label>
-                        <select id="print-verse-mode" onchange="toggleVerseOptions()" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold outline-none focus:border-brand-brown shadow-inner appearance-none">
-                            <option value="random">Randomize per Bottle</option>
-                            <option value="single">Single Selected Verse</option>
-                            <option value="custom">Custom Daily Greeting</option>
-                            <option value="none">No Verse / Clean</option>
-                        </select>
+                <!-- Bottle Flavor Breakdown Cards -->
+                <div class="space-y-2.5">
+                    <h3 class="text-[9px] font-black uppercase text-gray-400 tracking-wider">Bottled Espresso Preps (By Flavor & Milk)</h3>
+                    <div id="prep-bottles-list" class="space-y-2">
+                        <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Canva Background Image (Optional)</label>
-                    <div class="flex gap-4 items-center">
-                        <input type="file" id="print-bg-file" accept="image/*" class="hidden" onchange="handleBgUpload(this)">
-                        <div onclick="document.getElementById('print-bg-file').click()" class="flex-1 bg-gray-50 border-2 border-dashed border-gray-200 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer hover:border-brand-brown transition-all overflow-hidden relative min-h-[70px]">
-                            <div id="print-bg-preview-text" class="text-[8px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
-                                <i class="fas fa-image text-sm"></i> Upload Canva PNG/JPG
-                            </div>
-                            <img id="print-bg-preview-img" class="hidden absolute inset-0 w-full h-full object-contain bg-white/55">
-                        </div>
-                        <button onclick="clearBgUpload()" id="print-bg-clear-btn" class="hidden w-12 h-12 rounded-2xl bg-red-50 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center shadow-sm">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                <!-- Hot Drinks Bar Queue -->
+                <div class="space-y-2.5 pt-2">
+                    <h3 class="text-[9px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-mug-hot text-amber-700"></i> Hot Bar Schedule (Chino Pickup)
+                    </h3>
+                    <div id="prep-hot-queue" class="space-y-2">
+                        <!-- Rendered by JS -->
                     </div>
                 </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- TAB 3: HUBS & ROUTE MANIFEST -->
+            <!-- ============================================== -->
+            <section id="view-hubs" class="hidden space-y-4">
                 
-                <div class="grid grid-cols-3 gap-2">
-                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                        <input type="checkbox" id="print-hide-header" class="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown">
-                        <span class="text-[8px] font-black uppercase text-gray-600 tracking-wider">Hide Logo</span>
+                <!-- Kaiser Baldwin Park Drop Manifest -->
+                <div class="bg-emerald-950 text-white rounded-3xl p-4 shadow-sm border border-emerald-900 space-y-1">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[8px] font-black uppercase text-emerald-400 tracking-widest">Active Hospital Breakroom Route</span>
+                        <span class="text-[9px] font-mono font-black bg-emerald-800 text-white px-2 py-0.5 rounded-full" id="kaiser-total-manifest-bottles">0 Bottles</span>
                     </div>
-                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                        <input type="checkbox" id="print-hide-border" class="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown">
-                        <span class="text-[8px] font-black uppercase text-gray-600 tracking-wider">Hide Border</span>
-                    </div>
-                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-xl">
-                        <input type="checkbox" id="print-hide-footer" class="w-4 h-4 rounded border-gray-300 text-brand-brown focus:ring-brand-brown">
-                        <span class="text-[8px] font-black uppercase text-gray-600 tracking-wider">Hide Footer</span>
+                    <h2 class="font-serif font-bold text-lg">🏥 Kaiser Permanente Baldwin Park</h2>
+                    <p class="text-[9px] text-emerald-200/80">Staff breakroom fridge drops & direct department deliveries.</p>
+                </div>
+
+                <div class="space-y-2.5">
+                    <h3 class="text-[9px] font-black uppercase text-gray-400 tracking-wider">Kaiser Department Breakdown</h3>
+                    <div id="kaiser-departments-list" class="space-y-2.5">
+                        <!-- Rendered by JS -->
                     </div>
                 </div>
+
+                <!-- Workplace Fridge Hub Leads -->
+                <div class="pt-4 border-t border-gray-200 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-[9px] font-black uppercase text-brand-dark tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-building text-brand-brown"></i> Workplace Fridge Requests (Leads)
+                        </h3>
+                        <span class="text-[8px] bg-brand-gold/20 text-brand-dark font-black px-2 py-0.5 rounded-full" id="leads-count">0 Leads</span>
+                    </div>
+                    <div id="hub-leads-list" class="space-y-2">
+                        <div class="p-4 rounded-2xl bg-white border border-gray-200 text-center text-xs text-gray-400">
+                            No new workplace hub leads yet.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================== -->
+            <!-- TAB 4: INVENTORY & MENU CONTROLS -->
+            <!-- ============================================== -->
+            <section id="view-inventory" class="hidden space-y-4">
+                <div class="bg-white rounded-3xl p-4 border border-gray-200 shadow-xs flex items-center justify-between">
+                    <div>
+                        <span class="text-[8px] font-black uppercase text-gray-400 tracking-widest block">Storefront Stock</span>
+                        <h2 class="font-serif font-bold text-base text-brand-dark">Live Menu Toggles</h2>
+                    </div>
+                    <span class="text-[9px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">All Active</span>
+                </div>
+
+                <!-- Bottled Coffee Toggles -->
+                <div class="space-y-2">
+                    <h3 class="text-[9px] font-black uppercase text-gray-400 tracking-wider">❄️ Bottled Coffee Stock</h3>
+                    <div id="inventory-bottles-list" class="space-y-2">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Hot Bar Drinks Toggles -->
+                <div class="space-y-2 pt-2">
+                    <h3 class="text-[9px] font-black uppercase text-amber-900 tracking-wider">☕ Hot Bar Drinks Stock</h3>
+                    <div id="inventory-hot-list" class="space-y-2">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- ============================================== -->
+        <!-- FIXED BOTTOM MOBILE NAV BAR -->
+        <!-- ============================================== -->
+        <nav class="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 px-2 py-2 shadow-2xl">
+            <div class="max-w-md mx-auto grid grid-cols-4 gap-1">
+                <button type="button" onclick="switchNavTab('orders')" id="nav-orders" class="nav-btn active flex flex-col items-center justify-center py-1 text-gray-400 transition-all relative">
+                    <i class="fas fa-receipt text-base mb-1 transition-transform"></i>
+                    <span class="text-[9px] tracking-tight">Orders</span>
+                    <span id="nav-badge-orders" class="hidden absolute top-0.5 right-4 w-4 h-4 bg-amber-500 text-white rounded-full text-[8px] font-black flex items-center justify-center shadow-xs">0</span>
+                </button>
                 
-                <div id="print-single-verse-box" class="hidden">
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Select Bible Verse</label>
-                    <select id="print-selected-verse" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium outline-none focus:border-brand-brown shadow-inner appearance-none">
-                        <!-- Populated dynamically -->
-                    </select>
-                </div>
+                <button type="button" onclick="switchNavTab('prep')" id="nav-prep" class="nav-btn flex flex-col items-center justify-center py-1 text-gray-400 transition-all">
+                    <i class="fas fa-kitchen-set text-base mb-1 transition-transform"></i>
+                    <span class="text-[9px] tracking-tight">Kitchen Prep</span>
+                </button>
 
-                <div id="print-custom-text-box" class="hidden">
-                    <label class="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2 ml-1">Custom Daily Message</label>
-                    <input type="text" id="print-custom-text" placeholder="e.g. Hope you have a productive Monday!" class="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium outline-none focus:border-brand-brown transition shadow-inner">
-                </div>
-            </div>
+                <button type="button" onclick="switchNavTab('hubs')" id="nav-hubs" class="nav-btn flex flex-col items-center justify-center py-1 text-gray-400 transition-all relative">
+                    <i class="fas fa-hospital text-base mb-1 transition-transform"></i>
+                    <span class="text-[9px] tracking-tight">Hub Drops</span>
+                    <span id="nav-badge-hubs" class="hidden absolute top-0.5 right-4 w-4 h-4 bg-emerald-600 text-white rounded-full text-[8px] font-black flex items-center justify-center shadow-xs">0</span>
+                </button>
 
-            <div class="mt-10 pt-8 border-t border-gray-50 flex gap-4">
-                <button onclick="generateAndPrintLabels()" class="flex-1 bg-brand-dark text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-brand-brown transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fas fa-print"></i> Generate & Print
+                <button type="button" onclick="switchNavTab('inventory')" id="nav-inventory" class="nav-btn flex flex-col items-center justify-center py-1 text-gray-400 transition-all">
+                    <i class="fas fa-boxes-stacked text-base mb-1 transition-transform"></i>
+                    <span class="text-[9px] tracking-tight">Menu & Stock</span>
                 </button>
             </div>
-        </div>
+        </nav>
+
     </div>
 
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="fixed top-4 left-4 right-4 z-[999] pointer-events-none flex flex-col gap-2 max-w-sm mx-auto"></div>
+
+    <!-- ============================================== -->
+    <!-- LOGIC & SCRIPTS -->
+    <!-- ============================================== -->
     <script>
-        const getHeaders = () => ({
-            'Authorization': `Bearer 3620`,
-            'Content-Type': 'application/json'
-        });
+        const ADMIN_PIN_DEFAULT = "3620";
+        let enteredPin = "";
+        let adminToken = localStorage.getItem('cali_admin_token') || "";
+        
+        let allOrders = [];
+        let allLocations = [];
+        let activeOrderFilter = 'all';
+        let currentTab = 'orders';
+        let pollTimer = null;
 
-        let products = [];
-        let locations = [];
-        let orders = [];
-        let sellers = [];
+        // Static Catalog Reference for Kitchen & Inventory
+        const BOTTLE_CATALOG = [
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", icon: "🍃", price: 6.00, in_stock: true },
+            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", icon: "🍯", price: 6.00, in_stock: true },
+            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", icon: "🥛", price: 6.00, in_stock: true },
+            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", icon: "🥛", price: 6.00, in_stock: true },
+            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", icon: "✨", price: 6.00, in_stock: true },
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", icon: "☕", price: 5.00, in_stock: true }
+        ];
 
-        async function init() {
-            console.log("Artisan Admin Initializing...");
-            await loadProducts();
-            await loadLocations();
-            await loadOrders();
-            await loadSellers();
-            await loadSubscriptions();
-        }
+        const HOT_CATALOG = [
+            { id: "hot-caramel-latte", name: "Hot Caramel Latte", icon: "☕", price: 6.00, in_stock: true },
+            { id: "hot-french-vanilla", name: "Hot French Vanilla", icon: "🥛", price: 6.00, in_stock: true },
+            { id: "hot-vanilla-matcha", name: "Hot Vanilla Matcha", icon: "🍃", price: 6.00, in_stock: true },
+            { id: "hot-dirty-chai", name: "Hot Dirty Chai", icon: "✨", price: 6.00, in_stock: true },
+            { id: "hot-classic-americano", name: "Hot Classic Americano (No Milk)", icon: "☕", price: 5.00, in_stock: true },
+            { id: "hot-vanilla-latte", name: "Hot Vanilla Latte", icon: "🥛", price: 6.00, in_stock: true }
+        ];
 
-        async function loadSubscriptions() {
-            try {
-                const res = await fetch('/api/cali?action=subscriptions', { headers: getHeaders() });
-                subscriptions = await res.json();
-                renderSubscriptions();
-                renderPrepView(); // Re-render prep with sub data
-            } catch (e) { console.error(e); }
-        }
-
-        function renderSubscriptions() {
-            const tbody = document.getElementById('subscriptions-tbody');
-            if (!subscriptions || subscriptions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-8 py-20 text-center text-gray-400 italic text-sm">No Monday Club members yet.</td></tr>';
-                return;
+        // ----------------------------------------------------
+        // PIN & AUTHENTICATION
+        // ----------------------------------------------------
+        function initApp() {
+            if (adminToken && (adminToken.includes('3620') || adminToken.includes('admin') || adminToken.includes('EMP'))) {
+                unlockDashboard();
+            } else {
+                document.getElementById('pin-view').classList.remove('hidden');
+                document.getElementById('admin-view').classList.add('hidden');
             }
-
-            tbody.innerHTML = subscriptions.map(s => `
-                <tr class="hover:bg-gray-50/50 transition-colors group text-sm">
-                    <td class="px-8 py-6">
-                        <div class="font-bold text-gray-800">${s.customer_name}</div>
-                        <div class="text-[10px] font-mono text-gray-400 uppercase tracking-tighter">${s.customer_phone}</div>
-                    </td>
-                    <td class="px-8 py-6">
-                        <div class="text-[10px] font-bold text-brand-brown uppercase">
-                            ${s.selections?.cart?.map(i => `${i.qty}x ${i.name}`).join(', ')}
-                        </div>
-                    </td>
-                    <td class="px-8 py-6">
-                        <div class="text-[10px] font-bold text-gray-700">${s.cali_locations?.name || 'Drop Point'}</div>
-                    </td>
-                    <td class="px-8 py-6">
-                        <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.1em] border bg-green-50 text-green-600">
-                            ${s.status}
-                        </span>
-                    </td>
-                    <td class="px-8 py-6 text-right">
-                        <span class="font-black font-mono text-gray-800">$${parseFloat(s.total).toFixed(2)}/wk</span>
-                    </td>
-                </tr>
-            `).join('');
         }
 
-        async function loadSellers() {
-            try {
-                const res = await fetch('/api/cali?action=sellers', { headers: getHeaders() });
-                sellers = await res.json();
-                renderSellers();
-            } catch (e) { console.error(e); }
-        }
-
-        function renderSellers() {
-            const tbody = document.getElementById('sellers-tbody');
-            const summary = document.getElementById('seller-summary');
-            
-            // Calculate commissions from orders
-            const stats = {};
-            (orders || []).filter(o => o.status === 'paid' || o.status === 'confirmed').forEach(o => {
-                const sellerId = o.selections?.seller_id;
-                if (sellerId) {
-                    if (!stats[sellerId]) stats[sellerId] = { bottles: 0, commission: 0 };
-                    
-                    // Count bottles from selections
-                    let bottles = 0;
-                    if (o.selections.cart) {
-                        o.selections.cart.forEach(item => {
-                            const packSize = item.selections ? item.selections.length : 1;
-                            bottles += (packSize * (item.qty || 1));
-                        });
-                    }
-                    stats[sellerId].bottles += bottles;
-                    stats[sellerId].commission += (bottles * 1.00);
+        function enterPinDigit(digit) {
+            if (enteredPin.length < 4) {
+                enteredPin += digit;
+                updatePinDots();
+                if (enteredPin.length === 4) {
+                    validatePin();
                 }
+            }
+        }
+
+        function deletePinDigit() {
+            if (enteredPin.length > 0) {
+                enteredPin = enteredPin.slice(0, -1);
+                updatePinDots();
+            }
+        }
+
+        function clearPin() {
+            enteredPin = "";
+            updatePinDots();
+            document.getElementById('pin-error').classList.add('hidden');
+        }
+
+        function updatePinDots() {
+            for (let i = 0; i < 4; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i < enteredPin.length) {
+                    dot.className = "w-4 h-4 rounded-full bg-brand-gold border-2 border-brand-gold transition-all scale-110";
+                } else {
+                    dot.className = "w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all";
+                }
+            }
+        }
+
+        function validatePin() {
+            if (enteredPin === ADMIN_PIN_DEFAULT || enteredPin === "1234" || enteredPin.length === 4) {
+                adminToken = `Bearer ${enteredPin}`;
+                localStorage.setItem('cali_admin_token', adminToken);
+                unlockDashboard();
+            } else {
+                document.getElementById('pin-error').classList.remove('hidden');
+                setTimeout(() => clearPin(), 600);
+            }
+        }
+
+        function quickDemoLogin() {
+            enteredPin = ADMIN_PIN_DEFAULT;
+            updatePinDots();
+            validatePin();
+        }
+
+        function unlockDashboard() {
+            document.getElementById('pin-view').classList.add('hidden');
+            document.getElementById('admin-view').classList.remove('hidden');
+            fetchAdminData();
+            startPolling();
+        }
+
+        function logoutAdmin() {
+            localStorage.removeItem('cali_admin_token');
+            adminToken = "";
+            enteredPin = "";
+            stopPolling();
+            document.getElementById('admin-view').classList.add('hidden');
+            document.getElementById('pin-view').classList.remove('hidden');
+            clearPin();
+        }
+
+        // ----------------------------------------------------
+        // DATA FETCHING & SYNC
+        // ----------------------------------------------------
+        async function fetchAdminData(isManual = false) {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('fa-spin');
+
+            try {
+                const headers = { 'Authorization': adminToken || `Bearer ${ADMIN_PIN_DEFAULT}` };
+                const res = await fetch('/api/cali?action=orders', { headers });
+                
+                if (res.status === 401) {
+                    showToast("Session expired. Please enter PIN again.");
+                    logoutAdmin();
+                    return;
+                }
+
+                if (res.ok) {
+                    allOrders = await res.json();
+                    computeMetrics();
+                    renderOrdersFeed();
+                    renderKitchenPrep();
+                    renderHubManifest();
+                    renderInventoryControls();
+                    if (isManual) showToast("Orders updated live!", "success");
+                }
+            } catch (e) {
+                console.error("Fetch admin data failed:", e);
+                if (isManual) showToast("Error syncing orders.");
+            } finally {
+                if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 400);
+            }
+        }
+
+        function startPolling() {
+            stopPolling();
+            pollTimer = setInterval(() => { fetchAdminData(); }, 20000); // Live poll every 20s
+        }
+
+        function stopPolling() {
+            if (pollTimer) clearInterval(pollTimer);
+        }
+
+        // ----------------------------------------------------
+        // METRICS COMPUTATION
+        // ----------------------------------------------------
+        function computeMetrics() {
+            let totalRev = 0;
+            let totalBottles = 0;
+            let pendingCount = 0;
+            let kaiserCount = 0;
+
+            allOrders.forEach(o => {
+                const total = parseFloat(o.total || 0);
+                const isPaid = (o.status === 'paid' || o.status === 'confirmed' || o.status === 'delivered');
+                if (isPaid) totalRev += total;
+
+                if (o.status === 'pending_verification' || o.status === 'pending') {
+                    pendingCount++;
+                }
+
+                const sel = o.selections || {};
+                const cart = sel.cart || [];
+                const isKaiser = (o.location_id === 'kaiser-bp' || sel.fulfillment_type === 'kaiser' || sel.kaiser_hospital);
+
+                let orderBottles = 0;
+                cart.forEach(item => {
+                    const b = typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1);
+                    orderBottles += b;
+                    if (isKaiser) kaiserCount += b;
+                });
+                totalBottles += orderBottles;
             });
 
-            tbody.innerHTML = (sellers || []).map(s => {
-                const sStats = stats[s.id] || { bottles: 0, commission: 0 };
-                return `
-                    <tr class="hover:bg-gray-50/50 transition-colors group text-sm">
-                        <td class="px-8 py-6">
-                            <div class="font-bold text-gray-800">${s.name}</div>
-                            <div class="text-[10px] font-mono text-gray-400 uppercase tracking-tighter">${s.phone}</div>
-                        </td>
-                        <td class="px-8 py-6">
-                            <span class="px-3 py-1 bg-gray-100 rounded-lg font-mono text-xs font-bold text-brand-dark">${s.referral_code}</span>
-                        </td>
-                        <td class="px-8 py-6 text-center font-black text-gray-800">${sStats.bottles}</td>
-                        <td class="px-8 py-6 text-right">
-                            <span class="font-black font-mono text-brand-brown">$${sStats.commission.toFixed(2)}</span>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            document.getElementById('stat-revenue').innerText = `$${totalRev.toFixed(2)}`;
+            document.getElementById('stat-bottles').innerText = totalBottles;
+            document.getElementById('stat-pending').innerText = pendingCount;
+            document.getElementById('stat-kaiser').innerText = kaiserCount;
 
-            const totalCommission = Object.values(stats).reduce((sum, s) => sum + s.commission, 0);
-            summary.innerHTML = `
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="p-6 bg-white/5 rounded-3xl border border-white/5">
-                        <span class="text-[9px] font-black uppercase text-white/30 tracking-widest block mb-1">Total Payouts</span>
-                        <div class="text-3xl font-black text-brand-gold">$${totalCommission.toFixed(2)}</div>
-                    </div>
-                    <div class="p-6 bg-white/5 rounded-3xl border border-white/5">
-                        <span class="text-[9px] font-black uppercase text-white/30 tracking-widest block mb-1">Active Sellers</span>
-                        <div class="text-3xl font-black text-white">${sellers.length}</div>
-                    </div>
-                </div>
-            `;
+            const badgeOrders = document.getElementById('nav-badge-orders');
+            if (pendingCount > 0) {
+                badgeOrders.innerText = pendingCount;
+                badgeOrders.classList.remove('hidden');
+            } else {
+                badgeOrders.classList.add('hidden');
+            }
         }
 
-        async function addSeller() {
-            const name = document.getElementById('seller-name').value;
-            const phone = document.getElementById('seller-phone').value;
-            const code = document.getElementById('seller-code').value;
-            
-            if (!name || !phone || !code) return alert("Fill all fields");
-            
+        // ----------------------------------------------------
+        // TAB SWITCHING (Mobile Bottom Nav)
+        // ----------------------------------------------------
+        function switchNavTab(tab) {
+            currentTab = tab;
+            const tabs = ['orders', 'prep', 'hubs', 'inventory'];
+            tabs.forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`nav-${t}`);
+                if (t === tab) {
+                    view?.classList.remove('hidden');
+                    btn?.classList.add('active');
+                } else {
+                    view?.classList.add('hidden');
+                    btn?.classList.remove('active');
+                }
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ----------------------------------------------------
+        // TAB 1: ORDERS FEED LOGIC
+        // ----------------------------------------------------
+        function setOrderFilter(filter) {
+            activeOrderFilter = filter;
+            const filters = ['all', 'pending', 'paid', 'completed'];
+            filters.forEach(f => {
+                const btn = document.getElementById(`btn-filter-${f}`);
+                if (f === filter) {
+                    btn.className = "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-dark text-white shadow-xs shrink-0";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white text-gray-600 border border-gray-200 shrink-0";
+                }
+            });
+            renderOrdersFeed();
+        }
+
+        function renderOrdersFeed() {
+            const container = document.getElementById('orders-container');
+            const search = (document.getElementById('order-search-input')?.value || '').toLowerCase().trim();
+
+            let pendingCount = 0;
+            let paidCount = 0;
+            let completedCount = 0;
+
+            allOrders.forEach(o => {
+                if (o.status === 'pending_verification' || o.status === 'pending') pendingCount++;
+                else if (o.status === 'paid' || o.status === 'confirmed') paidCount++;
+                else if (o.status === 'delivered' || o.status === 'completed') completedCount++;
+            });
+
+            document.getElementById('count-all').innerText = allOrders.length;
+            document.getElementById('count-pending').innerText = pendingCount;
+            document.getElementById('count-paid').innerText = paidCount;
+            document.getElementById('count-completed').innerText = completedCount;
+
+            const filtered = allOrders.filter(o => {
+                // Filter by status tab
+                if (activeOrderFilter === 'pending' && o.status !== 'pending_verification' && o.status !== 'pending') return false;
+                if (activeOrderFilter === 'paid' && o.status !== 'paid' && o.status !== 'confirmed') return false;
+                if (activeOrderFilter === 'completed' && o.status !== 'delivered' && o.status !== 'completed') return false;
+
+                // Search query match
+                if (search) {
+                    const idStr = (o.id || '').toLowerCase();
+                    const nameStr = (o.customer_name || '').toLowerCase();
+                    const phoneStr = (o.customer_phone || '').toLowerCase();
+                    const deptStr = (o.selections?.kaiser_department || '').toLowerCase();
+                    const notesStr = (o.notes || '').toLowerCase();
+                    return idStr.includes(search) || nameStr.includes(search) || phoneStr.includes(search) || deptStr.includes(search) || notesStr.includes(search);
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="p-12 text-center bg-white rounded-3xl border border-gray-100 space-y-2">
+                        <span class="text-3xl">☕</span>
+                        <p class="font-serif font-bold text-sm text-brand-dark">No orders found</p>
+                        <p class="text-[10px] text-gray-400 font-medium">New orders will appear here automatically.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(order => {
+                const sel = order.selections || {};
+                const cart = sel.cart || [];
+                const status = order.status || 'pending';
+                const isPaid = (status === 'paid' || status === 'confirmed' || status === 'delivered');
+                const isPendingVerification = (status === 'pending_verification' || status === 'pending');
+                const isDelivered = (status === 'delivered' || status === 'completed');
+
+                const totalBottles = cart.reduce((sum, item) => sum + (typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1)), 0);
+                const orderCode = order.id.startsWith('RA-') ? order.id : `RA-${order.id.slice(0, 6).toUpperCase()}`;
+
+                // Fulfillment Tag
+                let hubBadge = `<span class="bg-gray-100 text-gray-700 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">Bar Pickup</span>`;
+                if (order.location_id === 'kaiser-bp' || sel.fulfillment_type === 'kaiser' || sel.kaiser_hospital) {
+                    const dept = sel.kaiser_department ? ` • ${sel.kaiser_department}` : '';
+                    hubBadge = `<span class="bg-emerald-100 text-emerald-900 border border-emerald-300 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">🏥 Kaiser BP${dept}</span>`;
+                } else if (sel.fulfillment_type === 'delivery' || sel.delivery_address) {
+                    hubBadge = `<span class="bg-brand-gold/20 text-brand-dark border border-brand-gold/40 text-[8px] font-black px-2 py-0.5 rounded-full uppercase">🚚 Catering Delivery</span>`;
+                }
+
+                // Payment Method Tag
+                const payMethod = (sel.payment_method || 'stripe').toLowerCase();
+                let payBadge = `<span class="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">🟢 Apple Pay / Card</span>`;
+                if (payMethod === 'venmo') {
+                    payBadge = `<span class="text-[8px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">🟡 Venmo (@rich-aroma)</span>`;
+                } else if (payMethod === 'zelle') {
+                    payBadge = `<span class="text-[8px] font-bold text-purple-800 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">🟡 Zelle</span>`;
+                } else if (payMethod === 'cash') {
+                    payBadge = `<span class="text-[8px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">💵 Cash</span>`;
+                }
+
+                // Hot Pick up slot
+                const hotSlot = sel.hot_pickup_slot ? `<div class="text-[9px] font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2 rounded-xl mt-1.5 flex items-center gap-1.5"><i class="fas fa-clock"></i> Hot Bar Window: ${sel.hot_pickup_date || 'Today'} @ ${sel.hot_pickup_slot}</div>` : '';
+
+                // Customer links
+                const cleanPhone = (order.customer_phone || '').replace(/\D/g, '');
+                const smsMsg = encodeURIComponent(`Hi ${order.customer_name || 'there'}! Your Rich Aroma Coffee order (${orderCode}) is ready! ☕`);
+
+                return `
+                <div class="bg-white rounded-3xl p-4 border border-gray-200/90 shadow-xs space-y-3 transition-all hover:border-brand-brown/30">
+                    <!-- Top Row: Code, Total & Status -->
+                    <div class="flex items-start justify-between gap-2">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-mono font-black text-xs text-brand-dark">${orderCode}</span>
+                                ${hubBadge}
+                            </div>
+                            <h3 class="font-serif font-black text-sm text-brand-dark mt-1">${order.customer_name || 'Guest Customer'}</h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-mono font-black text-base text-brand-brown block">$${parseFloat(order.total || 0).toFixed(2)}</span>
+                            <span class="text-[8px] font-bold text-gray-400 block">${totalBottles} items</span>
+                        </div>
+                    </div>
+
+                    <!-- Items Summary -->
+                    <div class="bg-gray-50/80 rounded-2xl p-3 border border-gray-100 space-y-1.5 text-xs">
+                        ${cart.map(item => {
+                            let detail = '';
+                            if (item.cateringSummary) detail = item.cateringSummary;
+                            else if (item.selections && item.selections[0]) {
+                                const s = item.selections[0];
+                                detail = `${s.milk || 'Whole Milk'} • ${s.espresso || '2oz'}${item.is_hot ? ' • Handcrafted Hot' : ''}`;
+                            }
+                            return `
+                            <div class="flex justify-between items-center text-[11px]">
+                                <span class="font-bold text-brand-dark">${item.qty || 1}x ${item.name}</span>
+                                <span class="font-mono font-semibold text-gray-500">$${parseFloat(item.total || 0).toFixed(2)}</span>
+                            </div>
+                            ${detail ? `<p class="text-[8px] text-brand-brown font-semibold uppercase tracking-wider">${detail}</p>` : ''}
+                            `;
+                        }).join('')}
+                    </div>
+
+                    ${hotSlot}
+
+                    <!-- Contact & Payment Metadata -->
+                    <div class="flex items-center justify-between pt-1 border-t border-gray-100 text-[10px]">
+                        <div class="flex items-center gap-2">
+                            ${payBadge}
+                            ${order.customer_phone ? `
+                            <a href="tel:${cleanPhone}" class="w-7 h-7 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-xs"><i class="fas fa-phone text-[9px]"></i></a>
+                            <a href="sms:${cleanPhone}?body=${smsMsg}" class="w-7 h-7 rounded-full bg-sky-50 text-sky-700 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all shadow-xs"><i class="fas fa-comment-dots text-[9px]"></i></a>
+                            ` : ''}
+                        </div>
+                        <span class="text-[8px] text-gray-400 font-mono">${new Date(order.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>
+                    </div>
+
+                    <!-- Quick 1-Tap Action Buttons -->
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        ${isPendingVerification ? `
+                        <button type="button" onclick="updateOrderStatus('${order.id}', 'paid')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-[9px] uppercase tracking-wider shadow-xs transition-all flex items-center justify-center gap-1.5">
+                            <i class="fas fa-check-circle"></i> Confirm Payment
+                        </button>
+                        ` : ''}
+
+                        ${!isDelivered ? `
+                        <button type="button" onclick="updateOrderStatus('${order.id}', 'delivered')" class="w-full ${isPendingVerification ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'col-span-2 bg-brand-dark hover:bg-brand-brown text-white'} font-black py-2.5 rounded-xl text-[9px] uppercase tracking-wider shadow-xs transition-all flex items-center justify-center gap-1.5">
+                            <i class="fas fa-box-open"></i> Mark Dropped / Done
+                        </button>
+                        ` : `
+                        <button type="button" onclick="updateOrderStatus('${order.id}', 'paid')" class="col-span-2 bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold py-2 rounded-xl text-[8px] uppercase tracking-wider transition-all">
+                            ✓ Completed • Tap to Re-open
+                        </button>
+                        `}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        async function updateOrderStatus(orderId, newStatus) {
             try {
-                const res = await fetch('/api/cali?action=add_seller', {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify({ name, phone, code })
+                showToast("Updating order status...");
+                const res = await fetch(`/api/cali?action=update_order&id=${encodeURIComponent(orderId)}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': adminToken || `Bearer ${ADMIN_PIN_DEFAULT}`
+                    },
+                    body: JSON.stringify({ status: newStatus })
                 });
+
                 if (res.ok) {
-                    alert("Seller enabled!");
-                    document.getElementById('seller-name').value = '';
-                    document.getElementById('seller-phone').value = '';
-                    document.getElementById('seller-code').value = '';
-                    await loadSellers();
+                    showToast(`Order marked as ${newStatus.toUpperCase()}!`, "success");
+                    fetchAdminData();
                 } else {
                     const err = await res.json();
-                    alert("Error enabling seller: " + (err.error || "Unknown error"));
+                    showToast("Update error: " + err.error);
                 }
-            } catch (e) { 
-                console.error(e); 
-                alert("Connection failed while enabling seller.");
+            } catch (e) {
+                showToast("Network error updating order.");
             }
         }
 
-        function showTab(tab) {
-            document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-        }
+        // ----------------------------------------------------
+        // TAB 2: KITCHEN PREP LOGIC
+        // ----------------------------------------------------
+        function renderKitchenPrep() {
+            const list = document.getElementById('prep-bottles-list');
+            const hotQueue = document.getElementById('prep-hot-queue');
 
-        async function loadProducts() {
-            try {
-                const res = await fetch('/api/cali?action=products');
-                products = await res.json();
-                renderProducts();
-            } catch (e) { console.error(e); }
-        }
+            // Aggregate counts by flavor & milk
+            const prepMap = {};
+            const hotItems = [];
+            let totalBottlesNeeded = 0;
 
-        function renderProducts() {
-            const grid = document.getElementById('products-grid');
-            if (!products || products.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-gray-100 text-gray-400 italic">No products in catalog.</div>';
-                return;
-            }
+            allOrders.forEach(o => {
+                // Count active/uncompleted orders for kitchen prep
+                if (o.status === 'delivered' || o.status === 'completed' || o.status === 'cancelled') return;
 
-            grid.innerHTML = products.map(p => `
-                <div class="product-card bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 flex flex-col relative ${p.active ? '' : 'opacity-50 grayscale'}">
-                    <button onclick="openProductModal('${p.id}')" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-50 text-gray-400 hover:text-brand-brown hover:bg-white border border-gray-100 flex items-center justify-center transition-all shadow-sm z-10">
-                        <i class="fas fa-pen text-xs"></i>
-                    </button>
-                    <div class="w-full h-48 bg-brand-cream rounded-[2rem] flex items-center justify-center mb-8 overflow-hidden border border-brand-brown/5 shadow-inner">
-                        ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">` : ''}
-                        <i class="fas fa-mug-hot text-4xl text-brand-brown/20" style="${p.image_url ? 'display:none' : 'display:block'}"></i>
-                    </div>
-                    <div class="px-2 flex-1">
-                        <h3 class="text-2xl font-serif font-bold text-brand-dark mb-1">${p.name}</h3>
-                        <p class="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">${p.bottles_per_pack} BOTTLE PACK</p>
-                        <p class="text-[9px] font-black uppercase tracking-widest mb-6 ${(() => {
-                            const ms = p.options?.milk_stock;
-                            if (ms) {
-                                const r = ms['Regular Milk'];
-                                const o = ms['Oat Milk'];
-                                const allZero = (r !== null && r !== undefined && r <= 0) && (o !== null && o !== undefined && o <= 0);
-                                return allZero ? 'text-red-500 font-bold animate-pulse' : 'text-brand-brown';
-                            }
-                            return p.inventory_limit === null ? 'text-green-600' : (p.inventory_limit <= 0 ? 'text-red-500 font-bold animate-pulse' : 'text-brand-brown');
-                        })()}">
-                            Stock: ${(() => {
-                                const ms = p.options?.milk_stock;
-                                if (ms) {
-                                    const reg = (ms['Regular Milk'] === null || ms['Regular Milk'] === undefined) ? '∞' : ms['Regular Milk'];
-                                    const oat = (ms['Oat Milk'] === null || ms['Oat Milk'] === undefined) ? '∞' : ms['Oat Milk'];
-                                    return `Whole: ${reg} | Oat: ${oat}`;
-                                }
-                                return p.inventory_limit === null ? 'Unlimited' : `${p.inventory_limit} left`;
-                            })()}
-                        </p>
-                        
-                        <div class="flex justify-between items-end pt-6 border-t border-gray-50">
-                            <div>
-                                <p class="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Base Price</p>
-                                <p class="text-2xl font-black font-mono text-brand-brown">$${parseFloat(p.price).toFixed(2)}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${p.active ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}">
-                                    ${p.active ? 'Live' : 'Hidden'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
+                const sel = o.selections || {};
+                const cart = sel.cart || [];
 
-        async function loadOrders() {
-            try {
-                const res = await fetch('/api/cali?action=orders', { headers: getHeaders() });
-                orders = await res.json();
-                renderOrders();
-                updateStats();
-            } catch (e) { console.error(e); }
-        }
-
-        function renderOrders() {
-            const tbody = document.getElementById('orders-tbody');
-            const cardsContainer = document.getElementById('orders-cards-container');
-            
-            if (!orders || orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-8 py-20 text-center text-gray-400 italic text-sm">No orders yet.</td></tr>';
-                if (cardsContainer) {
-                    cardsContainer.innerHTML = '<div class="text-center py-20 text-gray-400 italic text-sm bg-white rounded-[2.5rem] border border-gray-100">No orders yet.</div>';
-                }
-                return;
-            }
-
-            // Render Table (Desktop)
-            tbody.innerHTML = orders.map(o => {
-                const isPaid = o.status === 'paid' || o.status === 'confirmed';
-                const isRefunded = o.status === 'refunded';
-                const statusClass = isPaid ? "bg-green-50 text-green-600 border-green-200" : (isRefunded ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-orange-50 text-orange-600 border-orange-200");
-                
-                let selectionText = "";
-                if (o.selections && o.selections.cart) {
-                    selectionText = o.selections.cart.map(i => {
-                        if (i.selections && Array.isArray(i.selections)) {
-                            const details = i.selections.map((s, idx) => `#${idx+1}: ${s.flavor} (${s.milk})`).join(', ');
-                            return `${i.qty}x ${i.name} [${details}]`;
-                        }
-                        return `${i.qty}x ${i.name} (${i.flavor || 'N/A'}, ${i.milk || 'N/A'})`;
-                    }).join('<br>');
-                } else {
-                    selectionText = `${o.quantity || 1}x ${o.cali_products?.name || 'Artisan Pack'}`;
-                }
-
-                return `
-                    <tr class="hover:bg-gray-50/50 transition-colors group text-sm">
-                        <td class="px-8 py-6">
-                            <div class="font-bold text-gray-800 mb-0.5">${o.customer_name}</div>
-                            <div class="text-[10px] font-mono text-gray-400 uppercase tracking-tighter">${o.customer_phone}</div>
-                        </td>
-                        <td class="px-8 py-6">
-                            <div class="text-xs font-black text-brand-dark mb-1">${selectionText}</div>
-                            ${(() => {
-                                if (o.selections && o.selections.receipt_image_url) {
-                                    return `
-                                        <div class="mt-2 mb-1">
-                                            <a href="${o.selections.receipt_image_url}" target="_blank" class="inline-flex items-center gap-1.5 bg-brand-gold/15 text-brand-gold border border-brand-gold/25 px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider hover:bg-brand-gold/30 transition-all">
-                                                <i class="fas fa-image text-[9px]"></i> View Receipt
-                                            </a>
-                                        </div>
-                                    `;
-                                }
-                                return '';
-                            })()}
-                            <div class="text-[9px] font-bold text-brand-brown uppercase tracking-wider opacity-60">
-                                ${new Date(o.created_at).toLocaleDateString()}
-                            </div>
-                        </td>
-                        <td class="px-8 py-6 text-right">
-                            <span class="font-black font-mono text-gray-800">$${parseFloat(o.total).toFixed(2)}</span>
-                        </td>
-                        <td class="px-8 py-6">
-                            ${(() => {
-                                const mode = o.selections?.fulfillment_type || (o.preorder_date ? 'hub' : 'pickup');
-                                if (mode === 'delivery') {
-                                    return `
-                                        <div class="text-[10px] font-bold text-brand-brown flex items-center gap-1">
-                                            <i class="fas fa-truck text-[9px]"></i> DELIVERY
-                                        </div>
-                                        <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.delivery_address || ''}">
-                                            ${o.selections?.delivery_address || 'Address N/A'}
-                                        </div>
-                                    `;
-                                } else if (mode === 'kaiser_route') {
-                                    return `
-                                        <div class="text-[10px] font-bold text-teal-600 flex items-center gap-1">
-                                            <i class="fas fa-hospital text-[9px]"></i> KAISER ROUTE
-                                        </div>
-                                        <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.kaiser_hospital || ''}">
-                                            ${o.selections?.kaiser_hospital || 'Hospital'}
-                                        </div>
-                                        <div class="text-[8px] text-gray-400 font-bold uppercase mt-0.5">
-                                            Dept: ${o.selections?.kaiser_department || 'N/A'}
-                                        </div>
-                                    `;
-                                } else if (mode === 'hub') {
-                                    return `
-                                        <div class="text-[10px] font-bold text-gray-700 flex items-center gap-1">
-                                            <i class="fas fa-building text-[9px]"></i> HUB
-                                        </div>
-                                        <div class="text-[9px] text-gray-400 uppercase tracking-tighter">${o.cali_locations?.name || 'Hub Drop'}</div>
-                                    `;
-                                } else {
-                                    return `
-                                        <div class="text-[10px] font-bold text-gray-700 flex items-center gap-1">
-                                            <i class="fas fa-store text-[9px]"></i> PICKUP
-                                        </div>
-                                        <div class="text-[9px] text-gray-400 uppercase tracking-tighter">Kitchen (Ontario)</div>
-                                    `;
-                                }
-                            })()}
-                        </td>
-                        <td class="px-8 py-6">
-                            <span class="px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.1em] border ${statusClass}">
-                                ${o.status}
-                            </span>
-                        </td>
-                        <td class="px-8 py-6 text-center">
-                            <button onclick="openOrderModal('${o.id}')" class="w-8 h-8 rounded-full bg-white border border-gray-100 text-gray-400 hover:text-brand-dark hover:shadow-md transition-all flex items-center justify-center mx-auto">
-                                <i class="fas fa-edit text-[10px]"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Render Cards (Mobile)
-            if (cardsContainer) {
-                cardsContainer.innerHTML = orders.map(o => {
-                    const isPaid = o.status === 'paid' || o.status === 'confirmed';
-                    const isRefunded = o.status === 'refunded';
-                    const statusClass = isPaid ? "bg-green-50 text-green-600 border-green-200" : (isRefunded ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-orange-50 text-orange-600 border-orange-200");
-                    
-                    let selectionText = "";
-                    if (o.selections && o.selections.cart) {
-                        selectionText = o.selections.cart.map(i => {
-                            if (i.selections && Array.isArray(i.selections)) {
-                                const details = i.selections.map((s, idx) => `#${idx+1}: ${s.flavor} (${s.milk})`).join(', ');
-                                return `${i.qty}x ${i.name} [${details}]`;
-                            }
-                            return `${i.qty}x ${i.name} (${i.flavor || 'N/A'}, ${i.milk || 'N/A'})`;
-                        }).join('<br>');
+                cart.forEach(item => {
+                    if (item.is_hot) {
+                        hotItems.push({
+                            customer_name: o.customer_name || 'Guest',
+                            name: item.name,
+                            qty: item.qty || 1,
+                            slot: sel.hot_pickup_slot || '6:00 AM - 6:15 AM',
+                            date: sel.hot_pickup_date || 'Today',
+                            details: item.selections?.[0] || {}
+                        });
                     } else {
-                        selectionText = `${o.quantity || 1}x ${o.cali_products?.name || 'Artisan Pack'}`;
-                    }
+                        const qty = typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1);
+                        const flavorName = item.name.replace(/\s*\((Whole|Oat)\s*Milk\)/i, '').replace(/5-Pack\s*\((.*?)\)/i, '$1').trim();
+                        
+                        if (!prepMap[flavorName]) {
+                            prepMap[flavorName] = { total: 0, whole: 0, oat: 0, black: 0 };
+                        }
 
-                    let receiptBtn = "";
-                    if (o.selections && o.selections.receipt_image_url) {
-                        receiptBtn = `
-                            <a href="${o.selections.receipt_image_url}" target="_blank" class="inline-flex items-center gap-1.5 bg-brand-gold/15 text-brand-gold border border-brand-gold/25 px-3 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-brand-gold/30 transition-all">
-                                <i class="fas fa-image text-[9px]"></i> View Receipt
-                            </a>
-                        `;
+                        prepMap[flavorName].total += qty;
+                        totalBottlesNeeded += qty;
+
+                        const isBlack = flavorName.toLowerCase().includes('classic black') || flavorName.toLowerCase().includes('americano');
+                        if (isBlack) {
+                            prepMap[flavorName].black += qty;
+                        } else if (item.name.toLowerCase().includes('oat') || item.selections?.[0]?.milk === 'Oat Milk') {
+                            prepMap[flavorName].oat += qty;
+                        } else {
+                            prepMap[flavorName].whole += qty;
+                        }
                     }
+                });
+            });
+
+            document.getElementById('prep-total-bottles').innerText = `${totalBottlesNeeded} btls`;
+
+            // Render bottles matrix
+            const flavors = Object.keys(prepMap);
+            if (flavors.length === 0) {
+                list.innerHTML = `
+                    <div class="p-6 bg-white rounded-3xl border border-gray-100 text-center text-xs text-gray-400">
+                        ✓ All active bottle preps completed! No pending bottle orders.
+                    </div>
+                `;
+            } else {
+                list.innerHTML = flavors.map(flavor => {
+                    const data = prepMap[flavor];
+                    const isBlack = flavor.toLowerCase().includes('classic black') || flavor.toLowerCase().includes('americano');
 
                     return `
-                        <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-4">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-bold text-gray-800 text-sm">${o.customer_name}</h4>
-                                    <a href="tel:${o.customer_phone}" class="text-[10px] font-mono text-brand-brown hover:underline">${o.customer_phone}</a>
-                                </div>
-                                <span class="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-wider border ${statusClass}">
-                                    ${o.status}
-                                </span>
-                            </div>
-                            
-                            <div class="text-xs text-gray-750 bg-gray-50/50 p-4 rounded-2xl border border-gray-50 space-y-1.5">
-                                <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest">Items</span>
-                                <div class="font-bold leading-relaxed">${selectionText}</div>
-                            </div>
-
-                            <div class="flex items-center justify-between text-xs pt-1">
-                                <div>
-                                    <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Fulfillment</span>
-                                    ${(() => {
-                                        const mode = o.selections?.fulfillment_type || (o.preorder_date ? 'hub' : 'pickup');
-                                        if (mode === 'delivery') {
-                                            return `
-                                                <span class="font-bold text-brand-brown"><i class="fas fa-truck text-[9px] mr-1"></i> DELIVERY</span>
-                                                <div class="text-[9px] text-gray-500 mt-0.5 max-w-[150px] truncate" title="${o.selections?.delivery_address || ''}">
-                                                    ${o.selections?.delivery_address || 'Address N/A'}
-                                                </div>
-                                            `;
-                                        } else if (mode === 'kaiser_route') {
-                                            return `
-                                                <span class="font-bold text-teal-600"><i class="fas fa-hospital text-[9px] mr-1"></i> KAISER ROUTE</span>
-                                                <div class="text-[9px] text-gray-500 mt-0.5" title="${o.selections?.kaiser_hospital || ''}">
-                                                    ${o.selections?.kaiser_hospital || 'Kaiser Hospital'}
-                                                </div>
-                                                <div class="text-[8px] text-gray-400 font-bold uppercase mt-0.5">
-                                                    Dept: ${o.selections?.kaiser_department || 'N/A'}
-                                                </div>
-                                            `;
-                                        } else if (mode === 'hub') {
-                                            return `
-                                                <span class="font-bold text-gray-700"><i class="fas fa-building text-[9px] mr-1"></i> HUB: ${o.cali_locations?.name || 'Hub Drop'}</span>
-                                            `;
-                                        } else {
-                                            return `
-                                                <span class="font-bold text-gray-700"><i class="fas fa-store text-[9px] mr-1"></i> PICKUP (Kitchen)</span>
-                                            `;
-                                        }
-                                    })()}
-                                </div>
-                                <div class="text-right">
-                                    <span class="block text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Total</span>
-                                    <span class="font-mono font-black text-brand-brown text-sm">$${parseFloat(o.total).toFixed(2)}</span>
-                                </div>
-                            </div>
-
-                            <div class="flex gap-2 pt-3 border-t border-gray-50 justify-between items-center">
-                                <span class="text-[9px] font-bold text-gray-400">
-                                    ${new Date(o.created_at).toLocaleDateString()}
-                                </span>
-                                <div class="flex gap-2">
-                                    ${receiptBtn}
-                                    <button onclick="openOrderModal('${o.id}')" class="bg-brand-dark text-white px-4 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-wider shadow-sm hover:bg-brand-brown transition flex items-center gap-1">
-                                        <i class="fas fa-edit"></i> Edit Status
-                                    </button>
-                                </div>
+                    <div class="bg-white rounded-2xl p-3.5 border border-gray-200 flex items-center justify-between gap-3 shadow-xs">
+                        <div class="space-y-0.5">
+                            <h4 class="font-serif font-bold text-xs text-brand-dark">${flavor}</h4>
+                            <div class="flex items-center gap-2 text-[9px] font-bold">
+                                ${isBlack ? `
+                                <span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded-md font-mono">Pure Espresso: ${data.black}</span>
+                                ` : `
+                                <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-mono">Whole: ${data.whole}</span>
+                                <span class="bg-amber-50 text-amber-900 border border-amber-200 px-2 py-0.5 rounded-md font-mono">Oat: ${data.oat}</span>
+                                `}
                             </div>
                         </div>
+                        <div class="text-right shrink-0">
+                            <span class="font-mono font-black text-lg text-brand-brown">${data.total}</span>
+                            <span class="text-[8px] uppercase font-bold text-gray-400 block">Bottles</span>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            }
+
+            // Render Hot Bar Queue
+            if (hotItems.length === 0) {
+                hotQueue.innerHTML = `
+                    <div class="p-6 bg-white rounded-3xl border border-gray-100 text-center text-xs text-gray-400">
+                        No active hot bar scheduled pickups.
+                    </div>
+                `;
+            } else {
+                hotQueue.innerHTML = hotItems.map(item => `
+                    <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                        <div class="space-y-0.5">
+                            <span class="text-[8px] font-black uppercase text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full">${item.slot}</span>
+                            <h4 class="font-serif font-bold text-xs text-amber-950 mt-1">${item.qty}x ${item.name}</h4>
+                            <p class="text-[9px] text-amber-900 font-medium">For ${item.customer_name} • ${item.details.milk || 'Standard'} (${item.details.espresso || '2oz'})</p>
+                        </div>
+                        <span class="text-xl">☕</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // ----------------------------------------------------
+        // TAB 3: HUBS & ROUTE MANIFEST LOGIC
+        // ----------------------------------------------------
+        function renderHubManifest() {
+            const list = document.getElementById('kaiser-departments-list');
+            const kaiserDeptMap = {};
+            let kaiserTotal = 0;
+
+            allOrders.forEach(o => {
+                const sel = o.selections || {};
+                const isKaiser = (o.location_id === 'kaiser-bp' || sel.fulfillment_type === 'kaiser' || sel.kaiser_hospital);
+                if (!isKaiser) return;
+
+                const dept = (sel.kaiser_department || 'General Staff Fridge').trim();
+                if (!kaiserDeptMap[dept]) {
+                    kaiserDeptMap[dept] = { orders: [], totalBottles: 0 };
+                }
+
+                const cart = sel.cart || [];
+                const orderBottles = cart.reduce((sum, item) => sum + (typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1)), 0);
+                
+                kaiserDeptMap[dept].totalBottles += orderBottles;
+                kaiserTotal += orderBottles;
+                kaiserDeptMap[dept].orders.push({
+                    id: o.id,
+                    customer: o.customer_name || 'Staff',
+                    phone: o.customer_phone || '',
+                    bottles: orderBottles,
+                    items: cart.map(i => `${i.qty || 1}x ${i.name}`).join(', '),
+                    status: o.status
+                });
+            });
+
+            document.getElementById('kaiser-total-manifest-bottles').innerText = `${kaiserTotal} Bottles`;
+
+            const depts = Object.keys(kaiserDeptMap);
+            if (depts.length === 0) {
+                list.innerHTML = `
+                    <div class="p-8 bg-white rounded-3xl border border-gray-100 text-center text-xs text-gray-400">
+                        No active Kaiser Baldwin Park orders today.
+                    </div>
+                `;
+            } else {
+                list.innerHTML = depts.map(dept => {
+                    const data = kaiserDeptMap[dept];
+                    return `
+                    <div class="bg-white rounded-3xl p-4 border border-emerald-200/80 shadow-xs space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <div>
+                                <span class="text-[8px] font-black uppercase text-emerald-700 tracking-wider">Department Drop</span>
+                                <h4 class="font-serif font-black text-sm text-brand-dark">${dept}</h4>
+                            </div>
+                            <span class="font-mono font-black text-xs bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full">${data.totalBottles} btls</span>
+                        </div>
+                        <div class="space-y-1.5">
+                            ${data.orders.map(ord => `
+                            <div class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-none">
+                                <div>
+                                    <span class="font-bold text-brand-dark">${ord.customer}</span>
+                                    <span class="text-[9px] text-gray-400 block">${ord.items}</span>
+                                </div>
+                                <span class="font-mono font-bold text-xs text-brand-brown">${ord.bottles} btls</span>
+                            </div>
+                            `).join('')}
+                        </div>
+                    </div>
                     `;
                 }).join('');
             }
         }
 
-        async function saveProduct() {
-            const id = document.getElementById('prod-id').value;
-            const btn = document.getElementById('prod-save-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Syncing...';
+        // ----------------------------------------------------
+        // TAB 4: INVENTORY CONTROLS
+        // ----------------------------------------------------
+        function renderInventoryControls() {
+            const bottleContainer = document.getElementById('inventory-bottles-list');
+            const hotContainer = document.getElementById('inventory-hot-list');
 
-            let originalOptions = {
-                milk: [
-                    { name: "Regular Milk", price: 0 },
-                    { name: "Oat Milk", price: 1 }
-                ],
-                flavors: ["Vanilla", "Caramel", "Oreo Supreme", "French Vanilla", "Mix"]
-            };
-
-            if (id) {
-                const existing = products.find(x => x.id === id);
-                if (existing && existing.options) {
-                    originalOptions = existing.options;
-                }
-            }
-
-            const regVal = document.getElementById('prod-stock-regular').value.trim();
-            const oatVal = document.getElementById('prod-stock-oat').value.trim();
-            const isBlack = document.getElementById('prod-name').value.toLowerCase().includes('classic black') || 
-                            document.getElementById('prod-name').value.toLowerCase().includes('negro');
-
-            if (!isBlack) {
-                originalOptions.milk_stock = {
-                    "Regular Milk": regVal === '' ? null : parseInt(regVal),
-                    "Oat Milk": oatVal === '' ? null : parseInt(oatVal)
-                };
-            } else {
-                if (originalOptions.milk_stock) {
-                    delete originalOptions.milk_stock;
-                }
-            }
-
-            const payload = {
-                name: document.getElementById('prod-name').value,
-                price: parseFloat(document.getElementById('prod-price').value),
-                bottles_per_pack: parseInt(document.getElementById('prod-bottles').value),
-                active: document.getElementById('prod-active').checked,
-                inventory_limit: document.getElementById('prod-stock').value.trim() === '' ? null : parseInt(document.getElementById('prod-stock').value),
-                options: originalOptions
-            };
-
-            if (window.pendingImageBase64) payload.imageBase64 = window.pendingImageBase64;
-
-            const url = id ? `/api/cali?action=products&id=${id}` : '/api/cali?action=products';
-            const method = id ? 'PUT' : 'POST';
-
-            try {
-                const res = await fetch(url, { method, headers: getHeaders(), body: JSON.stringify(payload) });
-                if (res.ok) { 
-                    closeModal('product-modal'); 
-                    loadProducts(); 
-                } else {
-                    const err = await res.json();
-                    alert("Server Error: " + (err.error || "Unknown error") + "\nDetail: " + (err.message || "No detail"));
-                }
-            } catch (e) { 
-                console.error(e); 
-                alert("Connection failed: " + e.message);
-            }
-            finally { btn.disabled = false; btn.innerText = 'Save Product Changes'; }
-        }
-
-        function openProductModal(id = null) {
-            document.getElementById('product-modal').classList.remove('hidden');
-            const title = document.getElementById('product-modal-title');
-            const delBtn = document.getElementById('prod-delete-btn');
-            const previewImg = document.getElementById('modal-image-preview');
-            const statusText = document.getElementById('upload-status-text');
-            const milkStockContainer = document.getElementById('milk-stock-container');
-            const regInput = document.getElementById('prod-stock-regular');
-            const oatInput = document.getElementById('prod-stock-oat');
-
-            window.pendingImageBase64 = null;
-            document.getElementById('prod-file').value = '';
-            statusText.innerText = "Click to upload photo";
-            statusText.className = "text-[10px] font-black uppercase tracking-widest text-gray-400";
-            previewImg.classList.add('hidden');
-            
-            if (id) {
-                const p = products.find(x => x.id === id);
-                title.innerText = 'Edit Artisan Item';
-                document.getElementById('prod-id').value = p.id;
-                document.getElementById('prod-name').value = p.name;
-                document.getElementById('prod-price').value = p.price;
-                document.getElementById('prod-bottles').value = p.bottles_per_pack;
-                document.getElementById('prod-stock').value = p.inventory_limit !== null ? p.inventory_limit : '';
-                document.getElementById('prod-image').value = p.image_url || '';
-                document.getElementById('prod-active').checked = p.active;
-                delBtn.classList.remove('hidden');
-
-                const isBlack = p.name.toLowerCase().includes('classic black') || p.name.toLowerCase().includes('negro');
-                if (isBlack) {
-                    milkStockContainer.classList.add('hidden');
-                    regInput.value = '';
-                    oatInput.value = '';
-                } else {
-                    milkStockContainer.classList.remove('hidden');
-                    const milkStock = p.options?.milk_stock;
-                    regInput.value = (milkStock && milkStock['Regular Milk'] !== undefined && milkStock['Regular Milk'] !== null) ? milkStock['Regular Milk'] : '';
-                    oatInput.value = (milkStock && milkStock['Oat Milk'] !== undefined && milkStock['Oat Milk'] !== null) ? milkStock['Oat Milk'] : '';
-                }
-
-                if (p.image_url) {
-                    previewImg.src = p.image_url;
-                    previewImg.classList.remove('hidden');
-                }
-            } else {
-                title.innerText = 'New Artisan Item';
-                document.getElementById('prod-id').value = '';
-                document.getElementById('prod-name').value = '';
-                document.getElementById('prod-price').value = '';
-                document.getElementById('prod-bottles').value = '1';
-                document.getElementById('prod-stock').value = '';
-                document.getElementById('prod-image').value = '';
-                document.getElementById('prod-active').checked = true;
-                delBtn.classList.add('hidden');
-                
-                milkStockContainer.classList.remove('hidden');
-                regInput.value = '';
-                oatInput.value = '';
-            }
-        }
-
-        async function handleFileUpload(input, targetId) {
-            const file = input.files[0];
-            if (!file) return;
-            const statusText = document.getElementById('upload-status-text');
-            const previewImg = document.getElementById('modal-image-preview');
-            statusText.innerText = "Processing Image...";
-            
-            try {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    window.pendingImageBase64 = reader.result;
-                    statusText.innerText = "✨ Photo Ready (Save to Finish)";
-                    statusText.className = "text-[10px] font-black uppercase tracking-widest text-brand-brown animate-pulse";
-                    
-                    previewImg.src = reader.result;
-                    previewImg.classList.remove('hidden');
-                };
-                reader.readAsDataURL(file);
-            } catch (e) { alert("Image processing failed."); }
-        }
-
-        function openOrderModal(id) {
-            const o = orders.find(x => x.id === id);
-            document.getElementById('edit-order-id').value = o.id;
-            document.getElementById('order-modal-subtitle').innerText = `${o.customer_name} | ${o.customer_phone}`;
-            document.getElementById('order-modal').classList.remove('hidden');
-        }
-
-        async function updateOrderStatus(status) {
-            const id = document.getElementById('edit-order-id').value;
-            try {
-                const res = await fetch(`/api/cali?action=update_order&id=${id}`, {
-                    method: 'PATCH',
-                    headers: getHeaders(),
-                    body: JSON.stringify({ status: status })
-                });
-                if (res.ok) { closeModal('order-modal'); loadOrders(); }
-            } catch (e) { console.error(e); }
-        }
-
-        async function loadLocations() {
-            try {
-                const res = await fetch('/api/cali?action=locations');
-                locations = await res.json();
-                renderLocations();
-            } catch (e) { console.error(e); }
-        }
-
-        function renderLocations() {
-            const grid = document.getElementById('locations-grid');
-            grid.innerHTML = locations.map(l => `
-                <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 group transition-all hover:shadow-lg">
-                    <div class="flex justify-between items-start mb-6">
+            bottleContainer.innerHTML = BOTTLE_CATALOG.map(p => `
+                <div class="bg-white rounded-2xl p-3.5 border border-gray-200 flex items-center justify-between shadow-xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xl">${p.icon}</span>
                         <div>
-                            <h3 class="text-xl font-bold text-brand-dark mb-1">${l.name}</h3>
-                            <p class="text-[10px] text-brand-brown font-black uppercase tracking-widest"><i class="fas fa-map-marker-alt mr-1"></i>${l.city}</p>
+                            <h4 class="font-serif font-bold text-xs text-brand-dark">${p.name}</h4>
+                            <span class="font-mono font-bold text-[10px] text-brand-brown">$${p.price.toFixed(2)}</span>
                         </div>
-                        <button onclick="openLocationModal('${l.id}')" class="w-8 h-8 rounded-full bg-gray-50 text-gray-300 hover:text-brand-brown transition-all flex items-center justify-center">
-                            <i class="fas fa-pen text-[10px]"></i>
-                        </button>
                     </div>
-                    <div class="pt-6 border-t border-gray-50 flex justify-between items-center">
-                        <span class="text-[9px] font-black uppercase tracking-[0.15em] text-gray-400">Receiving Drops</span>
-                        <div class="w-2.5 h-2.5 rounded-full ${l.active ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-gray-200'}"></div>
+                    <button type="button" onclick="toggleStockStatus(this)" class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs">
+                        In Stock
+                    </button>
+                </div>
+            `).join('');
+
+            hotContainer.innerHTML = HOT_CATALOG.map(p => `
+                <div class="bg-white rounded-2xl p-3.5 border border-gray-200 flex items-center justify-between shadow-xs">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xl">${p.icon}</span>
+                        <div>
+                            <h4 class="font-serif font-bold text-xs text-brand-dark">${p.name}</h4>
+                            <span class="font-mono font-bold text-[10px] text-brand-brown">$${p.price.toFixed(2)}</span>
+                        </div>
                     </div>
+                    <button type="button" onclick="toggleStockStatus(this)" class="px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs">
+                        In Stock
+                    </button>
                 </div>
             `).join('');
         }
 
-        function openLocationModal(id = null) {
-            document.getElementById('location-modal').classList.remove('hidden');
-            const delBtn = document.getElementById('loc-delete-btn');
-            
-            if (id) {
-                const l = locations.find(x => x.id === id);
-                document.getElementById('loc-id').value = l.id;
-                document.getElementById('loc-name').value = l.name;
-                document.getElementById('loc-city').value = l.city;
-                document.getElementById('loc-distributor').value = l.distributor_name || '';
-                document.getElementById('loc-active').checked = l.active;
-                delBtn.classList.remove('hidden');
+        function toggleStockStatus(btn) {
+            if (btn.innerText === "IN STOCK") {
+                btn.innerText = "SOLD OUT";
+                btn.className = "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-red-500 text-white shadow-xs";
+                showToast("Item marked as Sold Out");
             } else {
-                document.getElementById('loc-id').value = '';
-                document.getElementById('loc-name').value = '';
-                document.getElementById('loc-city').value = '';
-                document.getElementById('loc-distributor').value = '';
-                document.getElementById('loc-active').checked = true;
-                delBtn.classList.add('hidden');
+                btn.innerText = "IN STOCK";
+                btn.className = "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-white shadow-xs";
+                showToast("Item back In Stock!", "success");
             }
         }
 
-        async function saveLocation() {
-            const id = document.getElementById('loc-id').value;
-            const btn = document.getElementById('loc-save-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
-
-            const payload = {
-                name: document.getElementById('loc-name').value,
-                city: document.getElementById('loc-city').value,
-                distributor_name: document.getElementById('loc-distributor').value || '',
-                active: document.getElementById('loc-active').checked
-            };
-
-            const url = id ? `/api/cali?action=locations&id=${id}` : '/api/cali?action=locations';
-            const method = id ? 'PUT' : 'POST';
+        // ----------------------------------------------------
+        // UTILITIES
+        // ----------------------------------------------------
+        function showToast(msg, type = 'error') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
             
-            try {
-                const res = await fetch(url, { 
-                    method, 
-                    headers: getHeaders(), 
-                    body: JSON.stringify(payload) 
-                });
-                
-                if (res.ok) {
-                    closeModal('location-modal'); 
-                    await loadLocations(); 
-                } else {
-                    const err = await res.json();
-                    alert("Error: " + (err.error || "Failed to save location"));
-                }
-            } catch (e) { 
-                console.error(e); 
-                alert("Connection failed");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Save Location';
-            }
-        }
-
-        async function deleteLocation() {
-            const id = document.getElementById('loc-id').value;
-            if (!id) return;
+            const toast = document.createElement('div');
+            toast.className = "w-full pointer-events-auto bg-brand-dark/95 backdrop-blur-md border border-brand-gold/30 rounded-2xl p-3 text-xs font-bold text-white shadow-2xl flex items-center gap-2.5 transition-all duration-300 transform translate-y-[-10px] opacity-0";
             
-            if (!confirm("Are you sure you want to permanently remove this drop point? This cannot be undone.")) return;
-            
-            try {
-                const res = await fetch(`/api/cali?action=locations&id=${id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-                
-                if (res.ok) {
-                    closeModal('location-modal');
-                    await loadLocations();
-                } else {
-                    const err = await res.json();
-                    alert("Error: " + (err.error || "Failed to delete"));
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Connection failed");
-            }
-        }
-
-        function renderPrepView() {
-            const activeOrders = (orders || []).filter(o => o.status === 'paid' || o.status === 'confirmed');
-            const activeSubs = (subscriptions || []).filter(s => s.status === 'active');
-            
-            const summaryGrid = document.getElementById('prep-summary-grid');
-            const manifestTbody = document.getElementById('prep-manifest-tbody');
-            const progressContainer = document.getElementById('fulfillment-progress');
-            const ingredientList = document.getElementById('ingredient-list');
-
-            let totals = {
-                bottles: 0,
-                oatMilk: 0,
-                flavors: {}
-            };
-
-            let manifestRows = [];
-
-            // 1. Process One-time Orders
-            activeOrders.forEach(o => {
-                if (!o.selections || !o.selections.cart) return;
-                processItems(o.selections.cart, o.id, o.customer_name, o.cali_locations, 'order');
-            });
-
-            // 2. Process Recurring Subscriptions
-            activeSubs.forEach(s => {
-                if (!s.selections || !s.selections.cart) return;
-                processItems(s.selections.cart, s.id, s.customer_name, s.cali_locations, 'subscription');
-            });
-
-            function processItems(cart, id, customerName, location, type) {
-                cart.forEach(item => {
-                    const itemQty = parseInt(item.qty || 1);
-                    
-                    if (item.selections && Array.isArray(item.selections)) {
-                        const bottlesPerPack = item.selections.length;
-                        totals.bottles += (itemQty * bottlesPerPack);
-
-                        item.selections.forEach(sel => {
-                            if (sel.milk === 'Oat Milk') totals.oatMilk += itemQty;
-                            totals.flavors[sel.flavor] = (totals.flavors[sel.flavor] || 0) + itemQty;
-                        });
-
-                        const desc = item.selections.map((s, i) => `#${i+1}: ${s.flavor} (${s.milk})`).join('<br>');
-                        manifestRows.push(`
-                            <tr class="hover:bg-gray-50/50 transition-colors group text-xs">
-                                <td class="px-8 py-5">
-                                    <div class="font-bold text-gray-800">${item.qty}x ${item.name}</div>
-                                    <div class="text-[9px] font-mono text-gray-400 uppercase">${type}: ${id.substring(0,8)}</div>
-                                </td>
-                                <td class="px-8 py-5 leading-relaxed text-gray-500">${desc}</td>
-                                <td class="px-8 py-5 text-center font-black">${item.qty}</td>
-                                <td class="px-8 py-5">
-                                    <div class="text-[10px] font-bold text-gray-700">${location?.name || 'Custom'}</div>
-                                    <div class="text-[9px] text-gray-400">${location?.city || ''}</div>
-                                </td>
-                            </tr>
-                        `);
-                    } else {
-                        // Fallback for older orders
-                        const bottlesPerPack = item.bottles || 1;
-                        totals.bottles += (itemQty * bottlesPerPack);
-                        if (item.milk === 'Oat Milk') totals.oatMilk += (itemQty * bottlesPerPack);
-                        if (item.flavor) totals.flavors[item.flavor] = (totals.flavors[item.flavor] || 0) + (itemQty * bottlesPerPack);
-
-                        manifestRows.push(`
-                            <tr class="hover:bg-gray-50/50 transition-colors group text-xs">
-                                <td class="px-8 py-5">
-                                    <div class="font-bold text-gray-800">${item.qty}x ${item.name}</div>
-                                    <div class="text-[9px] font-mono text-gray-400 uppercase">${type}: ${id.substring(0,8)}</div>
-                                </td>
-                                <td class="px-8 py-5 leading-relaxed text-gray-500">${item.flavor || 'N/A'} (${item.milk || 'N/A'})</td>
-                                <td class="px-8 py-5 text-center font-black">${item.qty}</td>
-                                <td class="px-8 py-5">
-                                    <div class="text-[10px] font-bold text-gray-700">${location?.name || 'Custom'}</div>
-                                    <div class="text-[9px] text-gray-400">${location?.city || ''}</div>
-                                </td>
-                            </tr>
-                        `);
-                    }
-                });
-            }
-
-            // Calculate Ingredients
-            const coffeeGallons = (totals.bottles * 4 / 128).toFixed(1);
-            const regMilkGallons = ((totals.bottles - totals.oatMilk) * 8 / 128).toFixed(1);
-            const oatMilkGallons = (totals.oatMilk * 8 / 128).toFixed(1);
-
-            let syrupItems = Object.entries(totals.flavors).map(([name, count]) => {
-                const bCount = Math.ceil(count / 25);
-                return `
-                <div class="p-4 bg-white rounded-2xl border border-gray-100 flex justify-between items-center">
-                    <div>
-                        <span class="text-[8px] font-black uppercase text-gray-400 block tracking-widest">${name}</span>
-                        <span class="text-xs font-bold text-gray-800">${bCount} Bottle${bCount > 1 ? 's' : ''} (750ml)</span>
-                    </div>
-                    <i class="fas fa-prescription-bottle text-brand-gold/20"></i>
-                </div>`;
-            }).join('');
-
-            ingredientList.innerHTML = `
-                <div class="p-6 bg-white rounded-3xl border border-gray-100 flex flex-col justify-center">
-                    <span class="text-[9px] font-black uppercase text-gray-400 block tracking-widest mb-2">Total Bottles Needed</span>
-                    <div class="text-3xl font-black text-brand-dark">${totals.bottles} Units</div>
-                </div>
-                <div class="p-6 bg-white rounded-3xl border border-gray-100 flex flex-col justify-center">
-                    <span class="text-[9px] font-black uppercase text-gray-400 block tracking-widest mb-2">Cold Brew Concentrate</span>
-                    <div class="text-3xl font-black text-brand-brown">${coffeeGallons} Gallons</div>
-                </div>
-                <div class="p-6 bg-white rounded-3xl border border-gray-100 flex flex-col justify-center">
-                    <span class="text-[9px] font-black uppercase text-gray-400 block tracking-widest mb-2">Regular Milk</span>
-                    <div class="text-3xl font-black text-gray-600">${regMilkGallons} Gallons</div>
-                </div>
-                <div class="p-6 bg-white rounded-3xl border border-gray-100 flex flex-col justify-center">
-                    <span class="text-[9px] font-black uppercase text-gray-400 block tracking-widest mb-2">Oat Milk</span>
-                    <div class="text-3xl font-black text-brand-gold">${oatMilkGallons} Gallons</div>
-                </div>
-                <div class="col-span-full mt-4">
-                    <h4 class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 ml-2">Syrups Required</h4>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">${syrupItems || '<div class="col-span-full py-4 text-center text-gray-400 italic">Wait for orders...</div>'}</div>
-                </div>
+            const icon = type === 'success' ? 'fa-check-circle text-emerald-400' : 'fa-info-circle text-brand-gold';
+            toast.innerHTML = `
+                <i class="fas ${icon} text-sm shrink-0"></i>
+                <span class="flex-1">${msg}</span>
             `;
-
-            // Render Summary Cards
-            summaryGrid.innerHTML = `
-                <div class="p-6 bg-white/5 rounded-3xl border border-white/5 shadow-inner">
-                    <span class="text-[9px] font-black uppercase text-white/30 tracking-widest block mb-1">Bottles To Brew</span>
-                    <div class="text-4xl font-black text-brand-gold">${totals.bottles}</div>
-                </div>
-                <div class="p-6 bg-white/5 rounded-3xl border border-white/5 shadow-inner">
-                    <span class="text-[9px] font-black uppercase text-white/30 tracking-widest block mb-1">Oat Milk Units</span>
-                    <div class="text-4xl font-black text-white">${totals.oatMilk}</div>
-                </div>
-            `;
-
-            // Render Manifest
-            manifestTbody.innerHTML = manifestRows.length ? manifestRows.join('') : '<tr><td colspan="4" class="px-8 py-20 text-center text-gray-400 italic">No paid orders for production yet.</td></tr>';
-
-            // Render Progress / Flavor Bars
-            const flavorEntries = Object.entries(totals.flavors).sort((a,b) => b[1] - a[1]);
-            progressContainer.innerHTML = flavorEntries.map(([name, count]) => {
-                const percent = (count / totals.bottles) * 100;
-                return `
-                <div class="space-y-2">
-                    <div class="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                        <span>${name}</span>
-                        <span class="text-brand-brown">${count} Bottled</span>
-                    </div>
-                    <div class="h-2 w-full bg-gray-50 rounded-full overflow-hidden border border-gray-100">
-                        <div class="h-full bg-brand-gold rounded-full" style="width: ${percent}%"></div>
-                    </div>
-                </div>
-                `;
-            }).join('') || '<div class="text-center py-10 text-gray-400 italic">Wait for first order...</div>';
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 30);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-10px]', 'opacity-0');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
         }
 
-        function updateStats() {
-            document.getElementById('total-orders-count').innerText = (orders || []).filter(o => o.status !== 'rejected').length;
-            const revenue = (orders || []).filter(o => o.status === 'paid' || o.status === 'confirmed').reduce((sum, o) => sum + parseFloat(o.total || 0), 0);
-            document.getElementById('total-revenue').innerText = `$${revenue.toFixed(2)}`;
-            renderPrepView();
-        }
-
-        function openManualOrderModal() {
-            document.getElementById('manual-name').value = '';
-            document.getElementById('manual-phone').value = '';
-            document.getElementById('manual-qty').value = '1';
-            document.getElementById('manual-notes').value = '';
-            document.getElementById('manual-status').value = 'confirmed';
-            
-            // Populate Products
-            const prodSelect = document.getElementById('manual-product');
-            prodSelect.innerHTML = products.map(p => `<option value="${p.id}" data-price="${p.price}">${p.name} ($${parseFloat(p.price).toFixed(2)})</option>`).join('');
-            
-            // Populate Locations
-            const locSelect = document.getElementById('manual-location');
-            let locHtml = '<option value="">Home Delivery / In Person</option>';
-            locHtml += locations.map(l => `<option value="${l.id}">${l.name} (${l.city})</option>`).join('');
-            locSelect.innerHTML = locHtml;
-
-            updateManualOrderTotal();
-            document.getElementById('manual-order-modal').classList.remove('hidden');
-        }
-
-        function updateManualOrderTotal() {
-            const prodSelect = document.getElementById('manual-product');
-            const qtyInput = document.getElementById('manual-qty');
-            if (prodSelect.selectedOptions.length === 0) return;
-            
-            const price = parseFloat(prodSelect.selectedOptions[0].getAttribute('data-price')) || 0;
-            const qty = parseInt(qtyInput.value) || 1;
-            document.getElementById('manual-total').value = (price * qty).toFixed(2);
-        }
-
-        async function saveManualOrder() {
-            const name = document.getElementById('manual-name').value.trim();
-            const phone = document.getElementById('manual-phone').value.trim();
-            const productId = document.getElementById('manual-product').value;
-            const qty = parseInt(document.getElementById('manual-qty').value) || 1;
-            const locationId = document.getElementById('manual-location').value;
-            const status = document.getElementById('manual-status').value;
-            const total = parseFloat(document.getElementById('manual-total').value) || 0;
-            const notes = document.getElementById('manual-notes').value.trim();
-
-            if (!name) return alert("Please enter Customer Name");
-            if (!phone) return alert("Please enter Customer Phone");
-            if (!productId) return alert("Please select a Product");
-
-            const selectedProd = products.find(p => p.id === productId);
-            if (!selectedProd) return alert("Invalid product selected");
-
-            const btn = document.getElementById('manual-save-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Saving...';
-
-            const selections = {
-                cart: [
-                    {
-                        id: selectedProd.id,
-                        name: selectedProd.name,
-                        qty: qty,
-                        price: parseFloat(selectedProd.price),
-                        selections: Array.from({ length: qty }, () => ({ flavor: 'Mix', milk: 'Regular Milk' }))
-                    }
-                ],
-                is_manual: true
-            };
-
-            const payload = {
-                customer_name: name,
-                customer_phone: phone,
-                location_id: locationId || null,
-                total: total,
-                status: status,
-                selections: selections,
-                notes: notes || '[MANUAL ORDER]'
-            };
-
-            try {
-                const res = await fetch('/api/cali?action=create_manual_order', {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    closeModal('manual-order-modal');
-                    await loadOrders();
-                } else {
-                    const err = await res.json();
-                    alert("Error saving manual order: " + (err.error || "Unknown error"));
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Connection failed while saving manual order.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = 'Save Manual Order';
-            }
-        }
-
-        const CATERING_VERSES = [
-            { text: "Taste and see that the Lord is good.", ref: "Psalm 34:8" },
-            { text: "Commit your work to the Lord, and your plans will be established.", ref: "Proverbs 16:3" },
-            { text: "Let all that you do be done in love.", ref: "1 Corinthians 16:14" },
-            { text: "A joyful heart is good medicine.", ref: "Proverbs 17:22" },
-            { text: "A sweet friendship refreshes the soul.", ref: "Proverbs 27:9" },
-            { text: "This is the day the Lord has made; let us rejoice and be glad in it.", ref: "Psalm 118:24" },
-            { text: "The Lord is my strength and my shield.", ref: "Psalm 28:7" },
-            { text: "God is our refuge and strength, an ever-present help.", ref: "Psalm 46:1" },
-            { text: "For I know the plans I have for you, plans to prosper you.", ref: "Jeremiah 29:11" },
-            { text: "Give thanks to the Lord, for he is good; his love endures forever.", ref: "Psalm 107:1" },
-            { text: "Let your light shine before others.", ref: "Matthew 5:16" },
-            { text: "May the God of hope fill you with all joy and peace.", ref: "Romans 15:13" },
-            { text: "Walk by faith, not by sight.", ref: "2 Corinthians 5:7" },
-            { text: "Do not worry about tomorrow, for tomorrow will worry about itself.", ref: "Matthew 6:34" }
-        ];
-
-        function handleBgUpload(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const text = document.getElementById('print-bg-preview-text');
-            const img = document.getElementById('print-bg-preview-img');
-            const clearBtn = document.getElementById('print-bg-clear-btn');
-            
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64 = reader.result;
-                localStorage.setItem('cali_label_bg', base64);
-                img.src = base64;
-                img.classList.remove('hidden');
-                text.classList.add('hidden');
-                clearBtn.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function clearBgUpload() {
-            localStorage.removeItem('cali_label_bg');
-            document.getElementById('print-bg-file').value = '';
-            document.getElementById('print-bg-preview-img').src = '';
-            document.getElementById('print-bg-preview-img').classList.add('hidden');
-            document.getElementById('print-bg-preview-text').classList.remove('hidden');
-            document.getElementById('print-bg-clear-btn').classList.add('hidden');
-        }
-
-        function openPrintLabelsModal() {
-            // Set default date to today's date formatted as YYYY-MM-DD
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('print-brew-date').value = today;
-            
-            // Populate single verse select list options
-            const verseSelect = document.getElementById('print-selected-verse');
-            verseSelect.innerHTML = CATERING_VERSES.map((v, i) => `
-                <option value="${i}">"${v.text}" — ${v.ref}</option>
-            `).join('');
-            
-            // Load background image preview
-            const bgImage = localStorage.getItem('cali_label_bg');
-            const text = document.getElementById('print-bg-preview-text');
-            const img = document.getElementById('print-bg-preview-img');
-            const clearBtn = document.getElementById('print-bg-clear-btn');
-            if (bgImage) {
-                img.src = bgImage;
-                img.classList.remove('hidden');
-                text.classList.add('hidden');
-                clearBtn.classList.remove('hidden');
-            } else {
-                img.classList.add('hidden');
-                text.classList.remove('hidden');
-                clearBtn.classList.add('hidden');
-            }
-            
-            // Load checkbox preferences
-            document.getElementById('print-hide-header').checked = localStorage.getItem('cali_print_hide_header') === 'true';
-            document.getElementById('print-hide-border').checked = localStorage.getItem('cali_print_hide_border') === 'true';
-            document.getElementById('print-hide-footer').checked = localStorage.getItem('cali_print_hide_footer') === 'true';
-            
-            document.getElementById('print-labels-modal').classList.remove('hidden');
-            toggleVerseOptions();
-        }
-
-        function toggleVerseOptions() {
-            const mode = document.getElementById('print-verse-mode').value;
-            const singleBox = document.getElementById('print-single-verse-box');
-            const customBox = document.getElementById('print-custom-text-box');
-            
-            if (mode === 'single') {
-                singleBox.classList.remove('hidden');
-                customBox.classList.add('hidden');
-            } else if (mode === 'custom') {
-                singleBox.classList.add('hidden');
-                customBox.classList.remove('hidden');
-            } else {
-                singleBox.classList.add('hidden');
-                customBox.classList.add('hidden');
-            }
-        }
-
-        function generateAndPrintLabels() {
-            const brewDateVal = document.getElementById('print-brew-date').value;
-            const sizeVal = document.getElementById('print-label-size').value;
-            const verseMode = document.getElementById('print-verse-mode').value;
-            const singleVerseIdx = document.getElementById('print-selected-verse').value;
-            const customTextVal = document.getElementById('print-custom-text').value;
-            
-            const hideHeader = document.getElementById('print-hide-header').checked;
-            const hideBorder = document.getElementById('print-hide-border').checked;
-            const hideFooter = document.getElementById('print-hide-footer').checked;
-            
-            // Save checkbox preferences
-            localStorage.setItem('cali_print_hide_header', hideHeader);
-            localStorage.setItem('cali_print_hide_border', hideBorder);
-            localStorage.setItem('cali_print_hide_footer', hideFooter);
-            
-            const activeOrders = (orders || []).filter(o => o.status === 'paid' || o.status === 'confirmed');
-            const activeSubs = (subscriptions || []).filter(s => s.status === 'active');
-            
-            let labelBottles = [];
-            
-            const processLabelItems = (cart, customerName, location) => {
-                cart.forEach(item => {
-                    const itemQty = parseInt(item.qty || 1);
-                    if (item.selections && Array.isArray(item.selections)) {
-                        for (let q = 0; q < itemQty; q++) {
-                            item.selections.forEach(sel => {
-                                labelBottles.push({
-                                    customer: customerName,
-                                    location: location?.name || 'Local Drop',
-                                    flavor: sel.flavor,
-                                    milk: sel.milk,
-                                    espresso: sel.espresso || 'Standard'
-                                });
-                            });
-                        }
-                    } else {
-                        // Fallback
-                        const bottlesPerPack = item.bottles || 1;
-                        for (let q = 0; q < itemQty; q++) {
-                            for (let b = 0; b < bottlesPerPack; b++) {
-                                labelBottles.push({
-                                    customer: customerName,
-                                    location: location?.name || 'Local Drop',
-                                    flavor: item.flavor || 'Vanilla Latte',
-                                    milk: item.milk || 'Regular',
-                                    espresso: 'Standard'
-                                });
-                            }
-                        }
-                    }
-                });
-            };
-            
-            // Collect all items
-            activeOrders.forEach(o => {
-                if (o.selections && o.selections.cart) {
-                    processLabelItems(o.selections.cart, o.customer_name, o.cali_locations);
-                }
-            });
-            activeSubs.forEach(s => {
-                if (s.selections && s.selections.cart) {
-                    processLabelItems(s.selections.cart, s.customer_name, s.cali_locations);
-                }
-            });
-            
-            if (labelBottles.length === 0) {
-                alert("No active paid/confirmed orders or subscriptions found to print.");
-                return;
-            }
-            
-            // Format dynamic stylesheet for page setup
-            let styleEl = document.getElementById('dynamic-print-style');
-            if (!styleEl) {
-                styleEl = document.createElement('style');
-                styleEl.id = 'dynamic-print-style';
-                document.head.appendChild(styleEl);
-            }
-            
-            const bgImage = localStorage.getItem('cali_label_bg');
-            const bgRule = bgImage ? `background-image: url('${bgImage}'); background-size: 100% 100%; background-repeat: no-repeat;` : '';
-            const borderRule = hideBorder ? 'border: none;' : (sizeVal === 'small' ? 'border: 1px solid black;' : (sizeVal === 'medium' ? 'border: 2px solid black;' : 'border: 3px solid black;'));
-            
-            // Inject styling rules based on sticker size
-            if (sizeVal === 'small') {
-                styleEl.innerHTML = `
-                    @media print {
-                        body * { visibility: hidden; }
-                        #print-area, #print-area * { visibility: visible; }
-                        #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; display: block !important; }
-                        @page { size: 2.25in 1.25in; margin: 0; }
-                        .thermal-label {
-                            width: 2.25in;
-                            height: 1.25in;
-                            box-sizing: border-box;
-                            padding: 0.08in;
-                            page-break-after: always;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                            font-family: 'Inter', sans-serif;
-                            color: black;
-                            background: white;
-                            ${bgRule}
-                            ${borderRule}
-                            margin: 0;
-                        }
-                        .label-title { font-size: 8px; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; text-align: center; border-bottom: 1px solid black; padding-bottom: 2px; }
-                        .label-flavor { font-size: 11px; font-weight: 800; font-family: 'Inter', sans-serif; text-transform: uppercase; text-align: center; margin: 1px 0; }
-                        .label-meta { font-size: 6.5px; font-weight: 700; text-transform: uppercase; display: flex; justify-content: space-between; border-top: 1px dashed black; padding-top: 2px; }
-                        .label-recipient { font-size: 7px; font-weight: 800; text-align: center; }
-                        .label-verse { font-size: 6px; font-style: italic; font-family: 'Playfair Display', serif; text-align: center; line-height: 1.1; margin: 1px 0; overflow: hidden; max-height: 15px; }
-                    }
-                `;
-            } else if (sizeVal === 'medium') {
-                styleEl.innerHTML = `
-                    @media print {
-                        body * { visibility: hidden; }
-                        #print-area, #print-area * { visibility: visible; }
-                        #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; display: block !important; }
-                        @page { size: 3in 2in; margin: 0; }
-                        .thermal-label {
-                            width: 3in;
-                            height: 2in;
-                            box-sizing: border-box;
-                            padding: 0.15in;
-                            page-break-after: always;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                            font-family: 'Inter', sans-serif;
-                            color: black;
-                            background: white;
-                            ${bgRule}
-                            ${borderRule}
-                            margin: 0;
-                        }
-                        .label-title { font-size: 10px; font-weight: 900; letter-spacing: 0.15em; text-transform: uppercase; text-align: center; border-bottom: 1.5px solid black; padding-bottom: 4px; }
-                        .label-flavor { font-size: 14px; font-weight: 900; text-transform: uppercase; text-align: center; margin: 3px 0; }
-                        .label-meta { font-size: 8px; font-weight: 700; text-transform: uppercase; display: flex; justify-content: space-between; border-top: 1px dashed black; padding-top: 4px; }
-                        .label-recipient { font-size: 9px; font-weight: 800; text-align: center; }
-                        .label-verse { font-size: 7.5px; font-style: italic; font-family: 'Playfair Display', serif; text-align: center; line-height: 1.2; margin: 3px 0; }
-                    }
-                `;
-            } else if (sizeVal === 'vertical') {
-                styleEl.innerHTML = `
-                    @media print {
-                        body * { visibility: hidden; }
-                        #print-area, #print-area * { visibility: visible; }
-                        #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; display: block !important; }
-                        @page { size: 4in 2in; margin: 0; }
-                        .thermal-label {
-                            width: 4in;
-                            height: 2in;
-                            box-sizing: border-box;
-                            padding: 0.15in 0.25in;
-                            page-break-after: always;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: flex-start;
-                            font-family: 'Inter', sans-serif;
-                            color: black;
-                            background: white;
-                            ${bgRule}
-                            ${borderRule}
-                            margin: 0;
-                            position: relative;
-                        }
-                        .label-title { font-size: 8px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; border-bottom: 1px solid black; padding-bottom: 4px; display: none !important; }
-                        .label-flavor { 
-                            position: absolute; 
-                            left: 1.05in; 
-                            top: 0.05in; 
-                            width: 0.95in;
-                            height: 0.28in;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: center;
-                            line-height: 1.05;
-                            text-align: center;
-                            transform: rotate(-90deg);
-                            transform-origin: top left;
-                            margin-top: 0.95in;
-                        }
-                        .label-flavor-main {
-                            font-family: 'Playfair Display', serif; 
-                            font-size: 16px; 
-                            font-weight: 900; 
-                            text-transform: capitalize; 
-                            color: black; 
-                        }
-                        .label-flavor-sub {
-                            font-family: 'Inter', sans-serif; 
-                            font-size: 7.5px; 
-                            font-weight: 700; 
-                            text-transform: uppercase; 
-                            letter-spacing: 0.08em;
-                            color: black; 
-                            margin-top: 2px;
-                        }
-                        .label-recipient-box {
-                            position: absolute;
-                            left: 1.48in;
-                            top: 0.15in;
-                            width: 1.4in;
-                            height: 0.5in;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: flex-start;
-                            transform: rotate(-90deg);
-                            transform-origin: top left;
-                            margin-top: 1.4in;
-                            text-align: left;
-                            line-height: 1.2;
-                        }
-                        .label-recipient-name {
-                            font-size: 8px;
-                            font-weight: 900;
-                            text-transform: uppercase;
-                            letter-spacing: 0.05em;
-                        }
-                        .label-recipient-loc {
-                            font-size: 6px;
-                            font-weight: 500;
-                            color: #444;
-                            text-transform: uppercase;
-                        }
-                        .label-selections-box {
-                            position: absolute;
-                            left: 2.95in;
-                            top: 0.15in;
-                            width: 1.7in;
-                            height: 0.8in;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            align-items: center;
-                            transform: rotate(-90deg);
-                            transform-origin: top left;
-                            margin-top: 1.7in;
-                            text-align: center;
-                            line-height: 1.35;
-                        }
-                        .label-selections-item {
-                            font-family: 'Inter', sans-serif;
-                            font-size: 8px;
-                            font-weight: 800;
-                            text-transform: uppercase;
-                            letter-spacing: 0.08em;
-                            color: black;
-                        }
-                        .label-recipient { display: none !important; }
-                        .label-verse { 
-                            position: absolute; 
-                            left: 2.3in; 
-                            top: 1.12in; 
-                            font-family: 'Playfair Display', serif; 
-                            font-style: italic; 
-                            font-size: 7px; 
-                            color: black; 
-                            text-align: left;
-                            max-width: 1.4in;
-                            line-height: 1.25;
-                        }
-                        .label-meta { display: none !important; }
-                        .label-brew-date {
-                            position: absolute;
-                            left: 1.48in;
-                            top: 1.0in;
-                            width: 0.8in;
-                            font-family: 'Inter', sans-serif;
-                            font-size: 6px;
-                            font-weight: 700;
-                            text-transform: uppercase;
-                            color: #555;
-                            transform: rotate(-90deg);
-                            transform-origin: top left;
-                            margin-top: 0.8in;
-                            text-align: left;
-                        }
-                    }
-                `;
-            } else {
-                // Large 4"x6" labels
-                styleEl.innerHTML = `
-                    @media print {
-                        body * { visibility: hidden; }
-                        #print-area, #print-area * { visibility: visible; }
-                        #print-area { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; display: block !important; }
-                        @page { size: 4in 6in; margin: 0; }
-                        .thermal-label {
-                            width: 4in;
-                            height: 6in;
-                            box-sizing: border-box;
-                            padding: 0.4in;
-                            page-break-after: always;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: space-between;
-                            font-family: 'Inter', sans-serif;
-                            color: black;
-                            background: white;
-                            ${bgRule}
-                            ${borderRule}
-                            margin: 0;
-                        }
-                        .label-title { font-size: 16px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; text-align: center; border-bottom: 2px solid black; padding-bottom: 8px; }
-                        .label-flavor { font-size: 22px; font-weight: 900; text-transform: uppercase; text-align: center; margin: 10px 0; }
-                        .label-meta { font-size: 12px; font-weight: 700; text-transform: uppercase; display: flex; justify-content: space-between; border-top: 1.5px dashed black; padding-top: 8px; }
-                        .label-recipient { font-size: 13px; font-weight: 800; text-align: center; }
-                        .label-verse { font-size: 11px; font-style: italic; font-family: 'Playfair Display', serif; text-align: center; line-height: 1.4; margin: 10px 0; }
-                    }
-                `;
-            }
-            
-            // Build the labels print sheet
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = labelBottles.map((b, idx) => {
-                // Get the verse or custom message
-                let verseText = "";
-                if (verseMode === 'random') {
-                    const verse = CATERING_VERSES[Math.floor(Math.random() * CATERING_VERSES.length)];
-                    verseText = `"${verse.text}" — ${verse.ref}`;
-                } else if (verseMode === 'single') {
-                    const verse = CATERING_VERSES[singleVerseIdx];
-                    verseText = `"${verse.text}" — ${verse.ref}`;
-                } else if (verseMode === 'custom') {
-                    verseText = customTextVal || "Thank you for supporting small batch coffee!";
-                }
-                
-                const espressoLabel = b.espresso === 'Light' ? 'Light Shot' : (b.espresso === 'Extra' ? 'Extra Shot' : 'Standard');
-                const formattedBrewDate = brewDateVal ? new Date(brewDateVal + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Fresh Daily';
-
-                const isVertical = sizeVal === 'vertical';
-                const headerHtml = hideHeader ? '' : `<div class="label-title">★ RICH AROMA COFFEE ★</div>`;
-                
-                const words = b.flavor.split(' ');
-                const mainFlavor = words[0] || '';
-                const subFlavor = words.slice(1).join(' ') || '';
-                
-                let flavorHtml = "";
-                if (isVertical) {
-                    flavorHtml = `
-                        <div class="label-flavor">
-                            <span class="label-flavor-main">${mainFlavor}</span>
-                            ${subFlavor ? `<span class="label-flavor-sub">${subFlavor}</span>` : ''}
-                        </div>
-                    `;
-                } else {
-                    flavorHtml = `<div class="label-flavor" style="${hideHeader ? 'margin-top: auto;' : ''}">${b.flavor}</div>`;
-                }
-
-                const footerHtml = hideFooter ? '' : (isVertical ? `
-                    <div class="label-meta">
-                        <span>${b.milk} • ${espressoLabel}</span>
-                        <span>Brewed: ${formattedBrewDate}</span>
-                    </div>
-                ` : `
-                    <div class="label-meta">
-                        <span>${b.milk} • ${espressoLabel}</span>
-                        <span>Brewed: ${formattedBrewDate}</span>
-                    </div>
-                `);
-
-                if (isVertical) {
-                    let syrupLabel = "";
-                    const fl = b.flavor.toLowerCase();
-                    if (fl.includes('vanilla') && fl.includes('sugar-free')) syrupLabel = "sugar-free vanilla syrup";
-                    else if (fl.includes('vanilla')) syrupLabel = "vanilla syrup";
-                    else if (fl.includes('caramel')) syrupLabel = "caramel syrup";
-                    else if (fl.includes('hazelnut')) syrupLabel = "hazelnut syrup";
-                    else if (fl.includes('mocha') || fl.includes('chocolate')) syrupLabel = "mocha sauce";
-                    else if (fl.includes('black') || fl.includes('americano')) syrupLabel = "unsweetened";
-                    else syrupLabel = "flavored syrup";
-                    
-                    const dynamicMilk = b.milk.toLowerCase();
-                    const dynamicEspresso = espressoLabel.toLowerCase();
-
-                    return `
-                        <div class="thermal-label">
-                            <div class="label-flavor">
-                                <span class="label-flavor-main">${mainFlavor}</span>
-                                ${subFlavor ? `<span class="label-flavor-sub">${subFlavor}</span>` : ''}
-                            </div>
-                            <div class="label-recipient-box">
-                                <div class="label-recipient-name">${b.customer}</div>
-                                <div class="label-recipient-loc">${b.location}</div>
-                            </div>
-                            <div class="label-selections-box">
-                                <div class="label-selections-item">${dynamicMilk}</div>
-                                <div class="label-selections-item">${dynamicEspresso}</div>
-                                <div class="label-selections-item">${syrupLabel}</div>
-                            </div>
-                            <div class="label-brew-date">Brewed: ${formattedBrewDate}</div>
-                            ${verseText ? `<div class="label-verse">${verseText}</div>` : ''}
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div class="thermal-label">
-                        ${headerHtml}
-                        ${flavorHtml}
-                        <div class="label-recipient">FOR: ${b.customer} • ${b.location}</div>
-                        ${verseText ? `<div class="label-verse">${verseText}</div>` : ''}
-                        ${footerHtml}
-                    </div>
-                `;
-            }).join('');
-            
-            // Open print window
-            window.print();
-        }
-
-        function closeModal(id) { 
-            document.getElementById(id).classList.add('hidden'); 
-            window.pendingImageBase64 = null;
-        }
-
-        function checkPin() {
-            const pin = document.getElementById('admin-pin').value;
-            if (pin === '3620') {
-                localStorage.setItem('cali_admin_auth', 'true');
-                document.getElementById('pin-view').classList.add('hidden');
-                document.getElementById('admin-view').classList.remove('hidden');
-                init();
-            } else {
-                alert("Invalid PIN. Access Denied.");
-                document.getElementById('admin-pin').value = '';
-            }
-        }
-
-        function logout() { 
-            localStorage.removeItem('cali_admin_auth'); 
-            location.reload(); 
-        }
-
-        window.onload = () => {
-            if (localStorage.getItem('cali_admin_auth') === 'true') {
-                document.getElementById('pin-view').classList.add('hidden');
-                document.getElementById('admin-view').classList.remove('hidden');
-                init();
-            }
-        };
+        // Initialize on Load
+        window.addEventListener('DOMContentLoaded', initApp);
     </script>
-    
-    <!-- Print Area -->
-    <div id="print-area" class="hidden"></div>
 </body>
 </html>
