@@ -975,6 +975,39 @@ module.exports = async (req, res) => {
             return res.json(data);
         }
 
+        // 6e. SEND CUSTOMER RECEIPT EMAIL (PUBLIC)
+        if (req.method === 'POST' && action === 'send_receipt_email') {
+            const { order_id, email, order_data } = req.body;
+            if (!email) return res.status(400).json({ error: 'Email is required' });
+
+            let order = order_data;
+            if (order_id && !order) {
+                const { data: dbOrder } = await supabase.from('cali_orders').select('*').eq('id', order_id).single();
+                if (dbOrder) order = dbOrder;
+            }
+
+            if (!order) {
+                return res.status(404).json({ error: 'Order not found' });
+            }
+
+            const { sendCustomerCaliReceipt } = require('./lib/email-service');
+            const result = await sendCustomerCaliReceipt(order, email);
+            if (result && result.error) {
+                return res.status(500).json({ error: result.message || 'Failed to send receipt email' });
+            }
+
+            return res.json({ success: true, message: 'Receipt sent successfully' });
+        }
+
+        // 6f. GET ORDER FOR RECEIPT (PUBLIC)
+        if (req.method === 'GET' && action === 'get_receipt') {
+            const orderId = req.query.order_id;
+            if (!orderId) return res.status(400).json({ error: 'order_id is required' });
+            const { data: order, error } = await supabase.from('cali_orders').select('*').eq('id', orderId).single();
+            if (error || !order) return res.status(404).json({ error: 'Order not found' });
+            return res.json(order);
+        }
+
         // 6c. CHECK ORDER STATUS
         if (req.method === 'GET' && action === 'check_order_status') {
             if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });

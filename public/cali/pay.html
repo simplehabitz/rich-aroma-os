@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -285,42 +286,112 @@
     </main>
 
     <!-- Success Splash Modal -->
-    <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/98 backdrop-blur-xl flex items-center justify-center z-[100] p-4">
-        <div class="bg-white w-full max-w-sm p-8 rounded-[3.5rem] text-center shadow-2xl relative border-4 border-brand-cream space-y-6">
-            <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center text-4xl mx-auto animate-bounce">
-                <i class="fas fa-check"></i>
-            </div>
+    <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-xl flex items-center justify-center z-[100] p-3 sm:p-4 overflow-y-auto">
+        <div class="w-full max-w-sm my-auto space-y-4 animate-fade-in">
             
-            <div class="space-y-2">
-                <h2 class="text-2xl font-serif font-bold text-brand-dark">Payment Registered!</h2>
-                <div class="inline-block px-3 py-1 rounded-full bg-green-50 border border-green-200 text-green-600 text-[8px] font-bold tracking-widest uppercase">
-                    Verification Badge: Active
+            <!-- Receipt Card Container (Captured by html2canvas) -->
+            <div id="receipt-capture-area" class="bg-[#fdfbf7] text-[#120e0c] rounded-[2.5rem] p-6 shadow-2xl border border-[#d4af37]/40 relative overflow-hidden space-y-4">
+                
+                <!-- Background Gold Accents -->
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-gold/10 rounded-full blur-2xl pointer-events-none"></div>
+                <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-brand-brown/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                <!-- Header -->
+                <div class="text-center pb-3 border-b border-brand-brown/15 relative z-10">
+                    <div class="flex items-center justify-center gap-2 mb-1">
+                        <img src="/logo.jpg" alt="Rich Aroma" class="h-7 w-7 rounded-full border border-brand-brown/20 shadow-sm">
+                        <span class="font-serif font-black text-sm tracking-wider uppercase text-brand-dark">Rich Aroma</span>
+                    </div>
+                    <p class="text-[8px] font-black uppercase text-brand-brown tracking-[0.2em]">Artisanal Brewed Chilled Espresso</p>
+                    <div class="inline-flex items-center gap-1 mt-2 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-wider border border-emerald-200">
+                        <i class="fas fa-check-circle text-[9px]"></i> Order Confirmed
+                    </div>
+                </div>
+
+                <!-- Metadata Row -->
+                <div class="bg-white/80 rounded-2xl p-3 border border-gray-100 space-y-1.5 text-[9px]">
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span class="font-bold uppercase tracking-wider text-[8px]">Receipt Code</span>
+                        <span id="receipt-code" class="font-mono font-black text-brand-brown text-[10px]">RA-XXXXX</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-500">
+                        <span class="font-bold uppercase tracking-wider text-[8px]">Date & Time</span>
+                        <span id="receipt-time" class="font-bold text-brand-dark">--</span>
+                    </div>
+                    <div id="receipt-customer-row" class="flex justify-between items-center text-gray-500">
+                        <span class="font-bold uppercase tracking-wider text-[8px]">Customer</span>
+                        <span id="receipt-customer-name" class="font-bold text-brand-dark">Guest</span>
+                    </div>
+                    <div id="receipt-location-row" class="flex justify-between items-center text-gray-500">
+                        <span class="font-bold uppercase tracking-wider text-[8px]">Location</span>
+                        <span id="receipt-location-name" class="font-bold text-brand-dark">Workplace</span>
+                    </div>
+                </div>
+
+                <!-- Fulfillment Badge -->
+                <div id="receipt-mode-box" class="rounded-2xl p-3 text-center border text-[9px] bg-brand-cream/80 border-brand-brown/15">
+                    <p id="receipt-mode-title" class="font-black uppercase tracking-wider text-brand-brown text-[8px]">Honors Fridge Grab</p>
+                    <p id="receipt-mode-desc" class="text-gray-600 font-medium mt-0.5">Please take your cold bottle directly from the fridge.</p>
+                </div>
+
+                <!-- Items List -->
+                <div class="space-y-2 pt-1">
+                    <p class="text-[8px] font-black uppercase text-gray-400 tracking-wider">Order Items</p>
+                    <div id="receipt-items-container" class="space-y-1.5 max-h-40 overflow-y-auto pr-1 no-scrollbar">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+
+                <!-- Total Row -->
+                <div class="flex justify-between items-baseline pt-3 border-t border-brand-brown/20">
+                    <div>
+                        <span class="text-[8px] font-black uppercase text-gray-400 tracking-wider">Total Paid</span>
+                        <p id="receipt-payment-method" class="text-[8px] font-bold text-gray-500 uppercase">Paid</p>
+                    </div>
+                    <span id="receipt-total" class="font-mono font-black text-xl text-brand-brown">$0.00</span>
+                </div>
+
+                <!-- Recipe / Brand Message -->
+                <div class="pt-3 border-t border-dashed border-brand-brown/20 text-center space-y-1">
+                    <p class="text-[10px] font-serif font-bold italic text-brand-dark">
+                        "Enjoy your fresh Honduran Artisan Bottled Coffee ☕"
+                    </p>
+                    <p class="text-[7px] text-gray-400 uppercase tracking-wider font-semibold">
+                        100% Single-Origin Espresso • Small-Batch Chilled
+                    </p>
                 </div>
             </div>
 
-            <!-- Receipt Card Details -->
-            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 space-y-3 text-left">
-                <div class="flex justify-between text-[9px] font-mono text-gray-500 border-b border-gray-100 pb-2">
-                    <span>Receipt Code:</span>
-                    <span id="receipt-code" class="font-bold text-brand-dark">RA-XXXXX</span>
+            <!-- Action Controls (Outside Capture Area) -->
+            <div class="space-y-2.5">
+                
+                <!-- 1. Download / Save Image Button -->
+                <button type="button" onclick="downloadReceiptImage()" id="btn-download-receipt" class="w-full bg-brand-gold text-brand-dark font-black py-3.5 rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2">
+                    <i class="fas fa-arrow-down-to-bracket text-xs"></i> Save / Download Receipt Image
+                </button>
+
+                <!-- 2. Email Receipt Box -->
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/15 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[8px] font-black uppercase text-white/70 tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-envelope text-brand-gold"></i> Email me a copy
+                        </label>
+                        <span id="receipt-email-status" class="text-[8px] font-bold text-emerald-400 hidden">✓ Sent to inbox!</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="email" id="receipt-email-input" placeholder="Enter your email" class="flex-1 bg-white/15 border border-white/20 rounded-xl px-3 py-2 text-xs text-white placeholder-white/40 focus:border-brand-gold focus:bg-white/25 outline-none transition-all">
+                        <button type="button" onclick="sendReceiptEmail()" id="btn-send-email" class="bg-white text-brand-dark px-4 py-2 rounded-xl font-black text-[9px] uppercase tracking-wider hover:bg-brand-gold transition-all shrink-0">
+                            Send
+                        </button>
+                    </div>
                 </div>
-                <div class="flex justify-between text-[9px] font-mono text-gray-500 border-b border-gray-100 pb-2">
-                    <span>Date / Time:</span>
-                    <span id="receipt-time" class="font-bold text-brand-dark">Jul 2, 2026 10:16 AM</span>
-                </div>
-                <div class="flex justify-between text-[9px] font-mono text-gray-500">
-                    <span>Selected Drink:</span>
-                    <span id="receipt-flavor" class="font-black text-brand-brown uppercase">Vanilla Latte</span>
-                </div>
+
+                <!-- 3. Done / Close Button -->
+                <button type="button" onclick="window.location.href='/cali/pay'" class="w-full bg-white/5 border border-white/15 text-white/70 font-black py-3 rounded-2xl hover:bg-white/10 hover:text-white transition-all uppercase tracking-widest text-[9px]">
+                    Done / Place Another Order
+                </button>
             </div>
 
-            <p class="text-xs text-gray-500 font-medium leading-relaxed italic">
-                "Please grab your bottle from the fridge. Thank you for supporting Honduras small-batch coffee! ☕"
-            </p>
-
-            <button onclick="window.location.reload()" class="w-full bg-brand-dark text-white font-black py-4 rounded-xl shadow-lg hover:bg-brand-brown transition-all uppercase tracking-wider text-[10px]">
-                Finish
-            </button>
         </div>
     </div>
 
@@ -348,16 +419,35 @@
         const urlProduct = urlParams.get('flavor'); 
         const urlLocation = urlParams.get('location');
 
+        let lastOrderData = null;
+
         async function init() {
             try {
+                // Restore saved customer info
+                const savedName = localStorage.getItem('cali_pay_name');
+                const savedPhone = localStorage.getItem('cali_pay_phone');
+                const savedEmail = localStorage.getItem('cali_pay_email');
+                
+                if (savedName && document.getElementById('pay-name')) document.getElementById('pay-name').value = savedName;
+                if (savedPhone && document.getElementById('pay-phone')) document.getElementById('pay-phone').value = savedPhone;
+                if (savedEmail && document.getElementById('receipt-email-input')) document.getElementById('receipt-email-input').value = savedEmail;
+
                 // If stripe checkout returned with success URL param
                 if (urlParams.get('success') === 'true') {
-                    showReceiptSplash(
-                        urlParams.get('order') || 'RA-STRIPE', 
-                        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-                        urlParams.get('flavor') || 'Stripe Paid Item',
-                        urlParams.get('mode') || 'grab'
-                    );
+                    const orderParam = urlParams.get('order');
+                    if (orderParam) {
+                        try {
+                            const rRes = await fetch(`/api/cali?action=get_receipt&order_id=${encodeURIComponent(orderParam)}`);
+                            if (rRes.ok) {
+                                const orderObj = await rRes.json();
+                                showReceiptSplash(orderObj);
+                            } else {
+                                showReceiptSplash(orderParam, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), urlParams.get('flavor') || 'Artisan Bottled Coffee', urlParams.get('mode') || 'grab');
+                            }
+                        } catch (err) {
+                            showReceiptSplash(orderParam, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), urlParams.get('flavor') || 'Artisan Bottled Coffee', urlParams.get('mode') || 'grab');
+                        }
+                    }
                 }
 
                 // Load Locations
@@ -887,8 +977,8 @@
         }
 
         async function processStripeCheckout() {
-            const name = document.getElementById('pay-name').value;
-            const phone = document.getElementById('pay-phone').value;
+            const name = document.getElementById('pay-name').value.trim();
+            const phone = document.getElementById('pay-phone').value.trim();
             const btn = document.getElementById('stripe-btn');
 
             if (cart.length === 0) {
@@ -899,6 +989,10 @@
                 showToast("Please enter your name, phone, and select your location.");
                 return;
             }
+
+            // Save to localStorage for convenience
+            localStorage.setItem('cali_pay_name', name);
+            localStorage.setItem('cali_pay_phone', phone);
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
@@ -921,7 +1015,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         name, 
-                        email: "",
+                        email: localStorage.getItem('cali_pay_email') || "",
                         phone, 
                         location_id: selectedLocationId, 
                         items: cart, 
@@ -947,8 +1041,8 @@
         }
 
         async function submitManualOrder(method) {
-            const name = document.getElementById('pay-name').value;
-            const phone = document.getElementById('pay-phone').value;
+            const name = document.getElementById('pay-name').value.trim();
+            const phone = document.getElementById('pay-phone').value.trim();
 
             if (cart.length === 0) {
                 showToast("Please add items to your order first.");
@@ -958,6 +1052,10 @@
                 showToast("Please enter your name, phone, and select your location.");
                 return;
             }
+
+            // Save to localStorage
+            localStorage.setItem('cali_pay_name', name);
+            localStorage.setItem('cali_pay_phone', phone);
 
             let totalVal = cart.reduce((sum, item) => sum + item.total, 0);
             if (isSubscription) totalVal = totalVal * 0.90;
@@ -996,13 +1094,7 @@
                 
                 if (res.ok) {
                     const data = await res.json();
-                    const itemsDesc = cart.map(item => `${item.qty}x ${item.name}`).join(' + ');
-                    showReceiptSplash(
-                        data.id || 'RA-MANUAL',
-                        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        itemsDesc,
-                        orderMode
-                    );
+                    showReceiptSplash(data);
                 } else {
                     const err = await res.json();
                     showToast("Order Submission Failed: " + err.error);
@@ -1012,29 +1104,228 @@
             }
         }
 
-        function showReceiptSplash(code, time, flavor, mode = 'grab') {
-            document.getElementById('receipt-code').innerText = code;
-            document.getElementById('receipt-time').innerText = time;
-            document.getElementById('receipt-flavor').innerText = flavor;
-            
-            const titleEl = document.querySelector('#success-modal h2');
-            const msgEl = document.querySelector('#success-modal p.italic');
-            
-            if (mode === 'preorder') {
-                titleEl.innerText = "Pre-Order Secured!";
-                const selectedDate = document.getElementById('preorder-date-picker').value;
-                let dateStr = "your selected date";
-                if (selectedDate) {
-                    const d = new Date(selectedDate + 'T00:00:00');
-                    dateStr = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-                }
-                msgEl.innerText = `Your bottle will be brewed fresh and delivered on ${dateStr} labeled with your name. See you at the drop! ☕`;
+        function showReceiptSplash(orderOrCode, time, flavor, mode = 'grab') {
+            let orderObj = null;
+
+            if (typeof orderOrCode === 'object' && orderOrCode !== null) {
+                orderObj = orderOrCode;
             } else {
-                titleEl.innerText = "Payment Registered!";
-                msgEl.innerText = "Please grab your bottle from the fridge. Thank you for supporting Honduras small-batch coffee! ☕";
+                orderObj = {
+                    id: orderOrCode || 'RA-HONORS',
+                    created_at: new Date().toISOString(),
+                    customer_name: localStorage.getItem('cali_pay_name') || 'Guest',
+                    total: cart.reduce((sum, item) => sum + item.total, 0),
+                    selections: {
+                        cart: cart.length > 0 ? cart : [{ name: flavor || 'Artisan Bottled Coffee', qty: 1, total: 5.00, selections: [{ milk: 'Regular', espresso: '2oz' }] }],
+                        preorder_date: mode === 'preorder' ? (document.getElementById('preorder-date-picker')?.value || null) : null,
+                        payment_method: paymentTab
+                    }
+                };
             }
+
+            lastOrderData = orderObj;
+
+            // Format Code & Time
+            const rawId = orderObj.id || 'RA-HONORS';
+            const displayCode = rawId.startsWith('RA-') ? rawId : `RA-${rawId.slice(0, 8).toUpperCase()}`;
+            document.getElementById('receipt-code').innerText = displayCode;
             
+            const timeDate = new Date(orderObj.created_at || Date.now());
+            document.getElementById('receipt-time').innerText = timeDate.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+
+            // Customer Name & Location
+            const custName = orderObj.customer_name || localStorage.getItem('cali_pay_name') || 'Guest';
+            document.getElementById('receipt-customer-name').innerText = custName;
+
+            const locMatch = allLocations.find(l => l.id === selectedLocationId || l.id === orderObj.location_id);
+            const locName = locMatch ? `${locMatch.name} (${locMatch.city || ''})` : (selectedLocationId ? selectedLocationId.toUpperCase() : 'ONT2 (Fontana)');
+            document.getElementById('receipt-location-name').innerText = locName;
+
+            // Fulfillment Mode
+            const selections = orderObj.selections || {};
+            const isPreorder = !!selections.preorder_date;
+            const modeBox = document.getElementById('receipt-mode-box');
+            const modeTitle = document.getElementById('receipt-mode-title');
+            const modeDesc = document.getElementById('receipt-mode-desc');
+
+            if (isPreorder) {
+                const d = new Date(selections.preorder_date + 'T00:00:00');
+                const dropDateStr = !isNaN(d) ? d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : selections.preorder_date;
+                modeTitle.innerText = "Pre-Order Drop Delivery";
+                modeTitle.className = "font-black uppercase tracking-wider text-brand-brown text-[8px]";
+                modeDesc.innerHTML = `Delivering on <strong>${dropDateStr}</strong> labeled with your name.`;
+            } else {
+                modeTitle.innerText = "Honors Fridge Grab";
+                modeTitle.className = "font-black uppercase tracking-wider text-emerald-600 text-[8px]";
+                modeDesc.innerText = "Please take your cold bottle directly from the honors fridge.";
+            }
+
+            // Render Items List
+            const itemsContainer = document.getElementById('receipt-items-container');
+            const orderCart = selections.cart || cart || [];
+            
+            if (orderCart.length > 0) {
+                itemsContainer.innerHTML = orderCart.map(item => {
+                    const sel = (item.selections && item.selections[0]) ? item.selections[0] : {};
+                    const isBlack = item.name && (item.name.toLowerCase().includes('classic black') || item.name.toLowerCase().includes('negro'));
+                    const descText = isBlack ? `${sel.espresso || '3oz (strong)'}` : `${sel.milk || 'Regular Milk'} • ${sel.espresso || '2oz (standard)'}`;
+                    const priceVal = item.total !== undefined ? item.total : (item.unitPrice || 0);
+
+                    return `
+                        <div class="bg-white/60 rounded-xl p-2.5 flex justify-between items-center border border-gray-100/80">
+                            <div>
+                                <p class="font-serif font-bold text-[10px] text-brand-dark">${item.qty || 1}x ${item.name}</p>
+                                <p class="text-[7px] text-brand-brown uppercase font-bold tracking-wider">${descText}</p>
+                            </div>
+                            <span class="font-mono font-black text-[10px] text-brand-dark">$${parseFloat(priceVal).toFixed(2)}</span>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                itemsContainer.innerHTML = `
+                    <div class="bg-white/60 rounded-xl p-2.5 flex justify-between items-center border border-gray-100/80">
+                        <p class="font-serif font-bold text-[10px] text-brand-dark">Artisan Bottled Coffee</p>
+                        <span class="font-mono font-black text-[10px] text-brand-dark">$${parseFloat(orderObj.total || 0).toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            // Total & Payment method
+            const totalVal = parseFloat(orderObj.total || (cart.reduce((sum, item) => sum + item.total, 0)) || 0);
+            document.getElementById('receipt-total').innerText = `$${totalVal.toFixed(2)}`;
+
+            const methodStr = (selections.payment_method || paymentTab || 'Paid').toUpperCase();
+            document.getElementById('receipt-payment-method').innerText = `Paid via ${methodStr}`;
+
+            // Reset email status & pre-fill input
+            const emailInput = document.getElementById('receipt-email-input');
+            const savedEmail = localStorage.getItem('cali_pay_email');
+            if (emailInput && savedEmail) emailInput.value = savedEmail;
+            
+            const emailStatus = document.getElementById('receipt-email-status');
+            if (emailStatus) emailStatus.classList.add('hidden');
+
             document.getElementById('success-modal').classList.remove('hidden');
+        }
+
+        async function downloadReceiptImage() {
+            const captureEl = document.getElementById('receipt-capture-area');
+            const btn = document.getElementById('btn-download-receipt');
+            if (!captureEl) return;
+
+            const originalBtnHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i> Generating Image...';
+
+            try {
+                const canvas = await html2canvas(captureEl, {
+                    scale: 2,
+                    useCORS: true,
+                    backgroundColor: '#fdfbf7'
+                });
+
+                const code = document.getElementById('receipt-code').innerText || 'RECEIPT';
+                const filename = `RichAroma_${code}.png`;
+
+                // If on mobile device supporting Web Share with files, prompt share sheet
+                canvas.toBlob(async (blob) => {
+                    if (!blob) throw new Error("Could not generate image blob");
+                    const file = new File([blob], filename, { type: 'image/png' });
+
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'Rich Aroma Coffee Receipt',
+                                text: `Rich Aroma Receipt ${code}`
+                            });
+                            btn.disabled = false;
+                            btn.innerHTML = originalBtnHtml;
+                            return;
+                        } catch (shareErr) {
+                            // If user cancelled share sheet, fallback to download
+                            if (shareErr.name === 'AbortError') {
+                                btn.disabled = false;
+                                btn.innerHTML = originalBtnHtml;
+                                return;
+                            }
+                        }
+                    }
+
+                    // Direct Download Fallback
+                    const link = document.createElement('a');
+                    link.download = filename;
+                    link.href = canvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+
+                    showToast("Receipt image saved to Downloads / Photos!", "success");
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtnHtml;
+                }, 'image/png');
+
+            } catch (err) {
+                console.error("Receipt capture error:", err);
+                showToast("Could not download receipt image.");
+                btn.disabled = false;
+                btn.innerHTML = originalBtnHtml;
+            }
+        }
+
+        async function sendReceiptEmail() {
+            const emailInput = document.getElementById('receipt-email-input');
+            const btn = document.getElementById('btn-send-email');
+            const statusEl = document.getElementById('receipt-email-status');
+            
+            if (!emailInput || !emailInput.value.trim()) {
+                showToast("Please enter an email address.");
+                return;
+            }
+
+            const email = emailInput.value.trim();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast("Please enter a valid email address.");
+                return;
+            }
+
+            localStorage.setItem('cali_pay_email', email);
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const res = await fetch('/api/cali?action=send_receipt_email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: lastOrderData?.id,
+                        email: email,
+                        order_data: lastOrderData
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerText = "✓ Sent to your inbox!";
+                    showToast("Receipt emailed successfully!", "success");
+                } else {
+                    throw new Error(data.error || "Failed to send email");
+                }
+            } catch (err) {
+                showToast("Email Error: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Send";
+            }
         }
 
         function showToast(msg, type = 'error') {

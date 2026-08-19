@@ -108,12 +108,9 @@ module.exports = async function handler(req, res) {
                 }
 
                 // Send Confirmation Emails
-                if (customerEmail) {
-                    await sendEmail({
-                        to: customerEmail,
-                        subject: 'Order Confirmed - Rich Aroma Cali Distro',
-                        html: `<h1>Thank you for your order!</h1><p>We've received your payment for order <strong>${orderId}</strong>.</p><p>We will brew your batch this Sunday and deliver it fresh Monday morning.</p>`
-                    });
+                if (customerEmail && updatedOrder) {
+                    const { sendCustomerCaliReceipt } = require('./lib/email-service');
+                    await sendCustomerCaliReceipt(updatedOrder, customerEmail);
                 }
 
                 // Notify Owners
