@@ -370,11 +370,34 @@
                         <p class="text-[10px] text-gray-500">Venmo Username:</p>
                         <p class="text-base font-black text-brand-brown font-mono">@rich-aroma-coffee</p>
                     </div>
-                    <button type="button" onclick="openVenmoApp()" class="w-full bg-sky-500 text-white font-black py-3.5 rounded-2xl shadow hover:bg-sky-600 transition-all uppercase tracking-wider text-[10px]">
+                    <button type="button" onclick="openVenmoApp()" class="w-full bg-sky-500 hover:bg-sky-600 text-white font-black py-3 rounded-2xl shadow transition-all uppercase tracking-wider text-[10px]">
                         Open Venmo App <i class="fas fa-mobile-alt ml-1"></i>
                     </button>
-                    <button type="button" onclick="handleManualCheckout('Venmo')" class="w-full bg-brand-dark text-white font-black py-3 rounded-2xl hover:bg-brand-brown transition-all uppercase tracking-wider text-[9px]">
-                        I Paid! Show Verification Screen
+                    
+                    <!-- Venmo Screenshot Upload Dropzone -->
+                    <div class="space-y-1 text-left">
+                        <label class="text-[9px] font-black uppercase text-gray-500 tracking-wider flex items-center justify-between">
+                            <span>Upload Payment Screenshot *</span>
+                            <span class="text-amber-800 font-bold text-[8px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">Required</span>
+                        </label>
+                        <div class="relative border-2 border-dashed border-gray-300 hover:border-brand-brown rounded-2xl p-3 text-center bg-gray-50/70 transition-all cursor-pointer" onclick="document.getElementById('venmo-proof-file').click()">
+                            <input type="file" id="venmo-proof-file" accept="image/*" class="hidden" onchange="handleProofImageSelected(event, 'venmo')">
+                            <div id="venmo-proof-preview-container" class="hidden space-y-1.5">
+                                <img id="venmo-proof-preview" class="max-h-32 mx-auto rounded-xl object-contain shadow-xs border border-gray-200">
+                                <p class="text-[9px] text-emerald-700 font-black uppercase tracking-wider flex items-center justify-center gap-1">
+                                    <i class="fas fa-check-circle"></i> Screenshot Attached (Tap to Change)
+                                </p>
+                            </div>
+                            <div id="venmo-proof-prompt" class="space-y-1 py-1">
+                                <i class="fas fa-camera text-brand-brown text-base"></i>
+                                <p class="text-[10px] font-bold text-brand-dark">Tap to Upload Venmo Screenshot</p>
+                                <p class="text-[8px] text-gray-400">Attach confirmation receipt image</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="handleManualCheckout('Venmo')" class="w-full bg-brand-dark text-white font-black py-3.5 rounded-2xl hover:bg-brand-brown transition-all uppercase tracking-wider text-[10px] shadow-sm">
+                        Submit Order with Venmo Proof <i class="fas fa-arrow-right ml-1"></i>
                     </button>
                 </div>
 
@@ -384,11 +407,34 @@
                         <p class="text-[10px] text-gray-500">Zelle Recipient:</p>
                         <p class="text-xs font-black text-brand-brown font-mono">order@richaromacoffee.com</p>
                     </div>
-                    <button type="button" onclick="copyZelleEmail()" class="w-full bg-brand-brown text-white font-black py-3 rounded-2xl shadow hover:bg-brand-dark transition-all uppercase tracking-wider text-[9px]">
-                        Copy Zelle Email
+                    <button type="button" onclick="copyZelleEmail()" class="w-full bg-brand-brown hover:bg-brand-dark text-white font-black py-3 rounded-2xl shadow transition-all uppercase tracking-wider text-[9px]">
+                        Copy Zelle Email <i class="fas fa-copy ml-1"></i>
                     </button>
-                    <button type="button" onclick="handleManualCheckout('Zelle')" class="w-full bg-brand-dark text-white font-black py-3.5 rounded-2xl hover:bg-brand-brown transition-all uppercase tracking-wider text-[9px]">
-                        I Zelled! Show Verification Screen <i class="fas fa-check ml-1"></i>
+
+                    <!-- Zelle Screenshot Upload Dropzone -->
+                    <div class="space-y-1 text-left">
+                        <label class="text-[9px] font-black uppercase text-gray-500 tracking-wider flex items-center justify-between">
+                            <span>Upload Payment Screenshot *</span>
+                            <span class="text-amber-800 font-bold text-[8px] bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">Required</span>
+                        </label>
+                        <div class="relative border-2 border-dashed border-gray-300 hover:border-brand-brown rounded-2xl p-3 text-center bg-gray-50/70 transition-all cursor-pointer" onclick="document.getElementById('zelle-proof-file').click()">
+                            <input type="file" id="zelle-proof-file" accept="image/*" class="hidden" onchange="handleProofImageSelected(event, 'zelle')">
+                            <div id="zelle-proof-preview-container" class="hidden space-y-1.5">
+                                <img id="zelle-proof-preview" class="max-h-32 mx-auto rounded-xl object-contain shadow-xs border border-gray-200">
+                                <p class="text-[9px] text-emerald-700 font-black uppercase tracking-wider flex items-center justify-center gap-1">
+                                    <i class="fas fa-check-circle"></i> Screenshot Attached (Tap to Change)
+                                </p>
+                            </div>
+                            <div id="zelle-proof-prompt" class="space-y-1 py-1">
+                                <i class="fas fa-camera text-brand-brown text-base"></i>
+                                <p class="text-[10px] font-bold text-brand-dark">Tap to Upload Zelle Screenshot</p>
+                                <p class="text-[8px] text-gray-400">Attach confirmation receipt image</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="handleManualCheckout('Zelle')" class="w-full bg-brand-dark text-white font-black py-3.5 rounded-2xl hover:bg-brand-brown transition-all uppercase tracking-wider text-[10px] shadow-sm">
+                        Submit Order with Zelle Proof <i class="fas fa-arrow-right ml-1"></i>
                     </button>
                 </div>
             </div>
@@ -2053,6 +2099,57 @@
             }
         }
 
+        let uploadedProofBase64 = "";
+
+        function handleProofImageSelected(event, method) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            if (file.size > 12 * 1024 * 1024) {
+                showToast("Image too large. Please select an image under 12MB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Compress slightly with canvas for fast upload
+                    const canvas = document.createElement('canvas');
+                    const maxDim = 1200;
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > maxDim || height > maxDim) {
+                        if (width > height) {
+                            height = Math.round((height * maxDim) / width);
+                            width = maxDim;
+                        } else {
+                            width = Math.round((width * maxDim) / height);
+                            height = maxDim;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    uploadedProofBase64 = canvas.toDataURL('image/jpeg', 0.85);
+
+                    // Update UI preview
+                    const preview = document.getElementById(`${method}-proof-preview`);
+                    const previewContainer = document.getElementById(`${method}-proof-preview-container`);
+                    const prompt = document.getElementById(`${method}-proof-prompt`);
+                    if (preview && previewContainer && prompt) {
+                        preview.src = uploadedProofBase64;
+                        previewContainer.classList.remove('hidden');
+                        prompt.classList.add('hidden');
+                    }
+                    showToast("✓ Transfer screenshot attached!", "success");
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         async function handleManualCheckout(method) {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
@@ -2067,6 +2164,11 @@
             }
             if (!name || !phone) {
                 showToast("Please enter your Name and Phone Number.");
+                return;
+            }
+
+            if (!uploadedProofBase64) {
+                showToast(`Please upload your ${method} transfer confirmation screenshot first!`);
                 return;
             }
 
@@ -2121,6 +2223,7 @@
                         customer_phone: phone,
                         location_id: (fulfillmentMode === 'kaiser') ? 'kaiser-bp' : selectedLocationId,
                         total: grandTotal,
+                        receiptBase64: uploadedProofBase64,
                         selections: {
                             cart: cart,
                             bundle_discount: autoBundleDiscount,
@@ -2134,10 +2237,11 @@
                             hot_pickup_date: hasHot ? selectedHotPickupDate : null,
                             hot_pickup_slot: hasHot ? selectedHotPickupSlot : null,
                             payment_method: method.toLowerCase(),
+                            payment_screenshot: uploadedProofBase64,
                             status: 'pending_verification',
                             preorder_date: isDelivery ? selectedDate : (hasHot ? selectedHotPickupDate : null)
                         },
-                        notes: `${notesTag} Order from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`
+                        notes: `${notesTag} Order from Main Storefront with ${method} screenshot proof attached. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`
                     })
                 });
 

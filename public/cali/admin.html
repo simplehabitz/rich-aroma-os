@@ -297,6 +297,35 @@
 
     </div>
 
+    <!-- ============================================== -->
+    <!-- PAYMENT PROOF SCREENSHOT MODAL -->
+    <!-- ============================================== -->
+    <div id="proof-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex flex-col justify-between p-4 z-[9999] animate-fade-in" onclick="if(event.target === this) closeProofViewer()">
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-white/10 rounded-2xl p-3.5 text-white">
+            <div>
+                <h3 class="font-serif font-bold text-sm" id="proof-modal-customer">Customer Transfer Proof</h3>
+                <p class="text-[9px] text-white/60 font-mono" id="proof-modal-order-id">RA-CALI</p>
+            </div>
+            <button type="button" onclick="closeProofViewer()" class="w-8 h-8 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-all"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Full Screenshot Preview -->
+        <div class="flex-1 flex items-center justify-center p-2 overflow-auto max-h-[65vh] my-auto">
+            <img id="proof-modal-img" class="max-h-[60vh] w-auto max-w-full object-contain rounded-2xl border border-white/20 shadow-2xl bg-black/40" alt="Payment Confirmation Screenshot">
+        </div>
+
+        <!-- Action Footer -->
+        <div class="space-y-2 max-w-md mx-auto w-full pt-2">
+            <button type="button" id="proof-modal-approve-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95">
+                <i class="fas fa-check-circle text-sm"></i> Approve & Confirm Payment ($<span id="proof-modal-amount">0.00</span>)
+            </button>
+            <button type="button" onclick="closeProofViewer()" class="w-full bg-white/10 text-white/70 font-bold py-2.5 rounded-xl text-[9px] uppercase tracking-wider hover:bg-white/20 transition-all">
+                Close Preview
+            </button>
+        </div>
+    </div>
+
     <!-- Toast Notification Overlay -->
     <div id="toast-container" class="fixed top-4 left-4 right-4 z-[999] pointer-events-none flex flex-col gap-2 max-w-sm mx-auto"></div>
 
@@ -593,6 +622,7 @@
                 const isPaid = (status === 'paid' || status === 'confirmed' || status === 'delivered');
                 const isPendingVerification = (status === 'pending_verification' || status === 'pending');
                 const isDelivered = (status === 'delivered' || status === 'completed');
+                const proofImg = sel.payment_screenshot || sel.receipt_image_url || order.receipt_image_url || null;
 
                 const totalBottles = cart.reduce((sum, item) => sum + (typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1)), 0);
                 const orderCode = order.id.startsWith('RA-') ? order.id : `RA-${order.id.slice(0, 6).toUpperCase()}`;
@@ -662,6 +692,28 @@
 
                     ${hotSlot}
 
+                    <!-- Payment Proof Screenshot Banner (For Venmo/Zelle) -->
+                    ${proofImg ? `
+                    <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-2.5 flex items-center justify-between gap-3 shadow-xs">
+                        <div class="flex items-center gap-2.5">
+                            <img src="${proofImg}" onclick="openProofViewer('${order.id}')" class="w-10 h-10 object-cover rounded-xl border border-amber-300 shadow-xs cursor-pointer hover:scale-105 transition-transform" alt="Payment Proof">
+                            <div>
+                                <p class="text-[9px] font-black text-amber-950 uppercase tracking-wide flex items-center gap-1">
+                                    <i class="fas fa-image text-amber-700"></i> Transfer Proof Attached
+                                </p>
+                                <p class="text-[8px] text-amber-800 font-medium">Tap image or button to inspect</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="openProofViewer('${order.id}')" class="bg-amber-800 hover:bg-amber-900 text-white font-black text-[9px] px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-xs transition-all flex items-center gap-1">
+                            <i class="fas fa-expand text-[8px]"></i> Inspect
+                        </button>
+                    </div>
+                    ` : (isPendingVerification ? `
+                    <div class="bg-gray-50 border border-dashed border-gray-200 rounded-2xl p-2 text-center text-[9px] text-gray-400 font-semibold">
+                        ⚠️ No screenshot uploaded by customer
+                    </div>
+                    ` : '')}
+
                     <!-- Contact & Payment Metadata -->
                     <div class="flex items-center justify-between pt-1 border-t border-gray-100 text-[10px]">
                         <div class="flex items-center gap-2">
@@ -695,6 +747,40 @@
                 </div>
                 `;
             }).join('');
+        }
+
+        let currentInspectedOrder = null;
+
+        function openProofViewer(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (!order) return;
+
+            currentInspectedOrder = order;
+            const sel = order.selections || {};
+            const proofImg = sel.payment_screenshot || sel.receipt_image_url || order.receipt_image_url;
+
+            if (!proofImg) {
+                showToast("No screenshot attached for this order.");
+                return;
+            }
+
+            document.getElementById('proof-modal-customer').innerText = `${order.customer_name || 'Guest'} (${order.selections?.payment_method?.toUpperCase() || 'VENMO/ZELLE'})`;
+            document.getElementById('proof-modal-order-id').innerText = order.id.startsWith('RA-') ? order.id : `RA-${order.id.slice(0, 6).toUpperCase()}`;
+            document.getElementById('proof-modal-amount').innerText = parseFloat(order.total || 0).toFixed(2);
+            document.getElementById('proof-modal-img').src = proofImg;
+
+            const approveBtn = document.getElementById('proof-modal-approve-btn');
+            approveBtn.onclick = () => {
+                updateOrderStatus(order.id, 'paid');
+                closeProofViewer();
+            };
+
+            document.getElementById('proof-modal').classList.remove('hidden');
+        }
+
+        function closeProofViewer() {
+            document.getElementById('proof-modal').classList.add('hidden');
+            currentInspectedOrder = null;
         }
 
         async function updateOrderStatus(orderId, newStatus) {
