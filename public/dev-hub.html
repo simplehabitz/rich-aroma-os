@@ -36,7 +36,7 @@
 <body class="min-h-screen flex flex-col bg-[#08080A] text-white select-none">
 
     <!-- Top Dev Mission Control Navigation Bar -->
-    <header class="w-full px-6 py-3.5 border-b border-white/10 bg-[#121215]/90 backdrop-blur-xl flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
+    <header class="w-full px-6 py-3 border-b border-white/10 bg-[#121215]/95 backdrop-blur-xl flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50">
         <div class="flex items-center gap-3.5">
             <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-lg shadow-lg shadow-orange-500/20">
                 <i class="fas fa-terminal"></i>
@@ -48,7 +48,7 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> EN VIVO
                     </span>
                 </div>
-                <p class="text-[9px] text-white/40 font-bold uppercase tracking-wider">Simulador de Ecosistema Multidispositivo en Tiempo Real</p>
+                <p class="text-[9px] text-white/40 font-bold uppercase tracking-wider">Todos los enlaces abren dentro de los teléfonos en pantalla (Sin pestañas nuevas)</p>
             </div>
         </div>
 
@@ -56,7 +56,7 @@
         <div class="flex items-center gap-3 flex-wrap">
             <!-- Restaurant Selector -->
             <div class="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
-                <label class="text-[9px] font-black uppercase text-white/40 tracking-wider"><i class="fas fa-store text-orange-400 mr-1"></i> Local Activo:</label>
+                <label class="text-[9px] font-black uppercase text-white/40 tracking-wider"><i class="fas fa-store text-orange-400 mr-1"></i> Local:</label>
                 <select id="active-restaurant-select" onchange="changeActiveRestaurant(this.value)" class="bg-transparent text-xs font-bold text-white outline-none cursor-pointer">
                     <option value="tacos-el-rey" class="bg-[#121215] text-white">🌮 Tacos El Rey</option>
                     <option value="pizza-express" class="bg-[#121215] text-white">🍕 Pizza Express Quimistán</option>
@@ -70,13 +70,13 @@
             <!-- Layout View Switcher -->
             <div class="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
                 <button onclick="setLayout('3col')" id="btn-layout-3col" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-orange-500 text-white transition-all shadow-sm">
-                    <i class="fas fa-columns mr-1"></i> Flujo 3 Pantallas (Cliente + Socio + Driver)
+                    <i class="fas fa-columns mr-1"></i> 3 Teléfonos
                 </button>
                 <button onclick="setLayout('4col')" id="btn-layout-4col" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all">
                     <i class="fas fa-th-large mr-1"></i> 4 Pantallas (+ Admin)
                 </button>
-                <button onclick="setLayout('kitchen_pos')" id="btn-layout-kitchen" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all">
-                    <i class="fas fa-utensils mr-1"></i> Cocina & POS
+                <button onclick="setLayout('single')" id="btn-layout-single" class="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all">
+                    <i class="fas fa-mobile-alt mr-1"></i> Teléfono Individual Grande
                 </button>
             </div>
 
@@ -92,25 +92,25 @@
         </div>
     </header>
 
-    <!-- Quick Test Action Toast Bar -->
+    <!-- Quick In-Screen Navigation Actions Bar -->
     <div class="w-full bg-[#16161C] border-b border-white/5 px-6 py-2 flex items-center justify-between overflow-x-auto text-[10px] uppercase font-bold tracking-wider text-white/50 gap-4 hide-scroll">
-        <div class="flex items-center gap-4 shrink-0">
-            <span class="text-orange-400 font-black flex items-center gap-1"><i class="fas fa-play-circle"></i> Acciones Rápidas:</span>
+        <div class="flex items-center gap-3 shrink-0">
+            <span class="text-orange-400 font-black flex items-center gap-1"><i class="fas fa-bolt"></i> Simulación:</span>
             <button onclick="injectMockOrder('delivery')" class="hover:text-white transition-colors flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
-                🛵 Simular Pedido Delivery
+                🛵 Inyectar Pedido Delivery
             </button>
             <button onclick="injectMockOrder('pickup')" class="hover:text-white transition-colors flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
-                🛍️ Simular Pedido Para Llevar
+                🛍️ Inyectar Pedido Pickup
             </button>
             <button onclick="simulateReceiptUpload()" class="hover:text-white transition-colors flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
-                📸 Simular Comprobante Banco (L. 750)
+                📸 Inyectar Comprobante L. 750
             </button>
             <button onclick="simulateDriverCashout()" class="hover:text-white transition-colors flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
-                ⚡ Simular Retiro Motorista (PIN)
+                ⚡ Generar OTP Retiro
             </button>
         </div>
         <div id="sim-status" class="text-emerald-400 font-mono text-[9px] shrink-0">
-            ⚡ Sistema listo para pruebas en vivo
+            ⚡ Todo se abre dentro de las pantallas en vivo
         </div>
     </div>
 
@@ -122,64 +122,72 @@
         <!-- ============================================================= -->
         <div id="layout-3col" class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start max-w-[1800px] mx-auto">
             
-            <!-- DEVICE 1: CUSTOMER STOREFRONT & TRACKER -->
+            <!-- DEVICE 1: CUSTOMER PHONE -->
             <div class="flex flex-col items-center gap-2 w-full">
-                <div class="w-full flex justify-between items-center px-3">
-                    <span class="text-[11px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <i class="fas fa-shopping-bag"></i> 1. Vista Cliente (Storefront & Tracker)
+                <!-- In-Screen Phone Address & Switcher Bar -->
+                <div class="w-full flex justify-between items-center px-3 py-1 bg-white/5 rounded-2xl border border-white/10">
+                    <span class="text-[10px] font-black text-orange-400 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fas fa-shopping-bag"></i> Teléfono 1: Cliente
                     </span>
-                    <a id="link-cust" href="/order.html?restaurantId=tacos-el-rey" target="_blank" class="text-[9px] text-white/40 hover:text-white font-mono" title="Abrir en pestaña nueva">
-                        /order.html <i class="fas fa-external-link-alt text-[7px]"></i>
-                    </a>
+                    <div class="flex items-center gap-1 text-[8px] font-bold">
+                        <button onclick="loadInFrame('frame-cust', '/order.html?restaurantId=' + currentRestaurant)" class="px-2 py-0.5 bg-orange-500/20 hover:bg-orange-500 text-orange-300 hover:text-white rounded">Menú</button>
+                        <button onclick="loadInFrame('frame-cust', '/quimieats.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">Marketplace</button>
+                        <button onclick="loadInFrame('frame-cust', '/order.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">Tracker</button>
+                    </div>
                 </div>
                 
-                <!-- Phone Wrapper Frame -->
+                <!-- Phone Frame -->
                 <div class="w-full h-[760px] bg-[#0E0E12] rounded-[3rem] border-4 border-white/10 p-1.5 relative overflow-hidden frame-shadow flex flex-col">
-                    <!-- Top Phone Speaker / Notch -->
                     <div class="w-full h-4 flex items-center justify-center shrink-0">
                         <div class="w-20 h-1 bg-white/20 rounded-full"></div>
                     </div>
-                    <iframe id="frame-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
+                    <iframe id="frame-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
-            <!-- DEVICE 2: RESTAURANT / PARTNER PORTAL -->
+            <!-- DEVICE 2: RESTAURANT / PARTNER PHONE -->
             <div class="flex flex-col items-center gap-2 w-full">
-                <div class="w-full flex justify-between items-center px-3">
-                    <span class="text-[11px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5">
-                        <i class="fas fa-store"></i> 2. Vista Restaurante (Partner KDS)
+                <!-- In-Screen Phone Address & Switcher Bar -->
+                <div class="w-full flex justify-between items-center px-3 py-1 bg-white/5 rounded-2xl border border-white/10">
+                    <span class="text-[10px] font-black text-cyan uppercase tracking-wider flex items-center gap-1">
+                        <i class="fas fa-store"></i> Teléfono 2: Restaurante
                     </span>
-                    <a href="/partner.html" target="_blank" class="text-[9px] text-white/40 hover:text-white font-mono" title="Abrir en pestaña nueva">
-                        /partner.html <i class="fas fa-external-link-alt text-[7px]"></i>
-                    </a>
+                    <div class="flex items-center gap-1 text-[8px] font-bold">
+                        <button onclick="loadInFrame('frame-partner', '/partner.html')" class="px-2 py-0.5 bg-cyan/20 hover:bg-cyan text-cyan hover:text-black rounded">Portal Socio</button>
+                        <button onclick="loadInFrame('frame-partner', '/kitchen.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">KDS Cocina</button>
+                        <button onclick="loadInFrame('frame-partner', '/pos.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">Caja POS</button>
+                    </div>
                 </div>
                 
-                <!-- Phone Wrapper Frame -->
+                <!-- Phone Frame -->
                 <div class="w-full h-[760px] bg-[#0E0E12] rounded-[3rem] border-4 border-cyan/30 p-1.5 relative overflow-hidden frame-shadow flex flex-col">
                     <div class="w-full h-4 flex items-center justify-center shrink-0">
                         <div class="w-20 h-1 bg-cyan/30 rounded-full"></div>
                     </div>
-                    <iframe id="frame-partner" src="/partner.html" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
+                    <iframe id="frame-partner" src="/partner.html" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
-            <!-- DEVICE 3: DRIVER PORTAL -->
+            <!-- DEVICE 3: DRIVER PHONE -->
             <div class="flex flex-col items-center gap-2 w-full">
-                <div class="w-full flex justify-between items-center px-3">
-                    <span class="text-[11px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <i class="fas fa-motorcycle"></i> 3. Vista Motorista (Driver Portal)
+                <!-- In-Screen Phone Address & Switcher Bar -->
+                <div class="w-full flex justify-between items-center px-3 py-1 bg-white/5 rounded-2xl border border-white/10">
+                    <span class="text-[10px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1">
+                        <i class="fas fa-motorcycle"></i> Teléfono 3: Motorista
                     </span>
-                    <a href="/driver-portal.html" target="_blank" class="text-[9px] text-white/40 hover:text-white font-mono" title="Abrir en pestaña nueva">
-                        /driver-portal.html <i class="fas fa-external-link-alt text-[7px]"></i>
-                    </a>
+                    <div class="flex items-center gap-1 text-[8px] font-bold">
+                        <button onclick="loadInFrame('frame-driver', '/driver-portal.html')" class="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black rounded">App Driver</button>
+                        <button onclick="loadInFrame('frame-driver', '/driver-signup.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">Registro</button>
+                        <button onclick="loadInFrame('frame-driver', '/quimieats-admin.html')" class="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white rounded">Admin</button>
+                    </div>
                 </div>
                 
-                <!-- Phone Wrapper Frame -->
+                <!-- Phone Frame -->
                 <div class="w-full h-[760px] bg-[#0E0E12] rounded-[3rem] border-4 border-amber-500/30 p-1.5 relative overflow-hidden frame-shadow flex flex-col">
                     <div class="w-full h-4 flex items-center justify-center shrink-0">
                         <div class="w-20 h-1 bg-amber-400/30 rounded-full"></div>
                     </div>
-                    <iframe id="frame-driver" src="/driver-portal.html" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms"></iframe>
+                    <iframe id="frame-driver" src="/driver-portal.html" class="w-full flex-1 rounded-[2.3rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
@@ -192,100 +200,127 @@
             
             <!-- 1. Customer -->
             <div class="flex flex-col items-center gap-1.5 w-full">
-                <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest"><i class="fas fa-shopping-bag"></i> 1. Cliente</span>
+                <div class="w-full flex justify-between items-center px-2 py-1 bg-white/5 rounded-xl text-[9px] font-bold">
+                    <span class="text-orange-400 font-black">1. Cliente</span>
+                    <button onclick="loadInFrame('frame-4col-cust', '/order.html?restaurantId=' + currentRestaurant)" class="text-white/60 hover:text-white">Menú</button>
+                </div>
                 <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-2 border-white/10 p-1 overflow-hidden shadow-xl">
-                    <iframe id="frame-4col-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
+                    <iframe id="frame-4col-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full h-full rounded-[2.2rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
             <!-- 2. Restaurant -->
             <div class="flex flex-col items-center gap-1.5 w-full">
-                <span class="text-[10px] font-black text-cyan uppercase tracking-widest"><i class="fas fa-store"></i> 2. Restaurante</span>
+                <div class="w-full flex justify-between items-center px-2 py-1 bg-white/5 rounded-xl text-[9px] font-bold">
+                    <span class="text-cyan font-black">2. Restaurante</span>
+                    <button onclick="loadInFrame('frame-4col-partner', '/partner.html')" class="text-white/60 hover:text-white">Socio</button>
+                </div>
                 <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-2 border-cyan/30 p-1 overflow-hidden shadow-xl">
-                    <iframe id="frame-4col-partner" src="/partner.html" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
+                    <iframe id="frame-4col-partner" src="/partner.html" class="w-full h-full rounded-[2.2rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
             <!-- 3. Driver -->
             <div class="flex flex-col items-center gap-1.5 w-full">
-                <span class="text-[10px] font-black text-amber-400 uppercase tracking-widest"><i class="fas fa-motorcycle"></i> 3. Motorista</span>
+                <div class="w-full flex justify-between items-center px-2 py-1 bg-white/5 rounded-xl text-[9px] font-bold">
+                    <span class="text-amber-400 font-black">3. Motorista</span>
+                    <button onclick="loadInFrame('frame-4col-driver', '/driver-portal.html')" class="text-white/60 hover:text-white">Driver</button>
+                </div>
                 <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-2 border-amber-500/30 p-1 overflow-hidden shadow-xl">
-                    <iframe id="frame-4col-driver" src="/driver-portal.html" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
+                    <iframe id="frame-4col-driver" src="/driver-portal.html" class="w-full h-full rounded-[2.2rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
             <!-- 4. Master Admin -->
             <div class="flex flex-col items-center gap-1.5 w-full">
-                <span class="text-[10px] font-black text-purple-400 uppercase tracking-widest"><i class="fas fa-crown"></i> 4. Admin Maestro</span>
+                <div class="w-full flex justify-between items-center px-2 py-1 bg-white/5 rounded-xl text-[9px] font-bold">
+                    <span class="text-purple-400 font-black">4. Admin Maestro</span>
+                    <button onclick="loadInFrame('frame-4col-admin', '/quimieats-admin.html')" class="text-white/60 hover:text-white">Admin</button>
+                </div>
                 <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-2 border-purple-500/30 p-1 overflow-hidden shadow-xl">
-                    <iframe id="frame-4col-admin" src="/quimieats-admin.html" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
+                    <iframe id="frame-4col-admin" src="/quimieats-admin.html" class="w-full h-full rounded-[2.2rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                 </div>
             </div>
 
         </div>
 
         <!-- ============================================================= -->
-        <!-- VIEW LAYOUT 3: KITCHEN KDS & IN-STORE POS                     -->
+        <!-- VIEW LAYOUT 3: SINGLE PHONE FOCUS VIEW                        -->
         <!-- ============================================================= -->
-        <div id="layout-kitchen" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6 items-start max-w-[1800px] mx-auto">
-            
-            <!-- Kitchen KDS Tablet -->
-            <div class="flex flex-col items-center gap-2 w-full">
-                <div class="w-full flex justify-between items-center px-3">
-                    <span class="text-[11px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <i class="fas fa-fire-burner"></i> Pantalla KDS Cocina (Comandas)
-                    </span>
-                    <a href="/kitchen.html" target="_blank" class="text-[9px] text-white/40 hover:text-white font-mono">/kitchen.html <i class="fas fa-external-link-alt text-[7px]"></i></a>
+        <div id="layout-single" class="hidden flex flex-col items-center gap-4 max-w-lg mx-auto">
+            <div class="w-full flex justify-between items-center bg-white/5 p-2 rounded-2xl border border-white/10 text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="text-orange-400 font-black">Cargar Vista:</span>
+                    <select id="single-view-select" onchange="loadInFrame('frame-single', this.value)" class="bg-[#121215] text-white px-3 py-1.5 rounded-xl font-bold border border-white/10 outline-none">
+                        <option value="/order.html?restaurantId=tacos-el-rey">🛍️ Cliente: Menú & Pedidos</option>
+                        <option value="/quimieats.html">💎 Cliente: Marketplace & Billetera</option>
+                        <option value="/partner.html">🏪 Restaurante: Portal de Socio</option>
+                        <option value="/driver-portal.html">🛵 Motorista: Portal de Repartidor</option>
+                        <option value="/quimieats-admin.html">👩‍💼 Administrador: Consola Master</option>
+                        <option value="/kitchen.html">🍳 Cocina: Pantalla KDS</option>
+                        <option value="/pos.html">💳 Caja: Punto de Venta POS</option>
+                    </select>
                 </div>
-                <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-4 border-red-500/30 p-1 overflow-hidden shadow-2xl">
-                    <iframe src="/kitchen.html" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
-                </div>
+                <button onclick="document.getElementById('frame-single').contentWindow.location.reload()" class="p-2 bg-white/10 rounded-xl text-white hover:bg-white/20"><i class="fas fa-sync-alt"></i></button>
             </div>
 
-            <!-- In-Store POS Register -->
-            <div class="flex flex-col items-center gap-2 w-full">
-                <div class="w-full flex justify-between items-center px-3">
-                    <span class="text-[11px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
-                        <i class="fas fa-cash-register"></i> Caja POS Presencial (Mostrador)
-                    </span>
-                    <a href="/pos.html" target="_blank" class="text-[9px] text-white/40 hover:text-white font-mono">/pos.html (PIN: 1234) <i class="fas fa-external-link-alt text-[7px]"></i></a>
+            <!-- Big Phone Frame -->
+            <div class="w-full h-[800px] bg-[#0E0E12] rounded-[3.5rem] border-8 border-white/10 p-2 relative overflow-hidden frame-shadow flex flex-col">
+                <div class="w-full h-5 flex items-center justify-center shrink-0">
+                    <div class="w-28 h-1.5 bg-white/20 rounded-full"></div>
                 </div>
-                <div class="w-full h-[720px] bg-[#0E0E12] rounded-[2.5rem] border-4 border-blue-500/30 p-1 overflow-hidden shadow-2xl">
-                    <iframe src="/pos.html" class="w-full h-full rounded-[2.2rem] border-0"></iframe>
-                </div>
+                <iframe id="frame-single" src="/order.html?restaurantId=tacos-el-rey" class="w-full flex-1 rounded-[2.8rem] border-0 bg-[#120C09]" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
             </div>
-
         </div>
 
     </main>
 
-    <!-- Bottom Portal Directory Quick-Jump Strip -->
-    <footer class="w-full bg-[#121215] border-t border-white/10 px-6 py-3 flex flex-wrap justify-between items-center gap-3 text-xs">
+    <!-- Bottom In-Screen Loader Strip -->
+    <footer class="w-full bg-[#121215] border-t border-white/10 px-6 py-3 flex flex-wrap justify-between items-center gap-3 text-xs sticky bottom-0 z-50">
         <div class="flex items-center gap-2 text-white/40 text-[10px] font-black uppercase tracking-wider">
-            <i class="fas fa-link text-orange-400"></i> Accesos Directos con Credenciales:
+            <i class="fas fa-desktop text-orange-400"></i> Cargar vista en pantalla:
         </div>
-        <div class="flex items-center gap-3 flex-wrap text-[10px] font-mono">
-            <a href="/quimieats-admin.html" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-orange-400 border border-orange-500/20">Admin (PIN: 4574)</a>
-            <a href="/partner.html" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-cyan border border-cyan/20">Socio (PIN: 4574)</a>
-            <a href="/driver-portal.html" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-amber-400 border border-amber-500/20">Driver (PIN: 4247)</a>
-            <a href="/order.html?restaurantId=tacos-el-rey" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-emerald-400 border border-emerald-500/20">Cliente Menu</a>
-            <a href="/kitchen.html" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-red-400 border border-red-500/20">Cocina KDS</a>
-            <a href="/pos.html" target="_blank" class="px-2.5 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-blue-400 border border-blue-500/20">POS (PIN: 1234)</a>
+        <div class="flex items-center gap-2 flex-wrap text-[10px] font-mono">
+            <button onclick="loadInFrame('frame-cust', '/quimieats-admin.html')" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-orange-400 border border-orange-500/20 active:scale-95 transition-all">
+                👑 Admin (4574)
+            </button>
+            <button onclick="loadInFrame('frame-partner', '/partner.html')" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-cyan border border-cyan/20 active:scale-95 transition-all">
+                🏪 Socio (4574)
+            </button>
+            <button onclick="loadInFrame('frame-driver', '/driver-portal.html')" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-amber-400 border border-amber-500/20 active:scale-95 transition-all">
+                🛵 Driver (4247)
+            </button>
+            <button onclick="loadInFrame('frame-cust', '/order.html?restaurantId=' + currentRestaurant)" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-emerald-400 border border-emerald-500/20 active:scale-95 transition-all">
+                🛍️ Cliente Menu
+            </button>
+            <button onclick="loadInFrame('frame-partner', '/kitchen.html')" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-red-400 border border-red-500/20 active:scale-95 transition-all">
+                🍳 Cocina KDS
+            </button>
+            <button onclick="loadInFrame('frame-partner', '/pos.html')" class="px-2.5 py-1 bg-white/5 hover:bg-white/15 rounded-lg text-blue-400 border border-blue-500/20 active:scale-95 transition-all">
+                💳 POS (1234)
+            </button>
         </div>
     </footer>
 
     <script>
         let currentRestaurant = 'tacos-el-rey';
 
+        // Load any URL directly inside a specified on-screen phone iframe
+        function loadInFrame(frameId, url) {
+            const frame = document.getElementById(frameId);
+            if (frame) {
+                frame.src = url;
+                setSimStatus(`📲 Cargado en pantalla: ${url}`);
+            }
+        }
+
         function changeActiveRestaurant(resId) {
             currentRestaurant = resId;
             const custUrl = `/order.html?restaurantId=${resId}`;
             
-            document.getElementById('frame-cust').src = custUrl;
-            document.getElementById('link-cust').href = custUrl;
-            
-            const frame4Cust = document.getElementById('frame-4col-cust');
-            if (frame4Cust) frame4Cust.src = custUrl;
+            loadInFrame('frame-cust', custUrl);
+            loadInFrame('frame-4col-cust', custUrl);
+            loadInFrame('frame-single', custUrl);
 
             setSimStatus(`📍 Local activo cambiado a: ${resId}`);
         }
@@ -293,19 +328,19 @@
         function setLayout(mode) {
             const btn3 = document.getElementById('btn-layout-3col');
             const btn4 = document.getElementById('btn-layout-4col');
-            const btnK = document.getElementById('btn-layout-kitchen');
+            const btnS = document.getElementById('btn-layout-single');
             
             const l3 = document.getElementById('layout-3col');
             const l4 = document.getElementById('layout-4col');
-            const lK = document.getElementById('layout-kitchen');
+            const lS = document.getElementById('layout-single');
 
             l3.classList.add('hidden');
             l4.classList.add('hidden');
-            lK.classList.add('hidden');
+            lS.classList.add('hidden');
 
             btn3.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all";
             btn4.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all";
-            btnK.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all";
+            btnS.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-white transition-all";
 
             if (mode === '3col') {
                 l3.classList.remove('hidden');
@@ -313,9 +348,9 @@
             } else if (mode === '4col') {
                 l4.classList.remove('hidden');
                 btn4.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-orange-500 text-white transition-all shadow-sm";
-            } else if (mode === 'kitchen_pos') {
-                lK.classList.remove('hidden');
-                btnK.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-orange-500 text-white transition-all shadow-sm";
+            } else if (mode === 'single') {
+                lS.classList.remove('hidden');
+                btnS.className = "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-orange-500 text-white transition-all shadow-sm";
             }
         }
 
@@ -371,7 +406,7 @@
 
                 const data = await res.json();
                 if (data.orderId) {
-                    setSimStatus(`🎉 ¡Pedido #${data.orderId.slice(-4)} Creado! Verás la alerta sonando en la pantalla del Restaurante.`);
+                    setSimStatus(`🎉 ¡Pedido #${data.orderId.slice(-4)} Creado! Sonando en Teléfono 2.`);
                 } else {
                     setSimStatus(`✅ Pedido simulado enviado al socket.`);
                 }
@@ -395,7 +430,7 @@
                     })
                 });
                 const data = await res.json();
-                setSimStatus("✅ ¡Comprobante de L. 750 enviado! Ábrelo en la pestaña 'Comprobantes' de la Consola Admin.");
+                setSimStatus("✅ ¡Comprobante L. 750 enviado! Míralo en la Consola Admin.");
             } catch(e) {
                 setSimStatus("✅ Comprobante simulado enviado.");
             }
@@ -411,7 +446,7 @@
                 });
                 const data = await res.json();
                 const otp = data.otp || '7412';
-                setSimStatus(`🔑 Código de retiro generado: [ ${otp} ]. Ingrésalo en el Portal de Restaurante.`);
+                setSimStatus(`🔑 Código de retiro generado: [ ${otp} ]. Ingrésalo en Teléfono 2.`);
             } catch(e) {
                 setSimStatus("🔑 Código de retiro generado: [ 7412 ]");
             }
