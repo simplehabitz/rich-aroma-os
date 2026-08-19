@@ -333,11 +333,11 @@
                     <input type="text" id="cust-kaiser-dept" placeholder="Department / Floor / Unit (e.g. ICU, 2nd Fl Surgery, ER)" class="w-full bg-emerald-50/50 border border-emerald-200 rounded-xl px-3.5 py-3 text-xs font-medium text-emerald-950 outline-none focus:border-emerald-500 transition-all">
                 </div>
 
-                <!-- Delivery Address Inputs (Visible for Workplace / Home Delivery) -->
+                <!-- Delivery Address Inputs (Visible for Catering Hand Delivery) -->
                 <div id="delivery-address-container" class="hidden space-y-2 pt-1">
                     <p class="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center justify-between">
-                        <span>Delivery Address (Up to 50 Miles from Chino, CA)</span>
-                        <span class="text-emerald-700 font-bold text-[8px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">FREE on 10+ bottles</span>
+                        <span>Catering Delivery Address (30+ Bottles Min • Up to 50 Mi)</span>
+                        <span class="text-brand-brown font-bold text-[8px] bg-brand-gold/20 text-brand-dark px-2 py-0.5 rounded-full border border-brand-gold/40">30+ Bottles Required</span>
                     </p>
                     <input type="text" id="cust-address" placeholder="Street Address (e.g. 14000 Central Ave)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                     <div class="grid grid-cols-2 gap-2">
@@ -656,17 +656,17 @@
                     <span id="check-kaiser" class="text-emerald-700 font-bold text-sm mt-1"><i class="fas fa-check-circle"></i></span>
                 </button>
 
-                <!-- Option 2: Workplace / Home Delivery -->
+                <!-- Option 2: Catering & Events Hand Delivery -->
                 <button type="button" onclick="setFulfillmentMode('delivery')" id="modal-card-delivery" class="w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-gold/80 transition-all flex items-start justify-between gap-3 shadow-xs">
                     <div class="flex items-start gap-3">
                         <span class="text-2xl">🚚</span>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h4 class="font-serif font-bold text-xs text-brand-dark">Workplace / Home Delivery</h4>
-                                <span class="text-[8px] bg-brand-gold text-brand-dark font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Free on 10+</span>
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">Catering Hand Delivery</h4>
+                                <span class="text-[8px] bg-brand-gold text-brand-dark font-black px-2 py-0.5 rounded-full uppercase tracking-wider">30+ Bottles Min</span>
                             </div>
-                            <p class="text-[9px] text-gray-600 font-medium mt-1">Hand-delivered cold in insulated packaging (up to 50 mi from Chino).</p>
-                            <p class="text-[8px] font-bold text-brand-brown uppercase tracking-wider mt-1">✨ <strong>100% FREE Delivery</strong> when you order 10+ bottles ($20 base under 10)</p>
+                            <p class="text-[9px] text-gray-600 font-medium mt-1">Direct drop for offices, events, and hospital units (up to 50 mi from Chino).</p>
+                            <p class="text-[8px] font-bold text-brand-brown uppercase tracking-wider mt-1">📦 Includes $15 Insulated Bag & 2 Ice Packs Kit • $20 base delivery</p>
                         </div>
                     </div>
                     <span id="check-delivery" class="hidden text-brand-brown font-bold text-sm mt-1"><i class="fas fa-check-circle"></i></span>
@@ -1671,17 +1671,16 @@
             }
 
             const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
-            const isFreeDelivery = totalBottles >= 10;
 
             if (badge) {
                 badge.classList.remove('hidden');
-                if (isFreeDelivery) {
+                if (totalBottles >= 30) {
                     badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200";
-                    badge.innerHTML = `🎉 Approx. <strong>${miles} miles</strong> from Chino • <strong>100% FREE Hand Delivery Unlocked!</strong> (10+ Bottles in Cart • $${calculatedDeliveryFee.toFixed(2)} fee waived)`;
+                    badge.innerHTML = `📍 Approx. <strong>${miles} miles</strong> from Chino • Catering Delivery: <strong>$${calculatedDeliveryFee.toFixed(2)}</strong> ($20 base for 10 mi + ${miles > 10 ? (miles - 10) + ' extra mi @ $1.25' : 'included'})`;
                 } else if (miles <= 50) {
-                    const needed = 10 - totalBottles;
-                    badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-emerald-50/60 text-emerald-900 border-emerald-200";
-                    badge.innerHTML = `📍 Approx. <strong>${miles} miles</strong> from Chino • Delivery: <strong>$${calculatedDeliveryFee.toFixed(2)}</strong> ($20 base for 10 mi + ${miles > 10 ? (miles - 10) + ' extra mi @ $1.25' : 'included'})<br><span class="text-emerald-700 font-bold">🎁 Add ${needed} more bottle${needed > 1 ? 's' : ''} to get 100% FREE Delivery!</span>`;
+                    const needed = 30 - totalBottles;
+                    badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-900 border-amber-200";
+                    badge.innerHTML = `⚠️ <strong>Catering Minimum:</strong> Hand Delivery is for 30+ bottles (currently ${totalBottles} bottles). Add ${needed} more bottle${needed > 1 ? 's' : ''} to qualify for delivery.`;
                 } else {
                     badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-800 border-amber-200";
                     badge.innerHTML = `⚠️ Approx. <strong>${miles} miles</strong> from Chino (exceeds 50-mile standard zone). Please contact us for custom long-distance delivery.`;
@@ -1713,11 +1712,10 @@
             headerCount.innerText = totalBottles;
             headerCount.classList.remove('hidden');
 
-            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const hasCatering = totalBottles >= 30 || cart.some(i => i.product_id === 'catering-bulk-30');
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isFreeDelivery = totalBottles >= 10;
-            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder') && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
 
             // Calculate Mix & Match 5-Pack Discounts for individual bottle orders
             // (Every set of 5 individual bottles automatically saves $5.00)
@@ -1726,7 +1724,7 @@
                 .reduce((sum, i) => sum + (i.bottles || 1), 0);
             
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
-            const autoBundleDiscount = (!hasHot) ? (autoBundlePacks * 5.00) : 0;
+            const autoBundleDiscount = (!hasHot && !hasCatering) ? (autoBundlePacks * 5.00) : 0;
             const remainderBottles = regularIndividualBottles % 5;
 
             // Upsell banner logic
@@ -1736,26 +1734,24 @@
                     bannerEl.className = "p-3 rounded-2xl border bg-amber-500/15 text-amber-900 border-amber-500/40 text-[10px] font-bold text-center";
                     bannerEl.innerHTML = `☕ <strong>Fresh Hot Bar Pickup:</strong> ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}<br><span class="text-[9px] font-normal text-amber-800">Rich Aroma Coffee Bar (Chino, CA) • Ready fresh when you arrive!</span>`;
                     bannerEl.classList.remove('hidden');
-                } else if (hasCatering) {
-                    bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
-                    bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (30+ Bottles) • ✨ <strong>100% FREE Hand Delivery!</strong>`;
-                    bannerEl.classList.remove('hidden');
                 } else if (fulfillmentMode === 'delivery') {
-                    if (isFreeDelivery) {
-                        bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
-                        bannerEl.innerHTML = `🎉 <strong>100% FREE Hand Delivery Unlocked!</strong> (10+ Bottles in cart • Saved $${calculatedDeliveryFee.toFixed(2)})`;
-                        bannerEl.classList.remove('hidden');
-                    } else if (totalBottles > 0 && totalBottles < 10) {
-                        const needed = 10 - totalBottles;
-                        bannerEl.className = "p-3 rounded-2xl border bg-emerald-50/70 text-emerald-900 border-emerald-200 text-[10px] font-bold text-center";
-                        bannerEl.innerHTML = `🚚 <strong>Office Delivery:</strong> Add ${needed} more bottle${needed > 1 ? 's' : ''} to unlock <strong>100% FREE Hand Delivery!</strong>`;
+                    if (totalBottles >= 30) {
+                        bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
+                        bannerEl.innerHTML = `🎉 <strong>Catering Order Qualified!</strong> (${totalBottles} Bottles) • 🚚 Hand Delivery with Insulated Cooler Bag Kit`;
                         bannerEl.classList.remove('hidden');
                     } else {
-                        bannerEl.classList.add('hidden');
+                        const needed = 30 - totalBottles;
+                        bannerEl.className = "p-3 rounded-2xl border bg-amber-50 text-amber-900 border-amber-300 text-[10px] font-bold text-center";
+                        bannerEl.innerHTML = `🚚 <strong>Catering Hand Delivery:</strong> Requires min. 30 bottles (Have ${totalBottles}). Add ${needed} more or <button type="button" onclick="openCateringBuilder()" class="underline text-brand-brown font-black ml-1">Open 30-Pack Builder &rarr;</button>`;
+                        bannerEl.classList.remove('hidden');
                     }
                 } else if (fulfillmentMode === 'kaiser') {
                     bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
                     bannerEl.innerHTML = `🏥 <strong>Kaiser Baldwin Park Staff Hub:</strong> Free Breakroom Drop & Fridge Pickup!`;
+                    bannerEl.classList.remove('hidden');
+                } else if (hasCatering) {
+                    bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (${totalBottles} Bottles)`;
                     bannerEl.classList.remove('hidden');
                 } else if (autoBundlePacks > 0 && remainderBottles === 0) {
                     bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
@@ -1778,7 +1774,7 @@
 
             const discountRow = document.getElementById('summary-discount-row');
             if (discountRow) {
-                if (autoBundleDiscount > 0 && !hasHot) {
+                if (autoBundleDiscount > 0 && !hasHot && !hasCatering) {
                     discountRow.classList.remove('hidden');
                     document.getElementById('summary-discount-label').innerText = `${autoBundlePacks}x 5-Pack Bundle Discount`;
                     document.getElementById('summary-discount-amount').innerText = `-$${autoBundleDiscount.toFixed(2)}`;
@@ -1793,10 +1789,10 @@
             const addrContainer = document.getElementById('delivery-address-container');
             const kaiserContainer = document.getElementById('kaiser-info-container');
 
-            const coolerBagFee = hasCatering ? 15.00 : 0.00;
+            const coolerBagFee = (hasCatering || isDelivery) ? 15.00 : 0.00;
             let deliveryFee = 0.00;
 
-            if (hasCatering) {
+            if (hasCatering || isDelivery) {
                 freshnessBox.classList.remove('hidden');
                 bagRow.classList.remove('hidden');
             } else {
@@ -1809,14 +1805,14 @@
                 addrContainer.classList.remove('hidden');
                 if (kaiserContainer) kaiserContainer.classList.add('hidden');
 
-                if (isFreeDelivery) {
-                    deliveryFee = 0.00;
-                    document.getElementById('delivery-fee-label').innerText = `Hand Delivery (10+ Bottles)`;
-                    document.getElementById('summary-delivery-amount').innerHTML = `<span class="line-through text-gray-400 font-normal mr-1">$${calculatedDeliveryFee.toFixed(2)}</span><span class="text-emerald-700 font-bold">FREE ($0.00)</span>`;
-                } else {
+                if (totalBottles >= 30) {
                     deliveryFee = calculatedDeliveryFee;
-                    document.getElementById('delivery-fee-label').innerText = `Hand Delivery (${calculatedDeliveryDistance} mi from Chino)`;
+                    document.getElementById('delivery-fee-label').innerText = `Catering Hand Delivery (${calculatedDeliveryDistance} mi from Chino)`;
                     document.getElementById('summary-delivery-amount').innerText = `$${deliveryFee.toFixed(2)}`;
+                } else {
+                    deliveryFee = 0.00;
+                    document.getElementById('delivery-fee-label').innerText = `Catering Hand Delivery (30+ min)`;
+                    document.getElementById('summary-delivery-amount').innerHTML = `<span class="text-amber-800 font-bold text-[8px] bg-amber-100 px-2 py-0.5 rounded-full">Min 30 btls</span>`;
                 }
             } else if (fulfillmentMode === 'kaiser') {
                 deliveryFee = 0.00;
@@ -1948,11 +1944,16 @@
             }
 
             const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
-            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const hasCatering = totalBottles >= 30 || cart.some(i => i.product_id === 'catering-bulk-30');
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isFreeDelivery = totalBottles >= 10;
-            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder') && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
+
+            if (isDelivery && totalBottles < 30) {
+                showToast("Hand delivery is strictly for Catering orders of 30 or more bottles.");
+                openCateringBuilder();
+                return;
+            }
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -1966,31 +1967,29 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
-            const coolerBagFee = hasCatering ? 15.00 : 0.00;
-            const deliveryFee = (isDelivery && !isFreeDelivery) ? calculatedDeliveryFee : 0.00;
+            const coolerBagFee = (hasCatering || isDelivery) ? 15.00 : 0.00;
+            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
 
             const regularIndividualBottles = cart
                 .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
                 .reduce((sum, i) => sum + (i.bottles || 1), 0);
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
-            const autoBundleDiscount = autoBundlePacks * 5.00;
+            const autoBundleDiscount = (!hasHot && !hasCatering) ? (autoBundlePacks * 5.00) : 0;
 
             let notesTag = '[FRIDGE-PICKUP]';
             if (hasHot) {
                 notesTag = `[HOT BAR PICKUP: ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
             } else if (fulfillmentMode === 'kaiser') {
                 notesTag = `[KAISER BALDWIN PARK STAFF DROP: Dept/Unit ${kaiserDept}] Free Staff Hub Drop.`;
-            } else if (hasCatering) {
-                notesTag = `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit. ${isFreeDelivery ? '(FREE Delivery Applied)' : ''}`;
-            } else if (isDelivery) {
-                notesTag = `[WORKPLACE/HOME DELIVERY FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip} ${isFreeDelivery ? '(FREE 10+ Bottle Delivery Applied)' : ''}`;
+            } else if (isDelivery || hasCatering) {
+                notesTag = `[CATERING HAND DELIVERY FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
             }
 
             const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`;
 
             // Prepare items array including packaging, bundle discount & delivery line items for Stripe
             const finalStripeItems = [...cart];
-            if (autoBundleDiscount > 0 && !hasHot) {
+            if (autoBundleDiscount > 0 && !hasHot && !hasCatering) {
                 finalStripeItems.push({
                     name: `5-Pack Mix & Match Bundle Discount (${autoBundlePacks}x 5-pack)`,
                     qty: 1,
@@ -2061,11 +2060,16 @@
             }
 
             const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
-            const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
+            const hasCatering = totalBottles >= 30 || cart.some(i => i.product_id === 'catering-bulk-30');
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isFreeDelivery = totalBottles >= 10;
-            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder') && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
+
+            if (isDelivery && totalBottles < 30) {
+                showToast("Hand delivery is strictly for Catering orders of 30 or more bottles.");
+                openCateringBuilder();
+                return;
+            }
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -2080,10 +2084,10 @@
                 .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
                 .reduce((sum, i) => sum + (i.bottles || 1), 0);
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
-            const autoBundleDiscount = (!hasHot) ? (autoBundlePacks * 5.00) : 0;
+            const autoBundleDiscount = (!hasHot && !hasCatering) ? (autoBundlePacks * 5.00) : 0;
 
-            const coolerBagFee = hasCatering ? 15.00 : 0.00;
-            const deliveryFee = (isDelivery && !isFreeDelivery) ? calculatedDeliveryFee : 0.00;
+            const coolerBagFee = (hasCatering || isDelivery) ? 15.00 : 0.00;
+            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
             const grandTotal = Math.max(0, totalDrinks - autoBundleDiscount + coolerBagFee + deliveryFee);
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
@@ -2093,10 +2097,8 @@
                 notesTag = `[HOT BAR PICKUP PAY: ${method.toUpperCase()} FOR ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
             } else if (fulfillmentMode === 'kaiser') {
                 notesTag = `[KAISER BALDWIN PARK STAFF PAY: ${method.toUpperCase()} - Dept/Unit ${kaiserDept}] Free Staff Drop.`;
-            } else if (hasCatering) {
-                notesTag = `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit. ${isFreeDelivery ? '(FREE Delivery Applied)' : ''}`;
-            } else if (isDelivery) {
-                notesTag = `[WORKPLACE/HOME DELIVERY PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip} ${isFreeDelivery ? '(FREE 10+ Bottle Delivery Applied)' : ''}`;
+            } else if (isDelivery || hasCatering) {
+                notesTag = `[CATERING HAND DELIVERY PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
             }
 
             try {
@@ -2354,14 +2356,21 @@
                 showToast("Fulfillment set to Kaiser Baldwin Park Staff Hub", "success");
             } else if (mode === 'delivery') {
                 if (iconEl) iconEl.innerText = "🚚";
-                if (nameEl) nameEl.innerText = "Hand Delivery (Free @ 10+)";
+                if (nameEl) nameEl.innerText = "Catering Delivery (30+)";
                 checkKaiser?.classList.add('hidden');
                 checkDelivery?.classList.remove('hidden');
                 checkBar?.classList.add('hidden');
                 if (cardDelivery) cardDelivery.className = "w-full text-left p-4 rounded-3xl border-2 transition-all flex items-start justify-between gap-3 bg-brand-cream/80 border-brand-gold shadow-xs";
                 if (cardKaiser) cardKaiser.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-emerald-500 transition-all flex items-start justify-between gap-3 shadow-xs";
                 if (cardBar) cardBar.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-brown/80 transition-all flex items-start justify-between gap-3 shadow-xs";
-                showToast("Fulfillment set to Workplace / Home Delivery", "success");
+                
+                const totalBtls = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
+                if (totalBtls < 30) {
+                    showToast("Catering Hand Delivery requires 30+ bottles. Opening 30-Pack Builder!", "success");
+                    setTimeout(() => openCateringBuilder(), 400);
+                } else {
+                    showToast("Fulfillment set to Catering Hand Delivery", "success");
+                }
             } else if (mode === 'bar') {
                 if (iconEl) iconEl.innerText = "☕";
                 if (nameEl) nameEl.innerText = "Rich Aroma Bar (Chino)";
