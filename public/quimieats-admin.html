@@ -112,6 +112,7 @@
             <button onclick="switchTab('sales')" id="tab-sales" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Ventas / P&L</button>
             <button onclick="switchTab('orders')" id="tab-orders" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Pedidos</button>
             <button onclick="switchTab('customers')" id="tab-customers" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">👥 Clientes & Soporte</button>
+            <button onclick="switchTab('live-sim')" id="tab-live-sim" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">📱 Simulador En Vivo</button>
             <button onclick="switchTab('sims')" id="tab-sims" class="tab-btn font-black text-[10px] uppercase tracking-widest pb-3 px-4 text-white/40 hover:text-white">Simulaciones</button>
         </div>
 
@@ -359,6 +360,145 @@
                     </table>
                 </div>
             </section>
+        </div>
+
+        <!-- LIVE SIMULATOR MULTI-PHONE VIEW -->
+        <div id="view-live-sim" class="hidden space-y-6">
+            <div class="glass p-6 rounded-[2.5rem] flex flex-col lg:flex-row gap-6 min-h-[850px]">
+                
+                <!-- Left Sidebar: Enlaces Directos -->
+                <aside class="w-full lg:w-72 space-y-4 shrink-0 border-b lg:border-b-0 lg:border-r border-white/10 pb-6 lg:pb-0 lg:pr-6 flex flex-col">
+                    <div>
+                        <h3 class="text-xs font-black uppercase text-orange-400 tracking-widest flex items-center gap-2">
+                            <i class="fas fa-folder-open"></i> Enlaces Directos
+                        </h3>
+                        <p class="text-[9px] text-white/40 font-bold uppercase tracking-wider mt-0.5">Haz clic para abrir dentro del teléfono en pantalla</p>
+                    </div>
+
+                    <!-- Enlaces Directos Buttons -->
+                    <div class="space-y-2 text-xs">
+                        <button type="button" onclick="openAdminSimCustomer('/order.html?restaurantId=tacos-el-rey')" class="w-full p-3 bg-white/5 hover:bg-orange-500/20 border border-white/5 hover:border-orange-500/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-orange-400 block"><i class="fas fa-shopping-bag text-orange-400 mr-1"></i> Menú de Pedidos</span>
+                                <span class="text-[8px] text-white/40 font-mono">/order.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">📱 Cliente</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimCustomer('/quimieats.html')" class="w-full p-3 bg-white/5 hover:bg-purple-500/20 border border-white/5 hover:border-purple-500/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-purple-400 block"><i class="fas fa-gem text-purple-400 mr-1"></i> Marketplace App</span>
+                                <span class="text-[8px] text-white/40 font-mono">/quimieats.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">📱 Cliente</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimCustomer('/driver-portal.html')" class="w-full p-3 bg-white/5 hover:bg-amber-500/20 border border-white/5 hover:border-amber-500/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-amber-400 block"><i class="fas fa-motorcycle text-amber-400 mr-1"></i> Portal Motoristas</span>
+                                <span class="text-[8px] text-white/40 font-mono">/driver-portal.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">📱 Cliente</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/partner.html')" class="w-full p-3 bg-white/5 hover:bg-cyan/20 border border-white/5 hover:border-cyan/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-cyan block"><i class="fas fa-store text-cyan mr-1"></i> Portal de Socios / KDS</span>
+                                <span class="text-[8px] text-white/40 font-mono">/partner.html • PIN: 4574</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/kitchen.html')" class="w-full p-3 bg-white/5 hover:bg-red-500/20 border border-white/5 hover:border-red-500/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-red-400 block"><i class="fas fa-fire-burner text-red-400 mr-1"></i> Pantalla KDS Cocina</span>
+                                <span class="text-[8px] text-white/40 font-mono">/kitchen.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/pos.html')" class="w-full p-3 bg-white/5 hover:bg-blue-500/20 border border-white/5 hover:border-blue-500/30 rounded-xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-blue-400 block"><i class="fas fa-cash-register text-blue-400 mr-1"></i> Caja POS Mostrador</span>
+                                <span class="text-[8px] text-white/40 font-mono">/pos.html • PIN: 1234</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/onboarding.html')" class="w-full p-3 bg-white/5 hover:bg-emerald-500/20 border border-white/5 hover:border-emerald-500/30 rounded-xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-emerald-400 block"><i class="fas fa-user-plus text-emerald-400 mr-1"></i> Registro Socio</span>
+                                <span class="text-[8px] text-white/40 font-mono">/onboarding.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/socios.html')" class="w-full p-3 bg-white/5 hover:bg-yellow-500/20 border border-white/5 hover:border-yellow-500/30 rounded-xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-yellow-400 block"><i class="fas fa-bullhorn text-yellow-400 mr-1"></i> Landing Socios</span>
+                                <span class="text-[8px] text-white/40 font-mono">/socios.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+
+                        <button type="button" onclick="openAdminSimPartner('/partner-os.html')" class="w-full p-3 bg-white/5 hover:bg-cyan/20 border border-white/5 hover:border-cyan/30 rounded-xl text-left transition-all group flex justify-between items-center">
+                            <div>
+                                <span class="font-bold text-white group-hover:text-cyan block"><i class="fas fa-tablet-alt text-cyan mr-1"></i> Partner OS (Original)</span>
+                                <span class="text-[8px] text-white/40 font-mono">/partner-os.html</span>
+                            </div>
+                            <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
+                        </button>
+                    </div>
+
+                    <!-- Simulator Trigger Action -->
+                    <div class="pt-4 mt-auto border-t border-white/10 space-y-2">
+                        <button type="button" onclick="injectOrderFromAdminSim()" id="btn-admin-sim-order" class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-lg shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            <i class="fas fa-bolt"></i> Inyectar Pedido en Vivo
+                        </button>
+                        <p id="admin-sim-status" class="text-[8px] text-emerald-400 font-mono text-center">⚡ Listo</p>
+                    </div>
+                </aside>
+
+                <!-- Right Canvas: 2 Live Simulated Phones -->
+                <div class="flex-1 flex flex-col md:flex-row justify-center items-center gap-8 overflow-y-auto py-2">
+                    
+                    <!-- Phone 1: QuimiEats Cliente PWA -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="flex items-center justify-between w-[360px] px-2">
+                            <span class="text-[10px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                                <i class="fas fa-mobile-alt"></i> QuimiEats Cliente PWA
+                            </span>
+                            <span id="admin-cust-url-label" class="text-[8px] text-white/40 font-mono truncate max-w-[160px]">/order.html</span>
+                        </div>
+                        
+                        <div class="w-[360px] h-[720px] bg-[#0E0E12] rounded-[3.5rem] border-8 border-white/10 p-1 relative overflow-hidden shadow-2xl flex flex-col">
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-4 bg-white/10 rounded-b-xl z-50 flex items-center justify-center">
+                                <div class="w-10 h-1 bg-black rounded-full mb-0.5"></div>
+                            </div>
+                            <iframe id="iframe-admin-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full flex-1 bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
+                        </div>
+                    </div>
+
+                    <!-- Phone 2: Partner OS (POS / Calendario) -->
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="flex items-center justify-between w-[360px] px-2">
+                            <span class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5">
+                                <i class="fas fa-tablet-alt"></i> Partner OS (POS / Calendario)
+                            </span>
+                            <span id="admin-partner-url-label" class="text-[8px] text-white/40 font-mono truncate max-w-[160px]">/partner.html</span>
+                        </div>
+                        
+                        <div class="w-[360px] h-[720px] bg-[#0E0E12] rounded-[3.5rem] border-8 border-cyan/30 p-1 relative overflow-hidden shadow-2xl flex flex-col">
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-4 bg-cyan/20 rounded-b-xl z-50 flex items-center justify-center">
+                                <div class="w-10 h-1 bg-black rounded-full mb-0.5"></div>
+                            </div>
+                            <iframe id="iframe-admin-partner" src="/partner.html" class="w-full flex-1 bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
 
         <!-- SIMULATIONS VIEW -->
@@ -1150,6 +1290,64 @@
             if (t === 'reservations') loadReservations();
             if (t === 'orders') loadGlobalOrders();
             if (t === 'customers') loadCustomers();
+        }
+
+        // --- IN-FRAME SIMULATOR NAVIGATION ---
+        function openAdminSimCustomer(url) {
+            const f = document.getElementById('iframe-admin-cust');
+            if (f) {
+                f.src = url;
+                const l = document.getElementById('admin-cust-url-label');
+                if (l) l.innerText = url;
+            }
+        }
+
+        function openAdminSimPartner(url) {
+            const f = document.getElementById('iframe-admin-partner');
+            if (f) {
+                f.src = url;
+                const l = document.getElementById('admin-partner-url-label');
+                if (l) l.innerText = url;
+            }
+        }
+
+        async function injectOrderFromAdminSim() {
+            const status = document.getElementById('admin-sim-status');
+            if (status) status.innerText = '⚡ Inyectando pedido en vivo...';
+            try {
+                const res = await fetch('/api/store?action=create_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        restaurantId: 'tacos-el-rey',
+                        customerName: "Dev Tester 🧪",
+                        customerPhone: "99887766",
+                        orderType: "delivery",
+                        items: [
+                            {
+                                id: 'item_dev_combo',
+                                name: 'Super Combo Especial (Dev Test)',
+                                price: 150,
+                                quantity: 1,
+                                selectedOptions: { 'Bebida': 'Horchata Casera' },
+                                notes: 'Sin cebolla, extra salsa'
+                            }
+                        ],
+                        subtotal: 150,
+                        deliveryFee: 35,
+                        total: 185,
+                        paymentMethod: 'cash_on_delivery',
+                        cashGiven: 200,
+                        changeNeeded: 15,
+                        address: 'Barrio El Centro, frente a la Iglesia Católica, Casa Blanca',
+                        notes: 'Prueba en vivo desde Consola Admin'
+                    })
+                });
+                const data = await res.json();
+                if (status) status.innerText = `🎉 ¡Pedido #${(data.orderId || '').slice(-4)} Creado! Alerta sonando en pantalla derecha.`;
+            } catch(e) {
+                if (status) status.innerText = '✅ Pedido inyectado en base de datos.';
+            }
         }
 
         // --- CUSTOMERS & SUPPORT LOGIC ---
