@@ -277,7 +277,12 @@
     {
       "src": "/hub",
       "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/kitchen.html"
+      "dest": "/public/hub.html"
+    },
+    {
+      "src": "/ecosystem",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/hub.html"
     },
     {
       "src": "/terminal",
