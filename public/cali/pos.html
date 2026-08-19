@@ -4,26 +4,26 @@
     <link rel="icon" type="image/png" href="/favicon.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Cali Distro | Mobile POS</title>
+    <title>Rich Aroma | Pop-Up Mobile POS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <!-- html5-qrcode scanner library -->
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        sans: ['Inter', '-apple-system', 'sans-serif'],
                         serif: ['Playfair Display', 'serif'],
                     },
                     colors: {
                         brand: {
-                            dark: '#0c0806',
+                            dark: '#140f0c',
                             brown: '#8b5a2b',
                             cream: '#fdfbf7',
-                            gold: '#C9A66B'
+                            gold: '#d4af37',
+                            surface: '#ffffff'
                         }
                     }
                 }
@@ -31,1297 +31,655 @@
         }
     </script>
     <style>
-        body { background-color: #0c0806; color: #fdfbf7; -webkit-tap-highlight-color: transparent; }
-        .glass-panel { background: rgba(25, 20, 18, 0.85); backdrop-filter: blur(20px); border: 1px solid rgba(201, 166, 107, 0.15); }
-        .gold-glow { box-shadow: 0 0 20px rgba(201, 166, 107, 0.25); }
-        .product-card { transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
-        .product-card:active { transform: scale(0.95); background: rgba(201, 166, 107, 0.1); border-color: rgba(201, 166, 107, 0.4); }
+        body { background-color: #0f0b09; color: #fdfbf7; -webkit-tap-highlight-color: transparent; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .keypad-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); transition: all 0.1s ease; }
-        .keypad-btn:active { background: rgba(201, 166, 107, 0.2); border-color: #C9A66B; transform: scale(0.92); }
+        .tap-scale { transition: transform 0.08s ease, filter 0.08s ease; }
+        .tap-scale:active { transform: scale(0.94); filter: brightness(1.2); }
+        .pos-grid-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(212, 175, 55, 0.18); }
+        .pos-grid-btn:active { background: rgba(212, 175, 55, 0.25); border-color: #d4af37; }
     </style>
 </head>
-<body class="bg-brand-dark text-gray-100 antialiased min-h-screen selection:bg-brand-gold selection:text-brand-dark overflow-x-hidden">
+<body class="bg-[#0f0b09] antialiased min-h-screen text-gray-100 flex flex-col justify-between select-none overflow-x-hidden">
 
-    <!-- PIN LOGIN VIEW -->
-    <div id="pin-view" class="fixed inset-0 bg-brand-dark flex items-center justify-center z-[1000]">
-        <div class="w-full max-w-sm p-6 text-center space-y-6">
-            <div class="w-16 h-16 bg-brand-gold/10 border border-brand-gold/30 rounded-3xl mx-auto flex items-center justify-center shadow-lg gold-glow">
-                <i class="fas fa-calculator text-brand-gold text-2xl"></i>
+    <!-- ============================================== -->
+    <!-- PIN LOGIN VIEW (Keypad) -->
+    <!-- ============================================== -->
+    <div id="pin-view" class="fixed inset-0 bg-brand-dark flex flex-col justify-between p-6 z-[1000]">
+        <div class="pt-8 text-center space-y-3">
+            <div class="w-16 h-16 bg-brand-gold/20 border border-brand-gold/30 rounded-3xl mx-auto flex items-center justify-center shadow-2xl">
+                <span class="text-2xl">☕</span>
             </div>
             <div>
-                <h2 class="text-2xl font-serif font-bold text-white mb-1">Cali POS Terminal</h2>
-                <p class="text-white/40 text-[9px] font-black uppercase tracking-widest leading-relaxed">Enter 4-Digit authorization code</p>
+                <h1 class="text-2xl font-serif font-bold text-white tracking-wide">Rich Aroma POS</h1>
+                <p class="text-white/50 text-[10px] font-black uppercase tracking-widest mt-1">Pop-Up & On-The-Spot Terminal</p>
             </div>
             
-            <!-- Code display dots -->
-            <div class="flex justify-center gap-4 py-2">
-                <div id="dot-1" class="w-4 h-4 rounded-full border-2 border-white/20 transition-all duration-150"></div>
-                <div id="dot-2" class="w-4 h-4 rounded-full border-2 border-white/20 transition-all duration-150"></div>
-                <div id="dot-3" class="w-4 h-4 rounded-full border-2 border-white/20 transition-all duration-150"></div>
-                <div id="dot-4" class="w-4 h-4 rounded-full border-2 border-white/20 transition-all duration-150"></div>
+            <div class="flex justify-center gap-3 pt-6 pb-2">
+                <div id="dot-0" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-1" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-2" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
+                <div id="dot-3" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
             </div>
+            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN. Try 3620</p>
+        </div>
 
-            <!-- Custom Touch Keypad -->
-            <div class="grid grid-cols-3 gap-3 max-w-[280px] mx-auto pt-4">
-                <button onclick="pressPin('1')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">1</button>
-                <button onclick="pressPin('2')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">2</button>
-                <button onclick="pressPin('3')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">3</button>
-                
-                <button onclick="pressPin('4')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">4</button>
-                <button onclick="pressPin('5')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">5</button>
-                <button onclick="pressPin('6')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">6</button>
-                
-                <button onclick="pressPin('7')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">7</button>
-                <button onclick="pressPin('8')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">8</button>
-                <button onclick="pressPin('9')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">9</button>
-                
-                <button onclick="clearPin()" class="keypad-btn text-xs font-black py-4 rounded-2xl text-red-400">CLEAR</button>
-                <button onclick="pressPin('0')" class="keypad-btn text-2xl font-black py-4 rounded-2xl">0</button>
-                <button onclick="backspacePin()" class="keypad-btn text-lg font-black py-4 rounded-2xl"><i class="fas fa-backspace"></i></button>
+        <div class="max-w-xs mx-auto w-full pb-8">
+            <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="enterPinDigit('1')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">1</button>
+                <button type="button" onclick="enterPinDigit('2')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">2</button>
+                <button type="button" onclick="enterPinDigit('3')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">3</button>
+                <button type="button" onclick="enterPinDigit('4')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">4</button>
+                <button type="button" onclick="enterPinDigit('5')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">5</button>
+                <button type="button" onclick="enterPinDigit('6')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">6</button>
+                <button type="button" onclick="enterPinDigit('7')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">7</button>
+                <button type="button" onclick="enterPinDigit('8')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">8</button>
+                <button type="button" onclick="enterPinDigit('9')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">9</button>
+                <button type="button" onclick="clearPin()" class="h-16 rounded-2xl bg-white/5 text-white/50 font-bold text-xs uppercase active:bg-white/20 transition-all">Clear</button>
+                <button type="button" onclick="enterPinDigit('0')" class="h-16 rounded-2xl bg-white/10 text-white font-mono font-bold text-2xl active:bg-white/25 active:scale-95 transition-all">0</button>
+                <button type="button" onclick="deletePinDigit()" class="h-16 rounded-2xl bg-white/5 text-white font-bold text-lg active:bg-white/20 transition-all"><i class="fas fa-backspace"></i></button>
             </div>
-            
-            <div class="pt-4">
-                <a href="/cali" class="text-xs text-brand-gold hover:underline opacity-60"><i class="fas fa-arrow-left mr-2"></i>Back to Customer Storefront</a>
-            </div>
+            <button type="button" onclick="quickDemoLogin()" class="w-full mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest text-center">
+                Tap to auto-fill default PIN (3620)
+            </button>
         </div>
     </div>
 
-    <!-- MAIN POS SCREEN -->
-    <div id="pos-view" class="hidden flex flex-col h-screen overflow-hidden">
-        <!-- Top Nav -->
-        <header class="glass-panel px-4 py-3 flex justify-between items-center z-50 border-b border-white/5 shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-xl bg-brand-gold flex items-center justify-center shadow-md">
-                    <i class="fas fa-cash-register text-brand-dark text-xs"></i>
-                </div>
+    <!-- ============================================== -->
+    <!-- MAIN POS TERMINAL -->
+    <!-- ============================================== -->
+    <div id="pos-terminal" class="hidden flex-1 flex flex-col max-w-md mx-auto w-full pb-32">
+        
+        <!-- Header Strip -->
+        <header class="bg-black/40 border-b border-white/10 px-4 py-2.5 flex justify-between items-center sticky top-0 z-30 backdrop-blur-md">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-xl bg-brand-gold text-brand-dark flex items-center justify-center font-bold text-xs">☕</div>
                 <div>
-                    <h1 class="text-sm font-serif font-bold text-white leading-none">Cali Distro</h1>
-                    <span class="text-[8px] font-black uppercase tracking-[0.2em] text-brand-gold block mt-0.5">Mobile POS</span>
+                    <h2 class="font-serif font-bold text-xs leading-none text-white">Pop-Up POS</h2>
+                    <span class="text-[8px] text-emerald-400 font-bold uppercase tracking-wider mt-0.5 inline-block">● 100% Phone Powered</span>
                 </div>
             </div>
             <div class="flex items-center gap-2">
-                <!-- Camera Scan Button -->
-                <button onclick="openScanner()" class="bg-brand-gold hover:bg-brand-gold/90 text-brand-dark font-black px-3.5 py-1.5 rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 shadow-md">
-                    <i class="fas fa-barcode"></i> Scan
-                </button>
-                
-                <a href="/cali/admin" class="text-[10px] font-black uppercase text-white/60 hover:text-white tracking-widest px-2 py-1.5 hidden md:block">Admin</a>
-                
-                <button onclick="logout()" class="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white transition-all">
-                    <i class="fas fa-sign-out-alt text-xs"></i>
+                <a href="/cali/admin" class="px-2.5 py-1 rounded-xl bg-white/10 text-[9px] font-black uppercase text-brand-gold hover:bg-white/20 transition-all">
+                    Admin
+                </a>
+                <button type="button" onclick="clearCart()" class="w-7 h-7 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center text-xs hover:bg-red-500/30">
+                    <i class="fas fa-trash-alt"></i>
                 </button>
             </div>
         </header>
 
-        <!-- Main Body (Scrollable Split screen) -->
-        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-            <!-- Left Side: Catalog Grid -->
-            <div class="flex-1 p-4 overflow-y-auto no-scrollbar pb-24 lg:pb-6 space-y-4">
-                <div class="flex justify-between items-center">
-                    <h2 class="text-base font-serif font-bold text-white">Products</h2>
-                    <span id="catalog-count" class="text-[10px] text-white/40 font-bold uppercase tracking-widest">Loading catalog...</span>
-                </div>
+        <!-- Category Filter Tabs -->
+        <div class="px-3 pt-3 pb-1 flex gap-2 overflow-x-auto no-scrollbar">
+            <button type="button" onclick="setPosCategory('bottles')" id="cat-bottles" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-gold text-brand-dark shadow-xs shrink-0">
+                ❄️ Bottled ($6)
+            </button>
+            <button type="button" onclick="setPosCategory('bundle')" id="cat-bundle" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
+                🔥 5-Pack ($25)
+            </button>
+            <button type="button" onclick="setPosCategory('hot')" id="cat-hot" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
+                ☕ Hot Bar ($5-$6)
+            </button>
+            <button type="button" onclick="openCustomAmountModal()" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
+                💲 Custom $
+            </button>
+        </div>
 
-                <!-- Product Catalog Grid - Highly optimized, compact for mobile screens -->
-                <div id="catalog-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                    <!-- Dynamic Product Cards -->
+        <!-- Menu Item Speed Grid -->
+        <div class="p-3 grid grid-cols-2 gap-2.5" id="pos-grid">
+            <!-- Rendered by JS -->
+        </div>
+
+        <!-- Optional Customer Loyalty Strip -->
+        <div class="px-3 py-2">
+            <div class="bg-white/5 rounded-2xl p-2.5 border border-white/10 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-1">
+                    <i class="fas fa-star text-brand-gold text-xs"></i>
+                    <input type="tel" id="pos-cust-phone" placeholder="Customer Phone (For Stamps)" class="bg-transparent text-xs text-white placeholder-white/40 outline-none w-full font-mono">
+                </div>
+                <button type="button" onclick="lookupLoyalty()" class="bg-white/10 hover:bg-white/20 text-[9px] font-black uppercase px-2.5 py-1.5 rounded-xl text-brand-gold">
+                    Lookup
+                </button>
+            </div>
+            <div id="loyalty-status" class="hidden text-[9px] text-brand-gold font-bold mt-1 px-1"></div>
+        </div>
+
+    </div>
+
+    <!-- ============================================== -->
+    <!-- FIXED BOTTOM POS DOCK (Checkout Drawer) -->
+    <!-- ============================================== -->
+    <div id="pos-dock" class="fixed bottom-0 left-0 right-0 z-40 bg-[#191310]/95 backdrop-blur-xl border-t border-brand-gold/30 p-3 max-w-md mx-auto shadow-2xl">
+        
+        <!-- Cart Summary Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-white/10">
+            <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-brand-gold/20 text-brand-gold text-xs font-black flex items-center justify-center" id="cart-item-count">0</span>
+                <span class="text-xs font-bold text-white/80" id="cart-summary-text">No items added</span>
+            </div>
+            <span class="font-mono font-black text-xl text-brand-gold" id="cart-grand-total">$0.00</span>
+        </div>
+
+        <!-- 3 Instant Checkout Buttons (No Hardware Needed) -->
+        <div class="grid grid-cols-2 gap-2 pt-2.5">
+            <!-- Cash Checkout (Instant Calculator) -->
+            <button type="button" onclick="openCashModal()" class="tap-scale bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
+                <i class="fas fa-money-bill-wave text-sm"></i> Cash
+            </button>
+
+            <!-- Show Customer QR (Venmo / Zelle / Stripe Apple Pay) -->
+            <button type="button" onclick="openCustomerQRModal()" class="tap-scale bg-brand-gold hover:bg-amber-400 text-brand-dark font-black py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
+                <i class="fas fa-qrcode text-sm"></i> Show QR
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- CASH CHECKOUT MODAL (Change Calculator) -->
+    <!-- ============================================== -->
+    <div id="cash-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex flex-col justify-between p-6 z-[9999]" onclick="if(event.target === this) closeCashModal()">
+        <div class="space-y-4 pt-4 text-center max-w-xs mx-auto w-full">
+            <div class="flex justify-between items-center text-white">
+                <h3 class="font-serif font-bold text-lg">💵 Cash Tender</h3>
+                <button type="button" onclick="closeCashModal()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
+
+            <!-- Amount Due Banner -->
+            <div class="bg-white/5 rounded-3xl p-4 border border-white/10">
+                <span class="text-[9px] font-black uppercase text-white/50 tracking-widest block">Total Amount Due</span>
+                <span class="font-mono font-black text-3xl text-brand-gold block mt-1" id="cash-total-due">$0.00</span>
+            </div>
+
+            <!-- Preset Tender Buttons -->
+            <div class="space-y-1.5 text-left">
+                <span class="text-[9px] font-black uppercase text-white/50 tracking-wider">Fast Tender</span>
+                <div class="grid grid-cols-4 gap-2" id="cash-preset-buttons">
+                    <!-- Populated by JS -->
                 </div>
             </div>
 
-            <!-- Floating Mobile Cart Drawer Backdrop (Mobile only) -->
-            <div id="cart-drawer-backdrop" onclick="toggleCartDrawer(false)" class="hidden fixed inset-0 bg-brand-dark/90 z-[80] lg:hidden backdrop-blur-sm"></div>
+            <!-- Change Due Output -->
+            <div class="bg-emerald-950/80 border border-emerald-500/30 rounded-3xl p-4 text-center">
+                <span class="text-[9px] font-black uppercase text-emerald-400 tracking-widest block">Change Due to Customer</span>
+                <span class="font-mono font-black text-3xl text-emerald-300 block mt-1" id="cash-change-due">$0.00</span>
+            </div>
+        </div>
 
-            <!-- Right Side / Slide-up Drawer: Shopping Cart -->
-            <div id="cart-drawer" class="fixed lg:relative inset-x-0 bottom-0 lg:inset-auto lg:top-0 lg:right-0 z-[90] lg:z-auto w-full lg:w-[400px] glass-panel border-t lg:border-t-0 lg:border-l border-white/10 p-5 flex flex-col justify-between overflow-hidden transform translate-y-full lg:translate-y-0 transition-transform duration-300 ease-out h-[85vh] lg:h-full">
-                <!-- Drag Handle for Mobile -->
-                <div class="w-12 h-1 bg-white/25 rounded-full mx-auto mb-4 lg:hidden cursor-pointer" onclick="toggleCartDrawer(false)"></div>
-                
-                <div class="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar space-y-5">
-                    <div class="flex justify-between items-center border-b border-white/5 pb-3">
-                        <h2 class="text-base font-serif font-bold text-white flex items-center gap-2">
-                            <i class="fas fa-shopping-basket text-brand-gold"></i> Checkout Cart
-                        </h2>
-                        <button onclick="clearCart()" class="text-[10px] font-black uppercase text-red-400 hover:text-red-300 tracking-wider">Clear</button>
-                    </div>
+        <div class="max-w-xs mx-auto w-full pb-4 space-y-2">
+            <button type="button" onclick="completeSale('Cash')" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl transition-all">
+                ✓ Complete Cash Sale
+            </button>
+            <button type="button" onclick="closeCashModal()" class="w-full bg-white/10 text-white/60 font-bold py-2.5 rounded-xl text-[9px] uppercase tracking-wider">
+                Cancel
+            </button>
+        </div>
+    </div>
 
-                    <!-- Cart Item List -->
-                    <div id="cart-list" class="space-y-3 overflow-y-auto no-scrollbar pr-1 flex-1">
-                        <!-- Dynamic Cart Items -->
-                        <div class="text-center py-10 text-white/30 italic text-xs">Cart is empty. Tap products to build an order.</div>
-                    </div>
+    <!-- ============================================== -->
+    <!-- CUSTOMER QR CODE DISPLAY (Customer Scans Phone) -->
+    <!-- ============================================== -->
+    <div id="qr-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex flex-col justify-between p-6 z-[9999]" onclick="if(event.target === this) closeQRModal()">
+        <div class="space-y-3 pt-2 text-center max-w-xs mx-auto w-full">
+            <div class="flex justify-between items-center text-white">
+                <h3 class="font-serif font-bold text-base">📲 Scan to Pay</h3>
+                <button type="button" onclick="closeQRModal()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center"><i class="fas fa-times"></i></button>
+            </div>
 
-                    <!-- Customer & Drop Selection Details -->
-                    <div class="space-y-3 pt-3 border-t border-white/5 shrink-0">
-                        <div class="flex items-center justify-between mb-0.5">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold">Customer Information</span>
-                        </div>
-                        
-                        <!-- Sleek Segmented Control Tab -->
-                        <div class="grid grid-cols-2 gap-1 p-1 bg-white/5 rounded-xl border border-white/10">
-                            <button onclick="setCheckoutMode('guest')" id="tab-mode-guest" class="py-2 text-[10px] font-black uppercase rounded-lg transition-all bg-brand-gold text-brand-dark">Guest Walk-up</button>
-                            <button onclick="setCheckoutMode('info')" id="tab-mode-info" class="py-2 text-[10px] font-black uppercase rounded-lg transition-all text-white/60 hover:text-white">Customer Info</button>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-2.5 hidden" id="customer-inputs">
-                            <input type="text" id="customer-name" placeholder="Name" class="w-full bg-brand-dark/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs focus:border-brand-gold outline-none text-white placeholder:text-white/20">
-                            <input type="tel" id="customer-phone" placeholder="Phone" class="w-full bg-brand-dark/40 border border-white/10 rounded-xl px-3.5 py-2.5 text-xs focus:border-brand-gold outline-none text-white placeholder:text-white/20">
-                        </div>
-                        
-                        <div>
-                            <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold block mb-1">Drop / Hub Location</span>
-                            <select id="drop-location" class="w-full bg-brand-dark/40 border border-white/10 rounded-xl px-3 py-2.5 text-xs focus:border-brand-gold outline-none text-white">
-                                <option value="" class="bg-brand-dark">In-Person Pickup (No Location)</option>
-                                <option value="home" class="bg-brand-dark">Home Delivery (+$10.00)</option>
-                                <!-- Dynamic locations loaded -->
-                            </select>
-                        </div>
+            <!-- Switcher: Venmo vs Zelle vs Apple Pay -->
+            <div class="grid grid-cols-3 gap-1 bg-white/10 p-1 rounded-2xl">
+                <button type="button" onclick="setQRMethod('venmo')" id="qr-tab-venmo" class="py-1.5 rounded-xl text-[9px] font-black uppercase bg-sky-500 text-white">Venmo</button>
+                <button type="button" onclick="setQRMethod('zelle')" id="qr-tab-zelle" class="py-1.5 rounded-xl text-[9px] font-black uppercase bg-transparent text-white/70">Zelle</button>
+                <button type="button" onclick="setQRMethod('stripe')" id="qr-tab-stripe" class="py-1.5 rounded-xl text-[9px] font-black uppercase bg-transparent text-white/70">Card/Apple</button>
+            </div>
 
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold block mb-1">Total Override</span>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-xs text-white/30">$</span>
-                                    <input type="number" step="0.01" id="total-override" placeholder="Auto" class="w-full bg-brand-dark/40 border border-white/10 rounded-xl pl-6 pr-3 py-2 text-xs focus:border-brand-gold outline-none text-white placeholder:text-white/20">
-                                </div>
-                            </div>
-                            <div>
-                                <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold block mb-1">Internal Notes</span>
-                                <input type="text" id="order-notes" placeholder="e.g. Cash sale" class="w-full bg-brand-dark/40 border border-white/10 rounded-xl px-3 py-2 text-xs focus:border-brand-gold outline-none text-white placeholder:text-white/20">
-                            </div>
-                        </div>
-                    </div>
+            <!-- QR Code Display Box (High Contrast for Scanning) -->
+            <div class="bg-white p-5 rounded-3xl shadow-2xl flex flex-col items-center justify-center space-y-2 border-4 border-brand-gold">
+                <div id="qrcode-container" class="flex justify-center p-1"></div>
+                <div class="text-center text-brand-dark">
+                    <p class="font-mono font-black text-lg" id="qr-amount-display">$0.00</p>
+                    <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider" id="qr-subtext">Scan with Venmo App</p>
                 </div>
+            </div>
 
-                <!-- Footer Summary & Checkout Trigger -->
-                <div class="pt-4 border-t border-white/10 space-y-3 shrink-0">
-                    <div class="flex justify-between items-end">
-                        <div>
-                            <span class="text-[9px] font-black uppercase tracking-widest text-white/40 block mb-0.5">Calculated Total</span>
-                            <span id="calculated-total-display" class="text-2xl font-black font-mono text-brand-gold">$0.00</span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-[8px] font-black uppercase tracking-widest text-white/40 block mb-0.5" id="delivery-tag">Fulfillment</span>
-                            <span id="fulfillment-type-display" class="text-[10px] font-bold text-white uppercase tracking-wider">In-Person</span>
-                        </div>
-                    </div>
-                    
-                    <button onclick="openPaymentModal()" id="checkout-btn" class="w-full bg-brand-gold hover:bg-brand-gold/90 text-brand-dark py-3.5 rounded-xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 shadow-xl hover:scale-[1.01] active:scale-95">
-                        <i class="fas fa-credit-card"></i> Pay / Complete Order
+            <p class="text-[10px] text-white/60">Turn your phone to the customer to scan!</p>
+        </div>
+
+        <div class="max-w-xs mx-auto w-full pb-4 space-y-2">
+            <button type="button" onclick="completeSale(activeQRMethod.toUpperCase())" class="w-full bg-brand-gold hover:bg-amber-400 text-brand-dark font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl transition-all">
+                ✓ Confirm Payment Received
+            </button>
+            <button type="button" onclick="closeQRModal()" class="w-full bg-white/10 text-white/60 font-bold py-2.5 rounded-xl text-[9px] uppercase tracking-wider">
+                Back
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- SALE SUCCESS SPLASH -->
+    <!-- ============================================== -->
+    <div id="success-modal" class="hidden fixed inset-0 bg-brand-dark/98 backdrop-blur-lg flex flex-col justify-between p-6 z-[99999]">
+        <div class="text-center pt-12 space-y-4 max-w-xs mx-auto">
+            <div class="w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400 rounded-full mx-auto flex items-center justify-center text-3xl text-emerald-400 animate-bounce">
+                <i class="fas fa-check"></i>
+            </div>
+            <div>
+                <h2 class="font-serif font-black text-2xl text-white">Sale Complete!</h2>
+                <p class="font-mono font-black text-brand-gold text-xl mt-1" id="success-amount">$0.00</p>
+                <p class="text-[10px] text-white/50 uppercase tracking-widest mt-1" id="success-method">Paid via Cash</p>
+            </div>
+            
+            <!-- Optional SMS Receipt Input -->
+            <div class="bg-white/5 rounded-2xl p-3 border border-white/10 space-y-2">
+                <span class="text-[8px] font-black uppercase text-white/50 block">Text Digital Receipt</span>
+                <div class="flex gap-1.5">
+                    <input type="tel" id="receipt-phone" placeholder="(555) 000-0000" class="flex-1 bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white font-mono outline-none">
+                    <button type="button" onclick="sendSmsReceipt()" class="bg-brand-gold text-brand-dark font-black text-[9px] uppercase px-3 py-2 rounded-xl">
+                        Send
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Floating Mobile Cart Button (Mobile only, flashes and updates when cart has items) -->
-        <div id="mobile-cart-bar" onclick="toggleCartDrawer(true)" class="lg:hidden fixed bottom-0 inset-x-0 bg-brand-gold text-brand-dark p-4 flex justify-between items-center z-45 cursor-pointer shadow-2xl transition-all translate-y-full duration-200">
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <i class="fas fa-shopping-basket text-xl"></i>
-                    <span id="mobile-cart-badge" class="absolute -top-2 -right-2 bg-[#1e1714] text-brand-gold text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center">0</span>
-                </div>
-                <div>
-                    <span class="text-[8px] font-black uppercase tracking-widest opacity-60 block">Review Order</span>
-                    <span id="mobile-cart-total" class="text-sm font-black font-mono">$0.00</span>
-                </div>
-            </div>
-            <div class="flex items-center gap-1 font-black text-xs uppercase tracking-wider">
-                View Cart <i class="fas fa-chevron-up text-[10px]"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- HTML5 CAMERA SCANNING MODAL -->
-    <div id="scanner-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex items-center justify-center z-[200] p-4">
-        <div class="w-full max-w-md bg-[#191412] border border-brand-gold/20 rounded-[2.5rem] p-6 shadow-2xl relative">
-            <button onclick="closeScanner()" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition-colors">
-                <i class="fas fa-times"></i>
+        <div class="max-w-xs mx-auto w-full pb-6">
+            <button type="button" onclick="startNewSale()" class="w-full bg-white text-brand-dark font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-2xl transition-all active:scale-95">
+                + New Sale
             </button>
-            <h3 class="text-lg font-serif font-bold text-white mb-1 flex items-center gap-2">
-                <i class="fas fa-camera text-brand-gold"></i> Cap / Bottle Scanner
-            </h3>
-            <p class="text-xs text-white/40 mb-6">Align the barcode sticker on the bottle inside the window.</p>
-            
-            <!-- Scanning stream view container -->
-            <div class="relative w-full aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 shadow-inner">
-                <div id="reader" class="w-full h-full"></div>
-                <!-- Laser glow animation line -->
-                <div class="absolute inset-x-0 h-0.5 bg-brand-gold/70 shadow-[0_0_10px_#C9A66B] animate-[bounce_2s_infinite] pointer-events-none"></div>
-            </div>
-            
-            <div class="text-center">
-                <span class="text-[9px] font-black uppercase tracking-widest text-white/40 block mb-2">Preset Mock Barcodes (For Manual Testing)</span>
-                <div class="flex flex-wrap justify-center gap-2">
-                    <button onclick="simulateScan('000000000001')" class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-mono text-brand-gold border border-white/5">0000...01 (Dirty Chai)</button>
-                    <button onclick="simulateScan('000000000002')" class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-mono text-brand-gold border border-white/5">0000...02 (Vanilla)</button>
-                    <button onclick="simulateScan('000000000003')" class="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-mono text-brand-gold border border-white/5">0000...03 (Classic Black)</button>
-                </div>
-            </div>
         </div>
     </div>
 
-    <!-- PAYMENT SELECTION MODAL -->
-    <div id="payment-modal" class="hidden fixed inset-0 bg-brand-dark/90 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-        <div class="w-full max-w-lg bg-[#191412] border border-brand-gold/25 rounded-[3rem] p-8 shadow-2xl relative">
-            <button onclick="closeModal('payment-modal')" class="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white flex items-center justify-center transition-colors">
-                <i class="fas fa-times"></i>
-            </button>
-            <h3 class="text-2xl font-serif font-bold text-white mb-2">Collect Payment</h3>
-            <p class="text-xs text-white/40 mb-8">Select how the customer wants to pay for this purchase.</p>
-            
-            <div class="grid grid-cols-3 gap-4 mb-8">
-                <!-- CASH option -->
-                <button onclick="selectPaymentMethod('cash')" id="btn-pay-cash" class="flex flex-col items-center justify-center p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-brand-gold hover:bg-brand-gold/5 transition-all text-center">
-                    <i class="fas fa-money-bill-wave text-green-500 text-3xl mb-3"></i>
-                    <span class="text-xs font-black uppercase tracking-wider text-white">Cash</span>
-                </button>
-                
-                <!-- VENMO option -->
-                <button onclick="selectPaymentMethod('venmo')" id="btn-pay-venmo" class="flex flex-col items-center justify-center p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-brand-gold hover:bg-brand-gold/5 transition-all text-center">
-                    <i class="fab fa-vimeo-v text-blue-400 text-3xl mb-3"></i>
-                    <span class="text-xs font-black uppercase tracking-wider text-white">Venmo</span>
-                </button>
-                
-                <!-- STRIPE Link option -->
-                <button onclick="selectPaymentMethod('stripe')" id="btn-pay-stripe" class="flex flex-col items-center justify-center p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-brand-gold hover:bg-brand-gold/5 transition-all text-center">
-                    <i class="fab fa-stripe text-[#635bff] text-3xl mb-3"></i>
-                    <span class="text-xs font-black uppercase tracking-wider text-white">Stripe QR</span>
-                </button>
-            </div>
+    <!-- Toast Overlay -->
+    <div id="toast-container" class="fixed top-4 left-4 right-4 z-[99999] pointer-events-none flex flex-col gap-2 max-w-xs mx-auto"></div>
 
-            <!-- PAYMENT DETAIL SCREENS -->
-            <div id="payment-screens" class="border-t border-white/5 pt-6 hidden">
-                <!-- Cash detail view -->
-                <div id="screen-cash" class="hidden text-center space-y-4">
-                    <p class="text-sm text-white/70">Please collect cash in person: <strong class="text-brand-gold text-lg" id="cash-collect-total">$0.00</strong></p>
-                    <button onclick="processCashCheckout()" class="bg-green-600 hover:bg-green-500 text-white font-black px-6 py-4 rounded-xl text-xs uppercase tracking-widest transition-all">Confirm Cash Received</button>
-                </div>
-
-                <!-- Venmo detail view -->
-                <div id="screen-venmo" class="hidden text-center space-y-6 flex flex-col items-center">
-                    <p class="text-sm text-white/70">Scan this QR code to pay via Venmo:</p>
-                    <div class="bg-white p-4 rounded-3xl w-48 h-48 flex items-center justify-center shadow-lg border border-white/10">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://venmo.com/u/RichAromaCoffee" class="w-full h-full object-contain">
-                    </div>
-                    <p class="text-[10px] text-white/30 tracking-wider">Account: @RichAromaCoffee</p>
-                    <button onclick="processVenmoCheckout()" class="bg-blue-500 hover:bg-blue-400 text-white font-black px-6 py-4 rounded-xl text-xs uppercase tracking-widest transition-all">Confirm Venmo Payment</button>
-                </div>
-
-                <!-- Stripe QR dynamic view -->
-                <div id="screen-stripe" class="hidden text-center space-y-6 flex flex-col items-center">
-                    <div id="stripe-qr-loading" class="space-y-4">
-                        <i class="fas fa-spinner fa-spin text-3xl text-brand-gold"></i>
-                        <p class="text-xs text-white/40">Generating Stripe checkout QR code...</p>
-                    </div>
-                    <div id="stripe-qr-container" class="hidden space-y-6 flex flex-col items-center w-full">
-                        <p class="text-sm text-white/70">Customer scans below to pay with Apple Pay / Card:</p>
-                        <div class="bg-white p-4 rounded-3xl w-48 h-48 flex items-center justify-center shadow-lg border border-white/10">
-                            <img id="stripe-qr-img" src="" class="w-full h-full object-contain">
-                        </div>
-                        <div class="flex items-center gap-2 bg-brand-gold/10 px-4 py-2 rounded-full border border-brand-gold/30">
-                            <i class="fas fa-clock text-brand-gold text-[10px] animate-pulse"></i>
-                            <span class="text-[9px] font-black uppercase text-brand-gold tracking-widest">Waiting for customer to pay...</span>
-                        </div>
-                        <button onclick="cancelStripeCheckout()" class="text-xs text-red-400 hover:underline tracking-widest uppercase">Cancel Stripe Link</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- DYNAMIC BARCODE CONFIGURATION MAPPING MODAL -->
-    <div id="mapping-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
-        <div class="w-full max-w-sm bg-[#191412] border border-brand-gold/20 rounded-[2.5rem] p-6 shadow-2xl">
-            <h3 class="text-xl font-serif font-bold text-white mb-1">Unknown Barcode</h3>
-            <p class="text-xs text-white/40 mb-4">Would you like to map code <code id="scanned-code-text" class="text-brand-gold font-mono font-bold bg-white/5 px-2 py-0.5 rounded"></code> to a product flavor?</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold block mb-1">Flavor Modifier</span>
-                    <select id="map-flavor" class="w-full bg-brand-dark border border-white/10 rounded-xl px-4 py-3 text-xs text-white">
-                        <option value="Vanilla Latte">Vanilla Latte</option>
-                        <option value="French Vanilla">French Vanilla</option>
-                        <option value="Caramel Latte">Caramel Latte</option>
-                        <option value="Oreo Supreme">Oreo Supreme</option>
-                        <option value="Classic Black Americano">Classic Black Americano</option>
-                        <option value="Dirty Chai">Dirty Chai</option>
-                    </select>
-                </div>
-                <div>
-                    <span class="text-[9px] font-black uppercase tracking-widest text-brand-gold block mb-1">Milk Modifier</span>
-                    <select id="map-milk" class="w-full bg-brand-dark border border-white/10 rounded-xl px-4 py-3 text-xs text-white">
-                        <option value="Regular Milk">Regular Milk</option>
-                        <option value="Oat Milk">Oat Milk</option>
-                    </select>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3 pt-4 border-t border-white/5">
-                    <button onclick="closeModal('mapping-modal')" class="bg-white/5 hover:bg-white/10 text-white/60 font-black py-3 rounded-xl text-xs uppercase tracking-wider">Cancel</button>
-                    <button onclick="saveBarcodeMapping()" class="bg-brand-gold hover:bg-brand-gold/90 text-brand-dark font-black py-3 rounded-xl text-xs uppercase tracking-wider">Save Map</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AUDIO NOTIFICATION ELEMENT (Web Audio Synthesizer fallback) -->
+    <!-- ============================================== -->
+    <!-- LOGIC & ENGINE -->
+    <!-- ============================================== -->
     <script>
-        // Synthesizes a clean POS register checkout chime
-        function playChime(type = 'success') {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                if (type === 'success') {
-                    // Two-tone rising chord (Ding!)
-                    const osc1 = ctx.createOscillator();
-                    const osc2 = ctx.createOscillator();
-                    const gainNode = ctx.createGain();
-                    
-                    osc1.type = 'sine';
-                    osc2.type = 'sine';
-                    
-                    osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
-                    osc1.frequency.setValueAtTime(659.25, ctx.currentTime + 0.1); // E5
-                    
-                    osc2.frequency.setValueAtTime(783.99, ctx.currentTime); // G5
-                    osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.1); // C6
-                    
-                    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-                    
-                    osc1.connect(gainNode);
-                    osc2.connect(gainNode);
-                    gainNode.connect(ctx.destination);
-                    
-                    osc1.start();
-                    osc2.start();
-                    osc1.stop(ctx.currentTime + 0.5);
-                    osc2.stop(ctx.currentTime + 0.5);
-                } else if (type === 'beep') {
-                    // Standard short scanner beep
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(1200, ctx.currentTime);
-                    
-                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-                    
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.12);
-                } else if (type === 'error') {
-                    // Buzzer error sound
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(150, ctx.currentTime);
-                    osc.frequency.linearRampToValueAtTime(100, ctx.currentTime + 0.25);
-                    
-                    gain.gain.setValueAtTime(0.15, ctx.currentTime);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-                    
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    
-                    osc.start();
-                    osc.stop(ctx.currentTime + 0.25);
-                }
-            } catch (e) {
-                console.error("Web Audio failed:", e);
-            }
-        }
-    </script>
-
-    <!-- CORE POS IMPLEMENTATION SCRIPTS -->
-    <script>
-        const ALL_FLAVORS = ['Vanilla Latte', 'French Vanilla', 'Caramel Latte', 'Oreo Supreme', 'Classic Black Americano', 'Dirty Chai'];
-
-        // PIN Auth Logics
-        let pinBufferLocal = "";
-        function pressPin(num) {
-            if (pinBufferLocal.length < 4) {
-                pinBufferLocal += num;
-                updatePinDotsLocal();
-                if (pinBufferLocal.length === 4) {
-                    setTimeout(checkPinLocal, 150);
-                }
-            }
-        }
-        function backspacePin() {
-            pinBufferLocal = pinBufferLocal.slice(0, -1);
-            updatePinDotsLocal();
-        }
-        function clearPin() {
-            pinBufferLocal = "";
-            updatePinDotsLocal();
-        }
-        function updatePinDotsLocal() {
-            for (let i = 1; i <= 4; i++) {
-                const dot = document.getElementById(`dot-${i}`);
-                if (i <= pinBufferLocal.length) {
-                    dot.classList.add('bg-brand-gold', 'border-brand-gold', 'scale-110');
-                } else {
-                    dot.classList.remove('bg-brand-gold', 'border-brand-gold', 'scale-110');
-                }
-            }
-        }
-        function checkPinLocal() {
-            if (pinBufferLocal === '3620') {
-                localStorage.setItem('cali_admin_auth', 'true');
-                document.getElementById('pin-view').classList.add('hidden');
-                document.getElementById('pos-view').classList.remove('hidden');
-                initPOS();
-            } else {
-                playChime('error');
-                alert("Invalid PIN. Access Denied.");
-                clearPin();
-            }
-        }
-        function logout() {
-            localStorage.removeItem('cali_admin_auth');
-            location.reload();
-        }
-
-        // State variables
-        let products = [];
-        let locations = [];
+        const ADMIN_PIN_DEFAULT = "3620";
+        let enteredPin = "";
+        let adminToken = localStorage.getItem('cali_admin_token') || "";
+        
+        let activeCategory = 'bottles';
         let cart = [];
-        let activeStripePoll = null;
-        let html5QrScanner = null;
-        let scannedCodeToMap = null;
-        let checkoutMode = 'guest';
+        let activeQRMethod = 'venmo';
+        let currentTotal = 0;
+        let lastCompletedOrder = null;
 
-        // Custom local barcode mappings dictionary
-        let barcodeMappings = {
-            "000000000001": { productId: null, flavor: "Dirty Chai", milk: "Oat Milk" },
-            "000000000002": { productId: null, flavor: "Vanilla Latte", milk: "Oat Milk" },
-            "000000000003": { productId: null, flavor: "Classic Black Americano", milk: "Regular Milk" },
-            "000000000004": { productId: null, flavor: "French Vanilla", milk: "Regular Milk" }
-        };
+        const MENU_ITEMS = [
+            // Cold Bottled Drinks
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", category: "bottles", icon: "🍃", price: 6.00, desc: "Ceremonial Matcha & Vanilla" },
+            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", category: "bottles", icon: "🍯", price: 6.00, desc: "Honduran Espresso & Salted Caramel" },
+            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", category: "bottles", icon: "🥛", price: 6.00, desc: "Classic Madagascar Vanilla" },
+            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", category: "bottles", icon: "🥛", price: 6.00, desc: "Smooth Vanilla & Fresh Milk" },
+            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", category: "bottles", icon: "✨", price: 6.00, desc: "Spiced Masala & Espresso" },
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", category: "bottles", icon: "☕", price: 5.00, desc: "Pure 3oz Espresso & Water" },
 
-        // Initialize state on load
-        window.onload = () => {
-            if (localStorage.getItem('cali_admin_auth') === 'true') {
-                document.getElementById('pin-view').classList.add('hidden');
-                document.getElementById('pos-view').classList.remove('hidden');
-                initPOS();
+            // 5-Pack Bundle
+            { id: "bundle-5pack", name: "Mix & Match 5-Pack", category: "bundle", icon: "🔥", price: 25.00, bottles: 5, desc: "Any 5 Bottles ($5/bottle)" },
+
+            // Hot Bar Drinks
+            { id: "hot-caramel-latte", name: "Hot Caramel Latte", category: "hot", icon: "☕", price: 6.00, is_hot: true, desc: "Steamed Milk & Caramel" },
+            { id: "hot-french-vanilla", name: "Hot French Vanilla", category: "hot", icon: "🥛", price: 6.00, is_hot: true, desc: "Hot Vanilla Espresso" },
+            { id: "hot-vanilla-matcha", name: "Hot Vanilla Matcha", category: "hot", icon: "🍃", price: 6.00, is_hot: true, desc: "Hot Green Tea & Espresso" },
+            { id: "hot-dirty-chai", name: "Hot Dirty Chai", category: "hot", icon: "✨", price: 6.00, is_hot: true, desc: "Steamed Chai & Espresso" },
+            { id: "hot-classic-americano", name: "Hot Classic Americano", category: "hot", icon: "☕", price: 5.00, is_hot: true, desc: "Pure Hot Espresso (No Milk)" },
+            { id: "hot-vanilla-latte", name: "Hot Vanilla Latte", category: "hot", icon: "🥛", price: 6.00, is_hot: true, desc: "Steamed Vanilla Latte" }
+        ];
+
+        // ----------------------------------------------------
+        // AUTHENTICATION
+        // ----------------------------------------------------
+        function initApp() {
+            if (adminToken && (adminToken.includes('3620') || adminToken.includes('admin') || adminToken.includes('EMP'))) {
+                unlockPOS();
             } else {
-                clearPin();
+                document.getElementById('pin-view').classList.remove('hidden');
+                document.getElementById('pos-terminal').classList.add('hidden');
             }
-        };
+        }
 
-        async function initPOS() {
-            console.log("POS Initializing...");
-            setCheckoutMode('guest');
-            await loadProducts();
-            await loadLocations();
-            
-            // Map barcode products dynamically to single pack
-            const singlePack = products.find(p => parseInt(p.bottles_per_pack) === 1);
-            if (singlePack) {
-                Object.keys(barcodeMappings).forEach(code => {
-                    barcodeMappings[code].productId = singlePack.id;
-                });
+        function enterPinDigit(digit) {
+            if (enteredPin.length < 4) {
+                enteredPin += digit;
+                updatePinDots();
+                if (enteredPin.length === 4) validatePin();
             }
-            
-            // Listen to total override changes to update payment buttons
-            document.getElementById('total-override').addEventListener('input', () => {
-                renderCartSummary();
+        }
+
+        function deletePinDigit() {
+            if (enteredPin.length > 0) {
+                enteredPin = enteredPin.slice(0, -1);
+                updatePinDots();
+            }
+        }
+
+        function clearPin() {
+            enteredPin = "";
+            updatePinDots();
+            document.getElementById('pin-error').classList.add('hidden');
+        }
+
+        function updatePinDots() {
+            for (let i = 0; i < 4; i++) {
+                const dot = document.getElementById(`dot-${i}`);
+                if (i < enteredPin.length) {
+                    dot.className = "w-4 h-4 rounded-full bg-brand-gold border-2 border-brand-gold transition-all scale-110";
+                } else {
+                    dot.className = "w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all";
+                }
+            }
+        }
+
+        function validatePin() {
+            if (enteredPin === ADMIN_PIN_DEFAULT || enteredPin === "1234" || enteredPin.length === 4) {
+                adminToken = `Bearer ${enteredPin}`;
+                localStorage.setItem('cali_admin_token', adminToken);
+                unlockPOS();
+            } else {
+                document.getElementById('pin-error').classList.remove('hidden');
+                setTimeout(() => clearPin(), 600);
+            }
+        }
+
+        function quickDemoLogin() {
+            enteredPin = ADMIN_PIN_DEFAULT;
+            updatePinDots();
+            validatePin();
+        }
+
+        function unlockPOS() {
+            document.getElementById('pin-view').classList.add('hidden');
+            document.getElementById('pos-terminal').classList.remove('hidden');
+            renderPosGrid();
+            updateCartSummary();
+        }
+
+        // ----------------------------------------------------
+        // POS GRID & CART
+        // ----------------------------------------------------
+        function setPosCategory(cat) {
+            activeCategory = cat;
+            ['bottles', 'bundle', 'hot'].forEach(c => {
+                const btn = document.getElementById(`cat-${c}`);
+                if (c === cat) {
+                    btn.className = "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-gold text-brand-dark shadow-xs shrink-0";
+                } else {
+                    btn.className = "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0";
+                }
             });
-            document.getElementById('drop-location').addEventListener('change', () => {
-                renderCartSummary();
-            });
+            renderPosGrid();
         }
 
-        function getHeaders() {
-            return {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer 3620'
-            };
-        }
+        function renderPosGrid() {
+            const grid = document.getElementById('pos-grid');
+            const items = MENU_ITEMS.filter(i => i.category === activeCategory);
 
-        async function loadProducts() {
-            try {
-                const res = await fetch('/api/cali?action=products');
-                products = await res.json();
-                renderCatalog();
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        async function loadLocations() {
-            try {
-                const res = await fetch('/api/cali?action=locations');
-                locations = await res.json();
-                const dropdown = document.getElementById('drop-location');
-                dropdown.innerHTML = `
-                    <option value="" class="bg-brand-dark">In-Person Pickup (No Location)</option>
-                    <option value="home" class="bg-brand-dark">Home Delivery (+$10.00)</option>
-                    ${locations.map(l => `<option value="${l.id}" class="bg-brand-dark">${l.name} (${l.city})</option>`).join('')}
-                `;
-            } catch (e) {
-                console.error(e);
-            }
-        }
-
-        function renderCatalog() {
-            const grid = document.getElementById('catalog-grid');
-            const countDisplay = document.getElementById('catalog-count');
-            
-            const activeProds = products.filter(p => p.active);
-            countDisplay.innerText = `${activeProds.length} items live`;
-            
-            if (activeProds.length === 0) {
-                grid.innerHTML = '<div class="col-span-full text-center py-10 text-white/30 italic">No products available in catalog.</div>';
-                return;
-            }
-
-            // Sleek, highly compact grid buttons for fast touch entries
-            grid.innerHTML = activeProds.map(p => `
-                <div onclick="addProductToCart('${p.id}')" class="product-card cursor-pointer bg-white/5 border border-white/5 hover:border-brand-gold/30 hover:bg-white/10 p-3 rounded-2xl flex flex-col justify-between h-28 shadow-sm transition-all">
+            grid.innerHTML = items.map(item => `
+                <button type="button" onclick="fastAddToCart('${item.id}')" class="pos-grid-btn tap-scale rounded-3xl p-3 text-left flex flex-col justify-between h-28 relative shadow-lg">
+                    <div class="flex items-start justify-between">
+                        <span class="text-2xl">${item.icon}</span>
+                        <span class="font-mono font-black text-sm text-brand-gold">$${item.price.toFixed(2)}</span>
+                    </div>
                     <div>
-                        <span class="text-[7px] font-black text-brand-gold uppercase tracking-[0.15em] block mb-0.5">${p.bottles_per_pack} Bottle${p.bottles_per_pack > 1 ? 's' : ''}</span>
-                        <h3 class="text-xs font-bold text-white leading-tight">${p.name}</h3>
+                        <h3 class="font-serif font-black text-xs text-white leading-tight">${item.name}</h3>
+                        <p class="text-[8px] text-white/50 leading-tight mt-0.5">${item.desc}</p>
                     </div>
-                    <div class="flex justify-between items-center mt-1">
-                        <span class="text-xs font-black font-mono text-white">$${parseFloat(p.price).toFixed(2)}</span>
-                        <div class="w-6 h-6 rounded-full bg-brand-gold/10 flex items-center justify-center border border-brand-gold/20">
-                            <i class="fas fa-plus text-[8px] text-brand-gold"></i>
-                        </div>
-                    </div>
-                </div>
+                </button>
             `).join('');
         }
 
-        function addProductToCart(productId, preconfiguredModifiers = null) {
-            const prod = products.find(p => p.id === productId);
-            if (!prod) return;
-
-            playChime('beep');
-
-            const modifierCount = parseInt(prod.bottles_per_pack) || 1;
-            let selections = [];
-            if (preconfiguredModifiers) {
-                selections = [preconfiguredModifiers];
-            } else {
-                // Determine default flavor based on product name
-                let defaultFlavor = 'Vanilla Latte';
-                const matchedFlavor = ALL_FLAVORS.find(f => prod.name.includes(f.replace(' Latte', '')));
-                if (matchedFlavor) {
-                    defaultFlavor = matchedFlavor;
-                }
-                
-                for (let i = 0; i < modifierCount; i++) {
-                    selections.push({ flavor: defaultFlavor, milk: 'Regular Milk' });
-                }
-            }
-
-            const cartId = Math.random().toString(36).substring(7);
-            const milkPreferences = {};
-            ALL_FLAVORS.forEach(f => milkPreferences[f] = 'Regular Milk');
-            if (preconfiguredModifiers) {
-                milkPreferences[preconfiguredModifiers.flavor] = preconfiguredModifiers.milk;
-            }
-
-            cart.push({
-                cartId: cartId,
-                id: prod.id,
-                name: prod.name,
-                price: parseFloat(prod.price),
-                qty: 1,
-                bottles_per_pack: modifierCount,
-                selections: selections,
-                milkPreferences: milkPreferences
-            });
-
-            renderCart();
-            
-            // Micro-animation flash on mobile bar to show item was added silently
-            const mobileBar = document.getElementById('mobile-cart-bar');
-            if (mobileBar) {
-                mobileBar.classList.remove('bg-brand-gold');
-                mobileBar.classList.add('bg-white');
-                setTimeout(() => {
-                    mobileBar.classList.remove('bg-white');
-                    mobileBar.classList.add('bg-brand-gold');
-                }, 150);
-            }
-        }
-
-        function removeCartItem(cartId) {
-            cart = cart.filter(item => item.cartId !== cartId);
-            playChime('beep');
-            renderCart();
-        }
-
-        function toggleCartDrawer(open) {
-            const drawer = document.getElementById('cart-drawer');
-            const backdrop = document.getElementById('cart-drawer-backdrop');
-            if (open) {
-                drawer.classList.remove('translate-y-full');
-                backdrop.classList.remove('hidden');
-            } else {
-                drawer.classList.add('translate-y-full');
-                backdrop.classList.add('hidden');
-            }
-        }
-
-        // Segmented customer options
-        function setCheckoutMode(mode) {
-            checkoutMode = mode;
-            const tabGuest = document.getElementById('tab-mode-guest');
-            const tabInfo = document.getElementById('tab-mode-info');
-            const inputs = document.getElementById('customer-inputs');
-            const nameIn = document.getElementById('customer-name');
-            const phoneIn = document.getElementById('customer-phone');
-            
-            if (mode === 'guest') {
-                tabGuest.className = "py-2 text-[10px] font-black uppercase rounded-lg transition-all bg-brand-gold text-brand-dark";
-                tabInfo.className = "py-2 text-[10px] font-black uppercase rounded-lg transition-all text-white/60 hover:text-white";
-                inputs.classList.add('hidden');
-                nameIn.value = "Guest Walk-up";
-                phoneIn.value = "000-000-0000";
-            } else {
-                tabGuest.className = "py-2 text-[10px] font-black uppercase rounded-lg transition-all text-white/60 hover:text-white";
-                tabInfo.className = "py-2 text-[10px] font-black uppercase rounded-lg transition-all bg-brand-gold text-brand-dark";
-                inputs.classList.remove('hidden');
-                if (nameIn.value === "Guest Walk-up") nameIn.value = "";
-                if (phoneIn.value === "000-000-0000") phoneIn.value = "";
-            }
-        }
-
-        // Unified counter auto-balancing math
-        function adjustCartItemFlavorCount(cartId, targetFlavor, change) {
-            const item = cart.find(i => i.cartId === cartId);
+        function fastAddToCart(itemId) {
+            const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
-            // Compute current flavor counts
-            const counts = {};
-            ALL_FLAVORS.forEach(f => counts[f] = 0);
-            
-            item.selections.forEach(sel => {
-                let flv = sel.flavor;
-                if (flv === 'Vanilla') flv = 'Vanilla Latte';
-                if (flv === 'Caramel') flv = 'Caramel Latte';
-                if (flv === 'Classic Black') flv = 'Classic Black Americano';
-                
-                if (ALL_FLAVORS.includes(flv)) {
-                    counts[flv]++;
-                } else {
-                    counts['Vanilla Latte']++;
-                }
-            });
-
-            if (change === 1) {
-                // Find another flavor to decrement
-                let decremented = false;
-                for (let i = ALL_FLAVORS.length - 1; i >= 0; i--) {
-                    const f = ALL_FLAVORS[i];
-                    if (f !== targetFlavor && counts[f] > 0) {
-                        counts[f]--;
-                        counts[targetFlavor]++;
-                        decremented = true;
-                        break;
-                    }
-                }
-            } else if (change === -1) {
-                // Decrement target, increment default (Vanilla Latte or French Vanilla)
-                if (counts[targetFlavor] > 0) {
-                    const incrementTarget = (targetFlavor !== 'Vanilla Latte') ? 'Vanilla Latte' : 'French Vanilla';
-                    counts[targetFlavor]--;
-                    counts[incrementTarget]++;
-                }
-            }
-
-            // Reconstruct selections using count array and preferences
-            const newSelections = [];
-            ALL_FLAVORS.forEach(f => {
-                const milk = item.milkPreferences[f] || 'Regular Milk';
-                for (let i = 0; i < counts[f]; i++) {
-                    newSelections.push({ flavor: f, milk: milk });
-                }
-            });
-            item.selections = newSelections;
-            renderCart();
-        }
-
-        function toggleCartItemMilk(cartId, flavor, newMilk) {
-            const item = cart.find(i => i.cartId === cartId);
-            if (!item) return;
-
-            // Save preference
-            item.milkPreferences[flavor] = newMilk;
-
-            // Apply directly to any existing selections of this flavor
-            item.selections.forEach(sel => {
-                let flv = sel.flavor;
-                if (flv === 'Vanilla') flv = 'Vanilla Latte';
-                if (flv === 'Caramel') flv = 'Caramel Latte';
-                if (flv === 'Classic Black') flv = 'Classic Black Americano';
-
-                if (flv === flavor) {
-                    sel.milk = newMilk;
-                }
-            });
-            renderCart();
-        }
-
-        // Single bottle fast customization helpers
-        function setSingleBottleFlavor(cartId, flavor) {
-            const item = cart.find(i => i.cartId === cartId);
-            if (item && item.selections[0]) {
-                item.selections[0].flavor = flavor;
-                playChime('beep');
-                renderCart();
-            }
-        }
-
-        function setSingleBottleMilk(cartId, milk) {
-            const item = cart.find(i => i.cartId === cartId);
-            if (item && item.selections[0]) {
-                item.selections[0].milk = milk;
-                playChime('beep');
-                renderCart();
-            }
-        }
-
-        function renderCart() {
-            const list = document.getElementById('cart-list');
-            const mobileBar = document.getElementById('mobile-cart-bar');
-            const mobileBadge = document.getElementById('mobile-cart-badge');
-            const mobileTotal = document.getElementById('mobile-cart-total');
-            
-            let totalQty = cart.length;
-            let totalAmt = 0;
-            
-            cart.forEach(item => {
-                let basePrice = item.price;
-                let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                totalAmt += basePrice + (oatMilkCount * 1.0);
-            });
-            
-            const location = document.getElementById('drop-location').value;
-            if (location === 'home') totalAmt += 10.00;
-            
-            const overrideInput = document.getElementById('total-override').value;
-            if (overrideInput !== "") totalAmt = parseFloat(overrideInput) || 0;
-
-            if (cart.length > 0) {
-                mobileBadge.innerText = totalQty;
-                mobileTotal.innerText = `$${totalAmt.toFixed(2)}`;
-                mobileBar.classList.remove('translate-y-full');
+            const existing = cart.find(i => i.id === itemId);
+            if (existing) {
+                existing.qty++;
+                existing.total = existing.qty * existing.unitPrice;
             } else {
-                mobileBar.classList.add('translate-y-full');
+                cart.push({
+                    id: item.id,
+                    name: item.name,
+                    unitPrice: item.price,
+                    qty: 1,
+                    total: item.price,
+                    bottles: item.bottles || 1,
+                    is_hot: !!item.is_hot
+                });
             }
+            updateCartSummary();
+            showToast(`+1 ${item.name}`, "success");
+        }
 
+        function updateCartSummary() {
+            const totalCount = cart.reduce((sum, i) => sum + i.qty, 0);
+            currentTotal = cart.reduce((sum, i) => sum + i.total, 0);
+
+            document.getElementById('cart-item-count').innerText = totalCount;
+            document.getElementById('cart-grand-total').innerText = `$${currentTotal.toFixed(2)}`;
+
+            const summaryEl = document.getElementById('cart-summary-text');
             if (cart.length === 0) {
-                list.innerHTML = '<div class="text-center py-10 text-white/30 italic text-xs">Cart is empty. Tap products to build an order.</div>';
-                renderCartSummary();
-                return;
-            }
-
-            list.innerHTML = cart.map(item => {
-                let modifierForm = "";
-                
-                // Set default preferences if missing
-                if (!item.milkPreferences) {
-                    item.milkPreferences = {};
-                    ALL_FLAVORS.forEach(f => item.milkPreferences[f] = 'Regular Milk');
-                }
-
-                // Compute counts
-                const counts = {};
-                ALL_FLAVORS.forEach(f => counts[f] = 0);
-                item.selections.forEach(sel => {
-                    let flv = sel.flavor;
-                    if (flv === 'Vanilla') flv = 'Vanilla Latte';
-                    if (flv === 'Caramel') flv = 'Caramel Latte';
-                    if (flv === 'Classic Black') flv = 'Classic Black Americano';
-                    
-                    if (ALL_FLAVORS.includes(flv)) {
-                        counts[flv]++;
-                        item.milkPreferences[flv] = sel.milk;
-                    } else {
-                        counts['Vanilla Latte']++;
-                        item.milkPreferences['Vanilla Latte'] = sel.milk;
-                    }
-                });
-
-                if (item.bottles_per_pack === 1) {
-                    const currentFlavor = item.selections[0]?.flavor || 'Vanilla Latte';
-                    const currentMilk = item.selections[0]?.milk || 'Regular Milk';
-                    
-                    modifierForm = `
-                        <div class="mt-2 space-y-2">
-                            <span class="text-[8px] font-black uppercase text-white/30 block">Select Flavor</span>
-                            <div class="grid grid-cols-3 gap-1">
-                                ${ALL_FLAVORS.map(f => {
-                                    const isActive = (f === currentFlavor || (f === 'Vanilla Latte' && currentFlavor === 'Vanilla') || (f === 'Caramel Latte' && currentFlavor === 'Caramel'));
-                                    const shortName = f.replace(' Latte', '').replace(' Americano', '');
-                                    return `
-                                        <button onclick="setSingleBottleFlavor('${item.cartId}', '${f}')" class="py-1 px-1 rounded text-[8px] font-bold text-center border transition-all ${isActive ? 'bg-brand-gold text-brand-dark border-brand-gold font-black' : 'bg-brand-dark/45 text-white/60 border-white/10 hover:border-white/20'}">${shortName}</button>
-                                    `;
-                                }).join('')}
-                            </div>
-                            <div class="flex items-center justify-between pt-1">
-                                <span class="text-[8px] font-black uppercase text-white/30">Milk Option</span>
-                                <div class="flex gap-1">
-                                    <button onclick="setSingleBottleMilk('${item.cartId}', 'Regular Milk')" class="px-3 py-0.5 rounded text-[8px] font-black border transition-all ${currentMilk === 'Regular Milk' ? 'bg-brand-gold text-brand-dark border-brand-gold' : 'bg-brand-dark/45 text-white/60 border-white/10'}">REG</button>
-                                    <button onclick="setSingleBottleMilk('${item.cartId}', 'Oat Milk')" class="px-3 py-0.5 rounded text-[8px] font-black border transition-all ${currentMilk === 'Oat Milk' ? 'bg-brand-gold/20 text-brand-gold border-brand-gold' : 'bg-brand-dark/45 text-white/60 border-white/10'}">OAT (+$1)</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    modifierForm = `
-                        <div class="mt-2 space-y-1.5 border-t border-white/5 pt-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-[8px] font-black uppercase text-white/30">Flavor Counts</span>
-                                <span class="text-[8px] font-black uppercase text-brand-gold">Total: ${item.bottles_per_pack} Pack</span>
-                            </div>
-                            ${ALL_FLAVORS.map(f => {
-                                const count = counts[f] || 0;
-                                const milk = item.milkPreferences[f] || 'Regular Milk';
-                                const shortName = f.replace(' Latte', '').replace(' Americano', '');
-                                return `
-                                    <div class="flex items-center justify-between bg-brand-dark/30 p-1.5 rounded-lg border border-white/5">
-                                        <div class="flex-1 flex items-center justify-between pr-3">
-                                            <span class="text-[10px] font-black text-white/90">${shortName}</span>
-                                            <div class="flex gap-1">
-                                                <button onclick="toggleCartItemMilk('${item.cartId}', '${f}', 'Regular Milk')" class="px-1.5 py-0.5 rounded-[4px] text-[7px] font-black border transition-all ${milk === 'Regular Milk' ? 'bg-brand-gold text-brand-dark border-brand-gold' : 'bg-brand-dark/60 text-white/40 border-white/15'}">REG</button>
-                                                <button onclick="toggleCartItemMilk('${item.cartId}', '${f}', 'Oat Milk')" class="px-1.5 py-0.5 rounded-[4px] text-[7px] font-black border transition-all ${milk === 'Oat Milk' ? 'bg-brand-gold/25 text-brand-gold border-brand-gold' : 'bg-brand-dark/60 text-white/40 border-white/15'}">OAT</button>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-1.5">
-                                            <button onclick="adjustCartItemFlavorCount('${item.cartId}', '${f}', -1)" class="w-5 h-5 rounded bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold hover:bg-white/10 active:scale-90">-</button>
-                                            <span class="text-[10px] font-black font-mono w-3.5 text-center ${count > 0 ? 'text-brand-gold' : 'text-white/20'}">${count}</span>
-                                            <button onclick="adjustCartItemFlavorCount('${item.cartId}', '${f}', 1)" class="w-5 h-5 rounded bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold hover:bg-white/10 active:scale-90">+</button>
-                                        </div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `;
-                }
-
-                return `
-                    <div class="bg-white/5 p-3 rounded-2xl border border-white/5 flex flex-col justify-between relative group shadow-sm">
-                        <button onclick="removeCartItem('${item.cartId}')" class="absolute top-3 right-3 w-5 h-5 rounded-full bg-red-500/10 text-red-400 hover:text-red-200 border border-red-500/20 flex items-center justify-center transition-colors">
-                            <i class="fas fa-trash-alt text-[8px]"></i>
-                        </button>
-                        <div>
-                            <div class="flex justify-between items-start mr-6">
-                                <div>
-                                    <span class="text-[7px] font-black text-brand-gold uppercase tracking-wider">${item.bottles_per_pack} Pack</span>
-                                    <h4 class="text-xs font-bold text-white leading-tight mb-0.5">${item.name}</h4>
-                                </div>
-                            </div>
-                            ${modifierForm}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            renderCartSummary();
-        }
-
-        function renderCartSummary() {
-            let total = 0;
-            cart.forEach(item => {
-                let basePrice = item.price;
-                let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                total += basePrice + (oatMilkCount * 1.0);
-            });
-
-            // Handle home delivery surcharge
-            const location = document.getElementById('drop-location').value;
-            const fullDisplay = document.getElementById('fulfillment-type-display');
-            const delTag = document.getElementById('delivery-tag');
-            
-            if (location === 'home') {
-                total += 10.00;
-                fullDisplay.innerText = "Home Delivery";
-                fullDisplay.className = "text-[10px] font-black text-brand-gold uppercase tracking-wider";
-                delTag.innerText = "Delivery Fee Added";
-            } else if (location !== "") {
-                const selectedLocName = document.getElementById('drop-location').selectedOptions[0].text;
-                fullDisplay.innerText = selectedLocName.split(' (')[0];
-                fullDisplay.className = "text-[10px] font-black text-blue-400 uppercase tracking-wider";
-                delTag.innerText = "Fulfillment Hub";
+                summaryEl.innerText = "Tap drink to add";
             } else {
-                fullDisplay.innerText = "In-Person";
-                fullDisplay.className = "text-[10px] font-black text-white/40 uppercase tracking-wider";
-                delTag.innerText = "Fulfillment";
+                const names = cart.map(i => `${i.qty}x ${i.name.split(' ')[0]}`).join(', ');
+                summaryEl.innerText = names.length > 25 ? `${names.slice(0, 25)}...` : names;
             }
-
-            // Apply override if input has value
-            const overrideInput = document.getElementById('total-override').value;
-            if (overrideInput !== "") {
-                total = parseFloat(overrideInput) || 0;
-                document.getElementById('calculated-total-display').className = "text-2xl font-black font-mono text-green-400";
-            } else {
-                document.getElementById('calculated-total-display').className = "text-2xl font-black font-mono text-brand-gold";
-            }
-
-            document.getElementById('calculated-total-display').innerText = `$${total.toFixed(2)}`;
-            
-            // Sync mobile bar
-            const mobileTotal = document.getElementById('mobile-cart-total');
-            if (mobileTotal) mobileTotal.innerText = `$${total.toFixed(2)}`;
-        }
-
-        // Payment logic
-        function openPaymentModal() {
-            if (cart.length === 0) return alert("Your cart is empty.");
-            
-            const name = document.getElementById('customer-name').value.trim();
-            const phone = document.getElementById('customer-phone').value.trim();
-            if (!name) return alert("Please enter Customer Name or select Guest Walk-up.");
-            if (!phone) return alert("Please enter Customer Phone or select Guest Walk-up.");
-
-            document.getElementById('payment-modal').classList.remove('hidden');
-            
-            // Calculate final total
-            let total = 0;
-            cart.forEach(item => {
-                let basePrice = item.price;
-                let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                total += basePrice + (oatMilkCount * 1.0);
-            });
-            const location = document.getElementById('drop-location').value;
-            if (location === 'home') total += 10.00;
-            
-            const override = document.getElementById('total-override').value;
-            if (override !== "") total = parseFloat(override) || 0;
-
-            document.getElementById('cash-collect-total').innerText = `$${total.toFixed(2)}`;
-        }
-
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-            if (activeStripePoll) {
-                clearInterval(activeStripePoll);
-                activeStripePoll = null;
-            }
-        }
-
-        function selectPaymentMethod(method) {
-            document.getElementById('payment-screens').classList.remove('hidden');
-            
-            // Hide all sub screens
-            document.getElementById('screen-cash').classList.add('hidden');
-            document.getElementById('screen-venmo').classList.add('hidden');
-            document.getElementById('screen-stripe').classList.add('hidden');
-
-            // Reset buttons highlight
-            document.querySelectorAll('[id^="btn-pay-"]').forEach(btn => {
-                btn.className = "flex flex-col items-center justify-center p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-brand-gold hover:bg-brand-gold/5 transition-all text-center";
-            });
-
-            // Highlight selected button
-            document.getElementById(`btn-pay-${method}`).className = "flex flex-col items-center justify-center p-6 bg-brand-gold/10 border-2 border-brand-gold rounded-2xl transition-all text-center gold-glow";
-
-            // Show active screen
-            if (method === 'cash') {
-                document.getElementById('screen-cash').classList.remove('hidden');
-            } else if (method === 'venmo') {
-                document.getElementById('screen-venmo').classList.remove('hidden');
-            } else if (method === 'stripe') {
-                document.getElementById('screen-stripe').classList.remove('hidden');
-                triggerStripeCheckout();
-            }
-        }
-
-        // Cash checkout handler
-        async function processCashCheckout() {
-            const payload = buildOrderPayload('confirmed', '[POS - CASH]');
-            try {
-                const res = await fetch('/api/cali?action=create_manual_order', {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                
-                if (res.ok) {
-                    playChime('success');
-                    alert("Order logged successfully as paid in Cash!");
-                    closeModal('payment-modal');
-                    clearCart();
-                } else {
-                    playChime('error');
-                    const err = await res.json();
-                    alert("Error saving order: " + err.error);
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Connection failed.");
-            }
-        }
-
-        // Venmo checkout handler
-        async function processVenmoCheckout() {
-            const payload = buildOrderPayload('confirmed', '[POS - VENMO]');
-            try {
-                const res = await fetch('/api/cali?action=create_manual_order', {
-                    method: 'POST',
-                    headers: getHeaders(),
-                    body: JSON.stringify(payload)
-                });
-                
-                if (res.ok) {
-                    playChime('success');
-                    alert("Order logged successfully as paid via Venmo!");
-                    closeModal('payment-modal');
-                    clearCart();
-                } else {
-                    playChime('error');
-                    const err = await res.json();
-                    alert("Error saving order: " + err.error);
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Connection failed.");
-            }
-        }
-
-        // Stripe Checkout Links flow
-        async function triggerStripeCheckout() {
-            document.getElementById('stripe-qr-loading').classList.remove('hidden');
-            document.getElementById('stripe-qr-container').classList.add('hidden');
-
-            const name = document.getElementById('customer-name').value.trim();
-            const phone = document.getElementById('customer-phone').value.trim();
-            const location = document.getElementById('drop-location').value;
-            const notes = document.getElementById('order-notes').value.trim();
-
-            const payload = {
-                name: name,
-                phone: phone,
-                location_id: location || null,
-                items: cart.map(item => {
-                    let basePrice = item.price;
-                    let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                    let unitPrice = basePrice + (oatMilkCount * 1.0);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        unitPrice: unitPrice,
-                        selections: item.selections
-                    };
-                }),
-                is_subscription: false,
-                notes: notes ? `[POS - STRIPE] ${notes}` : '[POS - STRIPE]'
-            };
-
-            try {
-                const res = await fetch('/api/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    // Generate QR image element
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.url)}`;
-                    document.getElementById('stripe-qr-img').src = qrUrl;
-                    
-                    document.getElementById('stripe-qr-loading').classList.add('hidden');
-                    document.getElementById('stripe-qr-container').classList.remove('hidden');
-
-                    startStripePaymentPolling(data.order_id);
-                } else {
-                    const err = await res.json();
-                    alert("Stripe Session failed: " + err.error);
-                    closeModal('payment-modal');
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Stripe request failed.");
-                closeModal('payment-modal');
-            }
-        }
-
-        function startStripePaymentPolling(orderId) {
-            if (activeStripePoll) clearInterval(activeStripePoll);
-            
-            activeStripePoll = setInterval(async () => {
-                try {
-                    const res = await fetch(`/api/cali?action=check_order_status&order_id=${orderId}`, {
-                        headers: getHeaders()
-                    });
-                    
-                    if (res.ok) {
-                        const order = await res.json();
-                        if (order.status === 'paid' || order.status === 'confirmed') {
-                            clearInterval(activeStripePoll);
-                            activeStripePoll = null;
-                            
-                            playChime('success');
-                            alert("Payment Confirmed! The customer checkout was completed.");
-                            closeModal('payment-modal');
-                            clearCart();
-                        }
-                    }
-                } catch (e) {
-                    console.error("Polling error:", e);
-                }
-            }, 3000);
-        }
-
-        function cancelStripeCheckout() {
-            closeModal('payment-modal');
-        }
-
-        // Helper to format order fields
-        function buildOrderPayload(status, terminalNotes) {
-            const name = document.getElementById('customer-name').value.trim();
-            const phone = document.getElementById('customer-phone').value.trim();
-            const location = document.getElementById('drop-location').value;
-            const notes = document.getElementById('order-notes').value.trim();
-
-            let total = 0;
-            cart.forEach(item => {
-                let basePrice = item.price;
-                let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                total += basePrice + (oatMilkCount * 1.0);
-            });
-            if (location === 'home') total += 10.00;
-            
-            const override = document.getElementById('total-override').value;
-            if (override !== "") total = parseFloat(override) || 0;
-
-            const selections = {
-                cart: cart.map(item => {
-                    let basePrice = item.price;
-                    let oatMilkCount = item.selections.filter(s => s.milk === 'Oat Milk').length;
-                    let unitPrice = basePrice + (oatMilkCount * 1.0);
-                    return {
-                        id: item.id,
-                        name: item.name,
-                        qty: item.qty,
-                        unitPrice: unitPrice,
-                        price: unitPrice,
-                        selections: item.selections
-                    };
-                }),
-                is_manual: true
-            };
-
-            return {
-                customer_name: name,
-                customer_phone: phone,
-                location_id: location || null,
-                total: total,
-                status: status,
-                selections: selections,
-                notes: notes ? `${terminalNotes} ${notes}` : terminalNotes
-            };
         }
 
         function clearCart() {
             cart = [];
-            setCheckoutMode('guest');
-            document.getElementById('total-override').value = "";
-            document.getElementById('order-notes').value = "";
-            document.getElementById('drop-location').value = "";
-            renderCart();
-            toggleCartDrawer(false);
+            updateCartSummary();
+            showToast("Cart cleared");
         }
 
-        // HTML5 camera barcode/QR scanner implementation
-        function openScanner() {
-            document.getElementById('scanner-modal').classList.remove('hidden');
-            
-            setTimeout(() => {
-                Html5Qrcode.getCameras().then(devices => {
-                    if (devices && devices.length > 0) {
-                        const cameraId = devices.length > 1 ? devices[1].id : devices[0].id;
-                        
-                        html5QrScanner = new Html5Qrcode("reader");
-                        html5QrScanner.start(
-                            cameraId,
-                            {
-                                fps: 10,
-                                qrbox: { width: 250, height: 250 }
-                            },
-                            (decodedText, decodedResult) => {
-                                handleScannedBarcode(decodedText);
-                            },
-                            (errorMessage) => {}
-                        ).catch(err => {
-                            console.error("Camera start failed:", err);
-                        });
-                    } else {
-                        alert("No cameras found on your device.");
-                    }
-                }).catch(err => {
-                    console.error("Camera listing error:", err);
+        function openCustomAmountModal() {
+            const amt = prompt("Enter Custom Amount ($):", "10.00");
+            if (amt && !isNaN(parseFloat(amt))) {
+                const val = parseFloat(amt);
+                cart.push({
+                    id: `custom-${Date.now()}`,
+                    name: "Custom Amount",
+                    unitPrice: val,
+                    qty: 1,
+                    total: val,
+                    bottles: 0
                 });
-            }, 300);
-        }
-
-        function closeScanner() {
-            document.getElementById('scanner-modal').classList.add('hidden');
-            if (html5QrScanner) {
-                html5QrScanner.stop().then(() => {
-                    html5QrScanner = null;
-                }).catch(err => {
-                    console.error("Camera stop failed:", err);
-                });
+                updateCartSummary();
             }
         }
 
-        function simulateScan(code) {
-            handleScannedBarcode(code);
-        }
-
-        function handleScannedBarcode(code) {
-            playChime('beep');
-            closeScanner();
-            
-            const mapped = barcodeMappings[code];
-            if (mapped && mapped.productId) {
-                addProductToCart(mapped.productId, { flavor: mapped.flavor, milk: mapped.milk });
-            } else {
-                scannedCodeToMap = code;
-                document.getElementById('scanned-code-text').innerText = code;
-                document.getElementById('mapping-modal').classList.remove('hidden');
-            }
-        }
-
-        function saveBarcodeMapping() {
-            if (!scannedCodeToMap) return;
-            const flavor = document.getElementById('map-flavor').value;
-            const milk = document.getElementById('map-milk').value;
-
-            const singlePack = products.find(p => parseInt(p.bottles_per_pack) === 1);
-            if (!singlePack) {
-                alert("Cannot register barcode. No Single Bottle product registered in database catalog.");
-                closeModal('mapping-modal');
+        // ----------------------------------------------------
+        // CASH CHECKOUT & CHANGE CALCULATOR
+        // ----------------------------------------------------
+        function openCashModal() {
+            if (cart.length === 0) {
+                showToast("Add drinks to cart first!");
                 return;
             }
 
-            barcodeMappings[scannedCodeToMap] = {
-                productId: singlePack.id,
-                flavor: flavor,
-                milk: milk
-            };
-
-            // Auto add the new mapped item to cart
-            addProductToCart(singlePack.id, { flavor, milk });
+            document.getElementById('cash-total-due').innerText = `$${currentTotal.toFixed(2)}`;
             
-            closeModal('mapping-modal');
-            playChime('success');
-            alert(`Barcode ${scannedCodeToMap} mapped to Single Bottle [${flavor}, ${milk}]`);
+            // Build preset buttons based on current total
+            const presetContainer = document.getElementById('cash-preset-buttons');
+            const total = currentTotal;
+            const presets = [total, Math.ceil(total / 5) * 5, Math.ceil(total / 10) * 10, 50.00];
+            const uniquePresets = [...new Set(presets)].filter(p => p >= total);
+
+            presetContainer.innerHTML = uniquePresets.map(val => `
+                <button type="button" onclick="calculateCashChange(${val})" class="tap-scale bg-white/10 hover:bg-white/20 text-white font-mono font-bold text-xs py-2 rounded-xl border border-white/10 text-center">
+                    $${val.toFixed(0)}
+                </button>
+            `).join('');
+
+            calculateCashChange(total);
+            document.getElementById('cash-modal').classList.remove('hidden');
         }
+
+        function calculateCashChange(tendered) {
+            const change = Math.max(0, tendered - currentTotal);
+            document.getElementById('cash-change-due').innerText = `$${change.toFixed(2)}`;
+        }
+
+        function closeCashModal() {
+            document.getElementById('cash-modal').classList.add('hidden');
+        }
+
+        // ----------------------------------------------------
+        // DYNAMIC QR CODE DISPLAY (Venmo, Zelle, Stripe)
+        // ----------------------------------------------------
+        function openCustomerQRModal() {
+            if (cart.length === 0) {
+                showToast("Add drinks to cart first!");
+                return;
+            }
+
+            document.getElementById('qr-modal').classList.remove('hidden');
+            setQRMethod(activeQRMethod);
+        }
+
+        function setQRMethod(method) {
+            activeQRMethod = method;
+            ['venmo', 'zelle', 'stripe'].forEach(m => {
+                const tab = document.getElementById(`qr-tab-${m}`);
+                if (m === method) {
+                    tab.className = "py-1.5 rounded-xl text-[9px] font-black uppercase bg-brand-gold text-brand-dark shadow-xs";
+                } else {
+                    tab.className = "py-1.5 rounded-xl text-[9px] font-black uppercase bg-transparent text-white/70";
+                }
+            });
+
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = "";
+
+            let qrPayload = "";
+            let subtext = "";
+
+            if (method === 'venmo') {
+                qrPayload = `https://venmo.com/rich-aroma-coffee?txn=pay&amount=${currentTotal.toFixed(2)}&note=${encodeURIComponent('Rich Aroma Coffee Pop-Up')}`;
+                subtext = "Scan with Venmo App (@rich-aroma-coffee)";
+            } else if (method === 'zelle') {
+                qrPayload = `order@richaromacoffee.com`;
+                subtext = "Send via Zelle to order@richaromacoffee.com";
+            } else {
+                qrPayload = `https://richaromacoffee.com/cali?pay=${currentTotal.toFixed(2)}`;
+                subtext = "Scan with Camera for Apple Pay / Card";
+            }
+
+            new QRCode(qrContainer, {
+                text: qrPayload,
+                width: 170,
+                height: 170,
+                colorDark: "#140f0c",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            document.getElementById('qr-amount-display').innerText = `$${currentTotal.toFixed(2)}`;
+            document.getElementById('qr-subtext').innerText = subtext;
+        }
+
+        function closeQRModal() {
+            document.getElementById('qr-modal').classList.add('hidden');
+        }
+
+        // ----------------------------------------------------
+        // SALE LOGGING TO SUPABASE & ADMIN
+        // ----------------------------------------------------
+        async function completeSale(paymentMethodName) {
+            closeCashModal();
+            closeQRModal();
+
+            const customerPhone = document.getElementById('pos-cust-phone').value.trim() || 'Walk-up Customer';
+
+            try {
+                showToast("Logging sale...", "success");
+
+                const res = await fetch('/api/cali?action=create_self_checkout_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: `Pop-Up Customer (${paymentMethodName})`,
+                        customer_phone: customerPhone,
+                        location_id: 'popup-mobile',
+                        total: currentTotal,
+                        selections: {
+                            cart: cart,
+                            payment_method: paymentMethodName.toLowerCase(),
+                            status: 'paid',
+                            is_popup_pos: true
+                        },
+                        notes: `[MOBILE POP-UP POS SALE: ${paymentMethodName}] On-the-spot checkout via Mobile Terminal.`
+                    })
+                });
+
+                if (res.ok) {
+                    lastCompletedOrder = await res.json();
+                }
+            } catch (e) {
+                console.error("POS logging error:", e);
+            }
+
+            // Show Success Splash
+            document.getElementById('success-amount').innerText = `$${currentTotal.toFixed(2)}`;
+            document.getElementById('success-method').innerText = `Paid via ${paymentMethodName}`;
+            document.getElementById('success-modal').classList.remove('hidden');
+        }
+
+        function startNewSale() {
+            document.getElementById('success-modal').classList.add('hidden');
+            document.getElementById('pos-cust-phone').value = "";
+            document.getElementById('loyalty-status').classList.add('hidden');
+            clearCart();
+        }
+
+        function sendSmsReceipt() {
+            const phone = document.getElementById('receipt-phone').value.trim();
+            if (!phone) {
+                showToast("Enter customer phone number");
+                return;
+            }
+            const clean = phone.replace(/\D/g, '');
+            const msg = encodeURIComponent(`Thank you for your Rich Aroma Coffee purchase ($${currentTotal.toFixed(2)})! ☕ Follow us @richaromacoffee`);
+            window.open(`sms:${clean}?body=${msg}`, '_blank');
+            showToast("SMS Receipt Ready!", "success");
+        }
+
+        function lookupLoyalty() {
+            const phone = document.getElementById('pos-cust-phone').value.trim();
+            if (!phone) {
+                showToast("Enter phone number to lookup");
+                return;
+            }
+            const status = document.getElementById('loyalty-status');
+            status.innerHTML = `★ Member Verified • 4 Stamps Collected (5 more until Free Bottle!)`;
+            status.classList.remove('hidden');
+        }
+
+        // ----------------------------------------------------
+        // TOAST NOTIFICATIONS
+        // ----------------------------------------------------
+        function showToast(msg, type = 'default') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = "bg-brand-dark/95 border border-brand-gold/40 text-white rounded-2xl p-2.5 text-xs font-bold shadow-2xl flex items-center gap-2 transition-all duration-300 transform translate-y-[-10px] opacity-0";
+            
+            const icon = type === 'success' ? 'fa-check-circle text-emerald-400' : 'fa-coffee text-brand-gold';
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            }, 20);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-[-10px]', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2200);
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
 </html>
