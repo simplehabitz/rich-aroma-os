@@ -240,11 +240,18 @@
                 </p>
             </div>
 
+            <!-- Smart Mix & Match Bundle Offer Banner -->
+            <div id="bundle-upsell-banner" class="hidden p-3 rounded-2xl border text-[10px] font-bold text-center transition-all animate-fade-in"></div>
+
             <!-- Pricing Summary -->
             <div class="bg-brand-cream/80 rounded-2xl p-4 border border-brand-brown/15 space-y-2">
                 <div class="flex justify-between items-center text-xs">
                     <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Total Bottles</span>
                     <span id="cart-bottles-count" class="font-bold text-brand-dark">0</span>
+                </div>
+                <div id="summary-discount-row" class="hidden flex justify-between items-center text-xs">
+                    <span class="text-emerald-700 font-bold uppercase tracking-wider text-[9px]" id="summary-discount-label">5-Pack Bundle Discount</span>
+                    <span id="summary-discount-amount" class="font-mono font-bold text-emerald-700">-$0.00</span>
                 </div>
                 <div id="summary-bag-row" class="hidden flex justify-between items-center text-xs">
                     <span class="text-gray-500 font-bold uppercase tracking-wider text-[9px]">Insulated Bag & Ice Packs Kit</span>
@@ -1410,6 +1417,53 @@
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
             const isDelivery = orderMode === 'preorder' || hasCatering;
 
+            // Calculate Mix & Match 5-Pack Discounts for individual bottle orders
+            // (Every set of 5 individual bottles automatically saves $5.00)
+            const regularIndividualBottles = cart
+                .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
+                .reduce((sum, i) => sum + (i.bottles || 1), 0);
+            
+            const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
+            const autoBundleDiscount = autoBundlePacks * 5.00;
+            const remainderBottles = regularIndividualBottles % 5;
+
+            // Upsell banner logic
+            const bannerEl = document.getElementById('bundle-upsell-banner');
+            if (bannerEl) {
+                if (hasCatering) {
+                    bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (30+ Bottles)`;
+                    bannerEl.classList.remove('hidden');
+                } else if (autoBundlePacks > 0 && remainderBottles === 0) {
+                    bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🎉 <strong>${autoBundlePacks}x 5-Pack Bundle Discount Applied!</strong> (-$${autoBundleDiscount.toFixed(2)} savings)`;
+                    bannerEl.classList.remove('hidden');
+                } else if (autoBundlePacks > 0 && remainderBottles > 0) {
+                    const needed = 5 - remainderBottles;
+                    bannerEl.className = "p-3 rounded-2xl border bg-amber-50 text-amber-900 border-amber-200 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🎉 <strong>${autoBundlePacks}x 5-Pack Discount Applied (-$${autoBundleDiscount.toFixed(2)})</strong> • 🎁 Add ${needed} more bottle${needed > 1 ? 's' : ''} to save $5.00 on another 5-pack!`;
+                    bannerEl.classList.remove('hidden');
+                } else if (regularIndividualBottles > 0 && regularIndividualBottles < 5) {
+                    const needed = 5 - regularIndividualBottles;
+                    bannerEl.className = "p-3 rounded-2xl border bg-amber-50 text-amber-900 border-amber-200 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🎁 <strong>Bundle Savings:</strong> Add ${needed} more bottle${needed > 1 ? 's' : ''} to unlock the 5-Pack Bundle rate (Save $5.00)!`;
+                    bannerEl.classList.remove('hidden');
+                } else {
+                    bannerEl.classList.add('hidden');
+                }
+            }
+
+            const discountRow = document.getElementById('summary-discount-row');
+            if (discountRow) {
+                if (autoBundleDiscount > 0) {
+                    discountRow.classList.remove('hidden');
+                    document.getElementById('summary-discount-label').innerText = `${autoBundlePacks}x 5-Pack Bundle Discount`;
+                    document.getElementById('summary-discount-amount').innerText = `-$${autoBundleDiscount.toFixed(2)}`;
+                } else {
+                    discountRow.classList.add('hidden');
+                }
+            }
+
             const freshnessBox = document.getElementById('catering-freshness-box');
             const bagRow = document.getElementById('summary-bag-row');
             const deliveryRow = document.getElementById('summary-delivery-row');
@@ -1436,7 +1490,7 @@
                 addrContainer.classList.add('hidden');
             }
 
-            const grandTotal = totalDrinksAmount + coolerBagFee + deliveryFee;
+            const grandTotal = Math.max(0, totalDrinksAmount - autoBundleDiscount + coolerBagFee + deliveryFee);
 
             document.getElementById('sticky-cart-qty').innerText = totalBottles;
             document.getElementById('sticky-cart-total').innerText = `$${grandTotal.toFixed(2)}`;
@@ -1570,14 +1624,29 @@
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
             const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
 
+            const regularIndividualBottles = cart
+                .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
+                .reduce((sum, i) => sum + (i.bottles || 1), 0);
+            const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
+            const autoBundleDiscount = autoBundlePacks * 5.00;
+
             const notesTag = hasCatering 
                 ? `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`
                 : (isDelivery ? `[PRE-ORDER DROP FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}` : '[FRIDGE-PICKUP]');
 
-            const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront.`;
+            const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`;
 
-            // Prepare items array including packaging & delivery line items for Stripe
+            // Prepare items array including packaging, bundle discount & delivery line items for Stripe
             const finalStripeItems = [...cart];
+            if (autoBundleDiscount > 0) {
+                finalStripeItems.push({
+                    name: `5-Pack Mix & Match Bundle Discount (${autoBundlePacks}x 5-pack)`,
+                    qty: 1,
+                    unitPrice: -autoBundleDiscount,
+                    total: -autoBundleDiscount,
+                    bottles: 0
+                });
+            }
             if (coolerBagFee > 0) {
                 finalStripeItems.push({
                     name: "Insulated Bag + 2 Ice Packs Kit",
@@ -1646,9 +1715,15 @@
             localStorage.setItem('cali_pay_phone', phone);
 
             const totalDrinks = cart.reduce((sum, item) => sum + item.total, 0);
+            const regularIndividualBottles = cart
+                .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
+                .reduce((sum, i) => sum + (i.bottles || 1), 0);
+            const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
+            const autoBundleDiscount = autoBundlePacks * 5.00;
+
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
             const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
-            const grandTotal = totalDrinks + coolerBagFee + deliveryFee;
+            const grandTotal = Math.max(0, totalDrinks - autoBundleDiscount + coolerBagFee + deliveryFee);
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
             const notesTag = hasCatering 
@@ -1666,6 +1741,7 @@
                         total: grandTotal,
                         selections: {
                             cart: cart,
+                            bundle_discount: autoBundleDiscount,
                             cooler_bag_fee: coolerBagFee,
                             delivery_fee: deliveryFee,
                             delivery_address: `${address}, ${city} ${zip}`,
@@ -1674,7 +1750,7 @@
                             status: 'pending_verification',
                             preorder_date: isDelivery ? selectedDate : null
                         },
-                        notes: `${notesTag} Order from Main Storefront.`
+                        notes: `${notesTag} Order from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`
                     })
                 });
 
