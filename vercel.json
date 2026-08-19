@@ -36,6 +36,16 @@
     },
     {
       "src": "/hub",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/hub.html"
+    },
+    {
+      "src": "/ecosystem",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/hub.html"
+    },
+    {
+      "src": "/hub",
       "dest": "/public/hub.html"
     },
     {
@@ -273,16 +283,6 @@
     {
       "src": "/api/campaign/valentines",
       "dest": "/api/store.js?action=valentines"
-    },
-    {
-      "src": "/hub",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/hub.html"
-    },
-    {
-      "src": "/ecosystem",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/hub.html"
     },
     {
       "src": "/terminal",

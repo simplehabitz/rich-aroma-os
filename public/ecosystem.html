@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QuimiEats | Ecosystem Control Hub & Multi-Portal Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        orange: {
+                            500: '#F97316',
+                            600: '#EA580C'
+                        },
+                        gold: '#F59E0B',
+                        dark: '#0A0A0B',
+                        charcoal: '#141417',
+                        cyan: '#00F2FF'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+        body { background-color: #0A0A0B; color: white; font-family: 'Outfit', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(20, 20, 23, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.06); }
+        .device-shadow { box-shadow: 0 25px 60px -15px rgba(249, 115, 22, 0.2); }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#0A0A0B] text-white">
+
+    <!-- Top Header Navigation -->
+    <header class="w-full px-6 md:px-10 py-5 border-b border-white/10 bg-charcoal/80 backdrop-blur-xl flex flex-col sm:flex-row justify-between items-center gap-4 z-50 sticky top-0">
+        <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white text-xl shadow-lg shadow-orange-500/20">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-lg font-black uppercase tracking-tight text-white">QUIMIEATS <span class="text-orange-500">ECOSYSTEM HUB</span></h1>
+                    <span class="bg-green-500/20 text-green-400 text-[8px] font-black uppercase px-2 py-0.5 rounded-full border border-green-500/30">ONLINE</span>
+                </div>
+                <p class="text-[10px] text-white/40 font-bold uppercase tracking-wider">Centro de Control de Todos los Portales y Vistas de Usuario</p>
+            </div>
+        </div>
+
+        <!-- View Mode Switcher -->
+        <div class="flex items-center gap-2 bg-white/5 p-1.5 rounded-2xl border border-white/10">
+            <button onclick="setViewMode('cards')" id="mode-btn-cards" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md">
+                <i class="fas fa-th-large mr-1.5"></i> Directorio de Portales
+            </button>
+            <button onclick="setViewMode('simulator')" id="mode-btn-simulator" class="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white">
+                <i class="fas fa-mobile-alt mr-1.5"></i> Simulador Multi-Dispositivo
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-10">
+
+        <!-- ================================================================= -->
+        <!-- VIEW 1: CARDS DIRECTORY WITH CREDENTIALS & DIRECT ACCESS LINKS    -->
+        <!-- ================================================================= -->
+        <div id="view-cards" class="space-y-10">
+            
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <h2 class="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+                    Los 7 Portales de <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-400">QuimiEats</span>
+                </h2>
+                <p class="text-xs text-white/50 font-bold uppercase tracking-wider">
+                    Selecciona cualquier portal para abrirlo en vivo con sus credenciales de prueba
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+                <!-- 1. Master & Field Admin -->
+                <div class="glass p-7 rounded-[2.5rem] border border-orange-500/30 hover:border-orange-500/60 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl shadow-lg shadow-orange-500/10">
+                                <i class="fas fa-crown"></i>
+                            </div>
+                            <span class="bg-orange-500/20 text-orange-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-orange-500/30">Super & Field Admin</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Consola de Administración</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Control de socios, motoristas, soporte y finanzas</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Panel completo en teléfono para tu operadora: alta de restaurantes, reset de contraseñas, aprobación de comprobantes bancarios y métricas de ventas.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN de Acceso:</span>
+                                <span class="font-mono text-orange-400 font-bold">4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/quimieats-admin.html</span>
+                            </div>
+                        </div>
+                        <a href="/quimieats-admin.html" target="_blank" class="w-full py-3.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
+                            Abrir Consola Admin <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 2. Restaurant Merchant Portal -->
+                <div class="glass p-7 rounded-[2.5rem] border border-cyan/20 hover:border-cyan/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-cyan/15 text-cyan flex items-center justify-center text-xl shadow-lg shadow-cyan/10">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <span class="bg-cyan/15 text-cyan text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-cyan/30">Business Admin</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Portal de Restaurante</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Gestión de menú, pedidos y billetera</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Recepción de pedidos con timbre sonoro, despacho a cocina, venta de Rico Cash, pago a motoristas con PIN y subida de comprobantes.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Restaurante / PIN:</span>
+                                <span class="font-mono text-cyan font-bold">tacos-el-rey / 4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/partner.html</span>
+                            </div>
+                        </div>
+                        <a href="/partner.html" target="_blank" class="w-full py-3.5 bg-cyan hover:bg-cyan/90 text-dark rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan/20 active:scale-95 transition-all">
+                            Abrir Portal Socio <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 3. Driver Delivery Portal -->
+                <div class="glass p-7 rounded-[2.5rem] border border-amber-500/20 hover:border-amber-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-400 flex items-center justify-center text-xl shadow-lg shadow-amber-500/10">
+                                <i class="fas fa-motorcycle"></i>
+                            </div>
+                            <span class="bg-amber-500/15 text-amber-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-amber-500/30">Motoristas</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Portal de Repartidores</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Reclamo de órdenes, PIN de entrega y retiro</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            App móvil para motoristas: reclamar entregas, chat WhatsApp con cliente, validación de PIN en puerta y generación de código de retiro de saldo.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN Driver Prueba:</span>
+                                <span class="font-mono text-amber-400 font-bold">4247 o 9999</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/driver-portal.html</span>
+                            </div>
+                        </div>
+                        <a href="/driver-portal.html" target="_blank" class="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-black rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 active:scale-95 transition-all">
+                            Abrir Portal Motorista <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 4. Customer Storefront & Live Tracker -->
+                <div class="glass p-7 rounded-[2.5rem] border border-emerald-500/20 hover:border-emerald-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center text-xl shadow-lg shadow-emerald-500/10">
+                                <i class="fas fa-shopping-bag"></i>
+                            </div>
+                            <span class="bg-emerald-500/15 text-emerald-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-emerald-500/30">Clientes</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Menú y Tracker en Vivo</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Catálogo, combos, checkout y seguimiento</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Experiencia del comprador: selección de sabores, eliminación de ingredientes, cálculo de cambio COD, tarjeta de sellos y seguimiento en tiempo real.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Restaurante Demo:</span>
+                                <span class="font-mono text-emerald-400 font-bold">Tacos El Rey</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/order.html?restaurantId=tacos-el-rey</span>
+                            </div>
+                        </div>
+                        <a href="/order.html?restaurantId=tacos-el-rey" target="_blank" class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 text-black rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                            Ver Menú de Cliente <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 5. Kitchen KDS Display -->
+                <div class="glass p-7 rounded-[2.5rem] border border-red-500/20 hover:border-red-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-red-500/15 text-red-400 flex items-center justify-center text-xl shadow-lg shadow-red-500/10">
+                                <i class="fas fa-fire-burner"></i>
+                            </div>
+                            <span class="bg-red-500/15 text-red-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-red-500/30">Cocineros / KDS</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Pantalla KDS Cocina</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Tickets de comandas y avance de preparación</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Diseñado para tablets en cocina: muestra comandas con ingredientes eliminados en rojo brillante, selector de sabores y botón "Listo".
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Modo:</span>
+                                <span class="font-mono text-red-400 font-bold">Pantalla Completa KDS</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/kitchen.html</span>
+                            </div>
+                        </div>
+                        <a href="/kitchen.html" target="_blank" class="w-full py-3.5 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                            Abrir KDS Cocina <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 6. In-Store POS Cashier -->
+                <div class="glass p-7 rounded-[2.5rem] border border-blue-500/20 hover:border-blue-500/50 transition-all space-y-5 relative group flex flex-col justify-between">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start">
+                            <div class="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 flex items-center justify-center text-xl shadow-lg shadow-blue-500/10">
+                                <i class="fas fa-cash-register"></i>
+                            </div>
+                            <span class="bg-blue-500/15 text-blue-400 text-[8px] font-black uppercase px-2.5 py-1 rounded-full border border-blue-500/30">Cajero / Barra</span>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black uppercase text-white">Caja POS Presencial</h3>
+                            <p class="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-0.5">Cobro rápido en mostrador y cierre de turno</p>
+                        </div>
+                        <p class="text-xs text-white/60 leading-relaxed">
+                            Punto de venta táctil para pedidos en caja, cobro en efectivo o Rico Cash escaneando teléfono del cliente y control de turnos.
+                        </p>
+                    </div>
+
+                    <div class="space-y-4 pt-4 border-t border-white/5">
+                        <div class="p-3 bg-black/40 rounded-xl border border-white/5 space-y-1 text-xs">
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>PIN Staff:</span>
+                                <span class="font-mono text-blue-400 font-bold">1234 o 4574</span>
+                            </div>
+                            <div class="flex justify-between text-white/50 text-[10px] uppercase font-bold">
+                                <span>Ruta:</span>
+                                <span class="font-mono text-white/70">/pos.html</span>
+                            </div>
+                        </div>
+                        <a href="/pos.html" target="_blank" class="w-full py-3.5 bg-blue-500/20 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 transition-all">
+                            Abrir Caja POS <i class="fas fa-arrow-right text-[10px]"></i>
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- VIEW 2: MULTI-DEVICE INTERACTIVE SIMULATOR (SPLIT SCREEN)        -->
+        <!-- ================================================================= -->
+        <div id="view-simulator" class="hidden space-y-6">
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-4 bg-charcoal/60 p-5 rounded-3xl border border-white/10">
+                <div>
+                    <h3 class="text-lg font-black uppercase text-white">Simulador de Pantallas en Vivo</h3>
+                    <p class="text-[10px] text-white/40 font-bold uppercase tracking-wider">Prueba los 3 roles principales interactuando simultáneamente</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="reloadAllFrames()" class="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all">
+                        <i class="fas fa-sync-alt mr-1.5"></i> Recargar Pantallas
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 Frame Split-Screen Matrix -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                
+                <!-- 1. Customer Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-orange-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-shopping-cart"></i> 1. Cliente (Storefront)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-white/10 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-cust" src="/order.html?restaurantId=tacos-el-rey" class="w-full h-full border-0"></iframe>
+                    </div>
+                </div>
+
+                <!-- 2. Restaurant Portal Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-store"></i> 2. Restaurante (Partner)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-cyan/30 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-partner" src="/partner.html" class="w-full h-full border-0"></iframe>
+                    </div>
+                </div>
+
+                <!-- 3. Driver Portal Screen -->
+                <div class="flex flex-col items-center gap-2">
+                    <span class="text-[11px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-motorcycle"></i> 3. Motorista (Driver)
+                    </span>
+                    <div class="w-full h-[650px] bg-black rounded-[2.5rem] border-4 border-amber-500/30 relative overflow-hidden shadow-2xl">
+                        <iframe id="frame-driver" src="/driver-portal.html" class="w-full h-full border-0"></iframe>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-6 border-t border-white/10 text-center text-xs text-white/30 font-bold uppercase tracking-widest">
+        QuimiEats Platform OS • Quimistán, Santa Bárbara, Honduras 🇭🇳
+    </footer>
+
+    <script>
+        function setViewMode(mode) {
+            const btnCards = document.getElementById('mode-btn-cards');
+            const btnSim = document.getElementById('mode-btn-simulator');
+            const viewCards = document.getElementById('view-cards');
+            const viewSim = document.getElementById('view-simulator');
+
+            if (mode === 'cards') {
+                viewCards.classList.remove('hidden');
+                viewSim.classList.add('hidden');
+                btnCards.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md";
+                btnSim.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white";
+            } else {
+                viewCards.classList.add('hidden');
+                viewSim.classList.remove('hidden');
+                btnCards.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-white/40 hover:text-white";
+                btnSim.className = "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-orange-500 text-white shadow-md";
+            }
+        }
+
+        function reloadAllFrames() {
+            document.getElementById('frame-cust').contentWindow.location.reload();
+            document.getElementById('frame-partner').contentWindow.location.reload();
+            document.getElementById('frame-driver').contentWindow.location.reload();
+        }
+    </script>
+</body>
+</html>
