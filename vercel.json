@@ -35,22 +35,50 @@
       "dest": "/public/admin.html"
     },
     {
+      "src": "/simulator",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/simulator.html",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/simulator",
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/simulator.html",
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
       "src": "/dev-hub",
       "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/dev-hub.html"
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     },
     {
       "src": "/dev-hub.html",
       "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/dev-hub.html"
-    },
-    {
-      "src": "/dev-hub",
-      "dest": "/public/dev-hub.html"
-    },
-    {
-      "src": "/dev-hub.html",
-      "dest": "/public/dev-hub.html"
+      "dest": "/public/simulator.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     },
     {
       "src": "/hub",
