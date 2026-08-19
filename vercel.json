@@ -35,14 +35,32 @@
       "dest": "/public/admin.html"
     },
     {
+      "src": "/dev-hub",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/dev-hub.html"
+    },
+    {
+      "src": "/dev-hub.html",
+      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "dest": "/public/dev-hub.html"
+    },
+    {
+      "src": "/dev-hub",
+      "dest": "/public/dev-hub.html"
+    },
+    {
+      "src": "/dev-hub.html",
+      "dest": "/public/dev-hub.html"
+    },
+    {
       "src": "/hub",
       "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/hub.html"
+      "dest": "/public/dev-hub.html"
     },
     {
       "src": "/ecosystem",
       "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/hub.html"
+      "dest": "/public/dev-hub.html"
     },
     {
       "src": "/hub",
