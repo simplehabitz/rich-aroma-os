@@ -403,7 +403,10 @@
     },
     {
       "src": "/cali",
-      "dest": "/public/cali/index.html"
+      "dest": "/public/cali/index.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     },
     {
       "src": "/cali/admin",
