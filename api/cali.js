@@ -91,6 +91,46 @@ module.exports = async (req, res) => {
             if (error || !seller) return res.status(404).json({ error: 'Invalid or inactive promo code' });
             return res.json({ success: true, seller_name: seller.name, discount_percent: 5 });
         }
+
+        // 3c. REQUEST WORKPLACE / HOSPITAL FRIDGE HUB LEAD
+        if (req.method === 'POST' && action === 'request_workplace_hub') {
+            const { company_name, address, city, department, contact_name, contact_phone, contact_email, est_headcount, notes } = req.body || {};
+            
+            if (!company_name || !contact_name) {
+                return res.status(400).json({ error: 'Company Name and Contact Name are required.' });
+            }
+
+            try {
+                const { sendEmail } = require('./lib/email-service');
+                await sendEmail({
+                    to: ['orders@richaromacoffee.com'],
+                    subject: `🏢 New Workplace Fridge Hub Request: ${company_name} (${city || 'SoCal'})`,
+                    html: `
+                        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0d5c1; border-radius: 16px; background-color: #fdfbf7;">
+                            <h2 style="color: #4a2c11; margin-top: 0;">🏢 New Workplace Fridge Drop Request!</h2>
+                            <p style="color: #666; font-size: 14px;">An employee or team lead has requested a recurring Rich Aroma coffee fridge drop at their facility:</p>
+                            
+                            <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #eae2d5; margin: 15px 0;">
+                                <p style="margin: 6px 0;"><strong>Company / Hospital:</strong> ${company_name}</p>
+                                <p style="margin: 6px 0;"><strong>Address:</strong> ${address || 'N/A'}, ${city || ''}</p>
+                                <p style="margin: 6px 0;"><strong>Department / Breakroom:</strong> ${department || 'General Breakroom'}</p>
+                                <p style="margin: 6px 0;"><strong>Estimated Team Size:</strong> ${est_headcount || 'Not specified'}</p>
+                                <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+                                <p style="margin: 6px 0;"><strong>Contact Person:</strong> ${contact_name}</p>
+                                <p style="margin: 6px 0;"><strong>Phone:</strong> ${contact_phone || 'N/A'}</p>
+                                <p style="margin: 6px 0;"><strong>Email:</strong> ${contact_email || 'N/A'}</p>
+                                ${notes ? `<p style="margin: 6px 0;"><strong>Notes:</strong> ${notes}</p>` : ''}
+                            </div>
+                            <p style="font-size: 12px; color: #888;">Follow up to drop off their complimentary sample 5-pack and set up the breakroom hub!</p>
+                        </div>
+                    `
+                });
+            } catch (e) {
+                console.error("Error sending hub request email:", e);
+            }
+
+            return res.json({ success: true, message: "Workplace hub request received! We'll reach out to coordinate your free sample 5-pack." });
+        }
  
         // 3b. GET DIGITAL STAMPS & SHIFT STREAKS
         if (req.method === 'GET' && action === 'get_stamps') {

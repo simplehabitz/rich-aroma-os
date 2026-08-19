@@ -66,9 +66,10 @@
             
             <!-- Quick Location & Cart Indicator -->
             <div class="flex items-center gap-2">
-                <button type="button" onclick="openLocationModal()" id="header-loc-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-brown/5 hover:bg-brand-brown/10 text-brand-brown text-[9px] font-black uppercase tracking-wider border border-brand-brown/15 transition-all">
-                    <i class="fas fa-map-marker-alt text-[9px]"></i>
-                    <span id="header-loc-name">ONT2 (Fontana)</span>
+                <button type="button" onclick="openLocationModal()" id="header-loc-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand-gold/15 hover:bg-brand-gold/25 text-brand-dark text-[9px] font-black uppercase tracking-wider border border-brand-gold/40 transition-all shadow-2xs">
+                    <span id="header-loc-icon">🏥</span>
+                    <span id="header-loc-name">Kaiser Baldwin Park</span>
+                    <i class="fas fa-chevron-down text-[8px] text-brand-brown opacity-60"></i>
                 </button>
                 <button type="button" onclick="scrollToCart()" id="header-cart-btn" class="relative w-9 h-9 rounded-full bg-brand-dark text-white flex items-center justify-center shadow hover:bg-brand-brown transition-all">
                     <i class="fas fa-shopping-bag text-xs"></i>
@@ -323,11 +324,20 @@
                     <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                 </div>
 
-                <!-- Delivery Address Inputs (Visible for Catering or Pre-Order Drops) -->
-                <div id="delivery-address-container" class="space-y-2 pt-1">
+                <!-- Kaiser Baldwin Park Staff Info (Visible when Kaiser hub selected) -->
+                <div id="kaiser-info-container" class="space-y-1.5 pt-1">
+                    <p class="text-[9px] font-black uppercase text-emerald-800 tracking-wider flex items-center justify-between">
+                        <span>🏥 Kaiser Baldwin Park Staff Breakroom Drop</span>
+                        <span class="font-bold text-[8px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">FREE Staff Drop</span>
+                    </p>
+                    <input type="text" id="cust-kaiser-dept" placeholder="Department / Floor / Unit (e.g. ICU, 2nd Fl Surgery, ER)" class="w-full bg-emerald-50/50 border border-emerald-200 rounded-xl px-3.5 py-3 text-xs font-medium text-emerald-950 outline-none focus:border-emerald-500 transition-all">
+                </div>
+
+                <!-- Delivery Address Inputs (Visible for Workplace / Home Delivery) -->
+                <div id="delivery-address-container" class="hidden space-y-2 pt-1">
                     <p class="text-[9px] font-black uppercase text-gray-400 tracking-wider flex items-center justify-between">
                         <span>Delivery Address (Up to 50 Miles from Chino, CA)</span>
-                        <span class="text-brand-brown font-bold text-[8px]">$20 base (10 mi) + $1.25/mi</span>
+                        <span class="text-emerald-700 font-bold text-[8px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">FREE on 10+ bottles</span>
                     </p>
                     <input type="text" id="cust-address" placeholder="Street Address (e.g. 14000 Central Ave)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                     <div class="grid grid-cols-2 gap-2">
@@ -614,20 +624,113 @@
     </div>
 
     <!-- ============================================== -->
-    <!-- LOCATION SELECTOR MODAL -->
+    <!-- FULFILLMENT & WORKPLACE HUB MODAL -->
     <!-- ============================================== -->
-    <div id="location-modal" class="hidden fixed inset-0 bg-brand-dark/80 backdrop-blur-sm flex items-center justify-center z-[90] p-4" onclick="if(event.target === this) closeLocationModal()">
-        <div class="bg-white max-w-sm w-full rounded-[2.5rem] p-6 shadow-2xl border border-brand-brown/20 space-y-4">
-            <div class="flex justify-between items-center">
-                <h3 class="font-serif font-black text-base text-brand-dark">Select Workplace Location</h3>
-                <button type="button" onclick="closeLocationModal()" class="w-7 h-7 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    <div id="location-modal" class="hidden fixed inset-0 bg-brand-dark/85 backdrop-blur-md flex items-center justify-center z-[90] p-4 animate-fade-in" onclick="if(event.target === this) closeLocationModal()">
+        <div class="bg-white max-w-md w-full rounded-[2.5rem] p-6 shadow-2xl border border-brand-brown/20 space-y-5 max-h-[90vh] overflow-y-auto no-scrollbar">
+            
+            <!-- Header -->
+            <div class="flex justify-between items-center pb-2 border-b border-gray-100">
+                <div>
+                    <h3 class="font-serif font-black text-lg text-brand-dark">Choose How You Get Your Coffee</h3>
+                    <p class="text-[9px] font-bold text-brand-brown uppercase tracking-wider">Active Hubs, Hand Delivery & Pickup</p>
+                </div>
+                <button type="button" onclick="closeLocationModal()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all"><i class="fas fa-times text-xs"></i></button>
             </div>
-            <div class="space-y-2">
-                <input type="text" id="loc-search-input" placeholder="Search workplace code (e.g. ONT2)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs outline-none uppercase font-mono" oninput="filterLocationsList()">
-                <div id="modal-locations-list" class="space-y-1 max-h-48 overflow-y-auto no-scrollbar pt-1">
-                    <!-- Injected dynamically -->
+
+            <!-- Options Grid -->
+            <div class="space-y-2.5">
+                <!-- Option 1: Kaiser Baldwin Park -->
+                <button type="button" onclick="setFulfillmentMode('kaiser')" id="modal-card-kaiser" class="w-full text-left p-4 rounded-3xl border-2 transition-all flex items-start justify-between gap-3 bg-emerald-50/70 border-emerald-500/80 shadow-xs hover:border-emerald-600">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🏥</span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-serif font-bold text-xs text-emerald-950">Kaiser Baldwin Park</h4>
+                                <span class="text-[8px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Active Hub</span>
+                            </div>
+                            <p class="text-[9px] text-emerald-800 font-medium mt-1">Staff breakroom fridge pickup & direct shift drops.</p>
+                            <p class="text-[8px] font-black text-emerald-700 uppercase tracking-wider mt-1">✓ $0.00 Delivery Fee • Always Free for Staff</p>
+                        </div>
+                    </div>
+                    <span id="check-kaiser" class="text-emerald-700 font-bold text-sm mt-1"><i class="fas fa-check-circle"></i></span>
+                </button>
+
+                <!-- Option 2: Workplace / Home Delivery -->
+                <button type="button" onclick="setFulfillmentMode('delivery')" id="modal-card-delivery" class="w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-gold/80 transition-all flex items-start justify-between gap-3 shadow-xs">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">🚚</span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">Workplace / Home Delivery</h4>
+                                <span class="text-[8px] bg-brand-gold text-brand-dark font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Free on 10+</span>
+                            </div>
+                            <p class="text-[9px] text-gray-600 font-medium mt-1">Hand-delivered cold in insulated packaging (up to 50 mi from Chino).</p>
+                            <p class="text-[8px] font-bold text-brand-brown uppercase tracking-wider mt-1">✨ <strong>100% FREE Delivery</strong> when you order 10+ bottles ($20 base under 10)</p>
+                        </div>
+                    </div>
+                    <span id="check-delivery" class="hidden text-brand-brown font-bold text-sm mt-1"><i class="fas fa-check-circle"></i></span>
+                </button>
+
+                <!-- Option 3: Rich Aroma Coffee Bar -->
+                <button type="button" onclick="setFulfillmentMode('bar')" id="modal-card-bar" class="w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-brown/80 transition-all flex items-start justify-between gap-3 shadow-xs">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl">☕</span>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">Rich Aroma Coffee Bar</h4>
+                                <span class="text-[8px] bg-amber-500/20 text-amber-900 font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Chino, CA</span>
+                            </div>
+                            <p class="text-[9px] text-gray-600 font-medium mt-1">Pick up fresh hot espresso bar drinks or chilled bottles (6am–3pm).</p>
+                            <p class="text-[8px] font-black text-brand-brown uppercase tracking-wider mt-1">✓ $0.00 Delivery Fee • Order Ahead Pickup</p>
+                        </div>
+                    </div>
+                    <span id="check-bar" class="hidden text-brand-brown font-bold text-sm mt-1"><i class="fas fa-check-circle"></i></span>
+                </button>
+            </div>
+
+            <!-- Route Growth Lead Gen Card -->
+            <div class="pt-2 border-t border-gray-100">
+                <div class="bg-brand-cream/80 border border-brand-brown/20 rounded-3xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">🏢</span>
+                            <div>
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">Request a Workplace Fridge Hub</h4>
+                                <p class="text-[8px] text-brand-brown uppercase font-bold tracking-wider">Hospitals • Clinics • Logistics • Corporate Offices</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-gray-600 leading-relaxed">
+                        Want regular cold coffee drops at your breakroom? Request your workplace and we'll deliver a <strong>FREE 5-Pack sample box</strong> for your team!
+                    </p>
+                    <button type="button" onclick="toggleWorkplaceHubForm()" id="btn-toggle-hub-form" class="w-full bg-brand-dark text-white font-black py-2.5 rounded-2xl hover:bg-brand-brown transition-all uppercase tracking-wider text-[9px] flex items-center justify-center gap-1.5">
+                        <i class="fas fa-plus-circle text-[10px]"></i> Request Your Workplace Hub
+                    </button>
+
+                    <!-- Expandable Lead Form -->
+                    <div id="workplace-hub-form" class="hidden pt-2 space-y-2 border-t border-brand-brown/15">
+                        <input type="text" id="hub-company-name" placeholder="Company / Hospital Name *" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="hub-address" placeholder="Address" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                            <input type="text" id="hub-city" placeholder="City" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="hub-department" placeholder="Breakroom / Floor / Unit" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                            <input type="text" id="hub-team-size" placeholder="Est. Team Size (e.g. 20+)" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="hub-contact-name" placeholder="Your Name *" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                            <input type="tel" id="hub-contact-phone" placeholder="Your Phone *" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        </div>
+                        <input type="email" id="hub-contact-email" placeholder="Your Work Email (Optional)" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        <button type="button" onclick="submitWorkplaceHubRequest()" id="btn-submit-hub" class="w-full gold-shimmer text-brand-dark font-black py-3 rounded-2xl shadow hover:brightness-105 transition-all uppercase tracking-wider text-[9px]">
+                            Submit Request • Claim Free 5-Pack 🎁
+                        </button>
+                    </div>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -760,7 +863,8 @@
         ];
 
         let allLocations = [];
-        let selectedLocationId = "ont2";
+        let selectedLocationId = "kaiser-bp";
+        let fulfillmentMode = "kaiser"; // 'kaiser', 'delivery', or 'bar'
         let currentMenuCategory = "bottles"; // 'bottles' or 'hot'
         let orderMode = "grab"; // 'grab' or 'preorder'
         let selectedHotPickupDate = "";
@@ -805,18 +909,6 @@
             // Render flyer grid
             renderDrinksGrid();
 
-            // Load locations from API
-            try {
-                const res = await fetch('/api/cali?action=locations');
-                if (res.ok) {
-                    allLocations = await res.json();
-                    const ont2 = allLocations.find(l => l.id.toLowerCase() === 'ont2');
-                    if (ont2) selectedLocationId = ont2.id;
-                }
-            } catch (e) {
-                console.error("Locations error:", e);
-            }
-
             // Check Stripe URL return
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('success') === 'true') {
@@ -827,11 +919,9 @@
                         if (rRes.ok) {
                             const orderObj = await rRes.json();
                             showReceiptSplash(orderObj);
-                        } else {
-                            showReceiptSplash(orderId, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                         }
                     } catch (e) {
-                        showReceiptSplash(orderId, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+                        console.error("Receipt load error:", e);
                     }
                 }
             }
@@ -1580,11 +1670,18 @@
                 calculatedDeliveryFee = 20.00 + (40 * 1.25);
             }
 
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
+            const isFreeDelivery = totalBottles >= 10;
+
             if (badge) {
                 badge.classList.remove('hidden');
-                if (miles <= 50) {
+                if (isFreeDelivery) {
                     badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200";
-                    badge.innerHTML = `📍 Approx. <strong>${miles} miles</strong> from Chino • Delivery: <strong>$${calculatedDeliveryFee.toFixed(2)}</strong> ($20 base for 10 mi + ${miles > 10 ? (miles - 10) + ' extra mi @ $1.25' : 'included'})`;
+                    badge.innerHTML = `🎉 Approx. <strong>${miles} miles</strong> from Chino • <strong>100% FREE Hand Delivery Unlocked!</strong> (10+ Bottles in Cart • $${calculatedDeliveryFee.toFixed(2)} fee waived)`;
+                } else if (miles <= 50) {
+                    const needed = 10 - totalBottles;
+                    badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-emerald-50/60 text-emerald-900 border-emerald-200";
+                    badge.innerHTML = `📍 Approx. <strong>${miles} miles</strong> from Chino • Delivery: <strong>$${calculatedDeliveryFee.toFixed(2)}</strong> ($20 base for 10 mi + ${miles > 10 ? (miles - 10) + ' extra mi @ $1.25' : 'included'})<br><span class="text-emerald-700 font-bold">🎁 Add ${needed} more bottle${needed > 1 ? 's' : ''} to get 100% FREE Delivery!</span>`;
                 } else {
                     badge.className = "text-[9px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-800 border-amber-200";
                     badge.innerHTML = `⚠️ Approx. <strong>${miles} miles</strong> from Chino (exceeds 50-mile standard zone). Please contact us for custom long-distance delivery.`;
@@ -1619,7 +1716,8 @@
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
+            const isFreeDelivery = totalBottles >= 10;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
 
             // Calculate Mix & Match 5-Pack Discounts for individual bottle orders
             // (Every set of 5 individual bottles automatically saves $5.00)
@@ -1628,7 +1726,7 @@
                 .reduce((sum, i) => sum + (i.bottles || 1), 0);
             
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
-            const autoBundleDiscount = autoBundlePacks * 5.00;
+            const autoBundleDiscount = (!hasHot) ? (autoBundlePacks * 5.00) : 0;
             const remainderBottles = regularIndividualBottles % 5;
 
             // Upsell banner logic
@@ -1640,7 +1738,24 @@
                     bannerEl.classList.remove('hidden');
                 } else if (hasCatering) {
                     bannerEl.className = "p-3 rounded-2xl border bg-brand-gold/15 text-brand-dark border-brand-gold/40 text-[10px] font-bold text-center";
-                    bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (30+ Bottles)`;
+                    bannerEl.innerHTML = `🎉 <strong>Bulk Catering Rate Applied!</strong> (30+ Bottles) • ✨ <strong>100% FREE Hand Delivery!</strong>`;
+                    bannerEl.classList.remove('hidden');
+                } else if (fulfillmentMode === 'delivery') {
+                    if (isFreeDelivery) {
+                        bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
+                        bannerEl.innerHTML = `🎉 <strong>100% FREE Hand Delivery Unlocked!</strong> (10+ Bottles in cart • Saved $${calculatedDeliveryFee.toFixed(2)})`;
+                        bannerEl.classList.remove('hidden');
+                    } else if (totalBottles > 0 && totalBottles < 10) {
+                        const needed = 10 - totalBottles;
+                        bannerEl.className = "p-3 rounded-2xl border bg-emerald-50/70 text-emerald-900 border-emerald-200 text-[10px] font-bold text-center";
+                        bannerEl.innerHTML = `🚚 <strong>Office Delivery:</strong> Add ${needed} more bottle${needed > 1 ? 's' : ''} to unlock <strong>100% FREE Hand Delivery!</strong>`;
+                        bannerEl.classList.remove('hidden');
+                    } else {
+                        bannerEl.classList.add('hidden');
+                    }
+                } else if (fulfillmentMode === 'kaiser') {
+                    bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
+                    bannerEl.innerHTML = `🏥 <strong>Kaiser Baldwin Park Staff Hub:</strong> Free Breakroom Drop & Fridge Pickup!`;
                     bannerEl.classList.remove('hidden');
                 } else if (autoBundlePacks > 0 && remainderBottles === 0) {
                     bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-[10px] font-bold text-center";
@@ -1676,9 +1791,10 @@
             const bagRow = document.getElementById('summary-bag-row');
             const deliveryRow = document.getElementById('summary-delivery-row');
             const addrContainer = document.getElementById('delivery-address-container');
+            const kaiserContainer = document.getElementById('kaiser-info-container');
 
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
-            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+            let deliveryFee = 0.00;
 
             if (hasCatering) {
                 freshnessBox.classList.remove('hidden');
@@ -1691,11 +1807,27 @@
             if (isDelivery) {
                 deliveryRow.classList.remove('hidden');
                 addrContainer.classList.remove('hidden');
-                document.getElementById('summary-delivery-amount').innerText = `$${deliveryFee.toFixed(2)}`;
-                document.getElementById('delivery-fee-label').innerText = `Hand Delivery (${calculatedDeliveryDistance} mi from Chino)`;
-            } else {
+                if (kaiserContainer) kaiserContainer.classList.add('hidden');
+
+                if (isFreeDelivery) {
+                    deliveryFee = 0.00;
+                    document.getElementById('delivery-fee-label').innerText = `Hand Delivery (10+ Bottles)`;
+                    document.getElementById('summary-delivery-amount').innerHTML = `<span class="line-through text-gray-400 font-normal mr-1">$${calculatedDeliveryFee.toFixed(2)}</span><span class="text-emerald-700 font-bold">FREE ($0.00)</span>`;
+                } else {
+                    deliveryFee = calculatedDeliveryFee;
+                    document.getElementById('delivery-fee-label').innerText = `Hand Delivery (${calculatedDeliveryDistance} mi from Chino)`;
+                    document.getElementById('summary-delivery-amount').innerText = `$${deliveryFee.toFixed(2)}`;
+                }
+            } else if (fulfillmentMode === 'kaiser') {
+                deliveryFee = 0.00;
                 deliveryRow.classList.add('hidden');
                 addrContainer.classList.add('hidden');
+                if (kaiserContainer) kaiserContainer.classList.remove('hidden');
+            } else {
+                deliveryFee = 0.00;
+                deliveryRow.classList.add('hidden');
+                addrContainer.classList.add('hidden');
+                if (kaiserContainer) kaiserContainer.classList.add('hidden');
             }
 
             const grandTotal = Math.max(0, totalDrinksAmount - autoBundleDiscount + coolerBagFee + deliveryFee);
@@ -1803,6 +1935,7 @@
             const address = document.getElementById('cust-address')?.value.trim() || '';
             const city = document.getElementById('cust-city')?.value.trim() || '';
             const zip = document.getElementById('cust-zip')?.value.trim() || '';
+            const kaiserDept = document.getElementById('cust-kaiser-dept')?.value.trim() || 'General Staff Fridge';
             const btn = document.getElementById('stripe-submit-btn');
 
             if (cart.length === 0) {
@@ -1814,10 +1947,12 @@
                 return;
             }
 
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
+            const isFreeDelivery = totalBottles >= 10;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -1832,7 +1967,7 @@
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
-            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+            const deliveryFee = (isDelivery && !isFreeDelivery) ? calculatedDeliveryFee : 0.00;
 
             const regularIndividualBottles = cart
                 .filter(i => i.product_id !== 'catering-bulk-30' && i.bottles !== 5)
@@ -1843,10 +1978,12 @@
             let notesTag = '[FRIDGE-PICKUP]';
             if (hasHot) {
                 notesTag = `[HOT BAR PICKUP: ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
+            } else if (fulfillmentMode === 'kaiser') {
+                notesTag = `[KAISER BALDWIN PARK STAFF DROP: Dept/Unit ${kaiserDept}] Free Staff Hub Drop.`;
             } else if (hasCatering) {
-                notesTag = `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
+                notesTag = `[CATERING FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit. ${isFreeDelivery ? '(FREE Delivery Applied)' : ''}`;
             } else if (isDelivery) {
-                notesTag = `[PRE-ORDER DROP FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}`;
+                notesTag = `[WORKPLACE/HOME DELIVERY FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip} ${isFreeDelivery ? '(FREE 10+ Bottle Delivery Applied)' : ''}`;
             }
 
             const selfCheckoutNotes = `${notesTag} Stripe checkout from Main Storefront. ${autoBundleDiscount > 0 ? `(Applied $${autoBundleDiscount} Mix & Match 5-Pack discount)` : ''}`;
@@ -1880,7 +2017,10 @@
                         name,
                         email: localStorage.getItem('cali_pay_email') || "",
                         phone,
-                        location_id: selectedLocationId,
+                        location_id: (fulfillmentMode === 'kaiser') ? 'kaiser-bp' : selectedLocationId,
+                        kaiser_hospital: (fulfillmentMode === 'kaiser') ? 'Kaiser Permanente Baldwin Park' : null,
+                        kaiser_department: (fulfillmentMode === 'kaiser') ? kaiserDept : null,
+                        fulfillment_type: fulfillmentMode,
                         items: finalStripeItems,
                         notes: selfCheckoutNotes,
                         is_subscription: false,
@@ -1909,6 +2049,7 @@
             const address = document.getElementById('cust-address')?.value.trim() || '';
             const city = document.getElementById('cust-city')?.value.trim() || '';
             const zip = document.getElementById('cust-zip')?.value.trim() || '';
+            const kaiserDept = document.getElementById('cust-kaiser-dept')?.value.trim() || 'General Staff Fridge';
 
             if (cart.length === 0) {
                 showToast("Please add drinks to your order first.");
@@ -1919,10 +2060,12 @@
                 return;
             }
 
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
             const hasCatering = cart.some(i => i.product_id === 'catering-bulk-30' || i.bottles >= 30);
             const hasHot = cart.some(i => i.is_hot);
             const isAllHot = cart.length > 0 && cart.every(i => i.is_hot);
-            const isDelivery = (orderMode === 'preorder' || hasCatering) && !isAllHot;
+            const isFreeDelivery = totalBottles >= 10;
+            const isDelivery = (fulfillmentMode === 'delivery' || orderMode === 'preorder' || hasCatering) && fulfillmentMode !== 'kaiser' && fulfillmentMode !== 'bar' && !isAllHot;
 
             if (isDelivery && !address) {
                 showToast("Please enter your delivery street address.");
@@ -1940,7 +2083,7 @@
             const autoBundleDiscount = (!hasHot) ? (autoBundlePacks * 5.00) : 0;
 
             const coolerBagFee = hasCatering ? 15.00 : 0.00;
-            const deliveryFee = isDelivery ? calculatedDeliveryFee : 0.00;
+            const deliveryFee = (isDelivery && !isFreeDelivery) ? calculatedDeliveryFee : 0.00;
             const grandTotal = Math.max(0, totalDrinks - autoBundleDiscount + coolerBagFee + deliveryFee);
 
             const selectedDate = document.getElementById('preorder-date-picker').value;
@@ -1948,10 +2091,12 @@
             let notesTag = `[FRIDGE-PICKUP PAY: ${method.toUpperCase()}]`;
             if (hasHot) {
                 notesTag = `[HOT BAR PICKUP PAY: ${method.toUpperCase()} FOR ${selectedHotPickupDate || 'Today'} @ ${selectedHotPickupSlot || '6:00 AM - 6:15 AM'}] Rich Aroma Bar, Chino CA.`;
+            } else if (fulfillmentMode === 'kaiser') {
+                notesTag = `[KAISER BALDWIN PARK STAFF PAY: ${method.toUpperCase()} - Dept/Unit ${kaiserDept}] Free Staff Drop.`;
             } else if (hasCatering) {
-                notesTag = `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit.`;
+                notesTag = `[CATERING PAY: ${method.toUpperCase()} FOR ${selectedDate}] Drop at ${address}, ${city} ${zip} (${calculatedDeliveryDistance} mi from Chino). Includes $15 Cooler Bag Kit. ${isFreeDelivery ? '(FREE Delivery Applied)' : ''}`;
             } else if (isDelivery) {
-                notesTag = `[PRE-ORDER PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip}`;
+                notesTag = `[WORKPLACE/HOME DELIVERY PAY: ${method.toUpperCase()} FOR ${selectedDate}] Deliver to ${address}, ${city} ${zip} ${isFreeDelivery ? '(FREE 10+ Bottle Delivery Applied)' : ''}`;
             }
 
             try {
@@ -1961,15 +2106,18 @@
                     body: JSON.stringify({
                         customer_name: name,
                         customer_phone: phone,
-                        location_id: selectedLocationId,
+                        location_id: (fulfillmentMode === 'kaiser') ? 'kaiser-bp' : selectedLocationId,
                         total: grandTotal,
                         selections: {
                             cart: cart,
                             bundle_discount: autoBundleDiscount,
                             cooler_bag_fee: coolerBagFee,
                             delivery_fee: deliveryFee,
-                            delivery_address: isDelivery ? `${address}, ${city} ${zip}` : 'Rich Aroma Bar (Chino, CA)',
+                            delivery_address: isDelivery ? `${address}, ${city} ${zip}` : (fulfillmentMode === 'kaiser' ? `Kaiser Baldwin Park (${kaiserDept})` : 'Rich Aroma Bar (Chino, CA)'),
                             delivery_distance_miles: calculatedDeliveryDistance,
+                            kaiser_hospital: (fulfillmentMode === 'kaiser') ? 'Kaiser Permanente Baldwin Park' : null,
+                            kaiser_department: (fulfillmentMode === 'kaiser') ? kaiserDept : null,
+                            fulfillment_type: fulfillmentMode,
                             hot_pickup_date: hasHot ? selectedHotPickupDate : null,
                             hot_pickup_slot: hasHot ? selectedHotPickupSlot : null,
                             payment_method: method.toLowerCase(),
@@ -2169,10 +2317,9 @@
         }
 
         // ==============================================
-        // LOCATION MODAL
+        // FULFILLMENT & WORKPLACE HUB MODAL
         // ==============================================
         function openLocationModal() {
-            filterLocationsList();
             document.getElementById('location-modal').classList.remove('hidden');
         }
 
@@ -2180,30 +2327,116 @@
             document.getElementById('location-modal').classList.add('hidden');
         }
 
-        function filterLocationsList() {
-            const query = (document.getElementById('loc-search-input')?.value || '').toLowerCase();
-            const list = document.getElementById('modal-locations-list');
+        function setFulfillmentMode(mode) {
+            fulfillmentMode = mode;
+            selectedLocationId = (mode === 'kaiser') ? 'kaiser-bp' : (mode === 'bar' ? 'chino-bar' : 'custom-delivery');
+            
+            const iconEl = document.getElementById('header-loc-icon');
+            const nameEl = document.getElementById('header-loc-name');
+            
+            const checkKaiser = document.getElementById('check-kaiser');
+            const checkDelivery = document.getElementById('check-delivery');
+            const checkBar = document.getElementById('check-bar');
+            
+            const cardKaiser = document.getElementById('modal-card-kaiser');
+            const cardDelivery = document.getElementById('modal-card-delivery');
+            const cardBar = document.getElementById('modal-card-bar');
 
-            const filtered = allLocations.filter(l => l.name.toLowerCase().includes(query) || l.id.toLowerCase().includes(query));
-            list.innerHTML = (filtered.length > 0 ? filtered : allLocations).map(l => `
-                <button type="button" onclick="selectLocation('${l.id}')" class="w-full text-left p-3 rounded-2xl bg-gray-50 hover:bg-brand-cream border border-transparent hover:border-brand-brown/20 transition-all flex justify-between items-center">
-                    <div>
-                        <p class="font-serif font-bold text-xs text-brand-dark">${l.name} (${l.id.toUpperCase()})</p>
-                        <p class="text-[8px] text-gray-400 uppercase font-bold">${l.city || ''}</p>
-                    </div>
-                    ${selectedLocationId === l.id ? '<span class="text-brand-brown font-bold text-xs"><i class="fas fa-check"></i></span>' : ''}
-                </button>
-            `).join('');
+            if (mode === 'kaiser') {
+                if (iconEl) iconEl.innerText = "🏥";
+                if (nameEl) nameEl.innerText = "Kaiser Baldwin Park";
+                checkKaiser?.classList.remove('hidden');
+                checkDelivery?.classList.add('hidden');
+                checkBar?.classList.add('hidden');
+                if (cardKaiser) cardKaiser.className = "w-full text-left p-4 rounded-3xl border-2 transition-all flex items-start justify-between gap-3 bg-emerald-50/70 border-emerald-500/80 shadow-xs";
+                if (cardDelivery) cardDelivery.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-gold/80 transition-all flex items-start justify-between gap-3 shadow-xs";
+                if (cardBar) cardBar.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-brown/80 transition-all flex items-start justify-between gap-3 shadow-xs";
+                showToast("Fulfillment set to Kaiser Baldwin Park Staff Hub", "success");
+            } else if (mode === 'delivery') {
+                if (iconEl) iconEl.innerText = "🚚";
+                if (nameEl) nameEl.innerText = "Hand Delivery (Free @ 10+)";
+                checkKaiser?.classList.add('hidden');
+                checkDelivery?.classList.remove('hidden');
+                checkBar?.classList.add('hidden');
+                if (cardDelivery) cardDelivery.className = "w-full text-left p-4 rounded-3xl border-2 transition-all flex items-start justify-between gap-3 bg-brand-cream/80 border-brand-gold shadow-xs";
+                if (cardKaiser) cardKaiser.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-emerald-500 transition-all flex items-start justify-between gap-3 shadow-xs";
+                if (cardBar) cardBar.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-brown/80 transition-all flex items-start justify-between gap-3 shadow-xs";
+                showToast("Fulfillment set to Workplace / Home Delivery", "success");
+            } else if (mode === 'bar') {
+                if (iconEl) iconEl.innerText = "☕";
+                if (nameEl) nameEl.innerText = "Rich Aroma Bar (Chino)";
+                checkKaiser?.classList.add('hidden');
+                checkDelivery?.classList.add('hidden');
+                checkBar?.classList.remove('hidden');
+                if (cardBar) cardBar.className = "w-full text-left p-4 rounded-3xl border-2 transition-all flex items-start justify-between gap-3 bg-amber-50/80 border-amber-500 shadow-xs";
+                if (cardKaiser) cardKaiser.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-emerald-500 transition-all flex items-start justify-between gap-3 shadow-xs";
+                if (cardDelivery) cardDelivery.className = "w-full text-left p-4 rounded-3xl border-2 border-gray-200 bg-white hover:border-brand-gold/80 transition-all flex items-start justify-between gap-3 shadow-xs";
+                showToast("Fulfillment set to Rich Aroma Bar Pickup", "success");
+            }
+
+            updateCartUI();
+            closeLocationModal();
         }
 
-        function selectLocation(locId) {
-            selectedLocationId = locId;
-            const loc = allLocations.find(l => l.id === locId);
-            if (loc) {
-                document.getElementById('header-loc-name').innerText = `${loc.name}`;
-                showToast(`Location set to ${loc.name}`, 'success');
+        function toggleWorkplaceHubForm() {
+            const form = document.getElementById('workplace-hub-form');
+            if (form) {
+                form.classList.toggle('hidden');
+                if (!form.classList.contains('hidden')) {
+                    document.getElementById('hub-company-name')?.focus();
+                }
             }
-            closeLocationModal();
+        }
+
+        async function submitWorkplaceHubRequest() {
+            const company = document.getElementById('hub-company-name')?.value.trim();
+            const address = document.getElementById('hub-address')?.value.trim();
+            const city = document.getElementById('hub-city')?.value.trim();
+            const dept = document.getElementById('hub-department')?.value.trim();
+            const teamSize = document.getElementById('hub-team-size')?.value.trim();
+            const contactName = document.getElementById('hub-contact-name')?.value.trim();
+            const contactPhone = document.getElementById('hub-contact-phone')?.value.trim();
+            const contactEmail = document.getElementById('hub-contact-email')?.value.trim();
+            const btn = document.getElementById('btn-submit-hub');
+
+            if (!company || !contactName || !contactPhone) {
+                showToast("Please enter Company Name, Your Name, and Phone Number.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Submitting...";
+
+            try {
+                const res = await fetch('/api/cali?action=request_workplace_hub', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        company_name: company,
+                        address,
+                        city,
+                        department: dept,
+                        est_headcount: teamSize,
+                        contact_name: contactName,
+                        contact_phone: contactPhone,
+                        contact_email: contactEmail
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showToast("🎉 Hub request submitted! We will drop off your free 5-pack sample!", "success");
+                    toggleWorkplaceHubForm();
+                    closeLocationModal();
+                } else {
+                    throw new Error(data.error || "Failed to submit");
+                }
+            } catch (e) {
+                showToast("Error: " + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Submit Request • Claim Free 5-Pack 🎁";
+            }
         }
 
         function showToast(msg, type = 'error') {
