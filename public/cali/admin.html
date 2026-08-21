@@ -321,12 +321,16 @@
             <button type="button" id="proof-modal-approve-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs uppercase tracking-wider shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95">
                 <i class="fas fa-check-circle text-sm"></i> Approve & Confirm Payment ($<span id="proof-modal-amount">0.00</span>)
             </button>
+            <button type="button" onclick="closeProofViewer()" class="w-full bg-white/10 text-white/70 font-bold py-2.5 rounded-xl text-[9px] uppercase tracking-wider hover:bg-white/20 transition-all">
+                Close Preview
+            </button>
+        </div>
     </div>
 
     <!-- ============================================== -->
     <!-- PRODUCT ADD / EDIT MODAL -->
     <!-- ============================================== -->
-    <div id="product-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex flex-col justify-between p-4 z-[9999] overflow-y-auto" onclick="if(event.target === this) closeProductModal()">
+    <div id="product-modal" class="hidden fixed inset-0 bg-brand-dark/95 backdrop-blur-md flex flex-col justify-between p-4 z-[99999] overflow-y-auto" onclick="if(event.target === this) closeProductModal()">
         <div class="max-w-md mx-auto w-full space-y-4 pt-2 pb-6">
             <!-- Modal Header -->
             <div class="flex justify-between items-center bg-white/10 rounded-2xl p-3.5 text-white">
@@ -382,22 +386,35 @@
                     <textarea id="prod-ingredients" rows="2" placeholder="e.g. Organic Matcha, Pure Vanilla, Honduran Espresso, Whole Milk / Oat Milk" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-xs outline-none focus:border-brand-brown resize-none"></textarea>
                 </div>
 
-                <!-- Image Photo Dropzone -->
-                <div class="space-y-1">
-                    <label class="text-[9px] font-black uppercase text-gray-500 tracking-wider">Product Photo</label>
-                    <div class="border-2 border-dashed border-gray-200 hover:border-brand-brown rounded-2xl p-3 text-center bg-gray-50 cursor-pointer" onclick="document.getElementById('prod-image-file').click()">
+                <!-- Image Photo Manager (Upload File + Direct URL) -->
+                <div class="space-y-2 pt-1">
+                    <label class="text-[9px] font-black uppercase text-gray-500 tracking-wider flex items-center justify-between">
+                        <span>Drink Image / Photo</span>
+                        <span class="text-[8px] text-brand-brown font-bold uppercase">Tap below to change</span>
+                    </label>
+
+                    <!-- Preview & Upload Dropzone -->
+                    <div class="border-2 border-dashed border-gray-200 hover:border-brand-brown rounded-2xl p-3 text-center bg-gray-50 cursor-pointer transition-all" onclick="document.getElementById('prod-image-file').click()">
                         <input type="file" id="prod-image-file" accept="image/*" class="hidden" onchange="handleProductImageFile(event)">
-                        <div id="prod-image-preview-container" class="space-y-1">
-                            <img id="prod-image-preview" class="max-h-28 mx-auto rounded-xl object-contain shadow-xs border border-gray-200">
-                            <p class="text-[8px] text-gray-400 font-bold uppercase">Tap to upload new photo</p>
+                        <div id="prod-image-preview-container" class="space-y-1.5">
+                            <img id="prod-image-preview" class="max-h-32 mx-auto rounded-xl object-contain shadow-xs border border-gray-200 bg-white" alt="Product Preview">
+                            <p class="text-[9px] text-brand-dark font-black uppercase flex items-center justify-center gap-1">
+                                <i class="fas fa-camera text-brand-brown"></i> Tap to Upload from Camera / Photos
+                            </p>
                         </div>
+                    </div>
+
+                    <!-- Direct Image URL Input (Alternative) -->
+                    <div class="space-y-1">
+                        <span class="text-[8px] text-gray-400 font-bold uppercase block">Or Paste Direct Image URL:</span>
+                        <input type="url" id="prod-image-url-input" oninput="handleDirectImageUrlInput(this.value)" placeholder="https://images.unsplash.com/..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:border-brand-brown font-mono">
                     </div>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="pt-2 space-y-2">
                     <button type="submit" id="prod-save-btn" class="w-full bg-brand-dark hover:bg-brand-brown text-white font-black py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all">
-                        <i class="fas fa-save"></i> Save Product Metadata
+                        <i class="fas fa-save"></i> Save Product & Image
                     </button>
                     <div class="flex gap-2">
                         <button type="button" onclick="deleteCurrentProduct()" id="prod-delete-btn" class="w-1/2 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-[9px] uppercase tracking-wider transition-all">
@@ -1210,6 +1227,7 @@
                 document.getElementById('prod-desc').value = prod.description || opt.description || '';
                 document.getElementById('prod-ingredients').value = opt.ingredients || prod.ingredients || '';
 
+                document.getElementById('prod-image-url-input').value = prod.image_url || '';
                 preview.src = prod.image_url || (isHot ? 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300&auto=format&fit=crop&q=80');
             } else {
                 title.innerText = "Add New Menu Item";
@@ -1222,6 +1240,7 @@
                 document.getElementById('prod-active').value = 'true';
                 document.getElementById('prod-desc').value = '';
                 document.getElementById('prod-ingredients').value = 'Single-Origin Honduran Espresso, Filtered Water, Whole Milk / Oat Milk';
+                document.getElementById('prod-image-url-input').value = '';
 
                 preview.src = 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300&auto=format&fit=crop&q=80';
             }
@@ -1233,6 +1252,9 @@
             document.getElementById('product-modal').classList.add('hidden');
             editingProductId = null;
         }
+
+        window.openProductModal = openProductModal;
+        window.closeProductModal = closeProductModal;
 
         function handleProductImageFile(event) {
             const file = event.target.files?.[0];
@@ -1274,6 +1296,14 @@
             reader.readAsDataURL(file);
         }
 
+        function handleDirectImageUrlInput(url) {
+            const preview = document.getElementById('prod-image-preview');
+            if (url && url.startsWith('http')) {
+                preview.src = url;
+                uploadedProductImageBase64 = "";
+            }
+        }
+
         async function saveProduct(event) {
             event.preventDefault();
             const btn = document.getElementById('prod-save-btn');
@@ -1287,6 +1317,7 @@
             const active = document.getElementById('prod-active').value === 'true';
             const description = document.getElementById('prod-desc').value.trim();
             const ingredients = document.getElementById('prod-ingredients').value.trim();
+            const directUrl = document.getElementById('prod-image-url-input')?.value?.trim();
 
             const isHot = category === 'hot';
             const isAmericano = name.toLowerCase().includes('americano') || name.toLowerCase().includes('black');
@@ -1308,6 +1339,8 @@
 
             if (uploadedProductImageBase64) {
                 payload.imageBase64 = uploadedProductImageBase64;
+            } else if (directUrl) {
+                payload.image_url = directUrl;
             }
 
             try {
@@ -1335,7 +1368,7 @@
                 showToast("Network error saving product.");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save"></i> Save Product Metadata';
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Product & Image';
             }
         }
 
@@ -1422,6 +1455,12 @@
                 setTimeout(() => { toast.remove(); }, 300);
             }, 3000);
         }
+
+        window.toggleProductStock = toggleProductStock;
+        window.saveProduct = saveProduct;
+        window.deleteCurrentProduct = deleteCurrentProduct;
+        window.openProductModal = openProductModal;
+        window.closeProductModal = closeProductModal;
 
         // Initialize on Load
         window.addEventListener('DOMContentLoaded', initApp);
