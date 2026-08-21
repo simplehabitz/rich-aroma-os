@@ -198,32 +198,35 @@
             </section>
 
             <!-- ============================================== -->
-            <!-- TAB 3: HUBS & ROUTE MANIFEST -->
+            <!-- TAB 3: DISTRIBUTION ROUTE MANIFEST -->
             <!-- ============================================== -->
             <section id="view-hubs" class="hidden space-y-4">
                 
-                <!-- Kaiser Baldwin Park Drop Manifest -->
-                <div class="bg-emerald-950 text-white rounded-3xl p-4 shadow-sm border border-emerald-900 space-y-1">
+                <!-- Route Manifest Overview Header -->
+                <div class="bg-brand-dark text-white rounded-3xl p-4 shadow-sm border border-brand-gold/30 space-y-1">
                     <div class="flex items-center justify-between">
-                        <span class="text-[8px] font-black uppercase text-emerald-400 tracking-widest">Active Hospital Breakroom Route</span>
-                        <span class="text-[9px] font-mono font-black bg-emerald-800 text-white px-2 py-0.5 rounded-full" id="kaiser-total-manifest-bottles">0 Bottles</span>
+                        <span class="text-[8px] font-black uppercase text-brand-gold tracking-widest">SoCal Distribution Schedule</span>
+                        <span class="text-[9px] font-mono font-black bg-brand-gold text-brand-dark px-2.5 py-0.5 rounded-full" id="route-total-manifest-bottles">0 Bottles Total</span>
                     </div>
-                    <h2 class="font-serif font-bold text-lg">🏥 Kaiser Permanente Baldwin Park</h2>
-                    <p class="text-[9px] text-emerald-200/80">Staff breakroom fridge drops & direct department deliveries.</p>
+                    <h2 class="font-serif font-bold text-lg">🚚 Live Distribution Route Manifest</h2>
+                    <p class="text-[9px] text-white/70">Grouped by delivery stop (High Schools, Hospitals, Offices & Businesses). 20+ bottles = Free Delivery.</p>
                 </div>
 
                 <div class="space-y-2.5">
-                    <h3 class="text-[9px] font-black uppercase text-gray-400 tracking-wider">Kaiser Department Breakdown</h3>
-                    <div id="kaiser-departments-list" class="space-y-2.5">
+                    <div class="flex items-center justify-between px-1">
+                        <h3 class="text-[9px] font-black uppercase text-gray-400 tracking-wider">Destination Stops & Case Counts</h3>
+                        <span class="text-[9px] font-bold text-brand-brown" id="route-stops-count">0 Stops</span>
+                    </div>
+                    <div id="route-stops-list" class="space-y-3">
                         <!-- Rendered by JS -->
                     </div>
                 </div>
 
-                <!-- Workplace Fridge Hub Leads -->
+                <!-- Workplace & School Route Requests (Leads) -->
                 <div class="pt-4 border-t border-gray-200 space-y-2.5">
                     <div class="flex items-center justify-between">
                         <h3 class="text-[9px] font-black uppercase text-brand-dark tracking-wider flex items-center gap-1.5">
-                            <i class="fas fa-building text-brand-brown"></i> Workplace Fridge Requests (Leads)
+                            <i class="fas fa-building text-brand-brown"></i> Breakroom Route Drop Requests (Leads)
                         </h3>
                         <span class="text-[8px] bg-brand-gold/20 text-brand-dark font-black px-2 py-0.5 rounded-full" id="leads-count">0 Leads</span>
                     </div>
@@ -1021,67 +1024,98 @@
         }
 
         // ----------------------------------------------------
-        // TAB 3: HUBS & ROUTE MANIFEST LOGIC
+        // TAB 3: DISTRIBUTION ROUTE MANIFEST LOGIC
         // ----------------------------------------------------
         function renderHubManifest() {
-            const list = document.getElementById('kaiser-departments-list');
-            const kaiserDeptMap = {};
-            let kaiserTotal = 0;
+            const list = document.getElementById('route-stops-list');
+            if (!list) return;
+
+            const stopMap = {};
+            let totalRouteBottles = 0;
 
             allOrders.forEach(o => {
                 const sel = o.selections || {};
-                const isKaiser = (o.location_id === 'kaiser-bp' || sel.fulfillment_type === 'kaiser' || sel.kaiser_hospital);
-                if (!isKaiser) return;
+                // Normalize destination name
+                const dest = (o.destination_name || sel.drop_location || sel.kaiser_hospital || (o.location_id === 'kaiser-bp' ? 'Kaiser Permanente Baldwin Park' : o.location_id) || 'Distribution Drop').trim();
+                const dept = (o.destination_dept || sel.drop_dept || sel.kaiser_department || '').trim();
+                const address = (o.destination_address || sel.drop_address || '').trim();
 
-                const dept = (sel.kaiser_department || 'General Staff Fridge').trim();
-                if (!kaiserDeptMap[dept]) {
-                    kaiserDeptMap[dept] = { orders: [], totalBottles: 0 };
+                if (!stopMap[dest]) {
+                    stopMap[dest] = {
+                        name: dest,
+                        dept: dept,
+                        address: address,
+                        orders: [],
+                        totalBottles: 0
+                    };
                 }
 
                 const cart = sel.cart || [];
                 const orderBottles = cart.reduce((sum, item) => sum + (typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1)), 0);
                 
-                kaiserDeptMap[dept].totalBottles += orderBottles;
-                kaiserTotal += orderBottles;
-                kaiserDeptMap[dept].orders.push({
+                stopMap[dest].totalBottles += orderBottles;
+                totalRouteBottles += orderBottles;
+                stopMap[dest].orders.push({
                     id: o.id,
-                    customer: o.customer_name || 'Staff',
+                    customer: o.customer_name || 'Customer',
                     phone: o.customer_phone || '',
                     bottles: orderBottles,
+                    dept: dept,
                     items: cart.map(i => `${i.qty || 1}x ${i.name}`).join(', '),
                     status: o.status
                 });
             });
 
-            document.getElementById('kaiser-total-manifest-bottles').innerText = `${kaiserTotal} Bottles`;
+            document.getElementById('route-total-manifest-bottles').innerText = `${totalRouteBottles} Bottles`;
 
-            const depts = Object.keys(kaiserDeptMap);
-            if (depts.length === 0) {
+            const stops = Object.keys(stopMap);
+            document.getElementById('route-stops-count').innerText = `${stops.length} Stop${stops.length === 1 ? '' : 's'}`;
+
+            if (stops.length === 0) {
                 list.innerHTML = `
                     <div class="p-8 bg-white rounded-3xl border border-gray-100 text-center text-xs text-gray-400">
-                        No active Kaiser Baldwin Park orders today.
+                        No active distribution route orders yet today.
                     </div>
                 `;
             } else {
-                list.innerHTML = depts.map(dept => {
-                    const data = kaiserDeptMap[dept];
+                list.innerHTML = stops.map(stopName => {
+                    const data = stopMap[stopName];
+                    const isQualifiedFree = data.totalBottles >= 20;
+
                     return `
-                    <div class="bg-white rounded-3xl p-4 border border-emerald-200/80 shadow-xs space-y-2.5">
-                        <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                    <div class="bg-white rounded-3xl p-4 border ${isQualifiedFree ? 'border-emerald-300 shadow-sm' : 'border-gray-200'} space-y-3">
+                        <div class="flex items-start justify-between gap-2 border-b border-gray-100 pb-2.5">
                             <div>
-                                <span class="text-[8px] font-black uppercase text-emerald-700 tracking-wider">Department Drop</span>
-                                <h4 class="font-serif font-black text-sm text-brand-dark">${dept}</h4>
-                            </div>
-                            <span class="font-mono font-black text-xs bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-full">${data.totalBottles} btls</span>
-                        </div>
-                        <div class="space-y-1.5">
-                            ${data.orders.map(ord => `
-                            <div class="flex items-center justify-between text-xs py-1 border-b border-gray-50 last:border-none">
-                                <div>
-                                    <span class="font-bold text-brand-dark">${ord.customer}</span>
-                                    <span class="text-[9px] text-gray-400 block">${ord.items}</span>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${isQualifiedFree ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300'}">
+                                        ${isQualifiedFree ? '★ 20+ Free Delivery Unlocked' : `${data.totalBottles}/20 btls ($5 drop fee)`}
+                                    </span>
+                                    ${data.dept ? `<span class="text-[8px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full font-bold">${data.dept}</span>` : ''}
                                 </div>
-                                <span class="font-mono font-bold text-xs text-brand-brown">${ord.bottles} btls</span>
+                                <h4 class="font-serif font-black text-sm text-brand-dark mt-1">${data.name}</h4>
+                                ${data.address ? `<p class="text-[9px] text-gray-400"><i class="fas fa-map-marker-alt text-brand-brown mr-1"></i>${data.address}</p>` : ''}
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span class="font-mono font-black text-sm text-brand-brown block">${data.totalBottles} btls</span>
+                                <span class="text-[8px] uppercase font-bold text-gray-400">${data.orders.length} order${data.orders.length > 1 ? 's' : ''}</span>
+                            </div>
+                        </div>
+
+                        <!-- Orders at this Stop -->
+                        <div class="space-y-2">
+                            ${data.orders.map(ord => `
+                            <div class="flex items-center justify-between text-xs py-1.5 border-b border-gray-50 last:border-none">
+                                <div class="space-y-0.5">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-brand-dark">${ord.customer}</span>
+                                        ${ord.phone ? `<a href="tel:${ord.phone}" class="text-[9px] text-brand-brown font-mono hover:underline"><i class="fas fa-phone-alt text-[8px]"></i> ${ord.phone}</a>` : ''}
+                                    </div>
+                                    <span class="text-[9px] text-gray-500 block leading-tight">${ord.items}</span>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <span class="font-mono font-bold text-xs text-brand-brown">${ord.bottles} btls</span>
+                                    <span class="text-[8px] uppercase font-bold px-1.5 py-0.2 rounded-full block mt-0.5 ${ord.status === 'delivered' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'}">${ord.status || 'pending'}</span>
+                                </div>
                             </div>
                             `).join('')}
                         </div>
