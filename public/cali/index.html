@@ -805,6 +805,46 @@
                 </div>
             </div>
 
+            <!-- Drop Captain & Viral 20-Bottle Referral Card -->
+            <div id="receipt-captain-card" class="bg-gradient-to-br from-brand-dark via-[#1e1511] to-[#2b1c15] text-white rounded-3xl p-5 border border-brand-gold/40 shadow-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-[8px] font-black uppercase text-brand-gold tracking-widest flex items-center gap-1.5">
+                        <i class="fas fa-crown text-amber-400"></i> Drop Captain Dashboard
+                    </span>
+                    <span class="bg-brand-gold/20 text-brand-gold border border-brand-gold/40 text-[9px] font-mono font-black px-2.5 py-0.5 rounded-full" id="receipt-captain-bottles">0 / 20 Bottles</span>
+                </div>
+
+                <div>
+                    <h3 class="font-serif font-black text-sm sm:text-base text-white leading-tight">
+                        Rally Coworkers to Hit 20 Bottles & Unlock 100% Free Delivery!
+                    </h3>
+                    <p class="text-[9.5px] text-white/70 mt-1 leading-snug">
+                        When <span id="receipt-captain-dest-name" class="text-white font-bold">your location</span> reaches <strong>20 bottles total</strong>, everyone gets <strong>$0.00 FREE DELIVERY</strong>, and you get <strong>1 FREE Bonus Specialty Bottle</strong> packed in your bag!
+                    </p>
+                </div>
+
+                <!-- Live Progress Bar -->
+                <div class="space-y-1">
+                    <div class="w-full bg-white/10 rounded-full h-2.5 overflow-hidden border border-white/10 p-0.5">
+                        <div id="receipt-captain-progress-bar" class="bg-brand-gold h-full rounded-full transition-all duration-300 w-0"></div>
+                    </div>
+                    <div class="flex justify-between text-[8px] text-brand-gold font-bold">
+                        <span id="receipt-captain-helper">Need 20 bottles to unlock free delivery</span>
+                        <span>Goal: 20 Bottles Minimum</span>
+                    </div>
+                </div>
+
+                <!-- 1-Tap Share Buttons -->
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button type="button" onclick="shareCaptainInvite('copy')" class="bg-white/15 hover:bg-white/25 text-white font-black py-3 rounded-2xl text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border border-white/20">
+                        <i class="fas fa-copy"></i> Copy Link
+                    </button>
+                    <button type="button" onclick="shareCaptainInvite('chat')" class="bg-brand-gold hover:brightness-105 text-brand-dark font-black py-3 rounded-2xl text-[9px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-md">
+                        <i class="fas fa-share-nodes"></i> Share to Team
+                    </button>
+                </div>
+            </div>
+
             <!-- Action Controls -->
             <div class="space-y-2.5">
                 <button type="button" onclick="downloadReceiptImage()" id="btn-download-receipt" class="w-full bg-brand-gold text-brand-dark font-black py-3.5 rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition-all uppercase tracking-wider text-[10px] flex items-center justify-center gap-2">
@@ -2118,7 +2158,8 @@
             document.getElementById('receipt-code').innerText = order.id || 'RA-CALI';
             document.getElementById('receipt-time').innerText = new Date(order.created_at || Date.now()).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
             document.getElementById('receipt-customer-name').innerText = order.customer_name || 'Guest';
-            document.getElementById('receipt-location-name').innerText = order.destination_name || order.location_id || 'Distribution Route';
+            const destName = order.destination_name || order.location_id || 'Distribution Route';
+            document.getElementById('receipt-location-name').innerText = destName;
             document.getElementById('receipt-payment-method').innerText = `Paid via ${order.payment_method || 'Card'}`;
             document.getElementById('receipt-total').innerText = `$${parseFloat(order.total_amount || 0).toFixed(2)}`;
 
@@ -2134,7 +2175,56 @@
                 </div>
             `).join('');
 
+            // Update Drop Captain Referral Card
+            const destEl = document.getElementById('receipt-captain-dest-name');
+            const bottlesEl = document.getElementById('receipt-captain-bottles');
+            const barEl = document.getElementById('receipt-captain-progress-bar');
+            const helperEl = document.getElementById('receipt-captain-helper');
+
+            // Calculate order bottles
+            const orderBottles = cartItems.reduce((sum, item) => sum + (typeof item.bottles === 'number' ? item.bottles : (parseInt(item.qty) || 1)), 0);
+            
+            // Check active drop pool count
+            const matchedDrop = activeDropsList.find(d => d.name.toLowerCase() === destName.toLowerCase() || d.slug === destName.toLowerCase());
+            const poolBottles = (matchedDrop ? matchedDrop.total_bottles : 0) + orderBottles;
+
+            if (destEl) destEl.innerText = destName;
+            if (bottlesEl) bottlesEl.innerText = `${poolBottles} / 20 Bottles`;
+            
+            const pct = Math.min(100, Math.round((poolBottles / 20) * 100));
+            if (barEl) barEl.style.width = `${pct}%`;
+
+            if (helperEl) {
+                if (poolBottles >= 20) {
+                    helperEl.innerText = `🎉 20+ Bottles reached! 100% Free Delivery + 1 Bonus Bottle unlocked!`;
+                } else {
+                    const needed = 20 - poolBottles;
+                    helperEl.innerText = `Need ${needed} more bottle${needed > 1 ? 's' : ''} to unlock Free Delivery & your Bonus Bottle`;
+                }
+            }
+
             modal.classList.remove('hidden');
+        }
+
+        function shareCaptainInvite(mode) {
+            if (!lastOrderData) return;
+            const dest = lastOrderData.destination_name || lastOrderData.location_id || 'Our Workplace';
+            const slug = dest.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 35);
+            const captainName = lastOrderData.customer_name || 'A coworker';
+
+            const shareUrl = `https://richaromacoffee.com?drop=${slug}&captain=${encodeURIComponent(captainName)}`;
+            const shareText = `Hey team! ☕ I just placed an order for our ${dest} cold coffee route drop. If our location hits 20 bottles total, delivery is 100% FREE for everyone! Add your bottles here before cutoff: ${shareUrl}`;
+
+            if (mode === 'chat' && navigator.share) {
+                navigator.share({
+                    title: `${dest} Coffee Drop Pool`,
+                    text: shareText,
+                    url: shareUrl
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText);
+                showToast("✓ Drop Captain invite copied! Paste in your team group chat or Slack.", "success");
+            }
         }
 
         function downloadReceiptImage() {
