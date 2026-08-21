@@ -35,9 +35,8 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .tap-scale { transition: transform 0.08s ease, filter 0.08s ease; }
-        .tap-scale:active { transform: scale(0.94); filter: brightness(1.2); }
-        .pos-grid-btn { background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(212, 175, 55, 0.18); }
-        .pos-grid-btn:active { background: rgba(212, 175, 55, 0.25); border-color: #d4af37; }
+        .tap-scale:active { transform: scale(0.93); filter: brightness(1.2); }
+        .pos-grid-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(212, 175, 55, 0.18); }
     </style>
 </head>
 <body class="bg-[#0f0b09] antialiased min-h-screen text-gray-100 flex flex-col justify-between select-none overflow-x-hidden">
@@ -88,10 +87,10 @@
     <!-- ============================================== -->
     <!-- MAIN POS TERMINAL -->
     <!-- ============================================== -->
-    <div id="pos-terminal" class="hidden flex-1 flex flex-col max-w-md mx-auto w-full pb-32">
+    <div id="pos-terminal" class="hidden flex-1 flex flex-col max-w-md mx-auto w-full pb-44">
         
         <!-- Header Strip -->
-        <header class="bg-black/40 border-b border-white/10 px-4 py-2.5 flex justify-between items-center sticky top-0 z-30 backdrop-blur-md">
+        <header class="bg-black/50 border-b border-white/10 px-4 py-2.5 flex justify-between items-center sticky top-0 z-30 backdrop-blur-md">
             <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-xl bg-brand-gold text-brand-dark flex items-center justify-center font-bold text-xs">☕</div>
                 <div>
@@ -112,13 +111,13 @@
         <!-- Category Filter Tabs -->
         <div class="px-3 pt-3 pb-1 flex gap-2 overflow-x-auto no-scrollbar">
             <button type="button" onclick="setPosCategory('bottles')" id="cat-bottles" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-brand-gold text-brand-dark shadow-xs shrink-0">
-                ❄️ Bottled ($6)
+                ❄️ Bottled Drinks
             </button>
             <button type="button" onclick="setPosCategory('bundle')" id="cat-bundle" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
                 🔥 5-Pack ($25)
             </button>
             <button type="button" onclick="setPosCategory('hot')" id="cat-hot" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
-                ☕ Hot Bar ($5-$6)
+                ☕ Hot Bar
             </button>
             <button type="button" onclick="openCustomAmountModal()" class="px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 text-white border border-white/10 shrink-0">
                 💲 Custom $
@@ -126,8 +125,25 @@
         </div>
 
         <!-- Menu Item Speed Grid -->
-        <div class="p-3 grid grid-cols-2 gap-2.5" id="pos-grid">
+        <div class="p-3 grid grid-cols-1 gap-2.5" id="pos-grid">
             <!-- Rendered by JS -->
+        </div>
+
+        <!-- Active Order Cart Item List (In-line live editor) -->
+        <div class="px-3 py-2 space-y-2" id="cart-items-section">
+            <div class="flex items-center justify-between">
+                <h3 class="text-[9px] font-black uppercase text-brand-gold tracking-wider flex items-center gap-1">
+                    <i class="fas fa-shopping-cart"></i> Current Order Items (<span id="cart-badge-count">0</span>)
+                </h3>
+                <span class="text-[8px] text-white/40 uppercase font-bold">1-Tap + / - & Milk Switch</span>
+            </div>
+            
+            <div id="cart-items-list" class="space-y-2">
+                <!-- Rendered dynamically by JS -->
+                <div class="p-4 rounded-2xl bg-white/5 border border-white/10 text-center text-xs text-white/40">
+                    No items in cart. Tap Whole or Oat milk buttons above to add drinks.
+                </div>
+            </div>
         </div>
 
         <!-- Optional Customer Loyalty Strip -->
@@ -157,10 +173,13 @@
                 <span class="w-6 h-6 rounded-lg bg-brand-gold/20 text-brand-gold text-xs font-black flex items-center justify-center" id="cart-item-count">0</span>
                 <span class="text-xs font-bold text-white/80" id="cart-summary-text">No items added</span>
             </div>
-            <span class="font-mono font-black text-xl text-brand-gold" id="cart-grand-total">$0.00</span>
+            <div class="text-right">
+                <span class="font-mono font-black text-xl text-brand-gold block leading-none" id="cart-grand-total">$0.00</span>
+                <span class="text-[8px] font-bold text-emerald-400 hidden mt-0.5" id="cart-discount-text"></span>
+            </div>
         </div>
 
-        <!-- 3 Instant Checkout Buttons (No Hardware Needed) -->
+        <!-- 2 Instant Checkout Buttons (No Hardware Needed) -->
         <div class="grid grid-cols-2 gap-2 pt-2.5">
             <!-- Cash Checkout (Instant Calculator) -->
             <button type="button" onclick="openCashModal()" class="tap-scale bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2">
@@ -302,27 +321,28 @@
         let cart = [];
         let activeQRMethod = 'venmo';
         let currentTotal = 0;
+        let currentDiscount = 0;
         let lastCompletedOrder = null;
 
         const MENU_ITEMS = [
             // Cold Bottled Drinks
-            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", category: "bottles", icon: "🍃", price: 6.00, desc: "Ceremonial Matcha & Vanilla" },
-            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", category: "bottles", icon: "🍯", price: 6.00, desc: "Honduran Espresso & Salted Caramel" },
-            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", category: "bottles", icon: "🥛", price: 6.00, desc: "Classic Madagascar Vanilla" },
-            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", category: "bottles", icon: "🥛", price: 6.00, desc: "Smooth Vanilla & Fresh Milk" },
-            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", category: "bottles", icon: "✨", price: 6.00, desc: "Spiced Masala & Espresso" },
-            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", category: "bottles", icon: "☕", price: 5.00, desc: "Pure 3oz Espresso & Water" },
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", category: "bottles", icon: "🍃", basePrice: 6.00, hasMilk: true, desc: "Ceremonial Matcha & Vanilla" },
+            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", category: "bottles", icon: "🍯", basePrice: 6.00, hasMilk: true, desc: "Honduran Espresso & Salted Caramel" },
+            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", category: "bottles", icon: "🥛", basePrice: 6.00, hasMilk: true, desc: "Classic Madagascar Vanilla" },
+            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", category: "bottles", icon: "🥛", basePrice: 6.00, hasMilk: true, desc: "Smooth Vanilla & Fresh Milk" },
+            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", category: "bottles", icon: "✨", basePrice: 6.00, hasMilk: true, desc: "Spiced Masala & Espresso" },
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", category: "bottles", icon: "☕", basePrice: 5.00, hasMilk: false, desc: "Pure 3oz Espresso & Water (No Milk)" },
 
             // 5-Pack Bundle
-            { id: "bundle-5pack", name: "Mix & Match 5-Pack", category: "bundle", icon: "🔥", price: 25.00, bottles: 5, desc: "Any 5 Bottles ($5/bottle)" },
+            { id: "bundle-5pack", name: "Mix & Match 5-Pack", category: "bundle", icon: "🔥", basePrice: 25.00, hasMilk: false, bottles: 5, desc: "Any 5 Bottles ($5/bottle)" },
 
             // Hot Bar Drinks
-            { id: "hot-caramel-latte", name: "Hot Caramel Latte", category: "hot", icon: "☕", price: 6.00, is_hot: true, desc: "Steamed Milk & Caramel" },
-            { id: "hot-french-vanilla", name: "Hot French Vanilla", category: "hot", icon: "🥛", price: 6.00, is_hot: true, desc: "Hot Vanilla Espresso" },
-            { id: "hot-vanilla-matcha", name: "Hot Vanilla Matcha", category: "hot", icon: "🍃", price: 6.00, is_hot: true, desc: "Hot Green Tea & Espresso" },
-            { id: "hot-dirty-chai", name: "Hot Dirty Chai", category: "hot", icon: "✨", price: 6.00, is_hot: true, desc: "Steamed Chai & Espresso" },
-            { id: "hot-classic-americano", name: "Hot Classic Americano", category: "hot", icon: "☕", price: 5.00, is_hot: true, desc: "Pure Hot Espresso (No Milk)" },
-            { id: "hot-vanilla-latte", name: "Hot Vanilla Latte", category: "hot", icon: "🥛", price: 6.00, is_hot: true, desc: "Steamed Vanilla Latte" }
+            { id: "hot-caramel-latte", name: "Hot Caramel Latte", category: "hot", icon: "☕", basePrice: 6.00, hasMilk: true, is_hot: true, desc: "Steamed Milk & Caramel" },
+            { id: "hot-french-vanilla", name: "Hot French Vanilla", category: "hot", icon: "🥛", basePrice: 6.00, hasMilk: true, is_hot: true, desc: "Hot Vanilla Espresso" },
+            { id: "hot-vanilla-matcha", name: "Hot Vanilla Matcha", category: "hot", icon: "🍃", basePrice: 6.00, hasMilk: true, is_hot: true, desc: "Hot Green Tea & Espresso" },
+            { id: "hot-dirty-chai", name: "Hot Dirty Chai", category: "hot", icon: "✨", basePrice: 6.00, hasMilk: true, is_hot: true, desc: "Steamed Chai & Espresso" },
+            { id: "hot-classic-americano", name: "Hot Classic Americano", category: "hot", icon: "☕", basePrice: 5.00, hasMilk: false, is_hot: true, desc: "Pure Hot Espresso (No Milk)" },
+            { id: "hot-vanilla-latte", name: "Hot Vanilla Latte", category: "hot", icon: "🥛", basePrice: 6.00, hasMilk: true, is_hot: true, desc: "Steamed Vanilla Latte" }
         ];
 
         // ----------------------------------------------------
@@ -390,11 +410,11 @@
             document.getElementById('pin-view').classList.add('hidden');
             document.getElementById('pos-terminal').classList.remove('hidden');
             renderPosGrid();
-            updateCartSummary();
+            renderCart();
         }
 
         // ----------------------------------------------------
-        // POS GRID & CART
+        // POS GRID & MENU
         // ----------------------------------------------------
         function setPosCategory(cat) {
             activeCategory = cat;
@@ -413,63 +433,218 @@
             const grid = document.getElementById('pos-grid');
             const items = MENU_ITEMS.filter(i => i.category === activeCategory);
 
-            grid.innerHTML = items.map(item => `
-                <button type="button" onclick="fastAddToCart('${item.id}')" class="pos-grid-btn tap-scale rounded-3xl p-3 text-left flex flex-col justify-between h-28 relative shadow-lg">
-                    <div class="flex items-start justify-between">
-                        <span class="text-2xl">${item.icon}</span>
-                        <span class="font-mono font-black text-sm text-brand-gold">$${item.price.toFixed(2)}</span>
+            grid.innerHTML = items.map(item => {
+                if (item.hasMilk) {
+                    const wholePrice = item.basePrice;
+                    const oatPrice = item.basePrice + 1.00;
+                    return `
+                    <div class="pos-grid-card rounded-3xl p-3 shadow-lg flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-2xl">${item.icon}</span>
+                            <div>
+                                <h3 class="font-serif font-black text-xs text-white leading-tight">${item.name}</h3>
+                                <p class="text-[8px] text-white/50 leading-tight mt-0.5">${item.desc}</p>
+                            </div>
+                        </div>
+
+                        <!-- 1-Tap Dual Milk Buttons -->
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <button type="button" onclick="fastAddDrink('${item.id}', 'Whole Milk')" class="tap-scale bg-emerald-600/90 hover:bg-emerald-600 text-white font-black px-2.5 py-2 rounded-xl text-[9px] uppercase tracking-wider shadow-xs border border-emerald-400/30 flex flex-col items-center leading-none">
+                                <span>Whole</span>
+                                <span class="text-[8px] font-mono text-emerald-200 mt-0.5">$${wholePrice.toFixed(2)}</span>
+                            </button>
+                            <button type="button" onclick="fastAddDrink('${item.id}', 'Oat Milk')" class="tap-scale bg-amber-600/90 hover:bg-amber-600 text-white font-black px-2.5 py-2 rounded-xl text-[9px] uppercase tracking-wider shadow-xs border border-amber-400/30 flex flex-col items-center leading-none">
+                                <span>Oat</span>
+                                <span class="text-[8px] font-mono text-amber-200 mt-0.5">$${oatPrice.toFixed(2)}</span>
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <h3 class="font-serif font-black text-xs text-white leading-tight">${item.name}</h3>
-                        <p class="text-[8px] text-white/50 leading-tight mt-0.5">${item.desc}</p>
+                    `;
+                } else {
+                    // Americano or 5-Pack bundle
+                    return `
+                    <div class="pos-grid-card rounded-3xl p-3 shadow-lg flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-2xl">${item.icon}</span>
+                            <div>
+                                <h3 class="font-serif font-black text-xs text-white leading-tight">${item.name}</h3>
+                                <p class="text-[8px] text-white/50 leading-tight mt-0.5">${item.desc}</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="fastAddDrink('${item.id}', 'No Milk')" class="tap-scale bg-brand-gold hover:bg-amber-400 text-brand-dark font-black px-3.5 py-2 rounded-xl text-[9px] uppercase tracking-wider shadow-xs flex flex-col items-center leading-none shrink-0">
+                            <span>Add</span>
+                            <span class="text-[8px] font-mono font-black text-brand-dark mt-0.5">$${item.basePrice.toFixed(2)}</span>
+                        </button>
                     </div>
-                </button>
-            `).join('');
+                    `;
+                }
+            }).join('');
         }
 
-        function fastAddToCart(itemId) {
+        // ----------------------------------------------------
+        // CART & QUANTITY ENGINE
+        // ----------------------------------------------------
+        function fastAddDrink(itemId, milkChoice) {
             const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
-            const existing = cart.find(i => i.id === itemId);
+            const unitPrice = (milkChoice === 'Oat Milk') ? (item.basePrice + 1.00) : item.basePrice;
+            
+            // Check if same item + milk already in cart
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice);
             if (existing) {
                 existing.qty++;
                 existing.total = existing.qty * existing.unitPrice;
             } else {
                 cart.push({
+                    cartId: `c-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
                     id: item.id,
                     name: item.name,
-                    unitPrice: item.price,
+                    milk: milkChoice,
+                    hasMilk: item.hasMilk,
+                    basePrice: item.basePrice,
+                    unitPrice: unitPrice,
                     qty: 1,
-                    total: item.price,
+                    total: unitPrice,
                     bottles: item.bottles || 1,
                     is_hot: !!item.is_hot
                 });
             }
-            updateCartSummary();
-            showToast(`+1 ${item.name}`, "success");
+
+            renderCart();
+            showToast(`+1 ${item.name} (${milkChoice})`, "success");
         }
 
-        function updateCartSummary() {
-            const totalCount = cart.reduce((sum, i) => sum + i.qty, 0);
-            currentTotal = cart.reduce((sum, i) => sum + i.total, 0);
+        function incrementCartItem(cartId) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item) return;
+            item.qty++;
+            item.total = item.qty * item.unitPrice;
+            renderCart();
+        }
 
-            document.getElementById('cart-item-count').innerText = totalCount;
-            document.getElementById('cart-grand-total').innerText = `$${currentTotal.toFixed(2)}`;
+        function decrementCartItem(cartId) {
+            const idx = cart.findIndex(i => i.cartId === cartId);
+            if (idx === -1) return;
 
-            const summaryEl = document.getElementById('cart-summary-text');
-            if (cart.length === 0) {
-                summaryEl.innerText = "Tap drink to add";
+            if (cart[idx].qty > 1) {
+                cart[idx].qty--;
+                cart[idx].total = cart[idx].qty * cart[idx].unitPrice;
             } else {
-                const names = cart.map(i => `${i.qty}x ${i.name.split(' ')[0]}`).join(', ');
-                summaryEl.innerText = names.length > 25 ? `${names.slice(0, 25)}...` : names;
+                cart.splice(idx, 1);
             }
+            renderCart();
+        }
+
+        function removeCartItem(cartId) {
+            cart = cart.filter(i => i.cartId !== cartId);
+            renderCart();
+            showToast("Item removed");
+        }
+
+        function toggleCartItemMilk(cartId) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item || !item.hasMilk) return;
+
+            if (item.milk === 'Whole Milk') {
+                item.milk = 'Oat Milk';
+                item.unitPrice = item.basePrice + 1.00;
+            } else {
+                item.milk = 'Whole Milk';
+                item.unitPrice = item.basePrice;
+            }
+            item.total = item.qty * item.unitPrice;
+            renderCart();
+            showToast(`Switched to ${item.milk}`);
         }
 
         function clearCart() {
             cart = [];
-            updateCartSummary();
+            renderCart();
             showToast("Cart cleared");
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cart-items-list');
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles * i.qty), 0);
+            const totalCount = cart.reduce((sum, i) => sum + i.qty, 0);
+
+            document.getElementById('cart-badge-count').innerText = totalCount;
+            document.getElementById('cart-item-count').innerText = totalCount;
+
+            // Compute Auto 5-Pack discount ($5 off for every 5 individual bottles)
+            const regularIndividualBottles = cart
+                .filter(i => i.id !== 'bundle-5pack' && !i.is_hot)
+                .reduce((sum, i) => sum + i.qty, 0);
+            
+            const bundlePacks = Math.floor(regularIndividualBottles / 5);
+            currentDiscount = bundlePacks * 5.00;
+
+            const rawTotal = cart.reduce((sum, i) => sum + i.total, 0);
+            currentTotal = Math.max(0, rawTotal - currentDiscount);
+
+            document.getElementById('cart-grand-total').innerText = `$${currentTotal.toFixed(2)}`;
+
+            const discountEl = document.getElementById('cart-discount-text');
+            if (currentDiscount > 0) {
+                discountEl.innerText = `-$${currentDiscount.toFixed(2)} (5-Pack Discount)`;
+                discountEl.classList.remove('hidden');
+            } else {
+                discountEl.classList.add('hidden');
+            }
+
+            const summaryEl = document.getElementById('cart-summary-text');
+            if (cart.length === 0) {
+                summaryEl.innerText = "No items added";
+                list.innerHTML = `
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10 text-center text-xs text-white/40">
+                        No items in cart. Tap Whole or Oat milk buttons above to add drinks.
+                    </div>
+                `;
+                return;
+            }
+
+            const names = cart.map(i => `${i.qty}x ${i.name.split(' ')[0]}`).join(', ');
+            summaryEl.innerText = names.length > 25 ? `${names.slice(0, 25)}...` : names;
+
+            // Render live line items with 1-tap quantity and milk switcher
+            list.innerHTML = cart.map(item => `
+                <div class="bg-white/10 border border-white/10 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-xs">
+                    <div class="flex-1 space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h4 class="font-serif font-black text-xs text-white">${item.name}</h4>
+                            <span class="font-mono font-bold text-[10px] text-brand-gold">$${item.total.toFixed(2)}</span>
+                        </div>
+                        
+                        <!-- 1-Tap Milk Switcher Pill -->
+                        ${item.hasMilk ? `
+                        <button type="button" onclick="toggleCartItemMilk('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${item.milk === 'Oat Milk' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'} flex items-center gap-1 transition-all">
+                            <span>${item.milk === 'Oat Milk' ? '🌾 Oat Milk (+$1)' : '🥛 Whole Milk'}</span>
+                            <i class="fas fa-rotate text-[7px]"></i>
+                        </button>
+                        ` : `
+                        <span class="text-[8px] text-white/50 uppercase font-bold">Pure Espresso</span>
+                        `}
+                    </div>
+
+                    <!-- Quantity Stepper Controls -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="flex items-center bg-black/40 border border-white/10 rounded-xl p-1 gap-1">
+                            <button type="button" onclick="decrementCartItem('${item.cartId}')" class="w-6 h-6 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs active:scale-95">
+                                <i class="fas fa-minus text-[8px]"></i>
+                            </button>
+                            <span class="w-6 text-center font-mono font-black text-xs text-white">${item.qty}</span>
+                            <button type="button" onclick="incrementCartItem('${item.cartId}')" class="w-6 h-6 rounded-lg bg-brand-gold text-brand-dark flex items-center justify-center text-xs active:scale-95 font-bold">
+                                <i class="fas fa-plus text-[8px]"></i>
+                            </button>
+                        </div>
+
+                        <button type="button" onclick="removeCartItem('${item.cartId}')" class="w-7 h-7 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 flex items-center justify-center text-xs">
+                            <i class="fas fa-trash-alt text-[9px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
         }
 
         function openCustomAmountModal() {
@@ -477,14 +652,18 @@
             if (amt && !isNaN(parseFloat(amt))) {
                 const val = parseFloat(amt);
                 cart.push({
+                    cartId: `c-${Date.now()}`,
                     id: `custom-${Date.now()}`,
-                    name: "Custom Amount",
+                    name: "Custom Item / Merch",
+                    milk: "Standard",
+                    hasMilk: false,
+                    basePrice: val,
                     unitPrice: val,
                     qty: 1,
                     total: val,
                     bottles: 0
                 });
-                updateCartSummary();
+                renderCart();
             }
         }
 
@@ -499,7 +678,6 @@
 
             document.getElementById('cash-total-due').innerText = `$${currentTotal.toFixed(2)}`;
             
-            // Build preset buttons based on current total
             const presetContainer = document.getElementById('cash-preset-buttons');
             const total = currentTotal;
             const presets = [total, Math.ceil(total / 5) * 5, Math.ceil(total / 10) * 10, 50.00];
@@ -604,11 +782,12 @@
                         total: currentTotal,
                         selections: {
                             cart: cart,
+                            bundle_discount: currentDiscount,
                             payment_method: paymentMethodName.toLowerCase(),
                             status: 'paid',
                             is_popup_pos: true
                         },
-                        notes: `[MOBILE POP-UP POS SALE: ${paymentMethodName}] On-the-spot checkout via Mobile Terminal.`
+                        notes: `[MOBILE POP-UP POS SALE: ${paymentMethodName}] On-the-spot checkout via Mobile Terminal. ${currentDiscount > 0 ? `(Applied $${currentDiscount.toFixed(2)} 5-Pack discount)` : ''}`
                     })
                 });
 
