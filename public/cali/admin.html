@@ -1339,10 +1339,12 @@
         }
 
         async function saveProduct(event) {
-            event.preventDefault();
+            if (event && event.preventDefault) event.preventDefault();
             const btn = document.getElementById('prod-save-btn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            }
 
             const id = document.getElementById('prod-id').value;
             const name = document.getElementById('prod-name').value.trim();
@@ -1352,6 +1354,7 @@
             const description = document.getElementById('prod-desc').value.trim();
             const ingredients = document.getElementById('prod-ingredients').value.trim();
             const directUrl = document.getElementById('prod-image-url-input')?.value?.trim();
+            const preview = document.getElementById('prod-image-preview');
 
             const isHot = category === 'hot';
             const isAmericano = name.toLowerCase().includes('americano') || name.toLowerCase().includes('black');
@@ -1361,11 +1364,13 @@
                 price: price,
                 active: active,
                 description: description,
+                ingredients: ingredients,
                 bottles_per_pack: 1,
                 options: {
                     category: category,
                     is_hot: isHot,
                     ingredients: ingredients,
+                    description: description,
                     milk_options: isAmericano ? ["No Milk"] : ["Whole Milk", "Oat Milk"],
                     caffeine_strengths: ["1oz Light", "2oz Standard", "3oz Strong"]
                 }
@@ -1375,7 +1380,11 @@
                 payload.imageBase64 = uploadedProductImageBase64;
             } else if (directUrl) {
                 payload.image_url = directUrl;
+            } else if (preview && preview.src && preview.src.startsWith('http')) {
+                payload.image_url = preview.src;
             }
+
+            console.log("Saving product with payload:", payload);
 
             try {
                 const method = id ? 'PUT' : 'POST';
@@ -1395,14 +1404,18 @@
                     closeProductModal();
                     await fetchProductsList();
                 } else {
-                    const err = await res.json();
+                    const err = await res.json().catch(() => ({}));
+                    console.error("Save product error response:", err);
                     showToast("Save error: " + (err.error || "Failed to update"));
                 }
             } catch (e) {
+                console.error("Network error saving product:", e);
                 showToast("Network error saving product.");
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save"></i> Save Product & Image';
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-save"></i> Save Product & Image';
+                }
             }
         }
 

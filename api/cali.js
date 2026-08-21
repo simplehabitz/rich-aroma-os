@@ -570,18 +570,23 @@ module.exports = async (req, res) => {
 
             if (req.method === 'DELETE') {
                 const { error: delErr } = await supabase.from('cali_products').delete().eq('id', id);
-                if (delErr) throw delErr;
+                if (delErr) {
+                    console.error("Product delete error:", delErr);
+                    return res.status(500).json({ error: delErr.message });
+                }
                 return res.json({ success: true, deleted: id });
             }
 
-            const { imageBase64, ...productData } = req.body;
+            const { imageBase64, image_url, name, price, active, description, ingredients, options, bottles_per_pack, inventory_limit } = req.body || {};
             
+            let finalImageUrl = image_url || '';
+
             if (imageBase64 && imageBase64.startsWith('data:image')) {
                 try {
                     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
                     const buffer = Buffer.from(base64Data, 'base64');
-                    const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
-                    const ext = mimeType.split('/')[1] || 'png';
+                    const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
+                    const ext = (mimeType.split('/')[1] || 'jpeg').replace('jpeg', 'jpg');
                     const storagePath = `cali_products/PROD_${id || Date.now()}_${Date.now()}.${ext}`;
 
                     const { error: uploadError } = await supabase.storage
@@ -590,22 +595,47 @@ module.exports = async (req, res) => {
 
                     if (!uploadError) {
                         const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(storagePath);
-                        productData.image_url = publicUrl;
+                        finalImageUrl = publicUrl;
+                    } else {
+                        console.warn("Storage upload warn, falling back to base64 data URI:", uploadError.message);
+                        finalImageUrl = imageBase64;
                     }
                 } catch (err) {
-                    console.error("Image upload failed:", err);
+                    console.error("Image upload exception, using fallback data URI:", err);
+                    finalImageUrl = imageBase64;
                 }
+            }
+
+            const sanitizedOptions = {
+                ...(options || {}),
+                description: description || options?.description || '',
+                ingredients: ingredients || options?.ingredients || ''
+            };
+
+            const dbPayload = {
+                name: name || 'Artisanal Drink',
+                price: parseFloat(price || 0),
+                active: active !== false,
+                bottles_per_pack: bottles_per_pack || 1,
+                options: sanitizedOptions
+            };
+
+            if (finalImageUrl) {
+                dbPayload.image_url = finalImageUrl;
             }
 
             let result;
             if (req.method === 'POST') {
-                result = await supabase.from('cali_products').insert(productData).select().single();
+                result = await supabase.from('cali_products').insert(dbPayload).select();
             } else {
-                result = await supabase.from('cali_products').update(productData).eq('id', id).select().single();
+                result = await supabase.from('cali_products').update(dbPayload).eq('id', id).select();
             }
 
-            if (result.error) throw result.error;
-            return res.json(result.data);
+            if (result.error) {
+                console.error("Product save error:", result.error);
+                return res.status(500).json({ error: result.error.message });
+            }
+            return res.json(result.data?.[0] || { success: true, ...dbPayload, id });
         }
 
         // 5. LOCATION MANAGEMENT
