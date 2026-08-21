@@ -76,6 +76,86 @@ module.exports = async (req, res) => {
             return res.json(locationsWithCounts);
         }
 
+        // 2b. GET ACTIVE GROUP DROPS & TEAM POOLS
+        if (req.method === 'GET' && action === 'active_drops') {
+            try {
+                // Fetch recent orders in the last 7 days to calculate live group pools
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                const { data: recentOrders, error } = await supabase
+                    .from('cali_orders')
+                    .select('id, location_id, destination_name, customer_name, total_amount, selections, created_at, status')
+                    .gte('created_at', sevenDaysAgo)
+                    .neq('status', 'cancelled');
+
+                const dropMap = {};
+
+                // Default hubs for discovery
+                const defaultHubs = [
+                    { name: "Kaiser Permanente Baldwin Park", slug: "kaiser-baldwin-park", icon: "🏥", city: "Baldwin Park" },
+                    { name: "Ayala High School", slug: "ayala-high-school", icon: "🏫", city: "Chino Hills" },
+                    { name: "Long Beach Medical", slug: "long-beach-medical", icon: "🏥", city: "Long Beach" },
+                    { name: "Chino Business Park", slug: "chino-business-park", icon: "🏢", city: "Chino" }
+                ];
+
+                defaultHubs.forEach(hub => {
+                    dropMap[hub.name] = {
+                        name: hub.name,
+                        slug: hub.slug,
+                        icon: hub.icon,
+                        city: hub.city,
+                        total_bottles: 0,
+                        orders_count: 0,
+                        participants: []
+                    };
+                });
+
+                if (!error && recentOrders) {
+                    recentOrders.forEach(o => {
+                        const sel = o.selections || {};
+                        const dest = (o.destination_name || sel.drop_location || (o.location_id === 'kaiser-bp' ? 'Kaiser Permanente Baldwin Park' : o.location_id) || '').trim();
+                        if (!dest) return;
+
+                        if (!dropMap[dest]) {
+                            const slug = dest.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').slice(0, 35);
+                            let icon = "🏢";
+                            if (dest.toLowerCase().includes('kaiser') || dest.toLowerCase().includes('hospital') || dest.toLowerCase().includes('medical')) icon = "🏥";
+                            else if (dest.toLowerCase().includes('school') || dest.toLowerCase().includes('high') || dest.toLowerCase().includes('college')) icon = "🏫";
+                            
+                            dropMap[dest] = {
+                                name: dest,
+                                slug: slug,
+                                icon: icon,
+                                city: sel.drop_address || "SoCal",
+                                total_bottles: 0,
+                                orders_count: 0,
+                                participants: []
+                            };
+                        }
+
+                        const cart = sel.cart || [];
+                        let bCount = cart.reduce((sum, i) => sum + (typeof i.bottles === 'number' ? i.bottles : (parseInt(i.qty) || 1)), 0);
+                        dropMap[dest].total_bottles += bCount;
+                        dropMap[dest].orders_count += 1;
+                        if (o.customer_name && !dropMap[dest].participants.includes(o.customer_name)) {
+                            dropMap[dest].participants.push(o.customer_name);
+                        }
+                    });
+                }
+
+                const dropsList = Object.values(dropMap).map(d => ({
+                    ...d,
+                    is_free_delivery: d.total_bottles >= 20,
+                    bottles_needed: Math.max(0, 20 - d.total_bottles),
+                    progress_pct: Math.min(100, Math.round((d.total_bottles / 20) * 100))
+                }));
+
+                return res.json(dropsList);
+            } catch (err) {
+                console.error("active_drops error:", err);
+                return res.json([]);
+            }
+        }
+
         // 3. VALIDATE PROMO CODE
         if (req.method === 'GET' && action === 'validate_promo') {
             const { code } = req.query;

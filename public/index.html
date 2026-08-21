@@ -108,11 +108,55 @@
             </p>
         </div>
 
+        <!-- Active Team Drops & Group Pools Widget -->
+        <div class="bg-white rounded-3xl p-4 sm:p-5 border border-brand-brown/15 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-[8px] font-black uppercase text-brand-brown tracking-widest block">Team Batching</span>
+                    <h3 class="font-serif font-black text-base text-brand-dark">Active Team Drops & Group Pools</h3>
+                </div>
+                <button type="button" onclick="openBreakroomModal()" class="text-[8px] font-black uppercase text-brand-brown bg-brand-cream hover:bg-brand-brown hover:text-white px-2.5 py-1 rounded-xl border border-brand-brown/20 transition-all">
+                    + Start New Drop
+                </button>
+            </div>
+
+            <p class="text-[10px] text-gray-500 leading-snug">
+                Join your workplace or school drop below to pool orders with colleagues. <strong>When your team reaches 20 bottles collectively, EVERYONE gets 100% Free Delivery!</strong>
+            </p>
+
+            <!-- Active Selected Pool Card (when a group drop is chosen) -->
+            <div id="selected-pool-banner" class="hidden bg-emerald-50 border border-emerald-300 rounded-2xl p-3.5 space-y-2 animate-fade-in">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span id="selected-pool-icon" class="text-xl">🏥</span>
+                        <div>
+                            <span class="text-[8px] font-black uppercase text-emerald-800 tracking-wider">Active Group Drop Selected</span>
+                            <h4 id="selected-pool-name" class="font-serif font-black text-xs text-emerald-950">Kaiser Permanente Baldwin Park</h4>
+                            <p id="selected-pool-status" class="text-[9px] text-emerald-700 font-bold">16 / 20 Team Bottles Pooled</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button type="button" onclick="shareActiveDrop()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-black text-[8px] uppercase px-2.5 py-1.5 rounded-xl shadow-xs flex items-center gap-1 transition-all">
+                            <i class="fas fa-share-nodes"></i> Share
+                        </button>
+                        <button type="button" onclick="clearSelectedDrop()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-black text-[8px] uppercase px-2 py-1.5 rounded-xl transition-all">
+                            Change
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Drop Cards List -->
+            <div id="active-drops-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <!-- Rendered by JS from /api/cali?action=active_drops -->
+            </div>
+        </div>
+
         <!-- 20-Bottle Free Delivery Live Progress Bar -->
         <div id="route-progress-container" class="bg-white rounded-3xl p-4 border border-brand-brown/20 shadow-sm space-y-2.5">
             <div class="flex justify-between items-center text-xs">
                 <span class="text-[9px] font-black uppercase text-gray-500 tracking-wider flex items-center gap-1.5">
-                    <i class="fas fa-box text-brand-brown"></i> Route Drop Progress
+                    <i class="fas fa-box text-brand-brown"></i> <span id="route-progress-title">Route Drop Progress</span>
                 </span>
                 <span id="route-progress-count" class="font-mono font-black text-xs text-brand-brown">0 / 20 Bottles</span>
             </div>
@@ -819,6 +863,10 @@
         // Case builder state
         let caseSelections = {};
 
+        // Group Drop Pools State
+        let activeDropsList = [];
+        let selectedDrop = null;
+
         async function init() {
             // Restore saved user info
             const savedName = localStorage.getItem('cali_pay_name');
@@ -846,6 +894,7 @@
             }
 
             renderDrinksGrid();
+            await fetchActiveDrops();
 
             // Check Stripe URL return
             const urlParams = new URLSearchParams(window.location.search);
@@ -862,6 +911,119 @@
                         console.error("Receipt load error:", e);
                     }
                 }
+            }
+        }
+
+        async function fetchActiveDrops() {
+            try {
+                const res = await fetch('/api/cali?action=active_drops');
+                if (res.ok) {
+                    activeDropsList = await res.json();
+                    renderActiveDrops();
+                    
+                    // Check URL for ?drop=slug
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const dropSlug = urlParams.get('drop');
+                    if (dropSlug) {
+                        const matched = activeDropsList.find(d => d.slug === dropSlug || d.name.toLowerCase().includes(dropSlug.toLowerCase()));
+                        if (matched) {
+                            selectActiveDrop(matched.slug);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("fetchActiveDrops error:", e);
+            }
+        }
+
+        function renderActiveDrops() {
+            const container = document.getElementById('active-drops-list');
+            if (!container) return;
+
+            if (activeDropsList.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center text-xs text-gray-400 py-3">No active group drops found. Tap "+ Start New Drop" to create one for your team!</div>`;
+                return;
+            }
+
+            container.innerHTML = activeDropsList.map(drop => {
+                const isSelected = selectedDrop && selectedDrop.slug === drop.slug;
+                const isQualified = drop.total_bottles >= 20;
+
+                return `
+                <div onclick="selectActiveDrop('${drop.slug}')" class="p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected ? 'bg-emerald-50 border-emerald-400 shadow-sm ring-2 ring-emerald-400/40' : 'bg-gray-50/80 hover:bg-white border-gray-200'}">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-2xl">${drop.icon || '🏢'}</span>
+                        <div class="space-y-0.5">
+                            <div class="flex items-center gap-1.5">
+                                <h4 class="font-serif font-bold text-xs text-brand-dark">${drop.name}</h4>
+                            </div>
+                            <div class="flex items-center gap-1 text-[8.5px] font-bold">
+                                <span class="${isQualified ? 'text-emerald-700' : 'text-amber-800'}">${drop.total_bottles} / 20 Bottles</span>
+                                <span class="text-gray-400">•</span>
+                                <span class="${isQualified ? 'bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-black' : 'text-gray-500'}">
+                                    ${isQualified ? '★ Free Delivery' : `${drop.bottles_needed} to Free Drop`}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="px-2.5 py-1 rounded-xl text-[8.5px] font-black uppercase tracking-wider transition-all ${isSelected ? 'bg-emerald-600 text-white' : 'bg-white border border-gray-200 text-gray-700 shadow-2xs'}">
+                        ${isSelected ? '✓ Joined' : 'Join Pool'}
+                    </button>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function selectActiveDrop(slug) {
+            const drop = activeDropsList.find(d => d.slug === slug);
+            if (!drop) return;
+
+            selectedDrop = drop;
+            
+            // Pre-fill Drop Location in Checkout
+            const locInput = document.getElementById('cust-location');
+            if (locInput) locInput.value = drop.name;
+            const addrInput = document.getElementById('cust-address');
+            if (addrInput && drop.city && !addrInput.value) addrInput.value = drop.city;
+
+            // Update Selected Banner
+            const banner = document.getElementById('selected-pool-banner');
+            document.getElementById('selected-pool-icon').innerText = drop.icon || '🏢';
+            document.getElementById('selected-pool-name').innerText = drop.name;
+            document.getElementById('selected-pool-status').innerText = `${drop.total_bottles} / 20 Team Bottles Pooled (${drop.orders_count} colleague${drop.orders_count === 1 ? '' : 's'} joined)`;
+            banner.classList.remove('hidden');
+
+            renderActiveDrops();
+            updateCartUI();
+
+            showToast(`✓ Joined the ${drop.name} Route Drop!`, "success");
+        }
+
+        function clearSelectedDrop() {
+            selectedDrop = null;
+            document.getElementById('selected-pool-banner').classList.add('hidden');
+            renderActiveDrops();
+            updateCartUI();
+        }
+
+        function shareActiveDrop() {
+            if (!selectedDrop) {
+                showToast("Please select a group drop first.");
+                return;
+            }
+
+            const shareUrl = `https://richaromacoffee.com?drop=${selectedDrop.slug}`;
+            const shareText = `Hey team! We're ordering Rich Aroma cold bottled coffee for our breakroom. Add your bottles to hit the 20-bottle Free Delivery pool: ${shareUrl}`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: `${selectedDrop.name} Coffee Drop Pool`,
+                    text: shareText,
+                    url: shareUrl
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText);
+                showToast("✓ Share invite copied to clipboard! Paste in your group chat.", "success");
             }
         }
 
@@ -1435,27 +1597,51 @@
             const totalBottles = cart.reduce((sum, i) => sum + (i.bottles || 1), 0);
             const totalDrinksAmount = cart.reduce((sum, i) => sum + i.total, 0);
 
-            // Update 20-Bottle Route Progress Bar on the main page
+            // Check collective group pool if a drop location is selected
+            const currentPoolBottles = selectedDrop ? (selectedDrop.total_bottles || 0) : 0;
+            const collectiveBottles = currentPoolBottles + totalBottles;
+
+            // Update Progress Bar with Team Pool or Individual Count
             const mainProgressBar = document.getElementById('route-progress-bar');
             const mainProgressCount = document.getElementById('route-progress-count');
+            const mainProgressTitle = document.getElementById('route-progress-title');
             const mainProgressHelper = document.getElementById('route-progress-helper');
 
             if (mainProgressBar && mainProgressCount && mainProgressHelper) {
-                mainProgressCount.innerText = `${totalBottles} / 20 Bottles`;
-                const pct = Math.min(100, Math.round((totalBottles / 20) * 100));
-                mainProgressBar.style.width = `${pct}%`;
+                if (selectedDrop) {
+                    if (mainProgressTitle) mainProgressTitle.innerText = `${selectedDrop.name} Pool`;
+                    mainProgressCount.innerText = `${collectiveBottles} / 20 Bottles`;
+                    const pct = Math.min(100, Math.round((collectiveBottles / 20) * 100));
+                    mainProgressBar.style.width = `${pct}%`;
 
-                if (totalBottles >= 20) {
-                    mainProgressBar.className = "bg-emerald-600 h-full rounded-full transition-all duration-300";
-                    mainProgressHelper.className = "text-emerald-700 font-black";
-                    mainProgressHelper.innerHTML = `🎉 <strong>FREE ROUTE DELIVERY UNLOCKED!</strong> ($0.00 Delivery Fee applied).`;
+                    if (collectiveBottles >= 20) {
+                        mainProgressBar.className = "bg-emerald-600 h-full rounded-full transition-all duration-300";
+                        mainProgressHelper.className = "text-emerald-700 font-black";
+                        mainProgressHelper.innerHTML = `🎉 <strong>FREE TEAM ROUTE DELIVERY UNLOCKED!</strong> (${selectedDrop.name} pool reached ${collectiveBottles} bottles • $0 Delivery Fee).`;
+                    } else {
+                        mainProgressBar.className = "bg-brand-brown h-full rounded-full transition-all duration-300";
+                        mainProgressHelper.className = "text-amber-800 font-bold";
+                        const needed = 20 - collectiveBottles;
+                        mainProgressHelper.innerHTML = `👥 <strong>${selectedDrop.name} Pool:</strong> ${collectiveBottles}/20 Bottles • Add <strong>${needed} more</strong> with coworkers to unlock <strong>FREE DELIVERY</strong>!`;
+                    }
                 } else {
-                    mainProgressBar.className = "bg-brand-brown h-full rounded-full transition-all duration-300";
-                    mainProgressHelper.className = "text-amber-800 font-bold";
-                    const needed = 20 - totalBottles;
-                    mainProgressHelper.innerHTML = totalBottles === 0 ? 
-                        `🚚 Free Delivery on 20+ bottles anywhere on our SoCal route!` : 
-                        `🚚 Add <strong>${needed} more bottle${needed > 1 ? 's' : ''}</strong> to unlock <strong>FREE DELIVERY</strong>!`;
+                    if (mainProgressTitle) mainProgressTitle.innerText = "Route Drop Progress";
+                    mainProgressCount.innerText = `${totalBottles} / 20 Bottles`;
+                    const pct = Math.min(100, Math.round((totalBottles / 20) * 100));
+                    mainProgressBar.style.width = `${pct}%`;
+
+                    if (totalBottles >= 20) {
+                        mainProgressBar.className = "bg-emerald-600 h-full rounded-full transition-all duration-300";
+                        mainProgressHelper.className = "text-emerald-700 font-black";
+                        mainProgressHelper.innerHTML = `🎉 <strong>FREE ROUTE DELIVERY UNLOCKED!</strong> ($0.00 Delivery Fee applied).`;
+                    } else {
+                        mainProgressBar.className = "bg-brand-brown h-full rounded-full transition-all duration-300";
+                        mainProgressHelper.className = "text-amber-800 font-bold";
+                        const needed = 20 - totalBottles;
+                        mainProgressHelper.innerHTML = totalBottles === 0 ? 
+                            `🚚 Free Delivery on 20+ bottles anywhere on our SoCal route!` : 
+                            `🚚 Add <strong>${needed} more bottle${needed > 1 ? 's' : ''}</strong> to unlock <strong>FREE DELIVERY</strong>!`;
+                    }
                 }
             }
 
@@ -1477,8 +1663,8 @@
             const autoBundlePacks = Math.floor(regularIndividualBottles / 5);
             const autoBundleDiscount = (autoBundlePacks * 5.00);
 
-            // Free Delivery Rule: Free for 20+ bottles, $5.00 flat drop fee for under 20 bottles
-            const isFreeDelivery = totalBottles >= 20;
+            // Free Delivery Rule: Free if individual order >= 20 OR collective team pool >= 20
+            const isFreeDelivery = totalBottles >= 20 || (selectedDrop && collectiveBottles >= 20);
             const deliveryFee = isFreeDelivery ? 0.00 : 5.00;
 
             // In-Cart Delivery Banner
@@ -1486,11 +1672,11 @@
             if (bannerEl) {
                 if (isFreeDelivery) {
                     bannerEl.className = "p-3 rounded-2xl border bg-emerald-50 text-emerald-800 border-emerald-300 text-[10px] font-bold text-center";
-                    bannerEl.innerHTML = `🎉 <strong>100% FREE ROUTE DELIVERY UNLOCKED!</strong> (${totalBottles} bottles • $0 Delivery Fee)`;
+                    bannerEl.innerHTML = `🎉 <strong>100% FREE ROUTE DELIVERY UNLOCKED!</strong> (${selectedDrop ? `${selectedDrop.name} Pool: ${collectiveBottles} bottles` : `${totalBottles} bottles`} • $0 Delivery Fee)`;
                 } else {
-                    const needed = 20 - totalBottles;
+                    const needed = selectedDrop ? (20 - collectiveBottles) : (20 - totalBottles);
                     bannerEl.className = "p-3 rounded-2xl border bg-amber-50 text-amber-900 border-amber-300 text-[10px] font-bold text-center";
-                    bannerEl.innerHTML = `🚚 <strong>Standard Route Drop Fee: $5.00</strong> • Add <strong>${needed} more bottle${needed > 1 ? 's' : ''}</strong> for <strong>FREE DELIVERY</strong>!`;
+                    bannerEl.innerHTML = `🚚 <strong>Standard Route Drop Fee: $5.00</strong> • Add <strong>${needed} more bottle${needed > 1 ? 's' : ''}</strong> ${selectedDrop ? 'with your team' : ''} for <strong>FREE DELIVERY</strong>!`;
                 }
             }
 
