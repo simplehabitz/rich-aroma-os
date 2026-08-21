@@ -89,27 +89,7 @@ module.exports = async (req, res) => {
 
                 const dropMap = {};
 
-                // Default hubs for discovery
-                const defaultHubs = [
-                    { name: "Kaiser Permanente Baldwin Park", slug: "kaiser-baldwin-park", icon: "🏥", city: "Baldwin Park" },
-                    { name: "Ayala High School", slug: "ayala-high-school", icon: "🏫", city: "Chino Hills" },
-                    { name: "Long Beach Medical", slug: "long-beach-medical", icon: "🏥", city: "Long Beach" },
-                    { name: "Chino Business Park", slug: "chino-business-park", icon: "🏢", city: "Chino" }
-                ];
-
-                defaultHubs.forEach(hub => {
-                    dropMap[hub.name] = {
-                        name: hub.name,
-                        slug: hub.slug,
-                        icon: hub.icon,
-                        city: hub.city,
-                        total_bottles: 0,
-                        orders_count: 0,
-                        participants: []
-                    };
-                });
-
-                if (!error && recentOrders) {
+                if (!error && recentOrders && recentOrders.length > 0) {
                     recentOrders.forEach(o => {
                         const sel = o.selections || {};
                         const dest = (o.destination_name || sel.drop_location || (o.location_id === 'kaiser-bp' ? 'Kaiser Permanente Baldwin Park' : o.location_id) || '').trim();

@@ -108,31 +108,27 @@
             </p>
         </div>
 
-        <!-- Active Team Drops & Group Pools Widget -->
-        <div class="bg-white rounded-3xl p-4 sm:p-5 border border-brand-brown/15 shadow-sm space-y-3">
+        <!-- Active Team Drops & Group Pools Widget (Visible when live drops exist) -->
+        <div id="active-drops-section" class="hidden bg-white rounded-3xl p-4 sm:p-5 border border-brand-brown/15 shadow-sm space-y-3">
             <div class="flex items-center justify-between">
                 <div>
                     <span class="text-[8px] font-black uppercase text-brand-brown tracking-widest block">Team Batching</span>
-                    <h3 class="font-serif font-black text-base text-brand-dark">Active Team Drops & Group Pools</h3>
+                    <h3 class="font-serif font-black text-base text-brand-dark">Active Route Drops</h3>
                 </div>
                 <button type="button" onclick="openBreakroomModal()" class="text-[8px] font-black uppercase text-brand-brown bg-brand-cream hover:bg-brand-brown hover:text-white px-2.5 py-1 rounded-xl border border-brand-brown/20 transition-all">
-                    + Start New Drop
+                    + Request Route Stop
                 </button>
             </div>
-
-            <p class="text-[10px] text-gray-500 leading-snug">
-                Join your workplace or school drop below to pool orders with colleagues. <strong>When your team reaches 20 bottles collectively, EVERYONE gets 100% Free Delivery!</strong>
-            </p>
 
             <!-- Active Selected Pool Card (when a group drop is chosen) -->
             <div id="selected-pool-banner" class="hidden bg-emerald-50 border border-emerald-300 rounded-2xl p-3.5 space-y-2 animate-fade-in">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
-                        <span id="selected-pool-icon" class="text-xl">🏥</span>
+                        <span id="selected-pool-icon" class="text-xl">🏢</span>
                         <div>
                             <span class="text-[8px] font-black uppercase text-emerald-800 tracking-wider">Active Group Drop Selected</span>
-                            <h4 id="selected-pool-name" class="font-serif font-black text-xs text-emerald-950">Kaiser Permanente Baldwin Park</h4>
-                            <p id="selected-pool-status" class="text-[9px] text-emerald-700 font-bold">16 / 20 Team Bottles Pooled</p>
+                            <h4 id="selected-pool-name" class="font-serif font-black text-xs text-emerald-950">Workplace Drop</h4>
+                            <p id="selected-pool-status" class="text-[9px] text-emerald-700 font-bold">0 / 20 Team Bottles Pooled</p>
                         </div>
                     </div>
                     <div class="flex gap-1.5">
@@ -977,14 +973,16 @@
         }
 
         function renderActiveDrops() {
+            const section = document.getElementById('active-drops-section');
             const container = document.getElementById('active-drops-list');
-            if (!container) return;
+            if (!container || !section) return;
 
             if (activeDropsList.length === 0) {
-                container.innerHTML = `<div class="col-span-2 text-center text-xs text-gray-400 py-3">No active group drops found. Tap "+ Start New Drop" to create one for your team!</div>`;
+                section.classList.add('hidden');
                 return;
             }
 
+            section.classList.remove('hidden');
             container.innerHTML = activeDropsList.map(drop => {
                 const isSelected = selectedDrop && selectedDrop.slug === drop.slug;
                 const isQualified = drop.total_bottles >= 20;
