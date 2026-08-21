@@ -504,9 +504,15 @@ module.exports = async (req, res) => {
             return res.json(data || []);
         }
 
-        // 7. PRODUCT MANAGEMENT
-        if (action === 'products' && (req.method === 'POST' || (req.method === 'PUT' && id))) {
+        // 7. PRODUCT MANAGEMENT (ADD / EDIT / DELETE)
+        if (action === 'products' && (req.method === 'POST' || (req.method === 'PUT' && id) || (req.method === 'DELETE' && id))) {
             if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+
+            if (req.method === 'DELETE') {
+                const { error: delErr } = await supabase.from('cali_products').delete().eq('id', id);
+                if (delErr) throw delErr;
+                return res.json({ success: true, deleted: id });
+            }
 
             const { imageBase64, ...productData } = req.body;
             
