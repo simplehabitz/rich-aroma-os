@@ -874,13 +874,13 @@
     <!-- LOGIC & SCRIPTS -->
     <!-- ============================================== -->
     <script>
-        const FLYER_PRODUCTS = [
-            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍵", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_1786490434692_1786490434692.jpeg" },
-            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍯", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1775224187104.jpeg" },
-            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍦", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1775224214187.jpeg" },
-            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1775224242879.jpeg" },
-            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "✨", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_b03751fd-1e87-4f6e-8557-c8b8bb9973fa_1778630672917.jpeg" },
-            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", price: 5.00, tag: "Pure 3oz Espresso • No Milk", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1782005065541.jpeg" }
+        let FLYER_PRODUCTS = [
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍵", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_dac6f286-b5bb-44d4-ad26-ea3b9f31f12a_1787352446241.jpg" },
+            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍯", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1787351071664.jpg" },
+            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🍦", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1787351092259.jpg" },
+            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "🥛", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1787351822566.jpg" },
+            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", price: 6.00, tag: "Whole Milk or Oat Milk", icon: "✨", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_b03751fd-1e87-4f6e-8557-c8b8bb9973fa_1787350973613.jpg" },
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", price: 5.00, tag: "Pure 3oz Espresso • No Milk", icon: "☕", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1787352533474.jpg" }
         ];
 
         let cart = [];
@@ -930,6 +930,7 @@
             }
 
             renderDrinksGrid();
+            await fetchLiveProducts();
             await fetchActiveDrops();
 
             // Check Stripe URL return
@@ -947,6 +948,37 @@
                         console.error("Receipt load error:", e);
                     }
                 }
+            }
+        }
+
+        async function fetchLiveProducts() {
+            try {
+                const res = await fetch('/api/cali?action=products');
+                if (res.ok) {
+                    const dbProds = await res.json();
+                    if (Array.isArray(dbProds) && dbProds.length > 0) {
+                        const activeBottles = dbProds.filter(p => p.active !== false && !p.name?.toLowerCase().includes('bundle') && (p.options?.category !== 'hot' && !p.is_hot));
+                        if (activeBottles.length > 0) {
+                            FLYER_PRODUCTS = activeBottles.map(p => {
+                                const isBlack = isDrinkAmericanoOrBlack(p);
+                                const opt = p.options || {};
+                                return {
+                                    id: p.id,
+                                    name: p.name,
+                                    price: parseFloat(p.price || 6.00),
+                                    tag: isBlack ? "Pure 3oz Espresso • No Milk" : "Whole Milk or Oat Milk",
+                                    icon: isBlack ? "☕" : (p.name.toLowerCase().includes('matcha') ? "🍵" : "🥛"),
+                                    image: p.image_url || 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?w=300&auto=format&fit=crop&q=80',
+                                    description: opt.description || p.description || '',
+                                    ingredients: opt.ingredients || p.ingredients || ''
+                                };
+                            });
+                            renderDrinksGrid();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("fetchLiveProducts error:", e);
             }
         }
 
