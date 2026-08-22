@@ -193,12 +193,10 @@
                 <!-- Bundle 1: BUNDLE OF 5 MILK ($25) -->
                 <div class="bg-white rounded-3xl p-5 border border-brand-brown/20 shadow-sm hover:shadow-md transition-all space-y-3.5 flex flex-col justify-between">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-12 h-12 rounded-full bg-[#8b5a2b] text-white flex items-center justify-center text-xl shrink-0 shadow-sm border-2 border-dashed border-white/60">
-                            <span>🐮</span>
-                        </div>
+                        <img src="https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1787351071664.jpg" alt="Whole Milk 5-Pack" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-brand-brown/20 shrink-0">
                         <div>
-                            <span class="text-[8px] font-black uppercase tracking-wider text-gray-400">Bundle of 5</span>
-                            <h3 class="font-serif font-black text-lg text-brand-dark leading-tight">WHOLE MILK</h3>
+                            <span class="text-[8px] font-black uppercase tracking-wider text-gray-400">Mix & Match 5-Pack</span>
+                            <h3 class="font-serif font-black text-lg text-brand-dark leading-tight">WHOLE MILK BUNDLE</h3>
                         </div>
                     </div>
 
@@ -215,12 +213,10 @@
                 <!-- Bundle 2: BUNDLE OF 5 OATMILK ($30) -->
                 <div class="bg-white rounded-3xl p-5 border border-emerald-600/20 shadow-sm hover:shadow-md transition-all space-y-3.5 flex flex-col justify-between">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-12 h-12 rounded-full bg-[#4a7c59] text-white flex items-center justify-center text-xl shrink-0 shadow-sm border-2 border-dashed border-white/60">
-                            <span>🍃</span>
-                        </div>
+                        <img src="https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_dac6f286-b5bb-44d4-ad26-ea3b9f31f12a_1787352446241.jpg" alt="Oat Milk 5-Pack" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-emerald-600/20 shrink-0">
                         <div>
-                            <span class="text-[8px] font-black uppercase tracking-wider text-gray-400">Bundle of 5</span>
-                            <h3 class="font-serif font-black text-lg text-emerald-800 leading-tight">OAT MILK</h3>
+                            <span class="text-[8px] font-black uppercase tracking-wider text-gray-400">Mix & Match 5-Pack</span>
+                            <h3 class="font-serif font-black text-lg text-emerald-800 leading-tight">OAT MILK BUNDLE</h3>
                         </div>
                     </div>
 
@@ -238,9 +234,7 @@
                 <div class="sm:col-span-2 bg-gradient-to-br from-brand-dark via-[#1e1511] to-[#2b1c15] text-white rounded-3xl p-5 border border-brand-gold/30 shadow-lg space-y-4 flex flex-col justify-between">
                     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div class="flex items-center gap-3.5">
-                            <div class="w-12 h-12 rounded-full bg-brand-gold/15 text-brand-gold flex items-center justify-center text-xl shrink-0 border border-brand-gold/30">
-                                <span>🚚</span>
-                            </div>
+                            <img src="https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1787351822566.jpg" alt="Route Case" class="w-14 h-14 rounded-2xl object-cover shadow-sm border border-brand-gold/30 shrink-0">
                             <div>
                                 <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[8px] font-black uppercase tracking-wider border border-emerald-400/30 mb-0.5">
                                     ★ 100% Free Delivery Unlocked
@@ -619,10 +613,15 @@
                 <button type="button" onclick="closeBundleBuilder()" class="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all"><i class="fas fa-times text-xs"></i></button>
             </div>
 
-            <!-- Progress Indicator -->
-            <div class="bg-brand-cream p-3 rounded-2xl border border-brand-brown/15 flex items-center justify-between">
-                <span class="text-[9px] font-black uppercase text-gray-500 tracking-wider">Selected Bottles</span>
-                <span id="bundle-count-indicator" class="font-mono font-black text-sm text-brand-brown">0 / 5</span>
+            <!-- 5-Bottle Visual Tray -->
+            <div class="bg-brand-cream/80 p-3.5 rounded-3xl border border-brand-brown/15 space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black uppercase text-gray-500 tracking-wider">5-Bottle Pack Tray</span>
+                    <span id="bundle-count-indicator" class="font-mono font-black text-xs text-brand-brown">0 / 5 Selected</span>
+                </div>
+                <div id="bundle-tray-slots" class="flex gap-2">
+                    <!-- Injected dynamically with 5 real bottle slots -->
+                </div>
             </div>
 
             <!-- Flavors Selector Grid -->
@@ -1456,25 +1455,64 @@
 
         function renderBundleFlavors() {
             const list = document.getElementById('bundle-flavors-list');
-            list.innerHTML = FLYER_PRODUCTS.filter(p => !isDrinkAmericanoOrBlack(p)).map(p => {
-                const count = bundleSelections[p.name] || 0;
-                return `
-                <div class="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
-                    <div class="flex items-center gap-3">
-                        <img src="${p.image}" class="w-8 h-8 object-contain">
-                        <div>
-                            <p class="font-serif font-bold text-xs text-brand-dark">${p.name}</p>
-                            <p class="text-[8px] text-gray-400 font-bold uppercase">${activeBundleType === 'oat' ? 'Oat Milk' : 'Whole Milk'}</p>
+            const tray = document.getElementById('bundle-tray-slots');
+            const coldBottles = FLYER_PRODUCTS.filter(p => !isDrinkAmericanoOrBlack(p));
+
+            // Flatten selections into array of chosen bottles
+            const chosenList = [];
+            for (const [flavorName, qty] of Object.entries(bundleSelections)) {
+                const prod = FLYER_PRODUCTS.find(p => p.name === flavorName);
+                for (let i = 0; i < qty; i++) {
+                    chosenList.push({ name: flavorName, image: prod?.image || '' });
+                }
+            }
+
+            // Render Tray Slots
+            if (tray) {
+                let slotsHtml = '';
+                for (let i = 0; i < 5; i++) {
+                    const item = chosenList[i];
+                    if (item) {
+                        slotsHtml += `
+                        <div class="relative flex-1 aspect-square rounded-2xl bg-white border border-brand-brown/30 p-1 flex flex-col items-center justify-center text-center shadow-xs">
+                            <img src="${item.image}" class="w-8 h-8 rounded-xl object-cover">
+                            <span class="text-[7px] font-bold text-brand-dark truncate max-w-full px-0.5 leading-tight mt-0.5">${item.name.split(' ')[0]}</span>
+                            <button type="button" onclick="adjustBundleQty('${item.name}', -1)" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center shadow-xs hover:scale-110">✕</button>
+                        </div>
+                        `;
+                    } else {
+                        slotsHtml += `
+                        <div class="flex-1 aspect-square rounded-2xl border-2 border-dashed border-gray-200 p-1 flex flex-col items-center justify-center text-center bg-gray-50/50">
+                            <span class="text-[8px] font-black text-gray-300">#${i + 1}</span>
+                            <span class="text-[6px] text-gray-300 uppercase font-bold">Empty</span>
+                        </div>
+                        `;
+                    }
+                }
+                tray.innerHTML = slotsHtml;
+            }
+
+            if (list) {
+                list.innerHTML = coldBottles.map(p => {
+                    const count = bundleSelections[p.name] || 0;
+                    return `
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:border-brand-brown/20 transition-all">
+                        <div class="flex items-center gap-3">
+                            <img src="${p.image}" class="w-11 h-11 rounded-xl object-cover border border-gray-200 shrink-0">
+                            <div>
+                                <p class="font-serif font-bold text-xs text-brand-dark">${p.name}</p>
+                                <p class="text-[8px] text-gray-400 font-bold uppercase">${activeBundleType === 'oat' ? 'Oat Milk Latte' : 'Whole Milk Latte'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustBundleQty('${p.name}', -1)" class="w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center hover:bg-gray-100 transition-all">-</button>
+                            <span class="font-mono font-black text-xs w-5 text-center text-brand-dark">${count}</span>
+                            <button type="button" onclick="adjustBundleQty('${p.name}', 1)" class="w-8 h-8 rounded-full bg-brand-dark text-white font-bold text-xs flex items-center justify-center hover:bg-brand-brown transition-all">+</button>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" onclick="adjustBundleQty('${p.name}', -1)" class="w-7 h-7 rounded-full bg-white border border-gray-200 text-gray-700 font-bold text-xs flex items-center justify-center hover:bg-gray-100 transition-all">-</button>
-                        <span class="font-mono font-black text-xs w-5 text-center">${count}</span>
-                        <button type="button" onclick="adjustBundleQty('${p.name}', 1)" class="w-7 h-7 rounded-full bg-brand-dark text-white font-bold text-xs flex items-center justify-center hover:bg-brand-brown transition-all">+</button>
-                    </div>
-                </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
         }
 
         function adjustBundleQty(flavor, delta) {
