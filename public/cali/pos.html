@@ -636,23 +636,17 @@
         // ----------------------------------------------------
         // CART & QUANTITY ENGINE
         // ----------------------------------------------------
-        const SHOT_OPTIONS = [
-            { id: 'standard', name: 'Default (2 Shots)', shortName: '⚡ 2 Shots (Default)', extraPrice: 0.00 },
-            { id: 'less', name: 'Less (1 Shot)', shortName: '🍃 1 Shot (Less)', extraPrice: 0.00 },
-            { id: 'extra', name: 'Extra (+1 Shot)', shortName: '🔥 3 Shots (+$1)', extraPrice: 1.00 },
-            { id: 'double_extra', name: 'Double Extra (+2 Shots)', shortName: '💥 4 Shots (+$2)', extraPrice: 2.00 }
-        ];
-
-        function fastAddDrink(itemId, milkChoice, shotsChoice = 'standard') {
+        function fastAddDrink(itemId, milkChoice, initialShots = 2) {
             const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
-            const shotConfig = SHOT_OPTIONS.find(s => s.id === shotsChoice) || SHOT_OPTIONS[0];
             const milkExtra = (milkChoice === 'Oat Milk') ? 1.00 : 0.00;
-            const unitPrice = item.basePrice + milkExtra + shotConfig.extraPrice;
+            const extraShots = Math.max(0, initialShots - 2);
+            const shotsExtra = extraShots * 1.00;
+            const unitPrice = item.basePrice + milkExtra + shotsExtra;
             
             // Check if same item + milk + shots already in cart
-            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shots || 'standard') === shotConfig.id && !i.is_bundle);
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shotsCount || 2) === initialShots && !i.is_bundle);
             if (existing) {
                 existing.qty++;
                 existing.total = existing.qty * existing.unitPrice;
@@ -664,10 +658,9 @@
                     image: item.image,
                     milk: milkChoice,
                     hasMilk: item.hasMilk,
-                    shots: shotConfig.id,
-                    shotsName: shotConfig.name,
-                    shotsShort: shotConfig.shortName,
-                    shotsExtra: shotConfig.extraPrice,
+                    shotsCount: initialShots,
+                    shotsName: `${initialShots} Shot${initialShots > 1 ? 's' : ''}`,
+                    shotsExtra: shotsExtra,
                     basePrice: item.basePrice,
                     unitPrice: unitPrice,
                     qty: 1,
@@ -725,26 +718,24 @@
             showToast(`Switched to ${item.milk}`);
         }
 
-        function toggleCartItemShots(cartId) {
+        function adjustCartItemShots(cartId, delta) {
             const item = cart.find(i => i.cartId === cartId);
             if (!item || item.is_bundle) return;
 
-            const currentId = item.shots || 'standard';
-            const currentIdx = SHOT_OPTIONS.findIndex(s => s.id === currentId);
-            const nextIdx = (currentIdx + 1) % SHOT_OPTIONS.length;
-            const next = SHOT_OPTIONS[nextIdx];
+            let count = (item.shotsCount !== undefined) ? item.shotsCount : 2;
+            count = Math.max(1, Math.min(6, count + delta)); // Min 1 shot, Max 6 shots
 
-            item.shots = next.id;
-            item.shotsName = next.name;
-            item.shotsShort = next.shortName;
-            item.shotsExtra = next.extraPrice;
+            item.shotsCount = count;
+            const extraShots = Math.max(0, count - 2);
+            item.shotsExtra = extraShots * 1.00;
+            item.shotsName = `${count} Shot${count > 1 ? 's' : ''}`;
 
             const milkExtra = (item.milk === 'Oat Milk') ? 1.00 : 0.00;
             item.unitPrice = item.basePrice + milkExtra + item.shotsExtra;
             item.total = item.qty * item.unitPrice;
 
             renderCart();
-            showToast(`${item.name}: ${next.shortName}`);
+            showToast(`${item.name}: ${item.shotsName} ${extraShots > 0 ? `(+$${item.shotsExtra.toFixed(2)})` : ''}`);
         }
 
         function clearCart() {
@@ -807,34 +798,34 @@
                                 <span class="font-mono font-bold text-[10px] text-brand-gold">$${item.total.toFixed(2)}</span>
                             </div>
                             
-                            <!-- 1-Tap Milk & Shot Switchers -->
-                            <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                            <!-- 1-Tap Milk Switcher & Shots Stepper Counter -->
+                            <div class="flex items-center gap-2 flex-wrap mt-1.5">
                                 ${item.is_bundle ? `
                                 <p class="text-[8px] text-white/60 truncate">${item.desc}</p>
                                 ` : item.hasMilk ? `
-                                <button type="button" onclick="toggleCartItemMilk('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${item.milk === 'Oat Milk' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'} flex items-center gap-1 transition-all">
+                                <button type="button" onclick="toggleCartItemMilk('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-1 rounded-xl border ${item.milk === 'Oat Milk' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'} flex items-center gap-1 transition-all">
                                     <span>${item.milk === 'Oat Milk' ? '🌾 Oat (+$1)' : '🥛 Whole'}</span>
                                     <i class="fas fa-rotate text-[7px]"></i>
                                 </button>
                                 ` : `
-                                <span class="text-[8px] text-white/50 uppercase font-bold inline-block">Pure Espresso</span>
+                                <span class="text-[8px] text-white/50 uppercase font-bold inline-block px-1">Pure Espresso</span>
                                 `}
 
                                 ${!item.is_bundle ? `
-                                <button type="button" onclick="toggleCartItemShots('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                                    item.shots === 'less' ? 'bg-sky-500/20 text-sky-300 border-sky-400/40' :
-                                    item.shots === 'extra' ? 'bg-amber-500/20 text-amber-300 border-amber-400/40' :
-                                    item.shots === 'double_extra' ? 'bg-red-500/20 text-red-300 border-red-400/40' :
-                                    'bg-white/10 text-white/80 border-white/20'
-                                } flex items-center gap-1 transition-all">
-                                    <span>${
-                                        item.shots === 'less' ? '🍃 1 Shot (Less)' :
-                                        item.shots === 'extra' ? '🔥 3 Shots (+$1)' :
-                                        item.shots === 'double_extra' ? '💥 4 Shots (+$2)' :
-                                        '⚡ 2 Shots (Default)'
-                                    }</span>
-                                    <i class="fas fa-rotate text-[7px]"></i>
-                                </button>
+                                <!-- Simple Numeric Shots Counter Stepper -->
+                                <div class="flex items-center bg-black/60 border border-white/15 rounded-xl p-0.5 gap-1 shadow-inner">
+                                    <span class="text-[7px] font-black text-white/50 uppercase pl-1.5">Shots</span>
+                                    <button type="button" onclick="adjustCartItemShots('${item.cartId}', -1)" class="w-5 h-5 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold active:scale-95">
+                                        <i class="fas fa-minus text-[7px]"></i>
+                                    </button>
+                                    <span class="font-mono font-black text-xs text-brand-gold min-w-[14px] text-center">
+                                        ${item.shotsCount || 2}
+                                    </span>
+                                    <button type="button" onclick="adjustCartItemShots('${item.cartId}', 1)" class="w-5 h-5 rounded-lg bg-brand-gold text-brand-dark flex items-center justify-center text-xs font-bold active:scale-95">
+                                        <i class="fas fa-plus text-[7px]"></i>
+                                    </button>
+                                    ${(item.shotsExtra > 0) ? `<span class="text-[7px] font-mono font-bold text-amber-300 pr-1">+$${item.shotsExtra.toFixed(0)}</span>` : ''}
+                                </div>
                                 ` : ''}
                             </div>
                         </div>
