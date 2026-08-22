@@ -636,14 +636,23 @@
         // ----------------------------------------------------
         // CART & QUANTITY ENGINE
         // ----------------------------------------------------
-        function fastAddDrink(itemId, milkChoice) {
+        const SHOT_OPTIONS = [
+            { id: 'standard', name: 'Default (2 Shots)', shortName: '⚡ 2 Shots (Default)', extraPrice: 0.00 },
+            { id: 'less', name: 'Less (1 Shot)', shortName: '🍃 1 Shot (Less)', extraPrice: 0.00 },
+            { id: 'extra', name: 'Extra (+1 Shot)', shortName: '🔥 3 Shots (+$1)', extraPrice: 1.00 },
+            { id: 'double_extra', name: 'Double Extra (+2 Shots)', shortName: '💥 4 Shots (+$2)', extraPrice: 2.00 }
+        ];
+
+        function fastAddDrink(itemId, milkChoice, shotsChoice = 'standard') {
             const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
-            const unitPrice = (milkChoice === 'Oat Milk') ? (item.basePrice + 1.00) : item.basePrice;
+            const shotConfig = SHOT_OPTIONS.find(s => s.id === shotsChoice) || SHOT_OPTIONS[0];
+            const milkExtra = (milkChoice === 'Oat Milk') ? 1.00 : 0.00;
+            const unitPrice = item.basePrice + milkExtra + shotConfig.extraPrice;
             
-            // Check if same item + milk already in cart
-            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && !i.is_bundle);
+            // Check if same item + milk + shots already in cart
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shots || 'standard') === shotConfig.id && !i.is_bundle);
             if (existing) {
                 existing.qty++;
                 existing.total = existing.qty * existing.unitPrice;
@@ -655,6 +664,10 @@
                     image: item.image,
                     milk: milkChoice,
                     hasMilk: item.hasMilk,
+                    shots: shotConfig.id,
+                    shotsName: shotConfig.name,
+                    shotsShort: shotConfig.shortName,
+                    shotsExtra: shotConfig.extraPrice,
                     basePrice: item.basePrice,
                     unitPrice: unitPrice,
                     qty: 1,
@@ -701,14 +714,37 @@
 
             if (item.milk === 'Whole Milk') {
                 item.milk = 'Oat Milk';
-                item.unitPrice = item.basePrice + 1.00;
             } else {
                 item.milk = 'Whole Milk';
-                item.unitPrice = item.basePrice;
             }
+            const milkExtra = (item.milk === 'Oat Milk') ? 1.00 : 0.00;
+            const shotsExtra = item.shotsExtra || 0.00;
+            item.unitPrice = item.basePrice + milkExtra + shotsExtra;
             item.total = item.qty * item.unitPrice;
             renderCart();
             showToast(`Switched to ${item.milk}`);
+        }
+
+        function toggleCartItemShots(cartId) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item || item.is_bundle) return;
+
+            const currentId = item.shots || 'standard';
+            const currentIdx = SHOT_OPTIONS.findIndex(s => s.id === currentId);
+            const nextIdx = (currentIdx + 1) % SHOT_OPTIONS.length;
+            const next = SHOT_OPTIONS[nextIdx];
+
+            item.shots = next.id;
+            item.shotsName = next.name;
+            item.shotsShort = next.shortName;
+            item.shotsExtra = next.extraPrice;
+
+            const milkExtra = (item.milk === 'Oat Milk') ? 1.00 : 0.00;
+            item.unitPrice = item.basePrice + milkExtra + item.shotsExtra;
+            item.total = item.qty * item.unitPrice;
+
+            renderCart();
+            showToast(`${item.name}: ${next.shortName}`);
         }
 
         function clearCart() {
@@ -771,17 +807,36 @@
                                 <span class="font-mono font-bold text-[10px] text-brand-gold">$${item.total.toFixed(2)}</span>
                             </div>
                             
-                            <!-- 1-Tap Milk Switcher Pill or Description -->
-                            ${item.is_bundle ? `
-                            <p class="text-[8px] text-white/60 truncate">${item.desc}</p>
-                            ` : item.hasMilk ? `
-                            <button type="button" onclick="toggleCartItemMilk('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${item.milk === 'Oat Milk' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'} flex items-center gap-1 transition-all mt-0.5">
-                                <span>${item.milk === 'Oat Milk' ? '🌾 Oat Milk (+$1)' : '🥛 Whole Milk'}</span>
-                                <i class="fas fa-rotate text-[7px]"></i>
-                            </button>
-                            ` : `
-                            <span class="text-[8px] text-white/50 uppercase font-bold mt-0.5 inline-block">Pure Espresso</span>
-                            `}
+                            <!-- 1-Tap Milk & Shot Switchers -->
+                            <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                                ${item.is_bundle ? `
+                                <p class="text-[8px] text-white/60 truncate">${item.desc}</p>
+                                ` : item.hasMilk ? `
+                                <button type="button" onclick="toggleCartItemMilk('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${item.milk === 'Oat Milk' ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'} flex items-center gap-1 transition-all">
+                                    <span>${item.milk === 'Oat Milk' ? '🌾 Oat (+$1)' : '🥛 Whole'}</span>
+                                    <i class="fas fa-rotate text-[7px]"></i>
+                                </button>
+                                ` : `
+                                <span class="text-[8px] text-white/50 uppercase font-bold inline-block">Pure Espresso</span>
+                                `}
+
+                                ${!item.is_bundle ? `
+                                <button type="button" onclick="toggleCartItemShots('${item.cartId}')" class="text-[8px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                                    item.shots === 'less' ? 'bg-sky-500/20 text-sky-300 border-sky-400/40' :
+                                    item.shots === 'extra' ? 'bg-amber-500/20 text-amber-300 border-amber-400/40' :
+                                    item.shots === 'double_extra' ? 'bg-red-500/20 text-red-300 border-red-400/40' :
+                                    'bg-white/10 text-white/80 border-white/20'
+                                } flex items-center gap-1 transition-all">
+                                    <span>${
+                                        item.shots === 'less' ? '🍃 1 Shot (Less)' :
+                                        item.shots === 'extra' ? '🔥 3 Shots (+$1)' :
+                                        item.shots === 'double_extra' ? '💥 4 Shots (+$2)' :
+                                        '⚡ 2 Shots (Default)'
+                                    }</span>
+                                    <i class="fas fa-rotate text-[7px]"></i>
+                                </button>
+                                ` : ''}
+                            </div>
                         </div>
                     </div>
 
