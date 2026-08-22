@@ -329,8 +329,30 @@
 
                 <div class="space-y-2 pt-1">
                     <div>
-                        <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider block mb-1">Drop Location / Facility Name *</label>
-                        <input type="text" id="cust-location" placeholder="e.g. Kaiser Baldwin Park, Ayala High, Long Beach Memorial, ABC Office, Home" required class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider">Drop Location / Facility *</label>
+                            <span class="text-[8px] font-bold text-brand-brown uppercase">20+ Bottles = Free Delivery</span>
+                        </div>
+                        <select id="cust-location-select" onchange="handleLocationSelectChange(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                            <option value="Kaiser Baldwin Park">🏥 Kaiser Baldwin Park (Baldwin Park)</option>
+                            <option value="__NEW_LOCATION__">➕ + Add New Delivery Location / Workplace Drop...</option>
+                        </select>
+                    </div>
+
+                    <!-- New / Custom Location Input Fields (Revealed when + Add New is selected) -->
+                    <div id="custom-location-box" class="hidden bg-brand-cream/60 border border-brand-brown/20 rounded-2xl p-3.5 space-y-2.5 animate-fade-in">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[8px] font-black uppercase text-brand-brown tracking-wider">New Drop Location Details</span>
+                            <button type="button" onclick="cancelCustomLocation()" class="text-[8px] text-gray-400 font-bold uppercase hover:underline">Choose Existing</button>
+                        </div>
+                        <div>
+                            <label class="text-[8px] font-black uppercase text-gray-500 tracking-wider block mb-1">Facility / Workplace / School Name *</label>
+                            <input type="text" id="cust-custom-name" placeholder="e.g. Ayala High School, Long Beach Memorial, Tech Park" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        </div>
+                        <div>
+                            <label class="text-[8px] font-black uppercase text-gray-500 tracking-wider block mb-1">Delivery Street Address & City *</label>
+                            <input type="text" id="cust-custom-address" placeholder="e.g. 14250 Ramona Ave, Chino Hills" class="w-full bg-white border border-gray-200 rounded-xl px-3 py-2 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -342,11 +364,6 @@
                             <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider block mb-1">Preferred Drop Date *</label>
                             <input type="date" id="cust-drop-date" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider block mb-1">Delivery Address & City</label>
-                        <input type="text" id="cust-address" placeholder="Street Address & City (e.g. 1011 Baldwin Park Blvd, Baldwin Park)" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                     </div>
                 </div>
             </div>
@@ -901,6 +918,7 @@
 
         // Group Drop Pools State
         let activeDropsList = [];
+        let activeLocationsList = [];
         let selectedDrop = null;
 
         async function init() {
@@ -908,13 +926,10 @@
             const savedName = localStorage.getItem('cali_pay_name');
             const savedPhone = localStorage.getItem('cali_pay_phone');
             const savedLocation = localStorage.getItem('cali_pay_loc');
-            const savedAddress = localStorage.getItem('cali_pay_addr');
             const savedEmail = localStorage.getItem('cali_pay_email');
 
             if (savedName) document.getElementById('cust-name').value = savedName;
             if (savedPhone) document.getElementById('cust-phone').value = savedPhone;
-            if (savedLocation) document.getElementById('cust-location').value = savedLocation;
-            if (savedAddress) document.getElementById('cust-address').value = savedAddress;
             if (savedEmail) document.getElementById('receipt-email-input').value = savedEmail;
 
             // Default drop date to tomorrow
@@ -931,7 +946,15 @@
 
             renderDrinksGrid();
             await fetchLiveProducts();
+            await fetchLocationsDropdown();
             await fetchActiveDrops();
+
+            if (savedLocation) {
+                const select = document.getElementById('cust-location-select');
+                if (select && select.querySelector(`option[value="${savedLocation}"]`)) {
+                    select.value = savedLocation;
+                }
+            }
 
             // Check Stripe URL return
             const urlParams = new URLSearchParams(window.location.search);
@@ -949,6 +972,86 @@
                     }
                 }
             }
+        }
+
+        async function fetchLocationsDropdown() {
+            try {
+                const res = await fetch('/api/cali?action=locations');
+                if (res.ok) {
+                    const locs = await res.json();
+                    if (Array.isArray(locs)) {
+                        activeLocationsList = locs.filter(l => l.active !== false);
+                        renderLocationsDropdown();
+                    }
+                }
+            } catch (e) {
+                console.error("fetchLocationsDropdown error:", e);
+            }
+        }
+
+        function renderLocationsDropdown() {
+            const select = document.getElementById('cust-location-select');
+            if (!select) return;
+
+            const currentValue = select.value;
+            let optionsHtml = '';
+
+            // Group existing active locations
+            if (activeLocationsList.length > 0) {
+                activeLocationsList.forEach(loc => {
+                    const icon = loc.name.toLowerCase().includes('kaiser') ? '🏥' : (loc.name.toLowerCase().includes('amazon') ? '📦' : '🏢');
+                    optionsHtml += `<option value="${loc.name}">${icon} ${loc.name} (${loc.city || 'SoCal'})</option>`;
+                });
+            } else {
+                optionsHtml += `<option value="Kaiser Baldwin Park">🏥 Kaiser Baldwin Park (Baldwin Park)</option>`;
+            }
+
+            optionsHtml += `<option value="__NEW_LOCATION__">➕ + Add New Delivery Location / Workplace Drop...</option>`;
+            select.innerHTML = optionsHtml;
+
+            if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
+                select.value = currentValue;
+            }
+        }
+
+        function handleLocationSelectChange(val) {
+            const customBox = document.getElementById('custom-location-box');
+            if (val === '__NEW_LOCATION__') {
+                customBox.classList.remove('hidden');
+                document.getElementById('cust-custom-name')?.focus();
+            } else {
+                customBox.classList.add('hidden');
+            }
+        }
+
+        function cancelCustomLocation() {
+            const select = document.getElementById('cust-location-select');
+            if (select && select.options.length > 0) {
+                select.selectedIndex = 0;
+            }
+            document.getElementById('custom-location-box').classList.add('hidden');
+        }
+
+        function getSelectedLocationData() {
+            const select = document.getElementById('cust-location-select');
+            const val = select ? select.value : '';
+
+            if (val === '__NEW_LOCATION__') {
+                const customName = document.getElementById('cust-custom-name')?.value?.trim() || '';
+                const customAddr = document.getElementById('cust-custom-address')?.value?.trim() || '';
+                return {
+                    name: customName,
+                    address: customAddr,
+                    isNew: true
+                };
+            }
+
+            const matchedLoc = activeLocationsList.find(l => l.name === val);
+            return {
+                name: val,
+                address: matchedLoc ? `${matchedLoc.name}, ${matchedLoc.city}` : val,
+                isNew: false
+            };
         }
 
         async function fetchLiveProducts() {
@@ -1879,9 +1982,10 @@
         async function handleStripeCheckout() {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
-            const location = document.getElementById('cust-location').value.trim();
+            const locData = getSelectedLocationData();
+            const location = locData.name;
+            const address = locData.address;
             const dept = document.getElementById('cust-dept')?.value.trim() || '';
-            const address = document.getElementById('cust-address')?.value.trim() || '';
             const dropDate = document.getElementById('cust-drop-date')?.value || '';
             const btn = document.getElementById('stripe-submit-btn');
 
@@ -1894,14 +1998,13 @@
                 return;
             }
             if (!location) {
-                showToast("Please enter your Drop Location / Facility name.");
+                showToast("Please select or enter your Drop Location / Facility name.");
                 return;
             }
 
             localStorage.setItem('cali_pay_name', name);
             localStorage.setItem('cali_pay_phone', phone);
             localStorage.setItem('cali_pay_loc', location);
-            localStorage.setItem('cali_pay_addr', address);
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1.5"></i> Redirecting...';
@@ -2025,9 +2128,10 @@
         async function handleManualCheckout(method) {
             const name = document.getElementById('cust-name').value.trim();
             const phone = document.getElementById('cust-phone').value.trim();
-            const location = document.getElementById('cust-location').value.trim();
+            const locData = getSelectedLocationData();
+            const location = locData.name;
+            const address = locData.address;
             const dept = document.getElementById('cust-dept')?.value.trim() || '';
-            const address = document.getElementById('cust-address')?.value.trim() || '';
             const dropDate = document.getElementById('cust-drop-date')?.value || '';
 
             if (cart.length === 0) {
@@ -2039,7 +2143,7 @@
                 return;
             }
             if (!location) {
-                showToast("Please enter your Drop Location / Facility name.");
+                showToast("Please select or enter your Drop Location / Facility name.");
                 return;
             }
 
@@ -2051,7 +2155,6 @@
             localStorage.setItem('cali_pay_name', name);
             localStorage.setItem('cali_pay_phone', phone);
             localStorage.setItem('cali_pay_loc', location);
-            localStorage.setItem('cali_pay_addr', address);
 
             const totalDrinks = cart.reduce((sum, item) => sum + item.total, 0);
             const regularIndividualBottles = cart
