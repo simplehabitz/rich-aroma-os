@@ -334,10 +334,16 @@
                             <input type="text" id="cust-dept" placeholder="e.g. ICU Breakroom, Teacher's Lounge, Suite 300" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-medium text-brand-dark outline-none focus:border-brand-brown transition-all">
                         </div>
                         <div>
-                            <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider block mb-1">Preferred Drop Date *</label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[8px] font-black uppercase text-gray-400 tracking-wider">Preferred Drop Date *</label>
+                                <span class="text-[7px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Next Route Drop</span>
+                            </div>
                             <input type="date" id="cust-drop-date" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
                         </div>
                     </div>
+                    <p class="text-[8px] text-gray-400 flex items-center gap-1.5 pt-0.5">
+                        <i class="fas fa-snowflake text-brand-brown text-[9px]"></i> Small-batch bottles delivered chilled directly to your department breakroom / fridge.
+                    </p>
                 </div>
             </div>
 
@@ -469,9 +475,9 @@
     </main>
 
     <!-- ============================================== -->
-    <!-- STICKY BOTTOM CART BAR -->
+    <!-- STICKY BOTTOM CART BAR (Auto-hides when inside checkout form) -->
     <!-- ============================================== -->
-    <div id="sticky-cart-bar" class="hidden fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto animate-fade-in">
+    <div id="sticky-cart-bar" class="hidden fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto transition-all duration-300 transform translate-y-0 opacity-100">
         <div class="glass-panel bg-brand-dark/95 border border-brand-gold/40 text-white rounded-3xl p-3.5 shadow-2xl flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-2xl bg-brand-gold text-brand-dark flex items-center justify-center font-mono font-black text-sm">
@@ -926,6 +932,7 @@
             await fetchLiveProducts();
             await fetchLocationsDropdown();
             await fetchActiveDrops();
+            initStickyCartObserver();
 
             if (savedLocation) {
                 const select = document.getElementById('cust-location-select');
@@ -950,6 +957,26 @@
                     }
                 }
             }
+        }
+
+        function initStickyCartObserver() {
+            const cartSection = document.getElementById('cart-section');
+            const stickyBar = document.getElementById('sticky-cart-bar');
+            if (!cartSection || !stickyBar) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && cart.length > 0) {
+                        stickyBar.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none');
+                        stickyBar.classList.remove('translate-y-0', 'opacity-100');
+                    } else if (cart.length > 0) {
+                        stickyBar.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+                        stickyBar.classList.add('translate-y-0', 'opacity-100');
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            observer.observe(cartSection);
         }
 
         async function fetchLocationsDropdown() {
