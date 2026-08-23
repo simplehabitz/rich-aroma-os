@@ -742,9 +742,9 @@ module.exports = async (req, res) => {
             return res.json({ success: true, message: 'All test orders cleared.' });
         }
 
-        // 6d. CREATE SELF CHECKOUT ORDER (PUBLIC)
-        if (req.method === 'POST' && action === 'create_self_checkout_order') {
-            const { customer_name, customer_phone, location_id, total, selections, notes, receiptBase64 } = req.body;
+        // 6d. CREATE SELF CHECKOUT / STOREFRONT ORDER (PUBLIC)
+        if (req.method === 'POST' && (action === 'create_self_checkout_order' || action === 'save_order')) {
+            const { customer_name, customer_phone, location_id, total, total_amount, selections, notes, receiptBase64, payment_proof_image, payment_method, destination_name, destination_dept, destination_address, preorder_date } = req.body;
 
             // Fast path for POS terminal
             if (selections && selections.is_popup_pos) {
@@ -756,7 +756,7 @@ module.exports = async (req, res) => {
                     customer_name: customer_name || 'Walk-up Customer',
                     customer_phone: customer_phone || '',
                     location_id: sanitizedLoc,
-                    total: parseFloat(total || 0),
+                    total: parseFloat(total || total_amount || 0),
                     status: 'paid',
                     selections: selections || {},
                     notes: notes || '[MOBILE POP-UP POS SALE]'
@@ -766,12 +766,13 @@ module.exports = async (req, res) => {
                 return res.json(posData || { success: true });
             }
             
+            const rawProof = payment_proof_image || receiptBase64;
             let receiptImageUrl = null;
-            if (receiptBase64 && receiptBase64.startsWith('data:image')) {
+            if (rawProof && rawProof.startsWith('data:image')) {
                 try {
-                    const base64Data = receiptBase64.replace(/^data:image\/\w+;base64,/, "");
+                    const base64Data = rawProof.replace(/^data:image\/\w+;base64,/, "");
                     const buffer = Buffer.from(base64Data, 'base64');
-                    const mimeType = receiptBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
+                    const mimeType = rawProof.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/png';
                     const ext = mimeType.split('/')[1] || 'png';
                     const storagePath = `receipts/REC_${Date.now()}.${ext}`;
 
@@ -1115,10 +1116,15 @@ module.exports = async (req, res) => {
                 updatedNotes += `\n[PAYMENT: ${selections.payment_method.toUpperCase()}] Sender: ${selections.payment_reference || 'N/A'}`;
             }
             
+            let sanitizedLocationId = null;
+            if (location_id && location_id.length === 36 && location_id.includes('-')) {
+                sanitizedLocationId = location_id;
+            }
+
             const { data, error } = await supabase.from('cali_orders').insert({
                 customer_name: customer_name || 'Guest',
                 customer_phone: customer_phone || '',
-                location_id: location_id === 'home' ? null : location_id,
+                location_id: sanitizedLocationId,
                 total: calculatedTotal,
                 status: initialStatus,
                 selections: updatedSelections,
