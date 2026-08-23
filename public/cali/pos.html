@@ -327,7 +327,7 @@
 
         let MENU_ITEMS = [
             // Cold Bottled Drinks
-            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_dac6f286-b5bb-44d4-ad26-ea3b9f31f12a_1787352446241.jpg", basePrice: 6.00, hasMilk: true, desc: "Ceremonial Matcha & Pure Vanilla" },
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_dac6f286-b5bb-44d4-ad26-ea3b9f31f12a_1787352446241.jpg", basePrice: 6.00, hasMilk: true, defaultShots: 0, desc: "Ceremonial Matcha & Pure Vanilla (0 Espresso Default)" },
             { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1787351071664.jpg", basePrice: 6.00, hasMilk: true, desc: "Honduran Espresso & Salted Caramel" },
             { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1787351092259.jpg", basePrice: 6.00, hasMilk: true, desc: "Classic Madagascar Vanilla" },
             { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1787351822566.jpg", basePrice: 6.00, hasMilk: true, desc: "Smooth Vanilla & Fresh Milk" },
@@ -640,8 +640,9 @@
             const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
+            const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
             const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || item.name.toLowerCase().includes('americano');
-            const defaultShots = item.defaultShots || (isAmericano ? 3 : 2);
+            const defaultShots = (item.defaultShots !== undefined) ? item.defaultShots : (isMatcha ? 0 : (isAmericano ? 3 : 2));
             const shots = (initialShots !== undefined) ? initialShots : defaultShots;
 
             const milkExtra = (milkChoice === 'Oat Milk') ? 1.00 : 0.00;
@@ -650,7 +651,7 @@
             const unitPrice = item.basePrice + milkExtra + shotsExtra;
             
             // Check if same item + milk + shots already in cart
-            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shotsCount || defaultShots) === shots && !i.is_bundle);
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && ((i.shotsCount !== undefined ? i.shotsCount : defaultShots) === shots) && !i.is_bundle);
             if (existing) {
                 existing.qty++;
                 existing.total = existing.qty * existing.unitPrice;
@@ -664,7 +665,7 @@
                     hasMilk: item.hasMilk,
                     defaultShots: defaultShots,
                     shotsCount: shots,
-                    shotsName: `${shots} Shot${shots > 1 ? 's' : ''}`,
+                    shotsName: shots === 0 ? '0 Shots' : `${shots} Shot${shots > 1 ? 's' : ''}`,
                     shotsExtra: shotsExtra,
                     basePrice: item.basePrice,
                     unitPrice: unitPrice,
@@ -676,7 +677,7 @@
             }
 
             renderCart();
-            showToast(`+1 ${item.name} (${shots} Shots)`, "success");
+            showToast(`+1 ${item.name} (${milkChoice})`, "success");
         }
 
         function incrementCartItem(cartId) {
@@ -727,16 +728,18 @@
             const item = cart.find(i => i.cartId === cartId);
             if (!item || item.is_bundle) return;
 
+            const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
             const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || (item.name && item.name.toLowerCase().includes('americano'));
-            const defaultShots = item.defaultShots || (isAmericano ? 3 : 2);
+            const defaultShots = (item.defaultShots !== undefined) ? item.defaultShots : (isMatcha ? 0 : (isAmericano ? 3 : 2));
+            const minShots = isMatcha ? 0 : 1;
 
             let count = (item.shotsCount !== undefined) ? item.shotsCount : defaultShots;
-            count = Math.max(1, Math.min(6, count + delta)); // Min 1 shot, Max 6 shots
+            count = Math.max(minShots, Math.min(6, count + delta)); // Min 0 for Matcha, 1 for Coffee
 
             item.shotsCount = count;
             const extraShots = Math.max(0, count - defaultShots);
             item.shotsExtra = extraShots * 1.00;
-            item.shotsName = `${count} Shot${count > 1 ? 's' : ''}`;
+            item.shotsName = count === 0 ? '0 Shots' : `${count} Shot${count > 1 ? 's' : ''}`;
 
             const milkExtra = (item.milk === 'Oat Milk') ? 1.00 : 0.00;
             item.unitPrice = item.basePrice + milkExtra + item.shotsExtra;
@@ -827,7 +830,7 @@
                                         <i class="fas fa-minus text-[7px]"></i>
                                     </button>
                                     <span class="font-mono font-black text-xs text-brand-gold min-w-[14px] text-center">
-                                        ${item.shotsCount || 2}
+                                        ${item.shotsCount !== undefined ? item.shotsCount : (item.defaultShots !== undefined ? item.defaultShots : 2)}
                                     </span>
                                     <button type="button" onclick="adjustCartItemShots('${item.cartId}', 1)" class="w-5 h-5 rounded-lg bg-brand-gold text-brand-dark flex items-center justify-center text-xs font-bold active:scale-95">
                                         <i class="fas fa-plus text-[7px]"></i>
