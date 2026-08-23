@@ -332,7 +332,7 @@
             { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1787351092259.jpg", basePrice: 6.00, hasMilk: true, desc: "Classic Madagascar Vanilla" },
             { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1787351822566.jpg", basePrice: 6.00, hasMilk: true, desc: "Smooth Vanilla & Fresh Milk" },
             { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_b03751fd-1e87-4f6e-8557-c8b8bb9973fa_1787350973613.jpg", basePrice: 6.00, hasMilk: true, desc: "Spiced Masala & Espresso" },
-            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1787352533474.jpg", basePrice: 5.00, hasMilk: false, desc: "Pure 3oz Espresso & Water (No Milk)" }
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", category: "bottles", image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1787352533474.jpg", basePrice: 5.00, hasMilk: false, defaultShots: 3, desc: "Pure 3oz Espresso (3 Shots Default) & Water (No Milk)" }
         ];
 
         // ----------------------------------------------------
@@ -636,17 +636,21 @@
         // ----------------------------------------------------
         // CART & QUANTITY ENGINE
         // ----------------------------------------------------
-        function fastAddDrink(itemId, milkChoice, initialShots = 2) {
+        function fastAddDrink(itemId, milkChoice, initialShots) {
             const item = MENU_ITEMS.find(i => i.id === itemId);
             if (!item) return;
 
+            const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || item.name.toLowerCase().includes('americano');
+            const defaultShots = item.defaultShots || (isAmericano ? 3 : 2);
+            const shots = (initialShots !== undefined) ? initialShots : defaultShots;
+
             const milkExtra = (milkChoice === 'Oat Milk') ? 1.00 : 0.00;
-            const extraShots = Math.max(0, initialShots - 2);
+            const extraShots = Math.max(0, shots - defaultShots);
             const shotsExtra = extraShots * 1.00;
             const unitPrice = item.basePrice + milkExtra + shotsExtra;
             
             // Check if same item + milk + shots already in cart
-            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shotsCount || 2) === initialShots && !i.is_bundle);
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && (i.shotsCount || defaultShots) === shots && !i.is_bundle);
             if (existing) {
                 existing.qty++;
                 existing.total = existing.qty * existing.unitPrice;
@@ -658,8 +662,9 @@
                     image: item.image,
                     milk: milkChoice,
                     hasMilk: item.hasMilk,
-                    shotsCount: initialShots,
-                    shotsName: `${initialShots} Shot${initialShots > 1 ? 's' : ''}`,
+                    defaultShots: defaultShots,
+                    shotsCount: shots,
+                    shotsName: `${shots} Shot${shots > 1 ? 's' : ''}`,
                     shotsExtra: shotsExtra,
                     basePrice: item.basePrice,
                     unitPrice: unitPrice,
@@ -671,7 +676,7 @@
             }
 
             renderCart();
-            showToast(`+1 ${item.name} (${milkChoice})`, "success");
+            showToast(`+1 ${item.name} (${shots} Shots)`, "success");
         }
 
         function incrementCartItem(cartId) {
@@ -722,11 +727,14 @@
             const item = cart.find(i => i.cartId === cartId);
             if (!item || item.is_bundle) return;
 
-            let count = (item.shotsCount !== undefined) ? item.shotsCount : 2;
+            const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || (item.name && item.name.toLowerCase().includes('americano'));
+            const defaultShots = item.defaultShots || (isAmericano ? 3 : 2);
+
+            let count = (item.shotsCount !== undefined) ? item.shotsCount : defaultShots;
             count = Math.max(1, Math.min(6, count + delta)); // Min 1 shot, Max 6 shots
 
             item.shotsCount = count;
-            const extraShots = Math.max(0, count - 2);
+            const extraShots = Math.max(0, count - defaultShots);
             item.shotsExtra = extraShots * 1.00;
             item.shotsName = `${count} Shot${count > 1 ? 's' : ''}`;
 
