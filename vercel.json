@@ -402,6 +402,27 @@
       "dest": "/public/academy.html"
     },
     {
+      "src": "/kaiser",
+      "dest": "/public/kaiser.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/kaiser-bp",
+      "dest": "/public/kaiser.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
+      "src": "/cali/kaiser",
+      "dest": "/public/kaiser.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
+    },
+    {
       "src": "/cali",
       "dest": "/public/cali/index.html",
       "headers": {

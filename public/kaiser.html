@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kaiser Permanente Staff Coffee Route | Rich Aroma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#140f0c',
+                            brown: '#8b5a2b',
+                            cream: '#fdfbf7',
+                            gold: '#d4af37',
+                            surface: '#ffffff',
+                            kaiser: '#005880'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #fdfbf7; color: #140f0c; }
+        .tap-scale { transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1); }
+        .tap-scale:active { transform: scale(0.96); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes pulse-subtle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.94; transform: scale(1.01); } }
+        .animate-pulse-subtle { animation: pulse-subtle 3s ease-in-out infinite; }
+    </style>
+</head>
+<body class="font-sans antialiased pb-28">
+
+    <!-- Top Kaiser Staff Announcement Bar -->
+    <div class="bg-[#004b6e] text-white text-center py-2 px-3 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm sticky top-0 z-40">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+        <span>🏥 Kaiser Staff Route: Fresh Chilled Drops Every <strong>Monday & Thursday @ 6:45 AM</strong></span>
+    </div>
+
+    <!-- Main Container -->
+    <div class="max-w-md mx-auto px-4 pt-4 space-y-4">
+
+        <!-- Header / Hospital Brand Block -->
+        <header class="bg-white rounded-3xl p-5 border border-brand-brown/15 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-2xl bg-[#005880]/10 text-[#005880] flex items-center justify-center text-lg font-bold border border-[#005880]/20">
+                        <i class="fas fa-hospital"></i>
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-black uppercase tracking-widest text-[#005880] block">Staff Breakroom Route</span>
+                        <h1 class="font-serif font-black text-lg text-brand-dark leading-tight">Kaiser Baldwin Park</h1>
+                    </div>
+                </div>
+                <span class="text-[9px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                    Free Delivery ($0)
+                </span>
+            </div>
+
+            <!-- Captain Trust Card -->
+            <div class="bg-gradient-to-r from-brand-cream to-amber-50/60 rounded-2xl p-3 border border-brand-gold/30 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-xl">👩‍⚕️</span>
+                    <div class="truncate">
+                        <p class="text-[8px] font-black uppercase tracking-wider text-brand-brown">Department Drop Captain</p>
+                        <p class="text-xs font-bold text-brand-dark truncate">Nalina Avalos • ICU & Hospital Floors</p>
+                    </div>
+                </div>
+                <span class="text-[8px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full shrink-0">
+                    ✓ Verified Route
+                </span>
+            </div>
+
+            <!-- Value Proposition -->
+            <p class="text-xs text-gray-600 leading-relaxed">
+                Small-batch artisan bottled lattes and cold espresso brewed fresh, flash-chilled, and dropped directly in your department breakroom fridge before your shift.
+            </p>
+        </header>
+
+        <!-- Drop Day Selector (Monday vs Thursday) -->
+        <section class="bg-white rounded-3xl p-4 border border-brand-brown/15 shadow-sm space-y-2.5">
+            <div class="flex items-center justify-between">
+                <label class="text-[9px] font-black uppercase text-brand-dark tracking-wider flex items-center gap-1.5">
+                    <i class="fas fa-calendar-check text-[#005880]"></i> Select Your Shift Delivery Day:
+                </label>
+                <span class="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Brewed Fresh</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" onclick="selectDropDay('Monday')" id="btn-day-monday" class="p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-black uppercase tracking-wider">🚀 Monday Drop</span>
+                        <i class="fas fa-check-circle text-xs text-emerald-300"></i>
+                    </div>
+                    <p class="text-[8px] text-white/70 mt-1 font-medium leading-tight">Covers Mon, Tue, Wed Shifts</p>
+                    <span class="text-[7px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded mt-1.5 inline-block">Brewed Sunday Night</span>
+                </button>
+
+                <button type="button" onclick="selectDropDay('Thursday')" id="btn-day-thursday" class="p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[9px] font-black uppercase tracking-wider">🚀 Thursday Drop</span>
+                        <i class="far fa-circle text-xs text-gray-400"></i>
+                    </div>
+                    <p class="text-[8px] text-gray-500 mt-1 font-medium leading-tight">Covers Thu, Fri, Weekend Shifts</p>
+                    <span class="text-[7px] font-bold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mt-1.5 inline-block">Brewed Wed Night</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- FEATURE #1: WEEKLY 5-BOTTLE SHIFT STASH (HERO) -->
+        <!-- ============================================== -->
+        <section class="bg-gradient-to-br from-brand-dark via-[#1e1511] to-[#2b1c15] text-white rounded-3xl p-5 border border-brand-gold/30 shadow-lg space-y-4">
+            <div class="flex justify-between items-start">
+                <div>
+                    <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-gold/20 text-brand-gold text-[8px] font-black uppercase tracking-wider border border-brand-gold/30 mb-1">
+                        ★ Most Popular For Kaiser Staff
+                    </div>
+                    <h2 class="font-serif font-black text-lg text-white leading-tight">Weekly 5-Bottle Shift Stash</h2>
+                    <p class="text-[10px] text-white/70">Pick any 5 bottles • Keep your breakroom fridge stocked</p>
+                </div>
+                <div class="text-right">
+                    <span class="font-mono font-black text-lg text-brand-gold block" id="bundle-hero-price">$22.50</span>
+                    <span class="text-[8px] text-white/50 block line-through">$30.00 single</span>
+                </div>
+            </div>
+
+            <!-- Interactive 5-Bottle Visual Tray -->
+            <div class="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-2">
+                <div class="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
+                    <span class="text-brand-gold">5-Pack Bottle Tray</span>
+                    <span class="text-white/80 font-mono" id="tray-count-text">0 / 5 Picked</span>
+                </div>
+                <div class="flex gap-1.5" id="hero-tray-slots">
+                    <!-- Injected by JS -->
+                </div>
+                <p class="text-[7px] text-white/40 text-center uppercase font-bold">Tap Whole 🥛 or Oat 🌾 below to fill your 5-pack</p>
+            </div>
+
+            <!-- 1-Tap Add Flavors into 5-Pack Grid -->
+            <div class="space-y-1.5">
+                <span class="text-[8px] font-black uppercase text-white/50 tracking-wider">1-Tap Add into 5-Pack:</span>
+                <div class="grid grid-cols-1 gap-1.5" id="hero-flavor-picker">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <!-- Subscription Toggle -->
+            <div class="bg-white/10 border border-brand-gold/30 rounded-2xl p-3 flex items-center justify-between cursor-pointer tap-scale" onclick="toggleSubscriptionMode()">
+                <div class="flex items-center gap-2.5">
+                    <input type="checkbox" id="sub-checkbox" checked class="w-4 h-4 rounded text-brand-gold accent-brand-gold cursor-pointer">
+                    <div>
+                        <p class="text-xs font-bold text-white flex items-center gap-1">
+                            <span>🔄 Weekly Auto-Refill</span>
+                            <span class="text-[7px] font-black bg-brand-gold text-brand-dark px-1.5 py-0.5 rounded-full uppercase">Save 10% ($22.50)</span>
+                        </p>
+                        <p class="text-[8px] text-white/60">Delivered every week. Pause, swap, or cancel anytime.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add 5-Pack to Cart Button -->
+            <button type="button" onclick="confirmHeroBundle()" id="btn-hero-add-bundle" disabled class="w-full font-black py-4 rounded-2xl shadow-lg uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all bg-white/10 text-white/30 cursor-not-allowed">
+                Pick 5 Bottles to Complete Stash
+            </button>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- FEATURE #2: SINGLE BOTTLES ($0 DELIVERY ON ROUTE) -->
+        <!-- ============================================== -->
+        <section class="bg-white rounded-3xl p-5 border border-brand-brown/15 shadow-sm space-y-3">
+            <div class="flex justify-between items-end pb-1 border-b border-gray-100">
+                <div>
+                    <span class="text-[8px] font-black uppercase text-brand-brown tracking-wider block">Individual Shift Bottles</span>
+                    <h3 class="font-serif font-black text-base text-brand-dark">Need Just 1 or 2 Bottles?</h3>
+                </div>
+                <span class="text-[8px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    $0 Delivery Fee on Route
+                </span>
+            </div>
+            <p class="text-[10px] text-gray-500">
+                Since we already drop at Kaiser Baldwin Park every Monday & Thursday, single bottles qualify for free breakroom delivery!
+            </p>
+
+            <!-- Single Bottle Cards -->
+            <div class="space-y-2.5 pt-1" id="single-bottles-list">
+                <!-- Injected by JS -->
+            </div>
+        </section>
+
+        <!-- ============================================== -->
+        <!-- CART & CHECKOUT SECTION -->
+        <!-- ============================================== -->
+        <section id="cart-section" class="bg-white rounded-3xl p-5 border border-brand-brown/20 shadow-lg space-y-4">
+            <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-shopping-bag text-brand-brown"></i>
+                    <h3 class="font-serif font-black text-sm text-brand-dark">Your Shift Order</h3>
+                </div>
+                <span class="font-mono font-black text-sm text-brand-brown" id="cart-total-badge">$0.00</span>
+            </div>
+
+            <!-- Line Items -->
+            <div id="cart-items-container" class="space-y-2">
+                <div class="p-6 rounded-2xl bg-gray-50 text-center text-xs text-gray-400">
+                    No drinks in cart yet. Select a 5-Pack or individual bottles above.
+                </div>
+            </div>
+
+            <!-- Auto-Bundle Discount Banner -->
+            <div id="bundle-discount-banner" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-2.5 flex items-center justify-between text-xs text-emerald-900 font-bold">
+                <span class="flex items-center gap-1.5"><i class="fas fa-tag"></i> 5-Pack Discount Applied!</span>
+                <span class="font-mono font-black" id="bundle-discount-amount">-$5.00</span>
+            </div>
+
+            <!-- Checkout Form (Simple 2 Fields) -->
+            <div class="pt-2 border-t border-gray-100 space-y-3">
+                <span class="text-[9px] font-black uppercase text-gray-400 tracking-wider block">Delivery & Contact Info</span>
+
+                <!-- Hospital Selector (Pre-selected) -->
+                <div>
+                    <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">Hospital Facility</label>
+                    <select id="cust-location" onchange="handleLocationChange(this.value)" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                        <option value="kaiser-bp" selected>🏥 Kaiser Baldwin Park (Active Route)</option>
+                        <option value="kaiser-fontana">🏥 Kaiser Fontana (Pool Drop)</option>
+                        <option value="kaiser-ontario">🏥 Kaiser Ontario Vineyard (Pool Drop)</option>
+                        <option value="kaiser-downey">🏥 Kaiser Downey (Pool Drop)</option>
+                        <option value="kaiser-anaheim">🏥 Kaiser Anaheim / OC (Pool Drop)</option>
+                        <option value="__OTHER__">➕ + Add Other Facility / Clinic...</option>
+                    </select>
+                </div>
+
+                <!-- Custom Facility Box if __OTHER__ selected -->
+                <div id="custom-facility-box" class="hidden bg-brand-cream/60 p-3 rounded-2xl border border-brand-brown/20 space-y-2">
+                    <input type="text" id="custom-facility-name" placeholder="Facility Name (e.g. Kaiser Sunset, Clinic)" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs text-brand-dark outline-none">
+                    <input type="text" id="custom-facility-address" placeholder="Address & City" class="w-full bg-white border border-gray-200 rounded-xl p-2.5 text-xs text-brand-dark outline-none">
+                </div>
+
+                <!-- Name & Phone -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">Your Name</label>
+                        <input type="text" id="cust-name" placeholder="First & Last Name" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">Cell Phone (SMS)</label>
+                        <input type="tel" id="cust-phone" placeholder="(909) 000-0000" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs font-bold text-brand-dark outline-none focus:border-brand-brown transition-all">
+                    </div>
+                </div>
+
+                <!-- Optional Department / Unit -->
+                <div>
+                    <label class="block text-[8px] font-black uppercase text-gray-500 mb-1">Department / Unit / Fridge Location <span class="text-gray-400 font-normal">(Optional)</span></label>
+                    <input type="text" id="cust-dept" placeholder="e.g. ICU 3rd Floor, ER, Labor & Delivery" class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 text-xs text-brand-dark outline-none focus:border-brand-brown transition-all">
+                </div>
+
+                <!-- Payment Method Selector -->
+                <div class="space-y-1.5 pt-1">
+                    <label class="block text-[8px] font-black uppercase text-gray-500">Select Payment Method</label>
+                    <div class="grid grid-cols-3 gap-1.5">
+                        <button type="button" onclick="setPaymentMethod('card')" id="pay-btn-card" class="p-2.5 rounded-xl border text-center font-bold text-xs transition-all bg-brand-dark text-white border-brand-dark shadow-xs">
+                            💳 Apple Pay / Card
+                        </button>
+                        <button type="button" onclick="setPaymentMethod('venmo')" id="pay-btn-venmo" class="p-2.5 rounded-xl border text-center font-bold text-xs transition-all bg-gray-50 text-gray-700 border-gray-200">
+                            🟡 Venmo
+                        </button>
+                        <button type="button" onclick="setPaymentMethod('zelle')" id="pay-btn-zelle" class="p-2.5 rounded-xl border text-center font-bold text-xs transition-all bg-gray-50 text-gray-700 border-gray-200">
+                            🟡 Zelle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Venmo / Zelle Instructions -->
+                <div id="manual-pay-box" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-3 space-y-2 text-xs text-amber-900 animate-fade-in">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold uppercase text-[9px]" id="manual-pay-title">Venmo Payment</span>
+                        <span class="font-mono font-black" id="manual-pay-handle">@rich-aroma</span>
+                    </div>
+                    <p class="text-[10px] text-amber-800" id="manual-pay-desc">Send payment to <strong>@rich-aroma</strong> and upload screenshot proof below for instant verification.</p>
+                    <input type="file" id="proof-file-input" accept="image/*" class="w-full text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:bg-amber-800 file:text-white">
+                </div>
+
+                <!-- Final Submit Button -->
+                <button type="button" onclick="submitKaiserOrder()" id="btn-submit-order" class="w-full bg-brand-dark hover:bg-brand-brown text-white font-black py-4 rounded-2xl shadow-xl active:scale-95 transition-all uppercase tracking-wider text-xs flex items-center justify-center gap-2">
+                    <span>Confirm Kaiser Drop Order</span> • <span id="btn-submit-total" class="font-mono">$0.00</span>
+                </button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Floating Quick Cart Bar (Mobile) -->
+    <div id="floating-cart-bar" class="fixed bottom-3 left-4 right-4 max-w-md mx-auto bg-brand-dark text-white p-3 rounded-2xl shadow-2xl border border-brand-gold/30 flex items-center justify-between z-30 transition-all">
+        <div>
+            <span class="text-[8px] font-black uppercase text-brand-gold block" id="float-day-label">Monday Drop</span>
+            <p class="text-xs font-bold"><span id="float-bottle-count">0</span> bottles • <span id="float-total-amount" class="font-mono text-brand-gold">$0.00</span></p>
+        </div>
+        <button type="button" onclick="scrollToCheckout()" class="bg-brand-gold hover:bg-amber-400 text-brand-dark font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider shadow-xs tap-scale">
+            Checkout <i class="fas fa-arrow-right ml-1"></i>
+        </button>
+    </div>
+
+    <!-- Order Success / Receipt Modal -->
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-brand-dark/85 backdrop-blur-md flex items-center justify-center z-50 p-4">
+        <div class="bg-white max-w-sm w-full rounded-[2.5rem] p-6 shadow-2xl border border-brand-brown/20 text-center space-y-4 animate-scale-up">
+            <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl mx-auto border border-emerald-300">
+                <i class="fas fa-check"></i>
+            </div>
+            <div>
+                <span class="text-[9px] font-black uppercase text-emerald-700 tracking-widest block">Kaiser Order Confirmed!</span>
+                <h3 class="font-serif font-black text-xl text-brand-dark mt-0.5" id="receipt-code">RA-KAISER</h3>
+                <p class="text-xs text-gray-500 mt-1" id="receipt-message">Your bottles will be dropped in the breakroom fridge on Monday morning!</p>
+            </div>
+
+            <!-- Captain Share Card -->
+            <div class="bg-brand-cream/80 p-3 rounded-2xl border border-brand-brown/20 text-left space-y-1.5">
+                <span class="text-[8px] font-black uppercase text-brand-brown">Share Drop with Coworkers:</span>
+                <p class="text-[10px] text-gray-600">Tell your department to add their bottles before cut-off:</p>
+                <div class="flex gap-1.5">
+                    <button type="button" onclick="copyKaiserLink()" class="flex-1 bg-white border border-gray-200 py-1.5 rounded-xl text-[9px] font-bold text-brand-dark flex items-center justify-center gap-1 shadow-xs">
+                        <i class="fas fa-copy"></i> Copy Link
+                    </button>
+                    <button type="button" onclick="shareKaiserWhatsApp()" class="flex-1 bg-emerald-600 text-white py-1.5 rounded-xl text-[9px] font-bold flex items-center justify-center gap-1 shadow-xs">
+                        <i class="fab fa-whatsapp"></i> WhatsApp
+                    </button>
+                </div>
+            </div>
+
+            <button type="button" onclick="closeReceiptModal()" class="w-full bg-brand-dark text-white font-bold py-3 rounded-2xl text-xs uppercase tracking-wider">
+                Done
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 bg-brand-dark/95 text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-2xl border border-brand-gold/40 z-50 transition-all opacity-0 pointer-events-none">
+        Toast message
+    </div>
+
+    <script>
+        // ----------------------------------------------------
+        // PRODUCTS DEFINITIONS & DATA
+        // ----------------------------------------------------
+        const MENU_ITEMS = [
+            { id: "dac6f286-b5bb-44d4-ad26-ea3b9f31f12a", name: "Vanilla Matcha", basePrice: 6.00, defaultShots: 0, hasMilk: true, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_dac6f286-b5bb-44d4-ad26-ea3b9f31f12a_1787352446241.jpg", desc: "Ceremonial Matcha & Madagascar Vanilla" },
+            { id: "7cc5ebd3-0fc7-4c15-9c14-750a036f006e", name: "Caramel Latte", basePrice: 6.00, defaultShots: 2, hasMilk: true, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_7cc5ebd3-0fc7-4c15-9c14-750a036f006e_1787351071664.jpg", desc: "Honduran Espresso & Salted Caramel" },
+            { id: "72018130-a6a7-4825-95b0-428e390318ff", name: "French Vanilla", basePrice: 6.00, defaultShots: 2, hasMilk: true, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_72018130-a6a7-4825-95b0-428e390318ff_1787351092259.jpg", desc: "Smooth Vanilla & Rich Espresso" },
+            { id: "0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9", name: "Vanilla Latte", basePrice: 6.00, defaultShots: 2, hasMilk: true, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_0a2426f0-6492-4c91-8af7-4a3a1aa5b1f9_1787351822566.jpg", desc: "Classic Cold Brewed Vanilla Latte" },
+            { id: "b03751fd-1e87-4f6e-8557-c8b8bb9973fa", name: "Dirty Chai", basePrice: 6.00, defaultShots: 2, hasMilk: true, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_b03751fd-1e87-4f6e-8557-c8b8bb9973fa_1787350973613.jpg", desc: "Spiced Masala Chai & Double Shot" },
+            { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", basePrice: 5.00, defaultShots: 3, hasMilk: false, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1787352533474.jpg", desc: "Pure 3oz Espresso & Water (No Milk)" }
+        ];
+
+        let selectedDropDay = 'Monday'; // 'Monday' or 'Thursday'
+        let heroBundleSlots = []; // Array of up to 5 items
+        let isSubscriptionMode = true;
+        let cart = []; // Array of line items
+        let activePaymentMethod = 'card';
+        let proofBase64 = null;
+
+        // ----------------------------------------------------
+        // INITIALIZATION
+        // ----------------------------------------------------
+        window.addEventListener('DOMContentLoaded', () => {
+            // Restore saved contact info
+            const savedName = localStorage.getItem('cali_pay_name');
+            const savedPhone = localStorage.getItem('cali_pay_phone');
+            const savedDept = localStorage.getItem('kaiser_dept');
+            if (savedName) document.getElementById('cust-name').value = savedName;
+            if (savedPhone) document.getElementById('cust-phone').value = savedPhone;
+            if (savedDept) document.getElementById('cust-dept').value = savedDept;
+
+            renderHeroTray();
+            renderHeroFlavorPicker();
+            renderSingleBottlesList();
+            renderCart();
+            setupIntersectionObserver();
+        });
+
+        // ----------------------------------------------------
+        // DROP DAY SELECTOR
+        // ----------------------------------------------------
+        function selectDropDay(day) {
+            selectedDropDay = day;
+            const btnMon = document.getElementById('btn-day-monday');
+            const btnThu = document.getElementById('btn-day-thursday');
+
+            if (day === 'Monday') {
+                btnMon.className = "p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs";
+                btnMon.querySelector('i').className = "fas fa-check-circle text-xs text-emerald-300";
+                btnThu.className = "p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40";
+                btnThu.querySelector('i').className = "far fa-circle text-xs text-gray-400";
+            } else {
+                btnThu.className = "p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs";
+                btnThu.querySelector('i').className = "fas fa-check-circle text-xs text-emerald-300";
+                btnMon.className = "p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40";
+                btnMon.querySelector('i').className = "far fa-circle text-xs text-gray-400";
+            }
+            document.getElementById('float-day-label').innerText = `${day} Drop`;
+            showToast(`Selected ${day} Morning Shift Drop`);
+        }
+
+        // ----------------------------------------------------
+        // 5-BOTTLE HERO TRAY LOGIC
+        // ----------------------------------------------------
+        function renderHeroTray() {
+            const container = document.getElementById('hero-tray-slots');
+            const countEl = document.getElementById('tray-count-text');
+            const btnEl = document.getElementById('btn-hero-add-bundle');
+            const priceEl = document.getElementById('bundle-hero-price');
+
+            countEl.innerText = `${heroBundleSlots.length} / 5 Picked`;
+
+            const oatCount = heroBundleSlots.filter(s => s.milk === 'Oat Milk').length;
+            const basePrice = isSubscriptionMode ? 22.50 : 25.00;
+            const finalBundlePrice = basePrice + (oatCount * 1.00);
+
+            priceEl.innerText = `$${finalBundlePrice.toFixed(2)}`;
+
+            let html = '';
+            for (let i = 0; i < 5; i++) {
+                const filled = heroBundleSlots[i];
+                if (filled) {
+                    const isOat = filled.milk === 'Oat Milk';
+                    html += `
+                    <div class="relative flex-1 rounded-2xl bg-white/10 border ${isOat ? 'border-amber-400/50' : 'border-brand-gold/40'} p-1 flex flex-col items-center justify-between text-center shadow-xs">
+                        <button type="button" onclick="removeHeroSlot(${i})" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center shadow-xs hover:scale-110 z-10">✕</button>
+                        <img src="${filled.image}" class="w-7 h-7 rounded-xl object-cover mt-0.5">
+                        <span class="text-[7px] font-bold text-white truncate max-w-full px-0.5 leading-tight">${filled.name.split(' ')[0]}</span>
+                        ${filled.hasMilk ? `
+                        <button type="button" onclick="toggleHeroSlotMilk(${i})" title="Tap to toggle milk" class="w-full text-[6px] font-black uppercase px-0.5 py-0.5 rounded border transition-all ${isOat ? 'bg-amber-500/30 text-amber-300 border-amber-400/50' : 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50'}">
+                            ${isOat ? '🌾 Oat +$1' : '🥛 Whole'}
+                        </button>
+                        ` : `
+                        <span class="text-[6px] font-bold text-white/40 uppercase">☕ Black</span>
+                        `}
+                    </div>
+                    `;
+                } else {
+                    html += `
+                    <div class="flex-1 aspect-square rounded-2xl border-2 border-dashed border-white/20 p-1 flex flex-col items-center justify-center text-center bg-black/20">
+                        <span class="text-[8px] font-black text-white/30">#${i + 1}</span>
+                        <span class="text-[6px] text-white/30 uppercase font-bold">Empty</span>
+                    </div>
+                    `;
+                }
+            }
+            container.innerHTML = html;
+
+            if (heroBundleSlots.length === 5) {
+                btnEl.disabled = false;
+                btnEl.className = "w-full font-black py-4 rounded-2xl shadow-lg uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all bg-brand-gold text-brand-dark hover:brightness-105 active:scale-95 cursor-pointer";
+                btnEl.innerText = `Add 5-Pack to Order • $${finalBundlePrice.toFixed(2)}`;
+            } else {
+                btnEl.disabled = true;
+                btnEl.className = "w-full font-black py-4 rounded-2xl shadow-lg uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all bg-white/10 text-white/30 cursor-not-allowed";
+                btnEl.innerText = `Pick ${5 - heroBundleSlots.length} More Bottle${5 - heroBundleSlots.length > 1 ? 's' : ''} to Complete Stash`;
+            }
+        }
+
+        function renderHeroFlavorPicker() {
+            const container = document.getElementById('hero-flavor-picker');
+            container.innerHTML = MENU_ITEMS.map(item => {
+                const isBlack = !item.hasMilk;
+                return `
+                <div class="bg-white/5 border border-white/10 rounded-2xl p-2 flex items-center justify-between gap-1.5 transition-all">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <img src="${item.image}" class="w-9 h-9 rounded-xl object-cover border border-white/10 shrink-0 bg-brand-dark">
+                        <div class="truncate">
+                            <h4 class="font-serif font-black text-[10px] text-white truncate leading-tight">${item.name}</h4>
+                            <p class="text-[7px] text-white/40 uppercase font-bold mt-0.5">${item.hasMilk ? 'Latte / Matcha' : 'Pure Espresso'}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 shrink-0">
+                        ${!isBlack ? `
+                        <button type="button" onclick="addHeroSlot('${item.id}', 'Whole Milk')" class="tap-scale bg-emerald-700 hover:bg-emerald-600 text-white font-black px-2 py-1.5 rounded-xl text-[8px] uppercase tracking-wider shadow-xs border border-emerald-400/30 flex flex-col items-center leading-none">
+                            <span>+ Whole</span>
+                            <span class="text-[7px] font-mono text-emerald-200 mt-0.5">$4.50</span>
+                        </button>
+                        <button type="button" onclick="addHeroSlot('${item.id}', 'Oat Milk')" class="tap-scale bg-amber-700 hover:bg-amber-600 text-white font-black px-2 py-1.5 rounded-xl text-[8px] uppercase tracking-wider shadow-xs border border-amber-400/30 flex flex-col items-center leading-none">
+                            <span>+ Oat</span>
+                            <span class="text-[7px] font-mono text-amber-200 mt-0.5">$5.50</span>
+                        </button>
+                        ` : `
+                        <button type="button" onclick="addHeroSlot('${item.id}', 'No Milk')" class="tap-scale bg-brand-gold hover:bg-amber-400 text-brand-dark font-black px-2.5 py-2 rounded-xl text-[8px] uppercase tracking-wider shadow-xs flex flex-col items-center leading-none">
+                            <span>+ Black</span>
+                            <span class="text-[7px] font-mono font-black text-brand-dark mt-0.5">$4.50</span>
+                        </button>
+                        `}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function addHeroSlot(itemId, milkChoice = 'Whole Milk') {
+            if (heroBundleSlots.length >= 5) {
+                showToast("5-Pack is full! Tap 'Add 5-Pack to Order'.");
+                return;
+            }
+            const item = MENU_ITEMS.find(i => i.id === itemId);
+            if (!item) return;
+
+            heroBundleSlots.push({
+                id: item.id,
+                name: item.name,
+                image: item.image,
+                milk: item.hasMilk ? milkChoice : 'No Milk',
+                hasMilk: item.hasMilk
+            });
+            renderHeroTray();
+            showToast(`+1 ${item.name} (${item.hasMilk ? milkChoice : 'Black'}) in 5-Pack`);
+        }
+
+        function toggleHeroSlotMilk(index) {
+            const slot = heroBundleSlots[index];
+            if (!slot || !slot.hasMilk) return;
+            slot.milk = slot.milk === 'Whole Milk' ? 'Oat Milk' : 'Whole Milk';
+            renderHeroTray();
+        }
+
+        function removeHeroSlot(index) {
+            heroBundleSlots.splice(index, 1);
+            renderHeroTray();
+        }
+
+        function toggleSubscriptionMode() {
+            const chk = document.getElementById('sub-checkbox');
+            isSubscriptionMode = chk.checked;
+            renderHeroTray();
+        }
+
+        function confirmHeroBundle() {
+            if (heroBundleSlots.length !== 5) return;
+
+            const oatCount = heroBundleSlots.filter(s => s.milk === 'Oat Milk').length;
+            const wholeCount = heroBundleSlots.filter(s => s.milk !== 'Oat Milk' && s.hasMilk).length;
+            const blackCount = heroBundleSlots.filter(s => !s.hasMilk).length;
+
+            const basePrice = isSubscriptionMode ? 22.50 : 25.00;
+            const finalBundlePrice = basePrice + (oatCount * 1.00);
+
+            const namesSummary = heroBundleSlots.map(s => `${s.name.split(' ')[0]} (${s.milk === 'Oat Milk' ? 'Oat' : s.hasMilk ? 'Whole' : 'Black'})`).join(', ');
+
+            let milkSummary = [];
+            if (wholeCount > 0) milkSummary.push(`${wholeCount} Whole`);
+            if (oatCount > 0) milkSummary.push(`${oatCount} Oat`);
+            if (blackCount > 0) milkSummary.push(`${blackCount} Black`);
+
+            cart.push({
+                cartId: `c-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                id: 'bundle-5pack',
+                name: `5-Pack (${milkSummary.join(', ')})`,
+                desc: namesSummary,
+                milk: oatCount > 0 && wholeCount === 0 ? 'Oat Milk' : (wholeCount > 0 && oatCount === 0 ? 'Whole Milk' : 'Mixed Milk'),
+                hasMilk: true,
+                image: heroBundleSlots[0]?.image || MENU_ITEMS[0].image,
+                basePrice: finalBundlePrice,
+                unitPrice: finalBundlePrice,
+                qty: 1,
+                total: finalBundlePrice,
+                bottles: 5,
+                is_bundle: true,
+                is_subscription: isSubscriptionMode,
+                bundleSelections: [...heroBundleSlots]
+            });
+
+            heroBundleSlots = [];
+            renderHeroTray();
+            renderCart();
+            showToast(`✓ Added 5-Pack to Order! ($${finalBundlePrice.toFixed(2)})`, "success");
+            scrollToCheckout();
+        }
+
+        // ----------------------------------------------------
+        // SINGLE BOTTLES LIST
+        // ----------------------------------------------------
+        function renderSingleBottlesList() {
+            const container = document.getElementById('single-bottles-list');
+            container.innerHTML = MENU_ITEMS.map(item => {
+                const isBlack = !item.hasMilk;
+                const wholePrice = item.basePrice;
+                const oatPrice = item.basePrice + 1.00;
+
+                return `
+                <div class="bg-gray-50/80 rounded-2xl p-3 border border-gray-100 flex items-center justify-between gap-2.5">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <img src="${item.image}" alt="${item.name}" class="w-12 h-12 rounded-xl object-cover border border-gray-200 bg-white shrink-0">
+                        <div class="min-w-0">
+                            <h4 class="font-serif font-black text-xs text-brand-dark truncate leading-tight">${item.name}</h4>
+                            <p class="text-[8px] text-gray-500 mt-0.5 truncate">${item.desc}</p>
+                            <span class="text-[9px] font-mono font-bold text-brand-brown mt-0.5 inline-block">$${item.basePrice.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        ${!isBlack ? `
+                        <button type="button" onclick="fastAddSingleDrink('${item.id}', 'Whole Milk')" class="tap-scale bg-emerald-700 hover:bg-emerald-800 text-white font-black px-2.5 py-2 rounded-xl text-[8px] uppercase tracking-wider shadow-xs flex flex-col items-center leading-none">
+                            <span>Whole</span>
+                            <span class="text-[7px] font-mono text-emerald-200 mt-0.5">$${wholePrice.toFixed(2)}</span>
+                        </button>
+                        <button type="button" onclick="fastAddSingleDrink('${item.id}', 'Oat Milk')" class="tap-scale bg-amber-700 hover:bg-amber-800 text-white font-black px-2.5 py-2 rounded-xl text-[8px] uppercase tracking-wider shadow-xs flex flex-col items-center leading-none">
+                            <span>Oat</span>
+                            <span class="text-[7px] font-mono text-amber-200 mt-0.5">$${oatPrice.toFixed(2)}</span>
+                        </button>
+                        ` : `
+                        <button type="button" onclick="fastAddSingleDrink('${item.id}', 'No Milk')" class="tap-scale bg-brand-dark hover:bg-brand-brown text-white font-black px-3 py-2 rounded-xl text-[8px] uppercase tracking-wider shadow-xs flex flex-col items-center leading-none">
+                            <span>Add</span>
+                            <span class="text-[7px] font-mono font-black text-brand-gold mt-0.5">$${item.basePrice.toFixed(2)}</span>
+                        </button>
+                        `}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function fastAddSingleDrink(itemId, milkChoice, initialShots) {
+            const item = MENU_ITEMS.find(i => i.id === itemId);
+            if (!item) return;
+
+            const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
+            const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || item.name.toLowerCase().includes('americano');
+            const defaultShots = (item.defaultShots !== undefined) ? item.defaultShots : (isMatcha ? 0 : (isAmericano ? 3 : 2));
+            const shots = (initialShots !== undefined) ? initialShots : defaultShots;
+
+            const milkExtra = (milkChoice === 'Oat Milk') ? 1.00 : 0.00;
+            const extraShots = Math.max(0, shots - defaultShots);
+            const shotsExtra = extraShots * 1.00;
+            const unitPrice = item.basePrice + milkExtra + shotsExtra;
+
+            const existing = cart.find(i => i.id === itemId && i.milk === milkChoice && ((i.shotsCount !== undefined ? i.shotsCount : defaultShots) === shots) && !i.is_bundle);
+            if (existing) {
+                existing.qty++;
+                existing.total = existing.qty * existing.unitPrice;
+            } else {
+                cart.push({
+                    cartId: `c-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                    id: item.id,
+                    name: item.name,
+                    image: item.image,
+                    milk: milkChoice,
+                    hasMilk: item.hasMilk,
+                    defaultShots: defaultShots,
+                    shotsCount: shots,
+                    shotsName: shots === 0 ? '0 Shots' : `${shots} Shot${shots > 1 ? 's' : ''}`,
+                    shotsExtra: shotsExtra,
+                    basePrice: item.basePrice,
+                    unitPrice: unitPrice,
+                    qty: 1,
+                    total: unitPrice,
+                    bottles: 1,
+                    is_bundle: false
+                });
+            }
+
+            renderCart();
+            showToast(`+1 ${item.name} (${milkChoice})`, "success");
+        }
+
+        // ----------------------------------------------------
+        // CART ENGINE & RENDERING
+        // ----------------------------------------------------
+        function renderCart() {
+            const container = document.getElementById('cart-items-container');
+            const badgeTotal = document.getElementById('cart-total-badge');
+            const floatCount = document.getElementById('float-bottle-count');
+            const floatTotal = document.getElementById('float-total-amount');
+            const submitTotal = document.getElementById('btn-submit-total');
+
+            const totalBottles = cart.reduce((sum, i) => sum + (i.bottles * i.qty), 0);
+            floatCount.innerText = totalBottles;
+
+            // Auto-bundle discount for individual bottles (5 bottles = -$5 discount)
+            const individualBottles = cart.filter(i => !i.is_bundle).reduce((sum, i) => sum + i.qty, 0);
+            const autoBundles = Math.floor(individualBottles / 5);
+            const autoDiscount = autoBundles * 5.00;
+
+            const rawTotal = cart.reduce((sum, i) => sum + i.total, 0);
+            const finalTotal = Math.max(0, rawTotal - autoDiscount);
+
+            badgeTotal.innerText = `$${finalTotal.toFixed(2)}`;
+            floatTotal.innerText = `$${finalTotal.toFixed(2)}`;
+            submitTotal.innerText = `$${finalTotal.toFixed(2)}`;
+
+            const discountBanner = document.getElementById('bundle-discount-banner');
+            if (autoDiscount > 0) {
+                document.getElementById('bundle-discount-amount').innerText = `-$${autoDiscount.toFixed(2)}`;
+                discountBanner.classList.remove('hidden');
+            } else {
+                discountBanner.classList.add('hidden');
+            }
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                <div class="p-6 rounded-2xl bg-gray-50 text-center text-xs text-gray-400">
+                    No drinks in cart yet. Select a 5-Pack or individual bottles above.
+                </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = cart.map(item => `
+            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-3 flex items-center justify-between gap-2 shadow-xs">
+                <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                    <img src="${item.image}" class="w-10 h-10 rounded-xl object-cover border border-gray-200 shrink-0 bg-white">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h4 class="font-serif font-black text-xs text-brand-dark truncate">${item.name}</h4>
+                            <span class="font-mono font-bold text-[10px] text-brand-brown">$${item.total.toFixed(2)}</span>
+                        </div>
+                        
+                        <!-- Line item milk switcher & shots counter -->
+                        <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                            ${item.is_bundle ? `
+                            <p class="text-[8px] text-gray-500 truncate">${item.desc}</p>
+                            ` : item.hasMilk ? `
+                            <button type="button" onclick="toggleCartMilk('${item.cartId}')" class="text-[7px] font-black uppercase px-2 py-0.5 rounded-lg border ${item.milk === 'Oat Milk' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300'}">
+                                ${item.milk === 'Oat Milk' ? '🌾 Oat (+$1)' : '🥛 Whole'}
+                            </button>
+                            ` : `
+                            <span class="text-[7px] text-gray-400 font-bold uppercase">Pure Espresso</span>
+                            `}
+
+                            ${!item.is_bundle ? `
+                            <!-- Shots Stepper -->
+                            <div class="flex items-center bg-white border border-gray-200 rounded-lg px-1 py-0.5 gap-1">
+                                <button type="button" onclick="adjustCartShots('${item.cartId}', -1)" class="w-4 h-4 rounded bg-gray-100 text-gray-700 flex items-center justify-center text-[7px]">-</button>
+                                <span class="font-mono font-bold text-[9px] text-brand-dark">${item.shotsCount !== undefined ? item.shotsCount : 2} Shots</span>
+                                <button type="button" onclick="adjustCartShots('${item.cartId}', 1)" class="w-4 h-4 rounded bg-brand-dark text-white flex items-center justify-center text-[7px]">+</button>
+                                ${item.shotsExtra > 0 ? `<span class="text-[7px] font-mono text-amber-700 font-bold">+$${item.shotsExtra.toFixed(0)}</span>` : ''}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quantity controls -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="flex items-center bg-white border border-gray-200 rounded-xl p-0.5 gap-1">
+                        <button type="button" onclick="decrementCart('${item.cartId}')" class="w-5 h-5 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center text-[9px]">-</button>
+                        <span class="w-4 text-center font-mono font-bold text-xs">${item.qty}</span>
+                        <button type="button" onclick="incrementCart('${item.cartId}')" class="w-5 h-5 rounded-lg bg-brand-dark text-white flex items-center justify-center text-[9px]">+</button>
+                    </div>
+                    <button type="button" onclick="removeCart('${item.cartId}')" class="w-6 h-6 rounded-lg bg-red-50 text-red-500 flex items-center justify-center text-[9px]">✕</button>
+                </div>
+            </div>
+            `).join('');
+        }
+
+        function incrementCart(cartId) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item) return;
+            item.qty++;
+            item.total = item.qty * item.unitPrice;
+            renderCart();
+        }
+
+        function decrementCart(cartId) {
+            const idx = cart.findIndex(i => i.cartId === cartId);
+            if (idx === -1) return;
+            if (cart[idx].qty > 1) {
+                cart[idx].qty--;
+                cart[idx].total = cart[idx].qty * cart[idx].unitPrice;
+            } else {
+                cart.splice(idx, 1);
+            }
+            renderCart();
+        }
+
+        function removeCart(cartId) {
+            cart = cart.filter(i => i.cartId !== cartId);
+            renderCart();
+        }
+
+        function toggleCartMilk(cartId) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item || !item.hasMilk || item.is_bundle) return;
+            item.milk = item.milk === 'Whole Milk' ? 'Oat Milk' : 'Whole Milk';
+            const milkExtra = item.milk === 'Oat Milk' ? 1.00 : 0.00;
+            item.unitPrice = item.basePrice + milkExtra + (item.shotsExtra || 0);
+            item.total = item.qty * item.unitPrice;
+            renderCart();
+        }
+
+        function adjustCartShots(cartId, delta) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (!item || item.is_bundle) return;
+
+            const isMatcha = item.name && item.name.toLowerCase().includes('matcha');
+            const isAmericano = item.id === 'ba7a19c3-96d2-4e44-a7d7-57e2711e79ae' || (item.name && item.name.toLowerCase().includes('americano'));
+            const defaultShots = (item.defaultShots !== undefined) ? item.defaultShots : (isMatcha ? 0 : (isAmericano ? 3 : 2));
+            const minShots = isMatcha ? 0 : 1;
+
+            let count = (item.shotsCount !== undefined) ? item.shotsCount : defaultShots;
+            count = Math.max(minShots, Math.min(6, count + delta));
+
+            item.shotsCount = count;
+            const extraShots = Math.max(0, count - defaultShots);
+            item.shotsExtra = extraShots * 1.00;
+            item.shotsName = count === 0 ? '0 Shots' : `${count} Shot${count > 1 ? 's' : ''}`;
+
+            const milkExtra = item.milk === 'Oat Milk' ? 1.00 : 0.00;
+            item.unitPrice = item.basePrice + milkExtra + item.shotsExtra;
+            item.total = item.qty * item.unitPrice;
+            renderCart();
+        }
+
+        // ----------------------------------------------------
+        // PAYMENT & CHECKOUT SUBMISSION
+        // ----------------------------------------------------
+        function setPaymentMethod(method) {
+            activePaymentMethod = method;
+            ['card', 'venmo', 'zelle'].forEach(m => {
+                const btn = document.getElementById(`pay-btn-${m}`);
+                if (m === method) {
+                    btn.className = "p-2.5 rounded-xl border text-center font-bold text-xs transition-all bg-brand-dark text-white border-brand-dark shadow-xs";
+                } else {
+                    btn.className = "p-2.5 rounded-xl border text-center font-bold text-xs transition-all bg-gray-50 text-gray-700 border-gray-200";
+                }
+            });
+
+            const manualBox = document.getElementById('manual-pay-box');
+            if (method === 'venmo' || method === 'zelle') {
+                manualBox.classList.remove('hidden');
+                document.getElementById('manual-pay-title').innerText = method === 'venmo' ? 'Venmo Payment' : 'Zelle Payment';
+                document.getElementById('manual-pay-handle').innerText = method === 'venmo' ? '@rich-aroma' : 'orders@richaromacoffee.com';
+                document.getElementById('manual-pay-desc').innerHTML = `Send payment to <strong>${method === 'venmo' ? '@rich-aroma' : 'orders@richaromacoffee.com'}</strong> and upload screenshot proof below.`;
+            } else {
+                manualBox.classList.add('hidden');
+            }
+        }
+
+        function handleLocationChange(val) {
+            const customBox = document.getElementById('custom-facility-box');
+            if (val === '__OTHER__') customBox.classList.remove('hidden');
+            else customBox.classList.add('hidden');
+        }
+
+        async function submitKaiserOrder() {
+            if (cart.length === 0) {
+                showToast("Please add drinks to your order first!");
+                return;
+            }
+
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            const dept = document.getElementById('cust-dept').value.trim();
+            const locSelect = document.getElementById('cust-location').value;
+
+            if (!name) {
+                showToast("Please enter your name!");
+                document.getElementById('cust-name').focus();
+                return;
+            }
+            if (!phone || phone.replace(/\D/g, '').length < 10) {
+                showToast("Please enter a valid 10-digit cell phone!");
+                document.getElementById('cust-phone').focus();
+                return;
+            }
+
+            // Save contact for next time
+            localStorage.setItem('cali_pay_name', name);
+            localStorage.setItem('cali_pay_phone', phone);
+            if (dept) localStorage.setItem('kaiser_dept', dept);
+
+            let locName = 'Kaiser Baldwin Park';
+            if (locSelect === 'kaiser-fontana') locName = 'Kaiser Fontana';
+            else if (locSelect === 'kaiser-ontario') locName = 'Kaiser Ontario Vineyard';
+            else if (locSelect === 'kaiser-downey') locName = 'Kaiser Downey';
+            else if (locSelect === 'kaiser-anaheim') locName = 'Kaiser Anaheim';
+            else if (locSelect === '__OTHER__') {
+                locName = document.getElementById('custom-facility-name').value.trim() || 'Custom Facility';
+            }
+
+            // Read proof image if uploaded
+            const fileInput = document.getElementById('proof-file-input');
+            if (fileInput && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                proofBase64 = await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const individualBottles = cart.filter(i => !i.is_bundle).reduce((sum, i) => sum + i.qty, 0);
+            const autoDiscount = Math.floor(individualBottles / 5) * 5.00;
+            const rawTotal = cart.reduce((sum, i) => sum + i.total, 0);
+            const finalTotal = Math.max(0, rawTotal - autoDiscount);
+
+            const isSubscriptionOrder = cart.some(i => i.is_subscription);
+
+            showToast("Submitting Kaiser drop order...");
+
+            // If Card & Stripe
+            if (activePaymentMethod === 'card') {
+                try {
+                    const stripeRes = await fetch('/api/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name,
+                            phone,
+                            location_id: '8be9f99f-b8cc-494a-9b14-5afe960dd03e', // Kaiser BP ID
+                            fulfillment_type: 'kaiser_route',
+                            kaiser_hospital: locName,
+                            kaiser_department: dept || 'Main Breakroom',
+                            kaiser_instructions: `Drop Day: ${selectedDropDay} Morning (Shift Drop)`,
+                            preorder_date: selectedDropDay,
+                            delivery_fee: 0,
+                            is_subscription: isSubscriptionOrder,
+                            items: cart.map(item => ({
+                                product_id: item.id === 'bundle-5pack' ? '83d571c7-5aa8-4efb-b649-0ee286dd463d' : item.id,
+                                name: item.name,
+                                qty: item.qty,
+                                unitPrice: item.unitPrice,
+                                total: item.total,
+                                bottles: item.bottles,
+                                selections: item.bundleSelections || [{ milk: item.milk, espresso: item.shotsName }]
+                            }))
+                        })
+                    });
+
+                    if (stripeRes.ok) {
+                        const data = await stripeRes.json();
+                        if (data.url) {
+                            window.location.href = data.url;
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Stripe error:", e);
+                }
+            }
+
+            // If Venmo / Zelle (save_order)
+            try {
+                const res = await fetch('/api/cali?action=save_order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: name,
+                        customer_phone: phone,
+                        location_id: null,
+                        total_amount: finalTotal,
+                        payment_method: activePaymentMethod,
+                        payment_proof_image: proofBase64,
+                        selections: {
+                            cart,
+                            hospital: locName,
+                            department: dept || 'Main Breakroom',
+                            drop_day: selectedDropDay,
+                            is_subscription: isSubscriptionOrder,
+                            payment_method: activePaymentMethod
+                        },
+                        notes: `[KAISER ROUTE DROP: ${locName}] Drop Day: ${selectedDropDay} Morning. Department: ${dept || 'Main Breakroom'}. Paid via ${activePaymentMethod.toUpperCase()}.`
+                    })
+                });
+
+                if (res.ok) {
+                    const result = await res.json();
+                    openReceiptModal(result.id || 'RA-KAISER', name, locName);
+                } else {
+                    showToast("Order received! Check your SMS for confirmation.", "success");
+                    openReceiptModal('RA-KAISER', name, locName);
+                }
+            } catch (e) {
+                console.error("Order error:", e);
+                openReceiptModal('RA-KAISER', name, locName);
+            }
+        }
+
+        function openReceiptModal(orderId, name, locName) {
+            document.getElementById('receipt-code').innerText = orderId.startsWith('RA-') ? orderId : `RA-${orderId.slice(0, 6).toUpperCase()}`;
+            document.getElementById('receipt-message').innerHTML = `Thank you <strong>${name}</strong>! Your bottles will be waiting in the <strong>${locName}</strong> breakroom fridge on <strong>${selectedDropDay} Morning</strong>.`;
+            document.getElementById('receipt-modal').classList.remove('hidden');
+            cart = [];
+            renderCart();
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        function copyKaiserLink() {
+            navigator.clipboard.writeText('https://www.richaromacoffee.com/kaiser');
+            showToast("Copied Kaiser Route Link! 📋", "success");
+        }
+
+        function shareKaiserWhatsApp() {
+            const msg = encodeURIComponent("Hey team! ☕ Next chilled artisan coffee drop at Kaiser is Monday morning! Order your 5-pack stash here: https://www.richaromacoffee.com/kaiser");
+            window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+        }
+
+        function scrollToCheckout() {
+            document.getElementById('cart-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function setupIntersectionObserver() {
+            const cartSection = document.getElementById('cart-section');
+            const floatingBar = document.getElementById('floating-cart-bar');
+            if (!cartSection || !floatingBar) return;
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        floatingBar.style.transform = 'translateY(150%)';
+                        floatingBar.style.opacity = '0';
+                    } else {
+                        floatingBar.style.transform = 'translateY(0)';
+                        floatingBar.style.opacity = '1';
+                    }
+                });
+            }, { threshold: 0.15 });
+
+            observer.observe(cartSection);
+        }
+
+        function showToast(msg, type = "normal") {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.className = `fixed top-14 left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-full text-xs font-bold shadow-2xl z-50 transition-all opacity-100 ${type === 'success' ? 'bg-emerald-900 text-emerald-100 border border-emerald-400' : 'bg-brand-dark/95 text-white border border-brand-gold/40'}`;
+            setTimeout(() => {
+                toast.className = "fixed top-14 left-1/2 -translate-x-1/2 bg-brand-dark/95 text-white px-4 py-2.5 rounded-full text-xs font-bold shadow-2xl border border-brand-gold/40 z-50 transition-all opacity-0 pointer-events-none";
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
