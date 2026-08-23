@@ -664,7 +664,12 @@ module.exports = async (req, res) => {
         if (req.method === 'GET' && action === 'orders') {
             if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
             const { data, error } = await supabase.from('cali_orders').select('*, cali_locations(name, city)').order('created_at', { ascending: false });
-            if (error) throw error;
+            if (error) {
+                // Fallback to simple select if join has schema issue
+                const { data: fallbackData, error: fbError } = await supabase.from('cali_orders').select('*').order('created_at', { ascending: false });
+                if (fbError) throw fbError;
+                return res.json(fallbackData || []);
+            }
             return res.json(data || []);
         }
 
@@ -673,10 +678,15 @@ module.exports = async (req, res) => {
             if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
             const { customer_name, customer_phone, location_id, total, status, selections, notes } = req.body;
             
+            let sanitizedLocationId = null;
+            if (location_id && location_id.length === 36 && location_id.includes('-')) {
+                sanitizedLocationId = location_id;
+            }
+
             const { data, error } = await supabase.from('cali_orders').insert({
                 customer_name,
                 customer_phone,
-                location_id,
+                location_id: sanitizedLocationId,
                 total,
                 status: status || 'confirmed',
                 selections: selections || {},
@@ -687,9 +697,74 @@ module.exports = async (req, res) => {
             return res.json(data);
         }
 
+        // 6c. CREATE POP-UP POS ORDER (From Mobile Terminal)
+        if (req.method === 'POST' && action === 'create_pos_order') {
+            const { customer_name, customer_phone, location_id, total, selections, notes } = req.body;
+
+            let sanitizedLocationId = null;
+            if (location_id && location_id.length === 36 && location_id.includes('-')) {
+                sanitizedLocationId = location_id;
+            }
+
+            const { data, error } = await supabase.from('cali_orders').insert({
+                customer_name: customer_name || 'Walk-up Customer',
+                customer_phone: customer_phone || '',
+                location_id: sanitizedLocationId,
+                total: parseFloat(total || 0),
+                status: 'paid',
+                selections: selections || {},
+                notes: notes || '[MOBILE POP-UP POS SALE]'
+            }).select().single();
+
+            if (error) {
+                console.error("POS order creation error:", error);
+                throw error;
+            }
+            return res.json(data || { success: true });
+        }
+
+        // 6c-2. DELETE SINGLE ORDER (Admin)
+        if (req.method === 'POST' && action === 'delete_order') {
+            if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+            const { id } = req.body;
+            if (!id) return res.status(400).json({ error: 'Order ID required' });
+
+            const { error } = await supabase.from('cali_orders').delete().eq('id', id);
+            if (error) throw error;
+            return res.json({ success: true, id });
+        }
+
+        // 6c-3. DELETE ALL ORDERS / CLEAR TEST ORDERS (Admin)
+        if (req.method === 'POST' && (action === 'delete_all_orders' || action === 'clear_test_orders')) {
+            if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
+            const { error } = await supabase.from('cali_orders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (error) throw error;
+            return res.json({ success: true, message: 'All test orders cleared.' });
+        }
+
         // 6d. CREATE SELF CHECKOUT ORDER (PUBLIC)
         if (req.method === 'POST' && action === 'create_self_checkout_order') {
             const { customer_name, customer_phone, location_id, total, selections, notes, receiptBase64 } = req.body;
+
+            // Fast path for POS terminal
+            if (selections && selections.is_popup_pos) {
+                let sanitizedLoc = null;
+                if (location_id && location_id.length === 36 && location_id.includes('-')) {
+                    sanitizedLoc = location_id;
+                }
+                const { data: posData, error: posErr } = await supabase.from('cali_orders').insert({
+                    customer_name: customer_name || 'Walk-up Customer',
+                    customer_phone: customer_phone || '',
+                    location_id: sanitizedLoc,
+                    total: parseFloat(total || 0),
+                    status: 'paid',
+                    selections: selections || {},
+                    notes: notes || '[MOBILE POP-UP POS SALE]'
+                }).select().single();
+
+                if (posErr) throw posErr;
+                return res.json(posData || { success: true });
+            }
             
             let receiptImageUrl = null;
             if (receiptBase64 && receiptBase64.startsWith('data:image')) {

@@ -976,13 +976,13 @@
             try {
                 showToast("Logging sale...", "success");
 
-                const res = await fetch('/api/cali?action=create_self_checkout_order', {
+                const res = await fetch('/api/cali?action=create_pos_order', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        customer_name: `Pop-Up Customer (${paymentMethodName})`,
+                        customer_name: customerPhone ? `Customer (${customerPhone})` : `Walk-Up Customer (${paymentMethodName})`,
                         customer_phone: customerPhone,
-                        location_id: 'popup-mobile',
+                        location_id: null,
                         total: currentTotal,
                         selections: {
                             cart: cart,
