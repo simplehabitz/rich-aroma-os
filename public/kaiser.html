@@ -146,16 +146,26 @@
                 </div>
             </div>
 
-            <!-- Interactive 5-Bottle Visual Tray -->
+            <!-- Stash Size Selector (5 vs 10 Pack) -->
+            <div class="grid grid-cols-2 gap-1.5 p-1 bg-white/10 rounded-2xl">
+                <button type="button" onclick="setBundleTargetSize(5)" id="btn-size-5" class="py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all bg-brand-gold text-brand-dark shadow-xs">
+                    5-Pack ($22.50 / wk)
+                </button>
+                <button type="button" onclick="setBundleTargetSize(10)" id="btn-size-10" class="py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all text-white/70 hover:text-white">
+                    ⚡ 10-Pack (5 & 5 Split • $42)
+                </button>
+            </div>
+
+            <!-- Interactive Visual Tray -->
             <div class="bg-white/5 border border-white/10 rounded-2xl p-3 space-y-2">
                 <div class="flex items-center justify-between text-[9px] font-black uppercase tracking-wider">
-                    <span class="text-brand-gold">5-Pack Bottle Tray</span>
+                    <span class="text-brand-gold" id="tray-title-text">5-Pack Bottle Tray</span>
                     <span class="text-white/80 font-mono" id="tray-count-text">0 / 5 Picked</span>
                 </div>
-                <div class="flex gap-1.5" id="hero-tray-slots">
+                <div class="flex flex-wrap gap-1.5" id="hero-tray-slots">
                     <!-- Injected by JS -->
                 </div>
-                <p class="text-[7px] text-white/40 text-center uppercase font-bold">Tap Whole 🥛 or Oat 🌾 below to fill your 5-pack</p>
+                <p class="text-[7px] text-white/40 text-center uppercase font-bold" id="tray-footer-note">Tap Whole 🥛 or Oat 🌾 below to fill your stash</p>
             </div>
 
             <!-- 1-Tap Add Flavors into 5-Pack Grid -->
@@ -371,8 +381,9 @@
             { id: "ba7a19c3-96d2-4e44-a7d7-57e2711e79ae", name: "Classic Black Americano", basePrice: 5.00, defaultShots: 3, hasMilk: false, image: "https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/cali_products/PROD_ba7a19c3-96d2-4e44-a7d7-57e2711e79ae_1787352533474.jpg", desc: "Pure 3oz Espresso & Water (No Milk)" }
         ];
 
-        let selectedDropDay = 'Monday'; // 'Monday' or 'Thursday'
-        let heroBundleSlots = []; // Array of up to 5 items
+        let selectedDropDay = 'Monday'; // 'Monday', 'Thursday', or 'Both'
+        let bundleTargetSize = 5; // 5 or 10
+        let heroBundleSlots = []; // Array of up to 5 or 10 items
         let isSubscriptionMode = true;
         let cart = []; // Array of line items
         let activePaymentMethod = 'card';
@@ -396,6 +407,27 @@
             renderCart();
             setupIntersectionObserver();
         });
+
+        function setBundleTargetSize(size) {
+            bundleTargetSize = size;
+            const btn5 = document.getElementById('btn-size-5');
+            const btn10 = document.getElementById('btn-size-10');
+
+            if (size === 10) {
+                btn10.className = "py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all bg-brand-gold text-brand-dark shadow-xs";
+                btn5.className = "py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all text-white/70 hover:text-white";
+                selectDropDay('Both'); // Auto-select both drops
+                showToast("Switched to 10-Bottle Double Stash (5 Mon + 5 Thu Split)");
+            } else {
+                btn5.className = "py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all bg-brand-gold text-brand-dark shadow-xs";
+                btn10.className = "py-2 px-2.5 rounded-xl text-center font-black text-[10px] uppercase transition-all text-white/70 hover:text-white";
+                if (heroBundleSlots.length > 5) {
+                    heroBundleSlots = heroBundleSlots.slice(0, 5);
+                }
+                showToast("Switched to 5-Bottle Weekly Stash");
+            }
+            renderHeroTray();
+        }
 
         // ----------------------------------------------------
         // DROP DAY SELECTOR
@@ -433,67 +465,150 @@
                 btnBoth.className = "p-2.5 rounded-2xl border text-left transition-all bg-gradient-to-br from-amber-700 to-amber-900 text-white border-amber-500 shadow-xs";
                 btnBoth.querySelector('i').className = "fas fa-check-circle text-[10px] text-brand-gold";
                 document.getElementById('float-day-label').innerText = "Mon & Thu Drops";
-                helper.innerText = "⚡ Both Drops: Split into 2 fresh drops (3 on Monday + 2 on Thursday) for maximum freshness!";
+                helper.innerText = "⚡ Both Drops: Split into 2 fresh drops (5 on Mon + 5 on Thu, or 3 Mon + 2 Thu) for peak freshness!";
                 showToast("Selected Both Drops (Monday & Thursday Split)");
             }
         }
 
         // ----------------------------------------------------
-        // 5-BOTTLE HERO TRAY LOGIC
+        // HERO TRAY LOGIC (5 vs 10 BOTTLE STASH)
         // ----------------------------------------------------
         function renderHeroTray() {
             const container = document.getElementById('hero-tray-slots');
             const countEl = document.getElementById('tray-count-text');
             const btnEl = document.getElementById('btn-hero-add-bundle');
             const priceEl = document.getElementById('bundle-hero-price');
+            const titleEl = document.getElementById('tray-title-text');
 
-            countEl.innerText = `${heroBundleSlots.length} / 5 Picked`;
+            titleEl.innerText = bundleTargetSize === 10 ? '10-Bottle Double Stash (5 & 5 Split)' : '5-Bottle Stash Tray';
+            countEl.innerText = `${heroBundleSlots.length} / ${bundleTargetSize} Picked`;
 
             const oatCount = heroBundleSlots.filter(s => s.milk === 'Oat Milk').length;
-            const basePrice = isSubscriptionMode ? 22.50 : 25.00;
+            const basePrice = bundleTargetSize === 10 ? (isSubscriptionMode ? 42.00 : 46.00) : (isSubscriptionMode ? 22.50 : 25.00);
             const finalBundlePrice = basePrice + (oatCount * 1.00);
 
             priceEl.innerText = `$${finalBundlePrice.toFixed(2)}`;
 
             let html = '';
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < bundleTargetSize; i++) {
                 const filled = heroBundleSlots[i];
                 if (filled) {
                     const isOat = filled.milk === 'Oat Milk';
                     html += `
-                    <div class="relative flex-1 rounded-2xl bg-white/10 border ${isOat ? 'border-amber-400/50' : 'border-brand-gold/40'} p-1 flex flex-col items-center justify-between text-center shadow-xs">
+                    <div class="relative ${bundleTargetSize === 10 ? 'w-[18%] aspect-square' : 'flex-1'} rounded-2xl bg-white/10 border ${isOat ? 'border-amber-400/50' : 'border-brand-gold/40'} p-1 flex flex-col items-center justify-between text-center shadow-xs">
                         <button type="button" onclick="removeHeroSlot(${i})" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white text-[8px] flex items-center justify-center shadow-xs hover:scale-110 z-10">✕</button>
-                        <img src="${filled.image}" class="w-7 h-7 rounded-xl object-cover mt-0.5">
-                        <span class="text-[7px] font-bold text-white truncate max-w-full px-0.5 leading-tight">${filled.name.split(' ')[0]}</span>
+                        <img src="${filled.image}" class="w-6 h-6 rounded-lg object-cover mt-0.5">
+                        <span class="text-[6px] font-bold text-white truncate max-w-full px-0.5 leading-tight">${filled.name.split(' ')[0]}</span>
                         ${filled.hasMilk ? `
-                        <button type="button" onclick="toggleHeroSlotMilk(${i})" title="Tap to toggle milk" class="w-full text-[6px] font-black uppercase px-0.5 py-0.5 rounded border transition-all ${isOat ? 'bg-amber-500/30 text-amber-300 border-amber-400/50' : 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50'}">
-                            ${isOat ? '🌾 Oat +$1' : '🥛 Whole'}
+                        <button type="button" onclick="toggleHeroSlotMilk(${i})" title="Tap to toggle milk" class="w-full text-[5px] font-black uppercase px-0.5 py-0.5 rounded border transition-all ${isOat ? 'bg-amber-500/30 text-amber-300 border-amber-400/50' : 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50'}">
+                            ${isOat ? 'Oat' : 'Whole'}
                         </button>
                         ` : `
-                        <span class="text-[6px] font-bold text-white/40 uppercase">☕ Black</span>
+                        <span class="text-[5px] font-bold text-white/40 uppercase">Black</span>
                         `}
                     </div>
                     `;
                 } else {
                     html += `
-                    <div class="flex-1 aspect-square rounded-2xl border-2 border-dashed border-white/20 p-1 flex flex-col items-center justify-center text-center bg-black/20">
-                        <span class="text-[8px] font-black text-white/30">#${i + 1}</span>
-                        <span class="text-[6px] text-white/30 uppercase font-bold">Empty</span>
+                    <div class="${bundleTargetSize === 10 ? 'w-[18%] aspect-square' : 'flex-1 aspect-square'} rounded-2xl border-2 border-dashed border-white/20 p-1 flex flex-col items-center justify-center text-center bg-black/20">
+                        <span class="text-[7px] font-black text-white/30">#${i + 1}</span>
+                        <span class="text-[5px] text-white/30 uppercase font-bold">Empty</span>
                     </div>
                     `;
                 }
             }
             container.innerHTML = html;
 
-            if (heroBundleSlots.length === 5) {
+            if (heroBundleSlots.length === bundleTargetSize) {
                 btnEl.disabled = false;
                 btnEl.className = "w-full font-black py-4 rounded-2xl shadow-lg uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all bg-brand-gold text-brand-dark hover:brightness-105 active:scale-95 cursor-pointer";
-                btnEl.innerText = `Add 5-Pack to Order • $${finalBundlePrice.toFixed(2)}`;
+                btnEl.innerText = `Add ${bundleTargetSize}-Pack to Order • $${finalBundlePrice.toFixed(2)}`;
             } else {
                 btnEl.disabled = true;
                 btnEl.className = "w-full font-black py-4 rounded-2xl shadow-lg uppercase tracking-wider text-xs flex items-center justify-center gap-2 transition-all bg-white/10 text-white/30 cursor-not-allowed";
-                btnEl.innerText = `Pick ${5 - heroBundleSlots.length} More Bottle${5 - heroBundleSlots.length > 1 ? 's' : ''} to Complete Stash`;
+                btnEl.innerText = `Pick ${bundleTargetSize - heroBundleSlots.length} More Bottle${bundleTargetSize - heroBundleSlots.length > 1 ? 's' : ''} to Complete Stash`;
             }
+        }
+
+        function addHeroSlot(itemId, milkChoice = 'Whole Milk') {
+            if (heroBundleSlots.length >= bundleTargetSize) {
+                showToast(`${bundleTargetSize}-Pack is full! Tap 'Add ${bundleTargetSize}-Pack to Order'.`);
+                return;
+            }
+            const item = MENU_ITEMS.find(i => i.id === itemId);
+            if (!item) return;
+
+            heroBundleSlots.push({
+                id: item.id,
+                name: item.name,
+                image: item.image,
+                milk: item.hasMilk ? milkChoice : 'No Milk',
+                hasMilk: item.hasMilk
+            });
+            renderHeroTray();
+            showToast(`+1 ${item.name} (${item.hasMilk ? milkChoice : 'Black'})`);
+        }
+
+        function toggleHeroSlotMilk(index) {
+            const slot = heroBundleSlots[index];
+            if (!slot || !slot.hasMilk) return;
+            slot.milk = slot.milk === 'Whole Milk' ? 'Oat Milk' : 'Whole Milk';
+            renderHeroTray();
+        }
+
+        function removeHeroSlot(index) {
+            heroBundleSlots.splice(index, 1);
+            renderHeroTray();
+        }
+
+        function toggleSubscriptionMode() {
+            const chk = document.getElementById('sub-checkbox');
+            isSubscriptionMode = chk.checked;
+            renderHeroTray();
+        }
+
+        function confirmHeroBundle() {
+            if (heroBundleSlots.length !== bundleTargetSize) return;
+
+            const oatCount = heroBundleSlots.filter(s => s.milk === 'Oat Milk').length;
+            const wholeCount = heroBundleSlots.filter(s => s.milk !== 'Oat Milk' && s.hasMilk).length;
+            const blackCount = heroBundleSlots.filter(s => !s.hasMilk).length;
+
+            const basePrice = bundleTargetSize === 10 ? (isSubscriptionMode ? 42.00 : 46.00) : (isSubscriptionMode ? 22.50 : 25.00);
+            const finalBundlePrice = basePrice + (oatCount * 1.00);
+
+            const namesSummary = heroBundleSlots.map(s => `${s.name.split(' ')[0]} (${s.milk === 'Oat Milk' ? 'Oat' : s.hasMilk ? 'Whole' : 'Black'})`).join(', ');
+
+            let milkSummary = [];
+            if (wholeCount > 0) milkSummary.push(`${wholeCount} Whole`);
+            if (oatCount > 0) milkSummary.push(`${oatCount} Oat`);
+            if (blackCount > 0) milkSummary.push(`${blackCount} Black`);
+
+            const bundleTitle = bundleTargetSize === 10 ? `10-Pack 5 & 5 Split (${milkSummary.join(', ')})` : `5-Pack (${milkSummary.join(', ')})`;
+
+            cart.push({
+                cartId: `c-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+                id: bundleTargetSize === 10 ? 'bundle-10pack' : 'bundle-5pack',
+                name: bundleTitle,
+                desc: namesSummary,
+                milk: oatCount > 0 && wholeCount === 0 ? 'Oat Milk' : (wholeCount > 0 && oatCount === 0 ? 'Whole Milk' : 'Mixed Milk'),
+                hasMilk: true,
+                image: heroBundleSlots[0]?.image || MENU_ITEMS[0].image,
+                basePrice: finalBundlePrice,
+                unitPrice: finalBundlePrice,
+                qty: 1,
+                total: finalBundlePrice,
+                bottles: bundleTargetSize,
+                is_bundle: true,
+                is_subscription: isSubscriptionMode,
+                bundleSelections: [...heroBundleSlots]
+            });
+
+            heroBundleSlots = [];
+            renderHeroTray();
+            renderCart();
+            showToast(`✓ Added ${bundleTargetSize}-Pack to Order! ($${finalBundlePrice.toFixed(2)})`, "success");
+            scrollToCheckout();
         }
 
         function renderHeroFlavorPicker() {
