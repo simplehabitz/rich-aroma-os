@@ -98,25 +98,34 @@
                 <span class="text-[8px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Brewed Fresh</span>
             </div>
 
-            <div class="grid grid-cols-2 gap-2">
-                <button type="button" onclick="selectDropDay('Monday')" id="btn-day-monday" class="p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs">
+            <div class="grid grid-cols-3 gap-1.5">
+                <button type="button" onclick="selectDropDay('Monday')" id="btn-day-monday" class="p-2.5 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs">
                     <div class="flex items-center justify-between">
-                        <span class="text-[9px] font-black uppercase tracking-wider">🚀 Monday Drop</span>
-                        <i class="fas fa-check-circle text-xs text-emerald-300"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">🚀 Monday</span>
+                        <i class="fas fa-check-circle text-[10px] text-emerald-300"></i>
                     </div>
-                    <p class="text-[8px] text-white/70 mt-1 font-medium leading-tight">Covers Mon, Tue, Wed Shifts</p>
-                    <span class="text-[7px] font-bold bg-white/20 text-white px-1.5 py-0.5 rounded mt-1.5 inline-block">Brewed Sunday Night</span>
+                    <p class="text-[7px] text-white/70 mt-1 font-medium leading-tight">Mon–Wed Shifts</p>
                 </button>
 
-                <button type="button" onclick="selectDropDay('Thursday')" id="btn-day-thursday" class="p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40">
+                <button type="button" onclick="selectDropDay('Thursday')" id="btn-day-thursday" class="p-2.5 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40">
                     <div class="flex items-center justify-between">
-                        <span class="text-[9px] font-black uppercase tracking-wider">🚀 Thursday Drop</span>
-                        <i class="far fa-circle text-xs text-gray-400"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">🚀 Thursday</span>
+                        <i class="far fa-circle text-[10px] text-gray-400"></i>
                     </div>
-                    <p class="text-[8px] text-gray-500 mt-1 font-medium leading-tight">Covers Thu, Fri, Weekend Shifts</p>
-                    <span class="text-[7px] font-bold bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded mt-1.5 inline-block">Brewed Wed Night</span>
+                    <p class="text-[7px] text-gray-500 mt-1 font-medium leading-tight">Thu–Sun Shifts</p>
+                </button>
+
+                <button type="button" onclick="selectDropDay('Both')" id="btn-day-both" class="p-2.5 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[8px] font-black uppercase tracking-wider text-amber-900">⚡ Both Drops</span>
+                        <i class="far fa-circle text-[10px] text-gray-400"></i>
+                    </div>
+                    <p class="text-[7px] text-gray-500 mt-1 font-medium leading-tight">Mon + Thu Split</p>
                 </button>
             </div>
+            <p id="drop-day-helper" class="text-[8px] text-[#005880] font-bold text-center pt-0.5">
+                📅 Monday Drop: Brewed fresh Sunday night, delivered Monday morning.
+            </p>
         </section>
 
         <!-- ============================================== -->
@@ -395,20 +404,38 @@
             selectedDropDay = day;
             const btnMon = document.getElementById('btn-day-monday');
             const btnThu = document.getElementById('btn-day-thursday');
+            const btnBoth = document.getElementById('btn-day-both');
+            const helper = document.getElementById('drop-day-helper');
+
+            const inactiveClass = "p-2.5 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40";
+            const activeClass = "p-2.5 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs";
+
+            btnMon.className = inactiveClass;
+            btnMon.querySelector('i').className = "far fa-circle text-[10px] text-gray-400";
+            btnThu.className = inactiveClass;
+            btnThu.querySelector('i').className = "far fa-circle text-[10px] text-gray-400";
+            btnBoth.className = inactiveClass;
+            btnBoth.querySelector('i').className = "far fa-circle text-[10px] text-gray-400";
 
             if (day === 'Monday') {
-                btnMon.className = "p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs";
-                btnMon.querySelector('i').className = "fas fa-check-circle text-xs text-emerald-300";
-                btnThu.className = "p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40";
-                btnThu.querySelector('i').className = "far fa-circle text-xs text-gray-400";
+                btnMon.className = activeClass;
+                btnMon.querySelector('i').className = "fas fa-check-circle text-[10px] text-emerald-300";
+                document.getElementById('float-day-label').innerText = "Monday Drop";
+                helper.innerText = "📅 Monday Drop: Brewed fresh Sunday night, delivered Monday morning.";
+                showToast("Selected Monday Morning Shift Drop");
+            } else if (day === 'Thursday') {
+                btnThu.className = activeClass;
+                btnThu.querySelector('i').className = "fas fa-check-circle text-[10px] text-emerald-300";
+                document.getElementById('float-day-label').innerText = "Thursday Drop";
+                helper.innerText = "📅 Thursday Drop: Brewed fresh Wednesday night, delivered Thursday morning.";
+                showToast("Selected Thursday Morning Shift Drop");
             } else {
-                btnThu.className = "p-3 rounded-2xl border text-left transition-all bg-[#005880] text-white border-[#005880] shadow-xs";
-                btnThu.querySelector('i').className = "fas fa-check-circle text-xs text-emerald-300";
-                btnMon.className = "p-3 rounded-2xl border text-left transition-all bg-gray-50 text-gray-700 border-gray-200 hover:border-[#005880]/40";
-                btnMon.querySelector('i').className = "far fa-circle text-xs text-gray-400";
+                btnBoth.className = "p-2.5 rounded-2xl border text-left transition-all bg-gradient-to-br from-amber-700 to-amber-900 text-white border-amber-500 shadow-xs";
+                btnBoth.querySelector('i').className = "fas fa-check-circle text-[10px] text-brand-gold";
+                document.getElementById('float-day-label').innerText = "Mon & Thu Drops";
+                helper.innerText = "⚡ Both Drops: Split into 2 fresh drops (3 on Monday + 2 on Thursday) for maximum freshness!";
+                showToast("Selected Both Drops (Monday & Thursday Split)");
             }
-            document.getElementById('float-day-label').innerText = `${day} Drop`;
-            showToast(`Selected ${day} Morning Shift Drop`);
         }
 
         // ----------------------------------------------------
