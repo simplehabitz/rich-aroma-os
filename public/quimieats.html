@@ -194,11 +194,6 @@
         </div>
     </div>
 
-    <!-- Featured (Rich Aroma) -->
-    <section class="px-4 mb-6" id="featured-section">
-        <!-- Injected via JS -->
-    </section>
-
     <!-- Popular Near You -->
     <section class="px-4 mb-6">
         <h2 class="font-bold text-lg mb-3" id="list-title">Recomendados en Quimistán 🇭🇳</h2>
@@ -331,13 +326,25 @@
                    'rich-aroma': 'https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/uploads/1780064113444_Copy_of_Copy_of_Menu_2025_-_2_512_x_512_px.png',
                    'el-meson': 'https://images.unsplash.com/photo-1509440159596-0249088772ff?q=80&w=800&auto=format&fit=crop'
                 };
-                allRestaurants = (data || []).map(r => ({
+                let list = (data || []).map(r => ({
                    ...r,
                    logo_url: eliteLogos[r.id] || r.logo_url
                 }));
+
+                // Ensure Rich Aroma is always present in list as coming soon
+                if (!list.some(r => r.id === 'rich-aroma')) {
+                    list.push({
+                        id: 'rich-aroma',
+                        name: 'Rich Aroma',
+                        category: 'Cafetería & Bebidas',
+                        logo_url: eliteLogos['rich-aroma'],
+                        settings: { is_taking_orders: false }
+                    });
+                }
+
+                allRestaurants = list;
                 filterRestaurants(null);
             } catch (e) {
-
                 console.error("Failed to load restaurants", e);
                 document.getElementById('restaurant-list').innerHTML = '<div class="p-8 text-center text-red-500">Error al cargar servicios.</div>';
             }
@@ -345,14 +352,13 @@
 
         function filterRestaurants(category) {
             currentCategory = category;
-            const featuredSection = document.getElementById('featured-section');
             const listSection = document.getElementById('restaurant-list');
             const listTitle = document.getElementById('list-title');
             
-            const activeIds = ['rich-aroma', 'pupuseria-mary'];
+            const activeIds = ['pupuseria-mary'];
             
-            const activeRestaurants = allRestaurants.filter(r => activeIds.includes(r.id) || r.settings?.is_taking_orders === true);
-            const comingSoonList = allRestaurants.filter(r => !activeIds.includes(r.id) && r.settings?.is_taking_orders !== true);
+            const activeRestaurants = allRestaurants.filter(r => (activeIds.includes(r.id) || r.settings?.is_taking_orders === true) && r.id !== 'rich-aroma');
+            const comingSoonList = allRestaurants.filter(r => (!activeIds.includes(r.id) && r.settings?.is_taking_orders !== true) || r.id === 'rich-aroma');
 
             let filtered = activeRestaurants;
             let filteredComingSoon = comingSoonList;
@@ -387,15 +393,14 @@
                 });
             }
 
-            // Pin Rich Aroma to top
-            filtered.sort((a, b) => {
+            // Pin Rich Aroma to top of coming soon
+            filteredComingSoon.sort((a, b) => {
                 if (a.id === 'rich-aroma') return -1;
                 if (b.id === 'rich-aroma') return 1;
                 return 0;
             });
 
             if (filtered.length === 0) {
-                featuredSection.innerHTML = '';
                 listSection.innerHTML = `<div class="p-12 text-center text-gray-400 italic">No hay ${category || 'negocios'} activos disponibles en esta categoría todavía. 🇭🇳</div>`;
                 renderComingSoon(filteredComingSoon);
                 return;
@@ -403,11 +408,9 @@
 
             if (!category) {
                 listTitle.innerText = "Recomendados en Quimistán 🇭🇳";
-                renderFeatured(filtered[0]);
-                renderList(filtered.slice(1));
+                renderList(filtered);
             } else {
                 listTitle.innerText = `Resultados: ${category}`;
-                featuredSection.innerHTML = '';
                 renderList(filtered);
             }
 
@@ -424,6 +427,7 @@
             document.getElementById('coming-soon-section').classList.remove('hidden');
 
             const eliteLogos = {
+               'rich-aroma': 'https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/uploads/1780064113444_Copy_of_Copy_of_Menu_2025_-_2_512_x_512_px.png',
                'fradas-bar--grill-445': 'https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/uploads/1780064261851_f3fc0c2b-67ad-4797-9151-31a65f1a119e.JPG',
                'tonys-pizza-mas-cerca-de-ti-622': 'https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/uploads/1780112315980_tonys_pizza_logo.jpg',
                'tonys-pizza': 'https://zcqubacfcettwawcimsy.supabase.co/storage/v1/object/public/menu-images/uploads/1780112315980_tonys_pizza_logo.jpg',
@@ -434,7 +438,7 @@
             container.innerHTML = list.map(r => {
                 const logoUrl = eliteLogos[r.id] || r.logo_url || '';
                 return `
-                <div class="flex flex-col items-center gap-2 p-3 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm select-none hover:shadow-md transition-all active:scale-[0.98]">
+                <div onclick="openStore('${r.id}')" class="flex flex-col items-center gap-2 p-3 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm select-none hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
                     <div class="w-14 h-14 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center relative">
                         ${logoUrl ? `<img src="${logoUrl}" class="w-full h-full object-cover">` : '<i class="fas fa-store text-gray-300 text-lg"></i>'}
                         <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
@@ -450,40 +454,6 @@
         function isProfessionalService(r) {
             const cat = (r.category || '').toLowerCase();
             return cat.includes('médico') || cat.includes('dentista') || cat.includes('abogado') || cat.includes('clínica') || cat.includes('ac') || cat.includes('eléctrico');
-        }
-
-        function renderFeatured(r) {
-            const container = document.getElementById('featured-section');
-            const isService = isProfessionalService(r);
-
-            container.innerHTML = `
-                <div class="flex justify-between items-center mb-3">
-                    <h2 class="font-black uppercase tracking-tighter text-lg">Destacado 🔥</h2>
-                </div>
-                <div onclick="openStore('${r.id}')" class="bg-white rounded-[2rem] shadow-xl overflow-hidden cursor-pointer border border-gray-100">
-                    <div class="h-44 bg-gray-900 relative">
-                        ${r.logo_url ? `<img src="${r.logo_url}" class="w-full h-full object-cover opacity-80">` : `
-                            <div class="absolute inset-0 flex items-center justify-center text-white opacity-20 text-7xl">🏙️</div>
-                        `}
-                        <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl">
-                            ${isService ? 'Abierto' : '15-25 min'}
-                        </div>
-                        <div class="absolute bottom-4 left-4 ${isService ? 'bg-blue-600' : 'bg-orange-500'} text-white px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                            ${isService ? 'Ver Perfil' : 'Ver Menú'}
-                        </div>
-                    </div>
-                    <div class="p-5">
-                        <div class="flex justify-between items-start mb-1">
-                            <h3 class="font-black text-xl uppercase tracking-tighter">${r.name}</h3>
-                            <div class="bg-green-50 text-green-700 px-2 py-1 rounded-lg text-xs font-black flex items-center gap-1">
-                                4.9 <i class="fas fa-star text-[10px]"></i>
-                            </div>
-                        </div>
-                        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">${r.category || 'Servicio'} • Quimistán Centro</p>
-                        ${r.id === 'rich-aroma' ? `<p class="text-orange-600 text-[10px] font-black uppercase tracking-tight mt-1.5 animate-pulse">✨ Apertura sus puertas Agost 14 2026</p>` : ''}
-                    </div>
-                </div>
-            `;
         }
 
         function renderList(list) {
@@ -503,7 +473,6 @@
                             </div>
                         </div>
                         <p class="text-gray-400 text-[9px] font-bold uppercase tracking-widest mb-2">${r.category || 'Servicio'}</p>
-                        ${r.id === 'rich-aroma' ? `<p class="text-orange-600 text-[8px] font-black uppercase tracking-tight mb-2 animate-pulse">✨ Apertura sus puertas Agost 14 2026</p>` : ''}
                         <div class="flex gap-3 text-[9px] font-black uppercase tracking-widest">
                             <span class="flex items-center gap-1 text-green-600">
                                 <i class="fas fa-circle text-[6px]"></i> ${isService ? 'Disponible' : 'Cocinando'}
