@@ -2200,6 +2200,35 @@
                     document.getElementById('receipt-qr').innerHTML = "";
                     new QRCode(document.getElementById('receipt-qr'), { text: saved.id, width: 160, height: 160, colorDark: "#120C09" });
                 }
+
+                // Build WhatsApp Order Notification Deep-Link (Method 1)
+                const storeObj = allRestaurants.find(x => x.id === (activeStoreId || saved.restaurant_id));
+                const rawStorePhone = (storeObj?.contact_phone || storeObj?.phone || '50497814474').replace(/\D/g, '');
+                const targetStorePhone = rawStorePhone.startsWith('504') ? rawStorePhone : `504${rawStorePhone}`;
+                
+                const orderNum = saved.order_number || saved.id.slice(-4);
+                const storeName = storeObj?.name || 'QuimiEats';
+                const itemsSummary = cart.map(i => `• ${i.qty || 1}x ${i.name} (L. ${i.finalPrice.toFixed(2)})`).join('\n');
+                
+                let waMessage = `🔔 *NUEVO PEDIDO QUIMIEATS #${orderNum}*\n`;
+                waMessage += `🏪 *Tienda:* ${storeName}\n\n`;
+                waMessage += `👤 *Cliente:* ${name}\n`;
+                waMessage += `📞 *Teléfono:* ${phone}\n`;
+                waMessage += `📍 *Modalidad:* ${fulfillment === 'delivery' ? `Domicilio (${address})` : 'Para Llevar / Retiro'}\n\n`;
+                waMessage += `🍔 *Detalle del Pedido:*\n${itemsSummary}\n\n`;
+                waMessage += `💵 *Subtotal:* L. ${subTotal.toFixed(2)}\n`;
+                if (deliveryFee > 0) waMessage += `🛵 *Envío:* L. ${deliveryFee.toFixed(2)}\n`;
+                if (discVal > 0) waMessage += `🏷️ *Descuento:* -L. ${discVal.toFixed(2)}\n`;
+                waMessage += `💰 *TOTAL A COBRAR:* L. ${finalTotal.toFixed(2)}\n`;
+                waMessage += `💳 *Método de Pago:* ${paymentMethod === 'cash' ? 'Efectivo contra entrega' : paymentMethod === 'transfer' ? 'Transferencia Bancaria' : 'Billetera Rico Cash'}\n\n`;
+                waMessage += `🔗 *Seguimiento en vivo:* ${window.location.origin}/quimieats.html?track=${saved.id}`;
+
+                const waUrl = `https://wa.me/${targetStorePhone}?text=${encodeURIComponent(waMessage)}`;
+                const waBtn = document.getElementById('btn-whatsapp-order-notify');
+                if (waBtn) {
+                    waBtn.href = waUrl;
+                }
+
                 document.getElementById('track-modal').classList.remove('hidden');
                 document.getElementById('track-modal').style.opacity = '1';
                 
@@ -3680,6 +3709,14 @@
             <h4 id="receipt-num" class="text-3xl font-mono font-black text-white">#000000</h4>
             <div id="receipt-qr" class="w-40 h-40 bg-white p-3 rounded-2xl flex items-center justify-center"></div>
             <p class="text-[9px] font-bold text-white/30 uppercase max-w-[160px] tracking-tight">Escanea en barra para retirar o muestra al motorista.</p>
+        </div>
+
+        <!-- WhatsApp Direct Alert Box (Method 1) -->
+        <div id="whatsapp-order-box" class="w-full max-w-xs mt-4 space-y-2">
+            <a id="btn-whatsapp-order-notify" href="#" target="_blank" class="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-xl flex items-center justify-center gap-2 transition-all active:scale-95">
+                <i class="fab fa-whatsapp text-lg"></i> Notificar a la Cocina 💬
+            </a>
+            <p class="text-[8px] text-white/40 uppercase font-black tracking-widest text-center">Toca para enviar el comprobante directo por WhatsApp</p>
         </div>
 
         <div id="delivery-info-box" class="hidden mt-6 w-full max-w-xs bg-white/5 border border-white/10 p-6 rounded-[2rem] text-center space-y-4">
