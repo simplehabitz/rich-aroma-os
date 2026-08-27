@@ -39,18 +39,6 @@ module.exports = async (req, res) => {
         const activeBatches = settings.batches || [];
         const now = new Date();
 
-        // --- ISOLATION SHIELD ---
-        if (finalResId !== 'rich-aroma') {
-            const hasCoffee = items.some(i => (i.name||'').toLowerCase().includes('latte'));
-            if (items.length === 0 || hasCoffee) {
-                return res.json({ 
-                    items: [], categories: [], modGroups: [], modOptions: [], itemModGroups: [], taxRate: 0,
-                    acceptedPayments: settings.accepted_payments || {},
-                    bankDetails: settings.bank_details || {}
-                });
-            }
-        }
-
         // --- MODIFIER FILTERING ---
         const itemIds = items.map(i => i.id);
         const linkedGroupIds = allItemMods.filter(img => itemIds.includes(img.item_id)).map(img => img.group_id);
