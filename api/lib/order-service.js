@@ -210,6 +210,15 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             dbOrder.notes = (dbOrder.notes || '') + ` [DELIVERY_PIN: ${deliveryPin}]`;
         }
 
+        // Gift / Diaspora Meta Note
+        if (orderRequest.isGift || orderRequest.is_gift) {
+            const gFrom = orderRequest.customerName || orderRequest.senderName || 'Alguien especial';
+            const gTo = orderRequest.recipientName || orderRequest.recipient_name || 'Familiar';
+            const gNote = orderRequest.giftNote || orderRequest.gift_note || '';
+            const gTel = orderRequest.recipientPhone || orderRequest.recipient_phone || '';
+            dbOrder.notes = (dbOrder.notes || '') + ` [🎁 REGALO: De ${gFrom} para ${gTo} | Mensaje: "${gNote}" | Tel: ${gTel}]`;
+        }
+
         // QuimiEats Commission Note
         if (!isPos && targetResId !== 'rich-aroma') {
             const commission = parseFloat(dbOrder.total) * 0.08;
@@ -295,8 +304,8 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
                         order_id: data.id
                     });
 
-                    // B. Credit order total to merchant if paid via platform-held channels (rico_balance, transfer)
-                    const isPlatformHeld = paymentMethod === 'rico_balance' || paymentMethod === 'rico_cash' || paymentMethod === 'transfer';
+                    // B. Credit order total to merchant if paid via platform-held channels (rico_balance, transfer, card, stripe)
+                    const isPlatformHeld = ['rico_balance', 'rico_cash', 'transfer', 'card', 'stripe'].includes(paymentMethod);
                     if (isPlatformHeld) {
                         await supabase.from('quimieats_ledger').insert({
                             restaurant_id: targetResId,
@@ -456,6 +465,14 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             // Email Notification (Every order triggers an email)
             await notifyOrder(data);
         })();
+
+        // Ensure caller receives delivery_pin even if database stripped the custom column
+        if (dbOrder.delivery_pin && !data.delivery_pin) {
+            data.delivery_pin = dbOrder.delivery_pin;
+        } else if (!data.delivery_pin && data.notes) {
+            const pinMatch = data.notes.match(/\[DELIVERY_PIN:\s*(\d{4})\]/);
+            if (pinMatch) data.delivery_pin = pinMatch[1];
+        }
 
         return data;
 

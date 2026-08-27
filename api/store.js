@@ -1314,6 +1314,16 @@ module.exports = async (req, res) => {
                 return res.status(500).json({ error: error.message });
             }
 
+            // Automatically seed L. 500 Launch Commission Credit in QuimiEats Ledger
+            await supabase.from('quimieats_ledger').insert({
+                restaurant_id: generatedResId,
+                amount: 500.00,
+                type: 'welcome_promo_credit',
+                status: 'settled',
+                customer_id: 'system_promo',
+                order_id: 'promo_welcome_500'
+            }).catch(err => console.error("[Partner Registration] Failed to seed welcome credit:", err));
+
             // Send WhatsApp credentials notification to the registered merchant
             const cleanPhone = phone.replace(/\D/g, '');
             let phoneToMsg = cleanPhone;
