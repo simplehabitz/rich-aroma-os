@@ -446,15 +446,23 @@
             const contrastVal = document.getElementById('product-edit-contrast').value;
             const bgPreset = document.getElementById('product-edit-bg-preset').value;
 
+            // Calculate target dimension (max 800px to ensure fast upload and small payload)
+            const MAX_DIM = 800;
+            let origW = productOriginalImgElement.width;
+            let origH = productOriginalImgElement.height;
+            let scale = Math.min(1, MAX_DIM / Math.max(origW, origH));
+            let targetW = Math.round(origW * scale);
+            let targetH = Math.round(origH * scale);
+
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
             if (productRotationAngle % 180 === 0) {
-                canvas.width = productOriginalImgElement.width;
-                canvas.height = productOriginalImgElement.height;
+                canvas.width = targetW;
+                canvas.height = targetH;
             } else {
-                canvas.width = productOriginalImgElement.height;
-                canvas.height = productOriginalImgElement.width;
+                canvas.width = targetH;
+                canvas.height = targetW;
             }
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -470,9 +478,9 @@
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.rotate((productRotationAngle * Math.PI) / 180);
             ctx.filter = `brightness(${brightnessVal}%) contrast(${contrastVal}%)`;
-            ctx.drawImage(productOriginalImgElement, -productOriginalImgElement.width / 2, -productOriginalImgElement.height / 2);
+            ctx.drawImage(productOriginalImgElement, -targetW / 2, -targetH / 2, targetW, targetH);
 
-            productImageBase64 = canvas.toDataURL('image/png');
+            productImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
             document.getElementById('product-preview').innerHTML = `<img src="${productImageBase64}" class="w-full h-full object-cover">`;
         }
 
@@ -540,12 +548,13 @@
                 if (res.ok) {
                     nextStep(3);
                 } else {
-                    const data = await res.json();
-                    alert("Error: " + data.error);
+                    const data = await res.json().catch(() => ({ error: `Error del servidor (${res.status})` }));
+                    alert("Error al guardar: " + (data.error || "Intenta nuevamente"));
                     btn.innerText = "REINTENTAR"; btn.disabled = false;
                 }
             } catch (e) {
-                alert("Error de conexión");
+                console.error("[saveFirstProduct] Error:", e);
+                alert("Error de conexión: " + (e.message || "Verifica tu internet"));
                 btn.innerText = "REINTENTAR"; btn.disabled = false;
             }
         }

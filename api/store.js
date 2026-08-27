@@ -1534,58 +1534,83 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_create_item' || action === 'partner_save_item') {
-            const { restaurant_id, name, price, category, is_unlimited, default_daily_stock, imageBase64, is_gacha_promo } = req.body || {};
-            if (!restaurant_id || !name || !price) return res.status(400).json({ error: "Missing required fields" });
+            try {
+                const { restaurant_id, name, price, category, is_unlimited, default_daily_stock, imageBase64, is_gacha_promo } = req.body || {};
+                if (!restaurant_id || !name || !price) return res.status(400).json({ error: "Faltan campos obligatorios (nombre, precio o restaurante)" });
 
-            let imageUrl = null;
-            if (imageBase64) {
-                try {
-                    const buffer = Buffer.from(imageBase64.split(',')[1], 'base64');
-                    const filePath = `uploads/${Date.now()}_item.png`;
-                    const { error: uploadErr } = await supabase.storage.from('menu-images').upload(filePath, buffer, { contentType: 'image/png', upsert: true });
-                    if (!uploadErr) {
-                        imageUrl = supabase.storage.from('menu-images').getPublicUrl(filePath).data.publicUrl;
+                // Ensure restaurant exists in DB
+                let { data: resData } = await supabase.from('restaurants').select('id, settings').eq('id', restaurant_id).maybeSingle();
+                if (!resData) {
+                    const { data: newRes, error: insertResErr } = await supabase.from('restaurants').insert({
+                        id: restaurant_id,
+                        name: restaurant_id.replace(/-/g, ' ').toUpperCase(),
+                        status: 'active',
+                        settings: { is_taking_orders: true }
+                    }).select().single();
+                    if (insertResErr) {
+                        console.error("[partner_save_item] Auto-restaurant create warning:", insertResErr);
                     }
-                } catch(e) { console.error("Image upload failed", e); }
+                    resData = newRes || { settings: {} };
+                }
+
+                let imageUrl = null;
+                if (imageBase64) {
+                    try {
+                        const rawBase64 = imageBase64.includes(',') ? imageBase64.split(',')[1] : imageBase64;
+                        const buffer = Buffer.from(rawBase64, 'base64');
+                        const filePath = `uploads/${Date.now()}_item.jpg`;
+                        const { error: uploadErr } = await supabase.storage.from('menu-images').upload(filePath, buffer, { contentType: 'image/jpeg', upsert: true });
+                        if (!uploadErr) {
+                            imageUrl = supabase.storage.from('menu-images').getPublicUrl(filePath).data.publicUrl;
+                        } else {
+                            console.warn("[partner_save_item] Storage upload warning:", uploadErr);
+                        }
+                    } catch(e) { console.error("[partner_save_item] Image parse failed:", e); }
+                }
+
+                const itemId = `${restaurant_id}-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.floor(100 + Math.random() * 900)}`;
+
+                const { data: itemData, error } = await supabase.from('menu_items').insert({
+                    id: itemId,
+                    restaurant_id,
+                    name,
+                    price: parseFloat(price),
+                    category: category || 'comida',
+                    image_url: imageUrl,
+                    available: true
+                }).select().single();
+
+                if (error) {
+                    console.error("[partner_save_item] menu_items insert error:", error);
+                    return res.status(500).json({ error: "Error al registrar plato: " + error.message });
+                }
+
+                // Save JSONB config to settings
+                const settings = resData?.settings || {};
+                settings.product_inventory = settings.product_inventory || {};
+                settings.product_inventory[itemId] = {
+                    is_unlimited: is_unlimited !== false,
+                    default_daily_stock: default_daily_stock ? parseInt(default_daily_stock) : null,
+                    stock_quantity: is_unlimited !== false ? null : 0,
+                    duration: req.body.duration ? parseInt(req.body.duration) : null
+                };
+
+                if (is_gacha_promo) {
+                    settings.gachaPromoItemIds = settings.gachaPromoItemIds || [];
+                    settings.gachaPromoItemIds.push(itemId);
+                }
+
+                await supabase.from('restaurants').update({ settings }).eq('id', restaurant_id);
+
+                if (itemData) {
+                    itemData.is_gacha_promo = !!is_gacha_promo;
+                }
+
+                return res.json({ success: true, item: itemData });
+            } catch (err) {
+                console.error("[partner_save_item] Catch-all error:", err);
+                return res.status(500).json({ error: "Error interno del servidor: " + (err.message || "Error desconocido") });
             }
-
-            const itemId = `${restaurant_id}-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Math.floor(100 + Math.random() * 900)}`;
-
-            const { data: itemData, error } = await supabase.from('menu_items').insert({
-                id: itemId,
-                restaurant_id,
-                name,
-                price: parseFloat(price),
-                category: category || 'comida',
-                image_url: imageUrl,
-                available: true
-            }).select().single();
-
-            if (error) throw error;
-
-            // Save JSONB config to settings
-            const { data: resData } = await supabase.from('restaurants').select('settings').eq('id', restaurant_id).single();
-            const settings = resData?.settings || {};
-            settings.product_inventory = settings.product_inventory || {};
-            settings.product_inventory[itemId] = {
-                is_unlimited: is_unlimited !== false,
-                default_daily_stock: default_daily_stock ? parseInt(default_daily_stock) : null,
-                stock_quantity: is_unlimited !== false ? null : 0,
-                duration: req.body.duration ? parseInt(req.body.duration) : null
-            };
-
-            if (is_gacha_promo) {
-                settings.gachaPromoItemIds = settings.gachaPromoItemIds || [];
-                settings.gachaPromoItemIds.push(itemId);
-            }
-
-            await supabase.from('restaurants').update({ settings }).eq('id', restaurant_id);
-
-            if (itemData) {
-                itemData.is_gacha_promo = !!is_gacha_promo;
-            }
-
-            return res.json({ success: true, item: itemData });
         }
 
         if (action === 'partner_delete_item') {
