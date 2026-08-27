@@ -236,11 +236,11 @@
             
             <div class="p-4 bg-white/5 rounded-2xl border border-white/10">
                 <p class="text-[10px] font-black text-cyan uppercase mb-2">Tu Panel de Control</p>
-                <a id="os-link" href="/os" class="text-xs font-bold text-white underline break-all">quimieats.com/os</a>
-                <p class="text-[8px] text-white/20 mt-2 uppercase">Usa tu PIN para ver los pedidos o citas que entren</p>
+                <a id="os-link" href="/partner-os" class="text-xs font-bold text-white underline break-all">quimieats.com/partner-os</a>
+                <p class="text-[8px] text-white/20 mt-2 uppercase">Gestiona tus productos, precios y pedidos en vivo</p>
             </div>
 
-            <button onclick="window.location.href='/os'" class="w-full bg-white text-dark py-5 rounded-2xl font-black uppercase tracking-widest">Ir al Panel de Control</button>
+            <button onclick="window.location.href='/partner-os'" class="w-full bg-white text-dark py-5 rounded-2xl font-black uppercase tracking-widest">Ir al Panel de Control</button>
         </div>
     </div>
 
@@ -546,6 +546,13 @@
                 });
 
                 if (res.ok) {
+                    localStorage.setItem('ra_kitchen_emp', JSON.stringify({
+                        id: `partner_${resId}`,
+                        name: resId.replace(/-/g, ' '),
+                        role: 'admin',
+                        restaurant_id: resId
+                    }));
+                    if (tempPin) localStorage.setItem('ra_staff_pin', tempPin);
                     nextStep(3);
                 } else {
                     const data = await res.json().catch(() => ({ error: `Error del servidor (${res.status})` }));

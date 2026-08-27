@@ -172,10 +172,11 @@
 
             // 2. POS Option (Cashiers or Admins or Desktop)
             if (isAdmin || role.includes('caja') || role.includes('cashier') || !isMobile) {
+                const posPath = isPartner ? `/pos-v2.html?restaurantId=${emp.restaurant_id}` : '/pos-v2.html';
                 const posTitle = isPartner ? 'Punto de Venta (POS)' : 'POS Command Center';
                 const posSub = isPartner ? 'Terminal de Caja' : 'Caja y Registro';
                 html += `
-                <button onclick="window.location.href='/pos-v2.html'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
+                <button onclick="window.location.href='${posPath}'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
                     <div class="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-500/30">
                         <i class="fas fa-cash-register text-xl"></i>
                     </div>
@@ -188,7 +189,7 @@
 
             // 3. Kitchen Option (Cooks, Baristas or Admins)
             if (isAdmin || role.includes('barista') || role.includes('cook') || role.includes('cocina')) {
-                const hubPath = '/kitchen.html';
+                const hubPath = isPartner ? `/kitchen.html?restaurantId=${emp.restaurant_id}` : '/kitchen.html';
                 const kitchenTitle = isPartner ? 'Pantalla de Cocina (KDS)' : 'Order Hub';
                 const kitchenSub = isPartner ? 'Pedidos en Preparación' : 'Gestión de Pedidos';
                 html += `
@@ -251,5 +252,6 @@
             }
         };
     </script>
+    <script src="/quimi-nav.js"></script>
 </body>
 </html>

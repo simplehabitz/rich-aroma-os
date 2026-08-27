@@ -53,23 +53,46 @@ export default async function handler(req, res) {
         // Special Case: Oscar Master PIN
         if (pin === '4574') {
             return res.json({ 
-                employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } 
+                employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin', restaurant_id: 'rich-aroma' } 
             });
         }
 
-        const { data: emp, error } = await supabase
+        // 1. Check employees table (Rich Aroma staff)
+        const { data: emp } = await supabase
             .from('employees')
             .select('id, name, role')
             .eq('pin', pin)
             .eq('active', true)
             .limit(1)
-            .single();
+            .maybeSingle();
 
-        if (error || !emp) {
-            console.error("PIN Login Error:", error);
-            return res.status(401).json({ error: 'PIN Inválido' });
+        if (emp) {
+            return res.json({ employee: { ...emp, restaurant_id: 'rich-aroma' } });
         }
-        return res.json({ employee: emp });
+
+        // 2. Check partner restaurants table (QuimiEats Merchants like Gigi's Licuados)
+        const { data: restaurants } = await supabase
+            .from('restaurants')
+            .select('id, name, settings')
+            .eq('status', 'active');
+
+        const matchingPartner = (restaurants || []).find(r => {
+            const rPin = String(r.settings?.pin || '');
+            return rPin === String(pin);
+        });
+
+        if (matchingPartner) {
+            return res.json({
+                employee: {
+                    id: `partner_${matchingPartner.id}`,
+                    name: matchingPartner.settings?.owner || matchingPartner.name,
+                    role: 'admin',
+                    restaurant_id: matchingPartner.id
+                }
+            });
+        }
+
+        return res.status(401).json({ error: 'PIN Inválido' });
     }
 
     if (action === 'current-shift' && req.method === 'GET') {

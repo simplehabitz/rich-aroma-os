@@ -1146,11 +1146,17 @@
     let kitchenPollInterval = null;
     let currentResId = 'rich-aroma';
     try {
-        const savedEmp = localStorage.getItem('ra_kitchen_emp');
-        if (savedEmp) {
-            const parsed = JSON.parse(savedEmp);
-            if (parsed && parsed.restaurant_id) {
-                currentResId = parsed.restaurant_id;
+        const urlParams = new URLSearchParams(window.location.search);
+        const paramId = urlParams.get('restaurantId') || urlParams.get('resId');
+        if (paramId) {
+            currentResId = paramId;
+        } else {
+            const savedEmp = localStorage.getItem('ra_kitchen_emp');
+            if (savedEmp) {
+                const parsed = JSON.parse(savedEmp);
+                if (parsed && parsed.restaurant_id) {
+                    currentResId = parsed.restaurant_id;
+                }
             }
         }
     } catch (e) {
@@ -1289,7 +1295,7 @@
 
     async function refreshMenu() {
         try {
-            const res = await fetch('/api/menu?admin=true', {
+            const res = await fetch(`/api/menu?admin=true&restaurantId=${encodeURIComponent(currentResId)}`, {
                 headers: { 'Authorization': 'Bearer EMP-admin' }
             });
             const data = await res.json();
@@ -3965,7 +3971,7 @@ function openTenderModal() {
         content.innerHTML = '<div class="text-center py-20"><i class="fas fa-spinner fa-spin text-3xl text-gray-300"></i></div>';
         
         if (tab === 'menu') {
-            const res = await fetch('/api/menu?admin=true', {
+            const res = await fetch(`/api/menu?admin=true&restaurantId=${encodeURIComponent(currentResId)}`, {
                 headers: { 'Authorization': 'Bearer EMP-admin' }
             });
             const data = await res.json();
@@ -4450,5 +4456,6 @@ function openTenderModal() {
             <button onclick="stopQRScanner()" class="w-full py-5 bg-white/5 border border-white/10 rounded-2xl text-white font-black text-sm uppercase tracking-widest active:scale-95 transition-all">Cancelar</button>
         </div>
     </div>
+    <script src="/quimi-nav.js"></script>
 </body>
 </html>
