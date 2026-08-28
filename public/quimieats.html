@@ -1132,7 +1132,10 @@
                 document.getElementById('profile-level-val').innerText = level;
                 
                 if (window.syncClaims) window.syncClaims();
-                if (userPhone) loadCustomerStampCards(userPhone);
+                if (userPhone) {
+                    loadCustomerStampCards(userPhone);
+                    loadCustomerOrderHistory(userPhone);
+                }
 
                 // Render POS phone linking status
                 const linkContainer = document.getElementById('link-pos-container');
@@ -1535,6 +1538,86 @@
             } catch (e) {
                 console.error("Redeem error:", e);
                 alert("Error de red al procesar el canje.");
+            }
+        }
+
+        // --- CUSTOMER ORDER HISTORY & 1-TAP REORDER ---
+        async function loadCustomerOrderHistory(phone) {
+            const container = document.getElementById('customer-order-history-list');
+            if (!container) return;
+            try {
+                const res = await fetch(`/api/store?action=customer_orders&phone=${encodeURIComponent(phone)}`);
+                const data = await res.json();
+                const orders = data.orders || [];
+
+                if (orders.length > 0) {
+                    container.innerHTML = orders.map(o => {
+                        const items = Array.isArray(o.items) ? o.items : [];
+                        const itemsSummary = items.map(i => `${i.qty || 1}x ${i.name}`).join(', ') || 'Productos varios';
+                        const dateStr = new Date(o.created_at).toLocaleDateString('es-HN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        const resName = (o.restaurant_id || 'Restaurante').replace(/-/g, ' ').toUpperCase();
+                        const isDelivered = o.status === 'completed' || o.status === 'delivered';
+                        const statusBadge = isDelivered ? 
+                            `<span class="text-[8px] bg-emerald-100 text-emerald-700 font-black px-2 py-0.5 rounded-full uppercase">Entregado</span>` :
+                            `<span class="text-[8px] bg-orange-100 text-orange-700 font-black px-2 py-0.5 rounded-full uppercase">${o.status}</span>`;
+
+                        const serializedItems = encodeURIComponent(JSON.stringify(items));
+
+                        return `
+                            <div class="bg-gray-50 border border-gray-150 p-4 rounded-2xl space-y-2.5">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <div class="text-[10px] font-black text-gray-800 uppercase tracking-tight">${resName}</div>
+                                        <div class="text-[9px] text-gray-400 font-bold">${dateStr} • #${o.order_number || o.id.slice(-6)}</div>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                                <div class="text-[11px] text-gray-600 font-medium line-clamp-2 leading-relaxed">
+                                    ${itemsSummary}
+                                </div>
+                                <div class="flex justify-between items-center pt-1 border-t border-gray-100">
+                                    <span class="text-xs font-black text-gray-900 font-mono">Total: L. ${parseFloat(o.total || 0).toFixed(2)}</span>
+                                    <button onclick="reorderPastOrder('${serializedItems}', '${o.restaurant_id}')" class="bg-orange-500 hover:bg-orange-600 text-white text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-1">
+                                        <i class="fas fa-redo-alt text-[8px]"></i> Volver a Pedir
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="bg-gray-50 border border-gray-150 p-4 rounded-2xl text-center space-y-1">
+                            <p class="text-xs font-bold text-gray-700">No tienes pedidos anteriores</p>
+                            <p class="text-[9px] text-gray-400">Cuando hagas tus pedidos, aparecerán aquí para volver a pedir en 1 toque.</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error("Error loading order history:", e);
+                container.innerHTML = `<div class="text-[9px] text-gray-400 italic">No se pudo cargar el historial de pedidos.</div>`;
+            }
+        }
+
+        function reorderPastOrder(encodedItems, restaurantId) {
+            try {
+                const items = JSON.parse(decodeURIComponent(encodedItems));
+                if (!items || items.length === 0) return alert("No se pudieron cargar los productos de esta orden.");
+                
+                cart = items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: parseFloat(item.price || 0),
+                    qty: parseInt(item.qty || 1),
+                    modifiers: item.modifiers || [],
+                    category: item.category || 'General'
+                }));
+
+                closeProfileModal();
+                updateCartUI();
+                openCart();
+            } catch (e) {
+                console.error("Reorder failed:", e);
+                alert("Error al reordenar.");
             }
         }
 
@@ -3270,6 +3353,19 @@
                     <span class="block text-[9px] font-black text-gray-400 uppercase tracking-widest">Mis Cupones y Premios</span>
                     <div id="profile-claims-list" class="space-y-2 max-h-[140px] overflow-y-auto pr-1">
                         <div class="text-[10px] text-gray-400 italic">No tienes cupones activos. ¡Gira la ruleta en tus tiendas favoritas!</div>
+                    </div>
+                </div>
+
+                <!-- Mis Pedidos Anteriores (Historial & Reordenar) -->
+                <div class="space-y-3 border-t border-gray-100 pt-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[10px] font-black text-gray-800 uppercase tracking-widest flex items-center gap-1.5">
+                            🛍️ Mis Pedidos Anteriores
+                        </span>
+                        <span class="text-[8px] bg-emerald-100 text-emerald-700 font-black px-2 py-0.5 rounded-full uppercase">1-Tap Reordenar</span>
+                    </div>
+                    <div id="customer-order-history-list" class="space-y-3 max-h-[240px] overflow-y-auto pr-1">
+                        <div class="text-[10px] text-gray-400 italic py-2">Cargando tus pedidos anteriores...</div>
                     </div>
                 </div>
 

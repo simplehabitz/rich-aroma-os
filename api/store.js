@@ -1076,6 +1076,44 @@ module.exports = async (req, res) => {
             return res.json({ success: true, topups: data || [] });
         }
 
+        // --- CUSTOMER ORDER HISTORY ---
+        if (action === 'customer_orders') {
+            const { phone, customerId } = req.query;
+            const cleanPhone = phone ? phone.replace(/\D/g, '') : '';
+            const phoneVariants = [];
+            if (cleanPhone) {
+                phoneVariants.push(cleanPhone);
+                if (cleanPhone.length === 8) phoneVariants.push(`504${cleanPhone}`);
+                if (cleanPhone.startsWith('504') && cleanPhone.length === 11) phoneVariants.push(cleanPhone.slice(3));
+            }
+
+            let customerIds = customerId ? [customerId] : [];
+            if (phoneVariants.length > 0) {
+                const { data: matchedCusts } = await supabase.from('customers')
+                    .select('id')
+                    .in('phone', phoneVariants);
+                if (matchedCusts) {
+                    customerIds = customerIds.concat(matchedCusts.map(c => c.id));
+                }
+            }
+
+            let query = supabase.from('orders')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (customerIds.length > 0) {
+                query = query.in('customer_id', customerIds);
+            } else {
+                return res.json({ orders: [] });
+            }
+
+            const { data: orders, error } = await query;
+            if (error) return res.status(500).json({ error: error.message });
+
+            return res.json({ orders: orders || [] });
+        }
+
         // --- PARTNER SELLS RICO CASH (OFFSETS PLATFORM FEES) ---
         if (action === 'partner_topup' && req.method === 'POST') {
             const { restaurant_id, phone, amount } = req.body || {};
