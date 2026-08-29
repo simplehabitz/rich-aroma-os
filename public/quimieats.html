@@ -440,7 +440,7 @@
                 return `
                 <div onclick="openStore('${r.id}')" class="flex flex-col items-center gap-2 p-3 bg-white border border-gray-100 rounded-[1.5rem] shadow-sm select-none hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
                     <div class="w-14 h-14 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center relative">
-                        ${logoUrl ? `<img src="${logoUrl}" class="w-full h-full object-cover">` : '<i class="fas fa-store text-gray-300 text-lg"></i>'}
+                        ${logoUrl ? `<img src="${logoUrl}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-store text-gray-300 text-lg\\'></i>';">` : '<i class="fas fa-store text-gray-300 text-lg"></i>'}
                         <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
                             <span class="text-[6px] font-black uppercase text-white bg-orange-600 px-1.5 py-0.5 rounded tracking-widest">Pronto</span>
                         </div>
@@ -463,7 +463,7 @@
                 return `
                 <div onclick="openStore('${r.id}')" class="flex gap-4 bg-white p-4 rounded-[2rem] shadow-sm cursor-pointer hover:shadow-md transition-all border border-gray-50 active:scale-[0.98]">
                     <div class="w-20 h-20 bg-gray-50 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0 relative overflow-hidden border border-gray-100">
-                        ${r.logo_url ? `<img src="${r.logo_url}" class="w-full h-full object-cover">` : '<i class="fas fa-store text-gray-200"></i>'}
+                        ${r.logo_url ? `<img src="${r.logo_url}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-store text-gray-300 text-xl\\'></i>';">` : '<i class="fas fa-store text-gray-200"></i>'}
                     </div>
                     <div class="flex flex-col justify-center flex-1">
                         <div class="flex justify-between items-start">
@@ -919,6 +919,27 @@
             }
         }
 
+        function getItemImageHtml(item) {
+            if (item.image_url && item.image_url.trim()) {
+                const safeUrl = item.image_url.trim();
+                return `<img src="${safeUrl}" alt="${item.name || 'Producto'}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'w-full h-full flex flex-col items-center justify-center bg-white/5 text-white/20\\'><i class=\\'fas fa-utensils text-lg\\'></i></div>';">`;
+            }
+            
+            // Contextual culinary icon fallbacks when no image is uploaded
+            const cat = (item.category || '').toLowerCase();
+            const name = (item.name || '').toLowerCase();
+            let icon = 'fa-utensils';
+            if (cat.includes('cafe') || cat.includes('café') || cat.includes('hot') || cat.includes('cold') || cat.includes('frappe') || name.includes('latte') || name.includes('cappuccino') || name.includes('espresso')) icon = 'fa-mug-hot';
+            else if (cat.includes('pizza') || name.includes('pizza')) icon = 'fa-pizza-slice';
+            else if (cat.includes('burger') || cat.includes('smash') || name.includes('burger') || name.includes('melt')) icon = 'fa-burger';
+            else if (cat.includes('licuado') || cat.includes('jugo') || cat.includes('smoothie') || cat.includes('bebida') || cat.includes('granita')) icon = 'fa-blender';
+            else if (cat.includes('sopa') || cat.includes('bowl') || name.includes('sopa')) icon = 'fa-bowl-food';
+            else if (cat.includes('postre') || cat.includes('reposteria') || cat.includes('pastel') || cat.includes('chocolate') || name.includes('pastel') || name.includes('flan')) icon = 'fa-cake-candles';
+            else if (cat.includes('baleada') || name.includes('baleada')) icon = 'fa-bread-slice';
+            
+            return `<div class="w-full h-full flex flex-col items-center justify-center bg-white/5 text-white/30"><i class="fas ${icon} text-xl"></i></div>`;
+        }
+
         function renderInAppMenu(categories, resId) {
             const container = document.getElementById('menu-items-container');
             const pillsBar = document.getElementById('menu-category-pills-bar');
@@ -994,7 +1015,7 @@
                                 return `
                                     <div onclick="${clickHandler}" class="flex gap-4 bg-white/5 p-4 rounded-[2rem] border border-white/5 active:scale-95 transition-all cursor-pointer ${opacityClass}">
                                         <div class="w-20 h-20 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 relative">
-                                            ${item.image_url && !item.image_url.startsWith('data:') ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : `<span class="text-white/10 font-black text-xl">QE</span>`}
+                                            ${getItemImageHtml(item)}
                                             ${!isAvailable ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[8px] font-black uppercase text-red-500 tracking-widest">Agotado</div>` : ''}
                                         </div>
                                         <div class="flex flex-col justify-center flex-1 font-sans">
