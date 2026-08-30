@@ -199,12 +199,14 @@ async function simulateQuimistanDay() {
 
         // Customer Sofia places a Delivery Order for Sopa de Res
         const custSofiaId = `cust_sofia_${simId}`;
-        await supabase.from('customers').insert({
+        const sofiaPhone = `99${Math.floor(100000 + Math.random() * 900000)}`;
+        const { error: custErr } = await supabase.from('customers').insert({
             id: custSofiaId,
-            phone: "99112233",
+            phone: sofiaPhone,
             name: "Sofia Rodriguez",
             rico_balance: 200.00
         });
+        if (custErr) throw new Error(`Failed to create Sofia customer: ${custErr.message}`);
 
         logEvent("CLIENTE", "Sofia pide 1x Sopa de Res (L. 120) + Pastel Tres Leches (L. 180) pagado con Saldo Digital.");
         const deliveryOrder1 = await createOrder({
@@ -273,12 +275,14 @@ async function simulateQuimistanDay() {
         
         // Create/Credit Carmen
         const custCarmenId = `cust_carmen_${simId}`;
-        await supabase.from('customers').insert({
+        const carmenPhone = `98${Math.floor(100000 + Math.random() * 900000)}`;
+        const { error: carmenErr } = await supabase.from('customers').insert({
             id: custCarmenId,
-            phone: "99443322",
+            phone: carmenPhone,
             name: "Carmen Rodriguez",
             rico_balance: 50.00
         });
+        if (carmenErr) throw new Error(`Failed to create Carmen customer: ${carmenErr.message}`);
 
         logSuccess("Transferencia instantánea completada (Cero comisiones bancarias). Carmen ya tiene saldo para merendar.");
 
