@@ -325,6 +325,21 @@ app.all('/api/onramp/:action?', async (req, res) => { try { await onrampHandler(
 const gachaHandler = require('./api/gacha.js');
 app.all('/api/gacha/:action?', async (req, res) => { try { await gachaHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
+const terrazaHandler = require('./api/terraza.js');
+app.all(['/api/terraza', '/api/terraza/:action', '/api/terraza/:action/:id'], async (req, res) => { 
+    try { 
+        if (req.params.action) {
+            req.query.action = req.params.action;
+        }
+        if (req.params.id) {
+            req.query.id = req.params.id;
+        }
+        await terrazaHandler(req, res); 
+    } catch(e) { 
+        res.status(500).json({error: e.message}); 
+    } 
+});
+
 const fs = require('fs');
 const { exec } = require('child_process');
 
@@ -355,9 +370,17 @@ app.get('/ecosystem', (req, res) => res.sendFile(path.join(__dirname, 'public/hu
 app.get('/driver-portal', (req, res) => res.sendFile(path.join(__dirname, 'public/driver-portal.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'src/admin/admin.html')));
 app.get('/quimieats-admin', (req, res) => res.sendFile(path.join(__dirname, 'public/quimieats-admin.html')));
+app.get('/eco-park', (req, res) => res.sendFile(path.join(__dirname, 'public/eco-park.html')));
+app.get('/operations', (req, res) => res.sendFile(path.join(__dirname, 'public/operations.html')));
+app.get('/pro-forma', (req, res) => res.sendFile(path.join(__dirname, 'public/operations.html')));
+app.get('/coffee-operations', (req, res) => res.sendFile(path.join(__dirname, 'public/coffee-operations.html')));
+app.get('/coffee-pro-forma', (req, res) => res.sendFile(path.join(__dirname, 'public/coffee-operations.html')));
+app.get('/arc-alpha', (req, res) => res.sendFile(path.join(__dirname, 'public/arc-alpha.html')));
 
 app.get('/cali/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/cali/admin.html')));
 app.get('/cali/pos', (req, res) => res.sendFile(path.join(__dirname, 'public/cali/pos.html')));
+app.get('/terraza', (req, res) => res.sendFile(path.join(__dirname, 'public/terraza.html')));
+app.get('/terraza/scanner', (req, res) => res.sendFile(path.join(__dirname, 'public/terraza-scanner.html')));
 
 const PORT = process.env.PORT || 8083;
 if (require.main === module) {

@@ -4,3 +4,7 @@ node_modules/
 *.log
 .vercel
 .env*.local
+.env.production
+.env*
+__pycache__/
+*.db

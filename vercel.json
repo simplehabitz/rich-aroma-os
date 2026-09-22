@@ -496,6 +496,22 @@
       "dest": "/api/staff.js"
     },
     {
+      "src": "/terraza/scanner/?",
+      "dest": "/public/terraza-scanner.html"
+    },
+    {
+      "src": "/terraza/?",
+      "dest": "/public/terraza.html"
+    },
+    {
+      "src": "/api/terraza/(.*)",
+      "dest": "/api/terraza.js?action=$1"
+    },
+    {
+      "src": "/api/terraza",
+      "dest": "/api/terraza.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }

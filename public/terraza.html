@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Terraza Deportiva Multiusos | Rich Aroma Quimistán</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif']
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#0d1317',
+                            card: '#161f26',
+                            gold: '#c9a66b',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            court: '#064e3b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #090e11; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass-card { background: rgba(22, 31, 38, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-gold { background: rgba(201, 166, 107, 0.1); border: 1px solid rgba(201, 166, 107, 0.3); }
+        .shimmer-gold {
+            background: linear-gradient(135deg, #c9a66b 0%, #fef3c7 50%, #c9a66b 100%);
+            background-size: 200% 200%;
+            animation: shimmer 4s ease infinite;
+        }
+        @keyframes shimmer { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="min-h-screen pb-32">
+
+    <!-- Top Universal Brand Switcher Bar -->
+    <nav class="sticky top-0 z-50 bg-[#0d1317]/90 backdrop-blur-md border-b border-white/10 px-4 py-2.5">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2.5">
+                <img src="/logo.jpg" alt="Rich Aroma" class="w-8 h-8 rounded-full border border-brand-gold/40">
+                <div>
+                    <span class="font-display font-black text-sm text-white tracking-wide uppercase block leading-none">Rich Aroma</span>
+                    <span class="text-[9px] font-bold text-brand-gold tracking-widest uppercase block">Terraza Deportiva</span>
+                </div>
+            </a>
+
+            <!-- Quick Service Switcher Dropdown / Pills -->
+            <div class="flex items-center gap-1.5 text-xs font-bold">
+                <a href="/order-simplified.html" class="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition flex items-center gap-1.5 text-[11px]">
+                    <i class="fas fa-coffee text-brand-gold"></i>
+                    <span class="hidden sm:inline">Café & Panadería</span>
+                    <span class="sm:hidden">Café</span>
+                </a>
+                <a href="/cali/pay.html" class="px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition flex items-center gap-1.5 text-[11px]">
+                    <span>🇺🇸</span>
+                    <span class="hidden sm:inline">SoCal Bottles</span>
+                    <span class="sm:hidden">SoCal</span>
+                </a>
+                <button onclick="openWalletModal()" class="px-3 py-1 rounded-full bg-brand-gold text-brand-dark font-black flex items-center gap-1.5 text-[11px] hover:scale-105 active:scale-95 transition shadow-sm">
+                    <i class="fas fa-wallet"></i>
+                    <span>Mis Pases</span>
+                    <span id="wallet-count-badge" class="hidden px-1.5 py-0.2 text-[9px] bg-brand-dark text-brand-gold rounded-full font-black">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-4xl mx-auto px-4 pt-4 space-y-6">
+
+        <!-- Official Terraza Promotional Banner Card -->
+        <div class="relative overflow-hidden rounded-3xl border border-emerald-500/30 shadow-2xl bg-gradient-to-br from-[#0c241d] to-[#081512]">
+            <img src="/assets/terraza_banner.png" alt="Terraza Deportiva Multiusos" class="w-full object-cover max-h-72 sm:max-h-80 rounded-2xl shadow-inner">
+            <div class="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3 bg-[#0d1715]/95 border-t border-emerald-500/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 text-xl font-black">
+                        <i class="fas fa-futbol"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-display font-black text-lg sm:text-xl text-white tracking-tight uppercase">Alquiler de Cancha & Espacio</h1>
+                        <p class="text-xs text-white/60">Quimistán, Santa Bárbara • WhatsApp Directo: <strong>9781-4474</strong></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> Luces LED Nocturnas
+                    </span>
+                    <a href="https://wa.me/50497814474?text=Hola%20Rich%20Aroma%2C%20quisiera%20consultar%20sobre%20la%20Terraza%20Deportiva" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black flex items-center gap-1.5 transition">
+                        <i class="fab fa-whatsapp text-sm"></i> Chat
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Pricing Rules Explainer Pill -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-emerald-500 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Estándar</span>
+                    <span class="text-xs text-white/80 font-medium">7:00 AM – 4:00 PM (L - V)</span>
+                </div>
+                <span class="text-base font-display font-black text-emerald-400">L. 250<span class="text-[10px] text-white/50">/hr</span></span>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-amber-500 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Tarde</span>
+                    <span class="text-xs text-white/80 font-medium">4:00 PM – 6:00 PM (L - V)</span>
+                </div>
+                <span class="text-base font-display font-black text-amber-400">L. 350<span class="text-[10px] text-white/50">/hr</span></span>
+            </div>
+            <div class="glass-card rounded-2xl p-3.5 border-l-4 border-rose-500 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Prime (Luces / Fin de Semana)</span>
+                    <span class="text-xs text-white/80 font-medium">6:00 PM – 10:00 PM & Sáb/Dom</span>
+                </div>
+                <span class="text-base font-display font-black text-rose-400">L. 500<span class="text-[10px] text-white/50">/hr</span></span>
+            </div>
+        </div>
+
+        <!-- Interactive Booking Engine Card -->
+        <div class="glass-card rounded-3xl p-5 sm:p-7 space-y-6">
+            <div class="border-b border-white/10 pb-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-display font-black text-white uppercase tracking-tight flex items-center gap-2">
+                        <i class="fas fa-calendar-check text-brand-gold"></i> Configura tu Reserva
+                    </h2>
+                    <p class="text-xs text-white/50">Selecciona tu deporte, horario y confirma con transferencia bancaria</p>
+                </div>
+                <span class="text-[11px] font-bold text-brand-gold bg-brand-gold/10 px-3 py-1 rounded-full border border-brand-gold/20">
+                    Paso 1 de 2
+                </span>
+            </div>
+
+            <!-- 1. Select Sport / Activity -->
+            <div class="space-y-3">
+                <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
+                    1. ¿Qué deporte o evento vas a realizar?
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="sport-selector">
+                    <button type="button" onclick="selectSport('Fútbol 5', this)" class="sport-btn active p-3 rounded-2xl bg-white/5 border border-emerald-500/60 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">⚽</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Fútbol 5</span>
+                            <span class="text-[9px] text-white/50 block">10-12 personas</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Voleibol', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">🏐</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Voleibol</span>
+                            <span class="text-[9px] text-white/50 block">6 vs 6</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Baloncesto', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">🏀</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Baloncesto</span>
+                            <span class="text-[9px] text-white/50 block">3v3 / 5v5</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Pickleball', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">🏓</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Pickleball</span>
+                            <span class="text-[9px] text-white/50 block">Dobles / Single</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Zumba / HIIT', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">💃</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Zumba / HIIT</span>
+                            <span class="text-[9px] text-white/50 block">Clase grupal</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Evento Privado', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">🎂</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Evento Privado</span>
+                            <span class="text-[9px] text-white/50 block">Cumpleaños / Social</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. Select Date & Duration -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
+                        2. Fecha de Reserva
+                    </label>
+                    <input type="date" id="booking-date" onchange="loadAvailableSlots()" class="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
+                        3. Duración (Horas consecutivas)
+                    </label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="selectHours(1, this)" class="hour-btn active py-3 rounded-2xl bg-white/5 border border-emerald-500/60 font-bold text-sm text-white hover:bg-white/10 transition">1 hr</button>
+                        <button type="button" onclick="selectHours(2, this)" class="hour-btn py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-sm text-white hover:bg-white/10 transition">2 hrs</button>
+                        <button type="button" onclick="selectHours(3, this)" class="hour-btn py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-sm text-white hover:bg-white/10 transition">3 hrs</button>
+                        <button type="button" onclick="selectHours(4, this)" class="hour-btn py-3 rounded-2xl bg-white/5 border border-white/10 font-bold text-sm text-white hover:bg-white/10 transition">4+ hrs</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Hourly Slots Grid -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
+                        4. Selecciona Hora de Inicio
+                    </label>
+                    <span id="selected-slot-indicator" class="text-xs font-bold text-emerald-400">Selecciona un bloque</span>
+                </div>
+
+                <div class="grid grid-cols-3 sm:grid-cols-5 gap-2" id="slots-grid">
+                    <!-- Loaded dynamically via JS -->
+                    <div class="col-span-full py-8 text-center text-white/40 text-xs">Cargando disponibilidad de la cancha...</div>
+                </div>
+            </div>
+
+            <!-- 4. Estimated People & Contact Info -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-white/70 block uppercase tracking-wide">Nombre Completo</label>
+                    <input type="text" id="cust-name" placeholder="Ej. Carlos Menjívar" class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-gold">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-white/70 block uppercase tracking-wide">WhatsApp / Teléfono</label>
+                    <input type="tel" id="cust-phone" placeholder="Ej. 9876-5432" class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-gold">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-white/70 block uppercase tracking-wide">Cantidad de Personas</label>
+                    <input type="number" id="cust-people" value="10" min="1" max="60" class="w-full bg-white/5 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-brand-gold">
+                </div>
+            </div>
+
+            <!-- Price Summary & Checkout Action -->
+            <div class="bg-black/40 rounded-2xl p-4 border border-white/10 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-white/50 block">Total a Transferir</span>
+                    <div class="flex items-baseline gap-2">
+                        <span id="summary-total-lempiras" class="font-display font-black text-2xl text-emerald-400">L. 0.00</span>
+                        <span id="summary-total-usd" class="text-xs font-bold text-white/40">($0.00 USD)</span>
+                    </div>
+                    <span id="summary-details" class="text-[10px] text-white/60 block mt-0.5">Seleccione un horario para calcular</span>
+                </div>
+
+                <button type="button" onclick="openTransferModal()" id="btn-continue-transfer" class="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-display font-black text-sm tracking-wide shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-money-check-alt"></i> Pagar con Transferencia y Reservar
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Bank Transfer & Receipt Upload -->
+    <div id="transfer-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#121a20] border border-white/15 rounded-3xl max-w-lg w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
+                        <i class="fas fa-university"></i>
+                    </div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Datos de Transferencia</h3>
+                </div>
+                <button onclick="closeTransferModal()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Booking Overview in Modal -->
+            <div class="bg-white/5 rounded-2xl p-3 border border-white/10 text-xs space-y-1">
+                <div class="flex justify-between text-white/60">
+                    <span>Actividad / Deporte:</span>
+                    <strong id="modal-sport" class="text-white">Fútbol 5</strong>
+                </div>
+                <div class="flex justify-between text-white/60">
+                    <span>Fecha & Horario:</span>
+                    <strong id="modal-datetime" class="text-white">2026-09-24 • 18:00 - 20:00</strong>
+                </div>
+                <div class="flex justify-between text-white/60 pt-1 border-t border-white/10">
+                    <span class="font-black text-white">Monto a Enviar:</span>
+                    <strong id="modal-total" class="font-display font-black text-emerald-400 text-sm">L. 1,000.00</strong>
+                </div>
+            </div>
+
+            <!-- Bank Accounts Accordion -->
+            <div class="space-y-2">
+                <span class="text-[10px] font-black uppercase tracking-wider text-white/50 block">Cuentas Disponibles (Honduras)</span>
+                
+                <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+                    <div>
+                        <strong class="text-xs text-white block">Banco Atlántida (Lempiras)</strong>
+                        <span class="font-mono text-xs text-brand-gold block">114-201-987654</span>
+                        <span class="text-[9px] text-white/40">Rich Aroma S. de R.L.</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('114201987654'); alert('Número copiado al portapapeles');" class="text-xs text-white/60 hover:text-white px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+
+                <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+                    <div>
+                        <strong class="text-xs text-white block">BAC Credomatic (Lempiras)</strong>
+                        <span class="font-mono text-xs text-brand-gold block">745-891-234</span>
+                        <span class="text-[9px] text-white/40">Rich Aroma S. de R.L.</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('745891234'); alert('Número copiado al portapapeles');" class="text-xs text-white/60 hover:text-white px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+
+                <div class="bg-black/30 rounded-xl p-3 border border-white/5 flex items-center justify-between">
+                    <div>
+                        <strong class="text-xs text-white block">Billetera Móvil Tengo / Dilo</strong>
+                        <span class="font-mono text-xs text-brand-gold block">9781-4474</span>
+                        <span class="text-[9px] text-white/40">Número de Negocio Directo</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('97814474'); alert('Número copiado');" class="text-xs text-white/60 hover:text-white px-2 py-1 bg-white/5 rounded-lg border border-white/10">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Receipt File Input -->
+            <div class="space-y-2">
+                <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
+                    Subir Comprobante de Transferencia (Captura)
+                </label>
+                <div class="border-2 border-dashed border-white/20 rounded-2xl p-4 text-center hover:border-emerald-500/60 transition cursor-pointer relative" onclick="document.getElementById('receipt-upload').click()">
+                    <input type="file" id="receipt-upload" accept="image/*" class="hidden" onchange="handleReceiptPreview(event)">
+                    <div id="upload-placeholder" class="space-y-1">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-emerald-400"></i>
+                        <p class="text-xs font-bold text-white">Haz clic para subir la captura</p>
+                        <p class="text-[10px] text-white/40">PNG, JPG, WebP o captura de pantalla</p>
+                    </div>
+                    <div id="receipt-preview-container" class="hidden space-y-2">
+                        <img id="receipt-preview" class="max-h-36 mx-auto rounded-lg shadow-md border border-white/20 object-contain">
+                        <p class="text-[10px] text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Comprobante adjuntado con éxito</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Final Booking Button -->
+            <button type="button" onclick="submitBooking()" id="btn-submit-booking" class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                <i class="fas fa-check-circle"></i> Confirmar Reserva y Generar Pase
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Customer Digital Wallet Pass (The QR Badge) -->
+    <div id="wallet-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#0f171d] border border-brand-gold/30 rounded-3xl max-w-sm w-full p-6 space-y-6 shadow-2xl text-center relative">
+            <button onclick="closeWalletModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-white/60 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Wallet Header -->
+            <div class="space-y-1">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-gold/10 border border-brand-gold/30 text-brand-gold text-[10px] font-black uppercase tracking-widest">
+                    <i class="fas fa-shield-alt"></i> Pase Digital Oficial
+                </div>
+                <h3 class="font-display font-black text-xl text-white tracking-tight uppercase" id="pass-sport-title">Fútbol 5</h3>
+                <p class="text-xs text-white/50" id="pass-booking-id">ID: TERR-0000</p>
+            </div>
+
+            <!-- Dynamic QR Code Container -->
+            <div class="bg-white p-4 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center shadow-lg border-2 border-brand-gold/50" id="qrcode-box">
+                <!-- QR injected via QRCode.js -->
+            </div>
+
+            <!-- Pass Booking Details -->
+            <div class="bg-white/5 rounded-2xl p-4 border border-white/10 text-left space-y-2 text-xs">
+                <div class="flex justify-between">
+                    <span class="text-white/50 font-medium">Titular:</span>
+                    <strong id="pass-customer" class="text-white">Carlos Menjívar</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-white/50 font-medium">Fecha:</span>
+                    <strong id="pass-date" class="text-white">2026-09-24</strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-white/50 font-medium">Horario:</span>
+                    <strong id="pass-time" class="text-emerald-400 font-bold">18:00 - 20:00 (2 hrs)</strong>
+                </div>
+                <div class="flex justify-between pt-1 border-t border-white/10">
+                    <span class="text-white/50 font-medium">Estado:</span>
+                    <span id="pass-status-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                        Confirmado
+                    </span>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-white/40 leading-relaxed">
+                Presenta este pase digital en caja al llegar a la Terraza Deportiva. El cajero escaneará tu código para el ingreso.
+            </p>
+
+            <div class="flex gap-2">
+                <a id="btn-share-whatsapp" href="#" target="_blank" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                    <i class="fab fa-whatsapp"></i> Compartir
+                </a>
+                <button onclick="window.print()" class="px-4 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition">
+                    <i class="fas fa-download"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let selectedSport = "Fútbol 5";
+        let selectedHours = 1;
+        let selectedStartHour = null;
+        let selectedDate = new Date().toISOString().split('T')[0];
+        let currentSlots = [];
+        let uploadedReceiptBase64 = null;
+        let activePass = null;
+
+        // Initialize today's date
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('booking-date');
+            dateInput.value = selectedDate;
+            dateInput.min = selectedDate;
+            loadAvailableSlots();
+            checkWalletPasses();
+        });
+
+        function selectSport(sport, btn) {
+            selectedSport = sport;
+            document.querySelectorAll('.sport-btn').forEach(b => {
+                b.classList.remove('border-emerald-500/60', 'bg-white/10');
+                b.classList.add('border-white/10');
+            });
+            btn.classList.add('border-emerald-500/60', 'bg-white/10');
+            updateCostSummary();
+        }
+
+        function selectHours(hrs, btn) {
+            selectedHours = hrs;
+            document.querySelectorAll('.hour-btn').forEach(b => {
+                b.classList.remove('border-emerald-500/60', 'bg-white/10');
+                b.classList.add('border-white/10');
+            });
+            btn.classList.add('border-emerald-500/60', 'bg-white/10');
+            updateSlotSelectionDisplay();
+            updateCostSummary();
+        }
+
+        async function loadAvailableSlots() {
+            selectedDate = document.getElementById('booking-date').value || new Date().toISOString().split('T')[0];
+            const grid = document.getElementById('slots-grid');
+            grid.innerHTML = '<div class="col-span-full py-8 text-center text-white/40 text-xs"><i class="fas fa-circle-notch fa-spin text-emerald-400 text-lg mr-2"></i> Consultando disponibilidad...</div>';
+
+            try {
+                const res = await fetch(`/api/terraza/slots?date=${selectedDate}`);
+                const data = await res.json();
+                currentSlots = data.slots || [];
+                renderSlots();
+            } catch (e) {
+                console.error("Error loading slots:", e);
+                // Fallback mock generation if offline
+                generateFallbackSlots();
+            }
+        }
+
+        function generateFallbackSlots() {
+            currentSlots = [];
+            for (let h = 7; h <= 21; h++) {
+                const isPeak = h >= 18;
+                const isMid = h >= 16 && h < 18;
+                const rate = isPeak ? 500 : (isMid ? 350 : 250);
+                currentSlots.push({
+                    hour: h,
+                    time: `${h.toString().padStart(2, '0')}:00`,
+                    rateLempiras: rate,
+                    rateUsd: (rate / 25).toFixed(2),
+                    isAvailable: h !== 19, // sample busy slot
+                    sport: h === 19 ? 'Fútbol 5' : null,
+                    isPeak
+                });
+            }
+            renderSlots();
+        }
+
+        function renderSlots() {
+            const grid = document.getElementById('slots-grid');
+            grid.innerHTML = '';
+
+            currentSlots.forEach(slot => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+
+                if (!slot.isAvailable) {
+                    btn.disabled = true;
+                    btn.className = 'p-3 rounded-2xl bg-rose-950/20 border border-rose-500/20 text-left opacity-60 cursor-not-allowed';
+                    btn.innerHTML = `
+                        <span class="text-xs font-bold text-rose-400 block">${slot.time}</span>
+                        <span class="text-[9px] text-white/40 uppercase block mt-0.5"><i class="fas fa-lock text-[8px]"></i> Ocupado</span>
+                    `;
+                } else {
+                    const isSelected = selectedStartHour === slot.hour;
+                    btn.className = `slot-item p-3 rounded-2xl border text-left transition ${
+                        isSelected 
+                            ? 'bg-emerald-500/20 border-emerald-400 shadow-md shadow-emerald-500/10' 
+                            : 'bg-white/5 border-white/10 hover:border-white/30'
+                    }`;
+                    btn.onclick = () => selectSlot(slot.hour);
+                    btn.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-white block">${slot.time}</span>
+                            ${slot.isPeak ? '<span class="text-[8px] font-black text-rose-400 uppercase tracking-widest"><i class="fas fa-moon"></i> Prime</span>' : ''}
+                        </div>
+                        <span class="text-[10px] font-display font-black text-emerald-400 block mt-1">L. ${slot.rateLempiras}</span>
+                    `;
+                }
+                grid.appendChild(btn);
+            });
+        }
+
+        function selectSlot(hour) {
+            selectedStartHour = hour;
+            renderSlots();
+            updateSlotSelectionDisplay();
+            updateCostSummary();
+        }
+
+        function updateSlotSelectionDisplay() {
+            const ind = document.getElementById('selected-slot-indicator');
+            if (!selectedStartHour) {
+                ind.innerText = "Selecciona un bloque";
+                ind.className = "text-xs font-bold text-white/40";
+                return;
+            }
+            const endHour = selectedStartHour + selectedHours;
+            ind.innerText = `${selectedStartHour}:00 a ${endHour}:00 (${selectedHours} hr${selectedHours > 1 ? 's' : ''})`;
+            ind.className = "text-xs font-bold text-emerald-400";
+        }
+
+        function updateCostSummary() {
+            if (!selectedStartHour) {
+                document.getElementById('summary-total-lempiras').innerText = "L. 0.00";
+                document.getElementById('summary-total-usd').innerText = "($0.00 USD)";
+                document.getElementById('summary-details').innerText = "Seleccione un horario para calcular";
+                return;
+            }
+
+            let total = 0;
+            const endHour = selectedStartHour + selectedHours;
+            for (let h = selectedStartHour; h < endHour; h++) {
+                const s = currentSlots.find(slot => slot.hour === h);
+                total += s ? s.rateLempiras : 250;
+            }
+
+            document.getElementById('summary-total-lempiras').innerText = `L. ${total.toLocaleString()}.00`;
+            document.getElementById('summary-total-usd').innerText = `($${(total / 25).toFixed(2)} USD)`;
+            document.getElementById('summary-details').innerText = `${selectedSport} • ${selectedDate} de ${selectedStartHour}:00 a ${endHour}:00`;
+        }
+
+        function openTransferModal() {
+            if (!selectedStartHour) {
+                alert("Por favor selecciona un horario disponible primero.");
+                return;
+            }
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            if (!name || !phone) {
+                alert("Por favor ingresa tu nombre y número de WhatsApp antes de continuar.");
+                return;
+            }
+
+            let total = 0;
+            const endHour = selectedStartHour + selectedHours;
+            for (let h = selectedStartHour; h < endHour; h++) {
+                const s = currentSlots.find(slot => slot.hour === h);
+                total += s ? s.rateLempiras : 250;
+            }
+
+            document.getElementById('modal-sport').innerText = selectedSport;
+            document.getElementById('modal-datetime').innerText = `${selectedDate} • ${selectedStartHour}:00 a ${endHour}:00 (${selectedHours} hrs)`;
+            document.getElementById('modal-total').innerText = `L. ${total.toLocaleString()}.00`;
+
+            document.getElementById('transfer-modal').classList.remove('hidden');
+        }
+
+        function closeTransferModal() {
+            document.getElementById('transfer-modal').classList.add('hidden');
+        }
+
+        function handleReceiptPreview(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                uploadedReceiptBase64 = evt.target.result;
+                document.getElementById('upload-placeholder').classList.add('hidden');
+                document.getElementById('receipt-preview').src = uploadedReceiptBase64;
+                document.getElementById('receipt-preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function submitBooking() {
+            const btn = document.getElementById('btn-submit-booking');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando reserva...';
+
+            const payload = {
+                sport: selectedSport,
+                date: selectedDate,
+                startTime: `${selectedStartHour.toString().padStart(2, '0')}:00`,
+                hours: selectedHours,
+                customerName: document.getElementById('cust-name').value.trim(),
+                phone: document.getElementById('cust-phone').value.trim(),
+                peopleCount: parseInt(document.getElementById('cust-people').value) || 10,
+                receiptImageBase64: uploadedReceiptBase64
+            };
+
+            try {
+                const res = await fetch('/api/terraza/book', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.success && data.booking) {
+                    activePass = data.booking;
+                    savePassToLocalWallet(activePass);
+                    closeTransferModal();
+                    openWalletModal(activePass);
+                    loadAvailableSlots(); // refresh grid
+                } else {
+                    alert(data.error || "No se pudo completar la reserva.");
+                }
+            } catch (err) {
+                console.error("Booking error:", err);
+                // Offline fallback booking
+                const fallbackId = `TERR-${Math.floor(1000 + Math.random() * 9000)}`;
+                activePass = {
+                    id: fallbackId,
+                    sport: selectedSport,
+                    date: selectedDate,
+                    startTime: payload.startTime,
+                    hours: selectedHours,
+                    endTime: `${(selectedStartHour + selectedHours)}:00`,
+                    customerName: payload.customerName,
+                    phone: payload.phone,
+                    totalLempiras: 500 * selectedHours,
+                    status: "Confirmado",
+                    checkedIn: false
+                };
+                savePassToLocalWallet(activePass);
+                closeTransferModal();
+                openWalletModal(activePass);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Reserva y Generar Pase';
+            }
+        }
+
+        function savePassToLocalWallet(pass) {
+            let passes = JSON.parse(localStorage.getItem('rich_aroma_terraza_passes') || '[]');
+            passes = passes.filter(p => p.id !== pass.id);
+            passes.unshift(pass);
+            localStorage.setItem('rich_aroma_terraza_passes', JSON.stringify(passes));
+            checkWalletPasses();
+        }
+
+        function checkWalletPasses() {
+            const passes = JSON.parse(localStorage.getItem('rich_aroma_terraza_passes') || '[]');
+            const badge = document.getElementById('wallet-count-badge');
+            if (passes.length > 0) {
+                badge.innerText = passes.length;
+                badge.classList.remove('hidden');
+                activePass = passes[0];
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function openWalletModal(pass = activePass) {
+            if (!pass) {
+                alert("No tienes pases de reserva activos todavía.");
+                return;
+            }
+
+            document.getElementById('pass-sport-title').innerText = pass.sport;
+            document.getElementById('pass-booking-id').innerText = `ID: ${pass.id}`;
+            document.getElementById('pass-customer').innerText = pass.customerName;
+            document.getElementById('pass-date').innerText = pass.date;
+            document.getElementById('pass-time').innerText = `${pass.startTime} a ${pass.endTime} (${pass.hours} hrs)`;
+            
+            const badge = document.getElementById('pass-status-badge');
+            if (pass.checkedIn) {
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-500/20 text-blue-400 border border-blue-500/30";
+                badge.innerText = "Check-In Completado";
+            } else {
+                badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                badge.innerText = "Confirmado • Listo para Ingreso";
+            }
+
+            // Generate QR Code
+            const qrBox = document.getElementById('qrcode-box');
+            qrBox.innerHTML = '';
+            const qrPayload = JSON.stringify({
+                bookingId: pass.id,
+                customer: pass.customerName,
+                sport: pass.sport,
+                date: pass.date,
+                time: `${pass.startTime}-${pass.endTime}`
+            });
+            new QRCode(qrBox, {
+                text: qrPayload,
+                width: 170,
+                height: 170,
+                colorDark: "#0d1b2a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+
+            // Set WhatsApp share link
+            const waText = encodeURIComponent(`¡Hola! Tengo mi reserva confirmada para la Terraza Deportiva Rich Aroma:
+• Deporte: ${pass.sport}
+• Fecha: ${pass.date} (${pass.startTime} a ${pass.endTime})
+• Reserva ID: ${pass.id}
+• Titular: ${pass.customerName}`);
+            document.getElementById('btn-share-whatsapp').href = `https://wa.me/50497814474?text=${waText}`;
+
+            document.getElementById('wallet-modal').classList.remove('hidden');
+        }
+
+        function closeWalletModal() {
+            document.getElementById('wallet-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
