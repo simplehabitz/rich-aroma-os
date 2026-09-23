@@ -105,28 +105,66 @@
             </div>
         </div>
 
-        <!-- Dynamic Pricing Rules Explainer Pill -->
+        <!-- Promotional Launch Rate Banner (50% OFF) -->
+        <div class="p-4 rounded-2xl bg-gradient-to-r from-rose-900/60 via-amber-900/50 to-emerald-900/60 border border-amber-500/50 shadow-xl flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center text-lg font-black shrink-0">
+                    🔥
+                </div>
+                <div>
+                    <span class="text-xs sm:text-sm font-display font-black text-white uppercase tracking-wide block">
+                        Tarifa de Apertura: 50% de Descuento
+                    </span>
+                    <span class="text-[11px] text-amber-200/90 font-medium">Válido en todas las reservas durante septiembre y octubre.</span>
+                </div>
+            </div>
+            <span class="px-3.5 py-1.5 rounded-full bg-amber-400 text-brand-dark text-xs font-black uppercase tracking-wider shadow-md">
+                50% OFF APLICADO
+            </span>
+        </div>
+
+        <!-- Dynamic Pricing Rules Explainer Pill with 50% OFF Display -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div class="glass-card rounded-2xl p-3.5 border-l-4 border-emerald-500 flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Estándar</span>
-                    <span class="text-xs text-white/80 font-medium">7:00 AM – 4:00 PM (L - V)</span>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Diurno (L - V)</span>
+                    <span class="text-xs text-white/80 font-medium">7:00 AM – 4:00 PM</span>
                 </div>
-                <span class="text-base font-display font-black text-emerald-400">L. 250<span class="text-[10px] text-white/50">/hr</span></span>
+                <div class="text-right">
+                    <span class="text-xs text-white/40 line-through block">L. 250</span>
+                    <span class="text-base font-display font-black text-emerald-400">L. 125<span class="text-[10px] text-white/50">/hr</span></span>
+                </div>
             </div>
             <div class="glass-card rounded-2xl p-3.5 border-l-4 border-amber-500 flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Tarde</span>
-                    <span class="text-xs text-white/80 font-medium">4:00 PM – 6:00 PM (L - V)</span>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Tarde (L - V)</span>
+                    <span class="text-xs text-white/80 font-medium">4:00 PM – 6:00 PM</span>
                 </div>
-                <span class="text-base font-display font-black text-amber-400">L. 350<span class="text-[10px] text-white/50">/hr</span></span>
+                <div class="text-right">
+                    <span class="text-xs text-white/40 line-through block">L. 350</span>
+                    <span class="text-base font-display font-black text-amber-400">L. 175<span class="text-[10px] text-white/50">/hr</span></span>
+                </div>
             </div>
             <div class="glass-card rounded-2xl p-3.5 border-l-4 border-rose-500 flex items-center justify-between">
                 <div>
-                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Horario Prime (Luces / Fin de Semana)</span>
-                    <span class="text-xs text-white/80 font-medium">6:00 PM – 10:00 PM & Sáb/Dom</span>
+                    <span class="text-[10px] font-black text-white/50 uppercase tracking-widest block">Prime (Luces & Música)</span>
+                    <span class="text-xs text-white/80 font-medium">6:00 PM – 10:00 PM & Fines</span>
                 </div>
-                <span class="text-base font-display font-black text-rose-400">L. 500<span class="text-[10px] text-white/50">/hr</span></span>
+                <div class="text-right">
+                    <span class="text-xs text-white/40 line-through block">L. 500</span>
+                    <span class="text-base font-display font-black text-rose-400">L. 250<span class="text-[10px] text-white/50">/hr</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footwear & Surface Rules Banner -->
+        <div class="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center text-base shrink-0">
+                <i class="fas fa-shoe-prints"></i>
+            </div>
+            <div class="text-xs text-white/80">
+                <strong class="text-white font-black uppercase tracking-wide block">Regla de Calzado para Superficie de Concreto:</strong>
+                Uso exclusivo de tenis deportivos o calzado de suela lisa (futsal / básquetbol). <span class="text-rose-400 font-bold">Prohibido el uso de tacos de fútbol.</span>
             </div>
         </div>
 
@@ -196,11 +234,18 @@
                     1. ¿Qué deporte o evento vas a realizar?
                 </label>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="sport-selector">
-                    <button type="button" onclick="selectSport('Fútbol 5', this)" class="sport-btn active p-3 rounded-2xl bg-white/5 border border-emerald-500/60 text-left flex items-center gap-3 transition hover:bg-white/10">
+                    <button type="button" onclick="selectSport('Futsal / Papi Fútbol', this)" class="sport-btn active p-3 rounded-2xl bg-white/5 border border-emerald-500/60 text-left flex items-center gap-3 transition hover:bg-white/10">
                         <span class="text-2xl">⚽</span>
                         <div>
-                            <span class="text-xs font-bold text-white block">Fútbol 5</span>
-                            <span class="text-[9px] text-white/50 block">10-12 personas</span>
+                            <span class="text-xs font-bold text-white block">Futsal / Papi Fútbol</span>
+                            <span class="text-[9px] text-amber-300 font-bold block">Tenis lisos (No tacos)</span>
+                        </div>
+                    </button>
+                    <button type="button" onclick="selectSport('Baloncesto', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
+                        <span class="text-2xl">🏀</span>
+                        <div>
+                            <span class="text-xs font-bold text-white block">Baloncesto / Streetball</span>
+                            <span class="text-[9px] text-emerald-400 font-bold block">Superficie ideal</span>
                         </div>
                     </button>
                     <button type="button" onclick="selectSport('Voleibol', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
@@ -208,13 +253,6 @@
                         <div>
                             <span class="text-xs font-bold text-white block">Voleibol</span>
                             <span class="text-[9px] text-white/50 block">6 vs 6</span>
-                        </div>
-                    </button>
-                    <button type="button" onclick="selectSport('Baloncesto', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
-                        <span class="text-2xl">🏀</span>
-                        <div>
-                            <span class="text-xs font-bold text-white block">Baloncesto</span>
-                            <span class="text-[9px] text-white/50 block">3v3 / 5v5</span>
                         </div>
                     </button>
                     <button type="button" onclick="selectSport('Pickleball', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
@@ -588,14 +626,16 @@
             for (let h = 7; h <= 21; h++) {
                 const isPeak = h >= 18;
                 const isMid = h >= 16 && h < 18;
-                const rate = isPeak ? 500 : (isMid ? 350 : 250);
+                const regularRate = isPeak ? 500 : (isMid ? 350 : 250);
+                const rate = regularRate / 2; // 50% launch promo
                 currentSlots.push({
                     hour: h,
                     time: `${h.toString().padStart(2, '0')}:00`,
                     rateLempiras: rate,
+                    regularRateLempiras: regularRate,
                     rateUsd: (rate / 25).toFixed(2),
                     isAvailable: h !== 19, // sample busy slot
-                    sport: h === 19 ? 'Fútbol 5' : null,
+                    sport: h === 19 ? 'Futsal' : null,
                     isPeak
                 });
             }
@@ -630,7 +670,10 @@
                             <span class="text-xs font-bold text-white block">${slot.time}</span>
                             ${slot.isPeak ? '<span class="text-[8px] font-black text-rose-400 uppercase tracking-widest"><i class="fas fa-moon"></i> Prime</span>' : ''}
                         </div>
-                        <span class="text-[10px] font-display font-black text-emerald-400 block mt-1">L. ${slot.rateLempiras}</span>
+                        <div class="flex items-baseline gap-1.5 mt-1">
+                            ${slot.regularRateLempiras ? `<span class="text-[9px] text-white/40 line-through">L. ${slot.regularRateLempiras}</span>` : ''}
+                            <span class="text-[11px] font-display font-black text-emerald-400">L. ${slot.rateLempiras}</span>
+                        </div>
                     `;
                 }
                 grid.appendChild(btn);
@@ -668,7 +711,7 @@
             const endHour = selectedStartHour + selectedHours;
             for (let h = selectedStartHour; h < endHour; h++) {
                 const s = currentSlots.find(slot => slot.hour === h);
-                total += s ? s.rateLempiras : 250;
+                total += s ? s.rateLempiras : 125;
             }
 
             document.getElementById('summary-total-lempiras').innerText = `L. ${total.toLocaleString()}.00`;
@@ -692,7 +735,7 @@
             const endHour = selectedStartHour + selectedHours;
             for (let h = selectedStartHour; h < endHour; h++) {
                 const s = currentSlots.find(slot => slot.hour === h);
-                total += s ? s.rateLempiras : 250;
+                total += s ? s.rateLempiras : 125;
             }
 
             document.getElementById('modal-sport').innerText = selectedSport;

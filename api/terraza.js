@@ -93,21 +93,22 @@ async function syncCustomerProfile(name, phone, tag = 'Terraza') {
 }
 
 // Calculate rate per hour based on hour and weekend
+// 🔥 50% OFF Promotional Launch Rate (Septiembre & Octubre)
 function calculateHourlyRate(dateStr, hour) {
     const d = new Date(dateStr + "T12:00:00Z");
     const isWeekend = d.getUTCDay() === 0 || d.getUTCDay() === 6; // Sun or Sat
 
-    // Weekend afternoons/nights are peak
+    // Weekend afternoons/nights (Prime)
     if (isWeekend) {
-        if (hour >= 14) return 500;
-        if (hour >= 10) return 350;
-        return 300;
+        if (hour >= 14) return 250; // Promo 50% OFF (Reg L. 500)
+        if (hour >= 10) return 175; // Promo 50% OFF (Reg L. 350)
+        return 150; // Promo 50% OFF (Reg L. 300)
     }
 
     // Weekdays
-    if (hour >= 18 && hour < 22) return 500; // Peak under LED lights (6pm - 10pm)
-    if (hour >= 16 && hour < 18) return 350; // Mid-Peak (4pm - 6pm)
-    return 250; // Daytime standard (7am - 4pm)
+    if (hour >= 18 && hour < 22) return 250; // Promo Prime con Luces LED & Música (Reg L. 500)
+    if (hour >= 16 && hour < 18) return 175; // Promo Tarde (Reg L. 350)
+    return 125; // Promo Diurno Estándar (Reg L. 250)
 }
 
 module.exports = async (req, res) => {
@@ -131,6 +132,7 @@ module.exports = async (req, res) => {
         for (let h = 7; h <= 21; h++) {
             const timeStr = `${h.toString().padStart(2, '0')}:00`;
             const rate = calculateHourlyRate(date, h);
+            const regularRate = rate * 2;
 
             // Check if slot is occupied
             const occupiedBooking = bookings.find(b => {
@@ -143,11 +145,13 @@ module.exports = async (req, res) => {
                 hour: h,
                 time: timeStr,
                 rateLempiras: rate,
+                regularRateLempiras: regularRate,
                 rateUsd: (rate / 25).toFixed(2),
                 isAvailable: !occupiedBooking,
                 bookingId: occupiedBooking ? occupiedBooking.id : null,
                 sport: occupiedBooking ? occupiedBooking.sport : null,
-                isPeak: rate === 500
+                isPeak: rate === 250,
+                isPromo: true
             });
         }
 
