@@ -234,17 +234,17 @@
                     1. ¿Qué deporte o evento vas a realizar?
                 </label>
                 <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5" id="sport-selector">
-                    <button type="button" onclick="selectSport('Futsal / Papi Fútbol', this)" class="sport-btn active p-3 rounded-2xl bg-white/5 border border-emerald-500/60 text-left flex items-center gap-3 transition hover:bg-white/10">
+                    <button type="button" onclick="selectSport('Futsal', this)" class="sport-btn active p-3 rounded-2xl bg-white/5 border border-emerald-500/60 text-left flex items-center gap-3 transition hover:bg-white/10">
                         <span class="text-2xl">⚽</span>
                         <div>
-                            <span class="text-xs font-bold text-white block">Futsal / Papi Fútbol</span>
+                            <span class="text-xs font-bold text-white block">Futsal</span>
                             <span class="text-[9px] text-amber-300 font-bold block">Tenis lisos (No tacos)</span>
                         </div>
                     </button>
                     <button type="button" onclick="selectSport('Baloncesto', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
                         <span class="text-2xl">🏀</span>
                         <div>
-                            <span class="text-xs font-bold text-white block">Baloncesto / Streetball</span>
+                            <span class="text-xs font-bold text-white block">Baloncesto</span>
                             <span class="text-[9px] text-emerald-400 font-bold block">Superficie ideal</span>
                         </div>
                     </button>
@@ -260,13 +260,6 @@
                         <div>
                             <span class="text-xs font-bold text-white block">Pickleball</span>
                             <span class="text-[9px] text-white/50 block">Dobles / Single</span>
-                        </div>
-                    </button>
-                    <button type="button" onclick="selectSport('Zumba / HIIT', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
-                        <span class="text-2xl">💃</span>
-                        <div>
-                            <span class="text-xs font-bold text-white block">Zumba / HIIT</span>
-                            <span class="text-[9px] text-white/50 block">Clase grupal</span>
                         </div>
                     </button>
                     <button type="button" onclick="selectSport('Evento Privado', this)" class="sport-btn p-3 rounded-2xl bg-white/5 border border-white/10 text-left flex items-center gap-3 transition hover:bg-white/10">
@@ -565,7 +558,7 @@
 
     <script>
         // State variables
-        let selectedSport = "Fútbol 5";
+        let selectedSport = "Futsal";
         let selectedHours = 1;
         let selectedStartHour = null;
         let selectedDate = new Date().toISOString().split('T')[0];

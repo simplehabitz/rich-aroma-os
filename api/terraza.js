@@ -15,7 +15,7 @@ function getBookings() {
             const initialData = [
                 {
                     id: "TERR-7001",
-                    sport: "Fútbol 5",
+                    sport: "Futsal",
                     date: new Date().toISOString().split('T')[0],
                     startTime: "18:00",
                     hours: 2,
