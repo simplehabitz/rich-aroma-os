@@ -431,6 +431,19 @@
                 </div>
             </div>
 
+            <!-- Annual Waiver & Surface Safety Agreement -->
+            <div id="booking-waiver-box" class="p-3.5 rounded-2xl bg-black/40 border border-white/10 text-xs space-y-2">
+                <div class="flex items-start gap-2.5">
+                    <input type="checkbox" id="booking-waiver-check" class="mt-0.5 w-4 h-4 rounded text-emerald-500 bg-white/10 border-white/30 focus:ring-0 cursor-pointer">
+                    <label for="booking-waiver-check" class="text-[11px] text-white/80 leading-snug cursor-pointer select-none">
+                        He leído y acepto el <button type="button" onclick="openWaiverModal('booking')" class="text-emerald-400 font-bold underline hover:text-emerald-300">Reglamento y Exoneración de Responsabilidad Anual</button>. Certifico que la cancha es superficie de concreto rígido, que está <strong>prohibido el uso de tacos</strong>, y asumo los riesgos deportivos inherentes para mí y mi grupo.
+                    </label>
+                </div>
+                <div id="booking-waiver-badge" class="hidden text-[10px] text-emerald-400 font-bold items-center gap-1.5 pl-6">
+                    <i class="fas fa-shield-alt"></i> Exoneración Anual Activa (Válida en este dispositivo)
+                </div>
+            </div>
+
             <!-- Submit Final Booking Button -->
             <button type="button" onclick="submitBooking()" id="btn-submit-booking" class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-sm uppercase tracking-wider shadow-xl shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2">
                 <i class="fas fa-check-circle"></i> Confirmar Reserva y Generar Pase
@@ -475,6 +488,19 @@
                 </div>
 
                 <div id="madr-error" class="hidden text-rose-400 text-xs font-bold bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl"></div>
+
+                <!-- Waiver in Madrugador Modal -->
+                <div id="madr-waiver-box" class="p-3 rounded-xl bg-black/40 border border-white/10 text-xs space-y-1.5">
+                    <div class="flex items-start gap-2.5">
+                        <input type="checkbox" id="madr-waiver-check" class="mt-0.5 w-4 h-4 rounded text-amber-500 bg-white/10 border-white/30 focus:ring-0 cursor-pointer" required>
+                        <label for="madr-waiver-check" class="text-[11px] text-white/80 leading-snug cursor-pointer select-none">
+                            Acepto el <button type="button" onclick="openWaiverModal('madr')" class="text-amber-400 font-bold underline hover:text-amber-300">Reglamento y Descargo Anual</button> (superficie de concreto, uso obligatorio de tenis, calzado sin tacos).
+                        </label>
+                    </div>
+                    <div id="madr-waiver-badge" class="hidden text-[10px] text-amber-400 font-bold items-center gap-1.5 pl-6">
+                        <i class="fas fa-shield-alt"></i> Exoneración Anual Activa (Válida en este dispositivo)
+                    </div>
+                </div>
 
                 <button type="submit" id="btn-submit-madr" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition flex items-center justify-center gap-2">
                     <i class="fas fa-check-circle"></i> Confirmar Pase Gratis + L. 10 OFF
@@ -524,6 +550,12 @@
                         Confirmado
                     </span>
                 </div>
+                <div class="flex justify-between pt-1 border-t border-white/10 text-[10px]">
+                    <span class="text-white/50 font-medium">Exoneración:</span>
+                    <span class="text-emerald-400 font-bold flex items-center gap-1">
+                        <i class="fas fa-check-shield text-[9px]"></i> Firmada (Válida 1 Año)
+                    </span>
+                </div>
             </div>
 
             <!-- Madrugador Perk Banner (if applicable) -->
@@ -553,6 +585,69 @@
                 <span>Ver Menú Coffee Shop • Cuenta Vinculada</span>
                 <i class="fas fa-arrow-right text-[10px] text-amber-400"></i>
             </a>
+        </div>
+    </div>
+
+    <!-- Modal: Reglamento y Exoneración de Responsabilidad Anual (Waiver) -->
+    <div id="waiver-modal" class="hidden fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181d] border border-brand-gold/40 rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <button onclick="closeWaiverModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <!-- Header -->
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="w-10 h-10 rounded-2xl bg-brand-gold/20 text-brand-gold flex items-center justify-center text-lg font-bold">
+                    <i class="fas fa-file-contract"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Reglamento & Exoneración Anual</h3>
+                    <p class="text-[11px] text-brand-gold font-bold">Válido por 1 Año Calendario • Quimistán, S.B.</p>
+                </div>
+            </div>
+
+            <!-- Scrollable Terms -->
+            <div class="overflow-y-auto pr-2 space-y-3 text-xs text-white/80 leading-relaxed max-h-[60vh]">
+                <div class="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-rose-200 text-xs">
+                    <strong class="text-rose-400 block font-black uppercase mb-0.5"><i class="fas fa-exclamation-triangle"></i> Regla Crítica de Calzado:</strong>
+                    La cancha es una superficie de concreto rígido. Está <strong>TERMINANTEMENTE PROHIBIDO EL USO DE TACOS DE FÚTBOL</strong> (de plástico, goma o metal). Solo se permite calzado deportivo de suela lisa o tenis para correr.
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase tracking-wider text-[11px]">1. Naturaleza de la Instalación</h4>
+                    <p class="text-white/70 text-[11px]">Terraza Deportiva Rich Aroma es un espacio multiuso de superficie de concreto pulido al aire libre, equipado con iluminación nocturna LED y sonido ambiental, destinado a la recreación deportiva comunitaria y eventos en Quimistán, Santa Bárbara.</p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase tracking-wider text-[11px]">2. Asunción Voluntaria de Riesgos Deportivos</h4>
+                    <p class="text-white/70 text-[11px]">El usuario y los participantes declaran contar con el estado de salud y condición física aptos para la práctica del deporte elegido. Reconocen voluntariamente que el ejercicio en superficie de concreto conlleva riesgos inherentes como caídas, torceduras, raspones, contusiones o choques accidentales entre jugadores.</p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase tracking-wider text-[11px]">3. Exoneración y Descargo de Responsabilidad</h4>
+                    <p class="text-white/70 text-[11px]">Al amparo de la legislación hondureña (Código Civil y Decreto No. 149-2013 de Comercio y Firmas Electrónicas), el usuario libera y exonera de responsabilidad civil, penal o indemnizatoria a Rich Aroma S. de R.L., sus propietarios, administradores y personal por cualquier lesión o daño sufrido derivado de la práctica deportiva voluntaria o del desacato a las normas de calzado.</p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase tracking-wider text-[11px]">4. Responsabilidad del Capitán / Organizador</h4>
+                    <p class="text-white/70 text-[11px]">Quien reserva o retira el pase digital actúa como responsable de su grupo y se compromete a comunicar y hacer cumplir este reglamento a todos sus acompañantes e invitados antes del inicio de su horario.</p>
+                </div>
+
+                <div class="space-y-1">
+                    <h4 class="font-bold text-white uppercase tracking-wider text-[11px]">5. Vigencia de la Firma Digital (1 Año)</h4>
+                    <p class="text-white/70 text-[11px]">Esta declaración y aceptación digital se registra en su perfil con validez legal de trescientos sesenta y cinco (365) días, requiriendo su renovación anual.</p>
+                </div>
+            </div>
+
+            <!-- Footer Buttons -->
+            <div class="pt-2 border-t border-white/10 flex items-center justify-end gap-2">
+                <button type="button" onclick="closeWaiverModal()" class="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-xs font-bold transition">
+                    Cerrar
+                </button>
+                <button type="button" onclick="acceptWaiverFromModal()" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition flex items-center gap-1.5">
+                    <i class="fas fa-check"></i> Entendido y Aceptar
+                </button>
+            </div>
         </div>
     </div>
 
@@ -735,6 +830,7 @@
             document.getElementById('modal-datetime').innerText = `${selectedDate} • ${selectedStartHour}:00 a ${endHour}:00 (${selectedHours} hrs)`;
             document.getElementById('modal-total').innerText = `L. ${total.toLocaleString()}.00`;
 
+            updateWaiverUI('booking');
             document.getElementById('transfer-modal').classList.remove('hidden');
         }
 
@@ -757,19 +853,30 @@
         }
 
         async function submitBooking() {
+            const waiverCheck = document.getElementById('booking-waiver-check');
+            if (!waiverCheck.checked) {
+                alert("Por favor lee y acepta el Reglamento y Exoneración de Responsabilidad Anual antes de continuar.");
+                return;
+            }
+
             const btn = document.getElementById('btn-submit-booking');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando reserva...';
+
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            saveAnnualWaiver(name, phone);
 
             const payload = {
                 sport: selectedSport,
                 date: selectedDate,
                 startTime: `${selectedStartHour.toString().padStart(2, '0')}:00`,
                 hours: selectedHours,
-                customerName: document.getElementById('cust-name').value.trim(),
-                phone: document.getElementById('cust-phone').value.trim(),
+                customerName: name,
+                phone: phone,
                 peopleCount: parseInt(document.getElementById('cust-people').value) || 10,
-                receiptImageBase64: uploadedReceiptBase64
+                receiptImageBase64: uploadedReceiptBase64,
+                waiverAccepted: true
             };
 
             try {
@@ -949,6 +1056,7 @@
 
         function openMadrugadorModal() {
             document.getElementById('madr-error').classList.add('hidden');
+            updateWaiverUI('madr');
             document.getElementById('madrugador-modal').classList.remove('hidden');
         }
 
@@ -962,6 +1070,13 @@
             const errDiv = document.getElementById('madr-error');
             errDiv.classList.add('hidden');
 
+            const waiverCheck = document.getElementById('madr-waiver-check');
+            if (!waiverCheck.checked) {
+                errDiv.innerText = "Debes aceptar el Reglamento y Exoneración de Responsabilidad Anual.";
+                errDiv.classList.remove('hidden');
+                return;
+            }
+
             const name = document.getElementById('madr-name').value.trim();
             const phone = document.getElementById('madr-phone').value.trim();
             const date = document.getElementById('madr-date').value;
@@ -969,11 +1084,13 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Reservando pase...';
 
+            saveAnnualWaiver(name, phone);
+
             try {
                 const res = await fetch('/api/terraza/madrugador', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, phone, date })
+                    body: JSON.stringify({ name, phone, date, waiverAccepted: true })
                 });
                 const data = await res.json();
 
@@ -994,6 +1111,89 @@
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pase Gratis + L. 10 OFF';
             }
+        }
+
+        // --- Annual Waiver & Surface Safety Management (1 Year Validity) ---
+        let activeWaiverTarget = 'booking'; // 'booking' or 'madr'
+
+        function getAnnualWaiver() {
+            try {
+                const raw = localStorage.getItem('rich_aroma_terraza_waiver');
+                if (!raw) return null;
+                const data = JSON.parse(raw);
+                if (data && data.expiresAt && new Date(data.expiresAt) > new Date()) {
+                    return data;
+                }
+                return null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function saveAnnualWaiver(name, phone) {
+            try {
+                const waiver = {
+                    signed: true,
+                    signedAt: new Date().toISOString(),
+                    expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                    customerName: name || '',
+                    phone: phone || ''
+                };
+                localStorage.setItem('rich_aroma_terraza_waiver', JSON.stringify(waiver));
+                return waiver;
+            } catch (e) {
+                console.error("Error saving waiver:", e);
+                return null;
+            }
+        }
+
+        function updateWaiverUI(target = 'booking') {
+            const waiver = getAnnualWaiver();
+            if (target === 'booking') {
+                const check = document.getElementById('booking-waiver-check');
+                const badge = document.getElementById('booking-waiver-badge');
+                if (waiver) {
+                    check.checked = true;
+                    const dateFormatted = new Date(waiver.expiresAt).toLocaleDateString('es-HN');
+                    badge.innerHTML = `<i class="fas fa-shield-alt"></i> Exoneración Anual Activa (Válida hasta ${dateFormatted})`;
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                } else {
+                    check.checked = false;
+                    badge.classList.add('hidden');
+                    badge.classList.remove('flex');
+                }
+            } else if (target === 'madr') {
+                const check = document.getElementById('madr-waiver-check');
+                const badge = document.getElementById('madr-waiver-badge');
+                if (waiver) {
+                    check.checked = true;
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                } else {
+                    check.checked = false;
+                    badge.classList.add('hidden');
+                    badge.classList.remove('flex');
+                }
+            }
+        }
+
+        function openWaiverModal(target = 'booking') {
+            activeWaiverTarget = target;
+            document.getElementById('waiver-modal').classList.remove('hidden');
+        }
+
+        function closeWaiverModal() {
+            document.getElementById('waiver-modal').classList.add('hidden');
+        }
+
+        function acceptWaiverFromModal() {
+            if (activeWaiverTarget === 'booking') {
+                document.getElementById('booking-waiver-check').checked = true;
+            } else if (activeWaiverTarget === 'madr') {
+                document.getElementById('madr-waiver-check').checked = true;
+            }
+            closeWaiverModal();
         }
     </script>
 </body>

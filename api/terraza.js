@@ -218,6 +218,9 @@ module.exports = async (req, res) => {
                 status: "Confirmado",
                 benefit: "L. 10 OFF en tu café matutino",
                 receiptImage: "exempt_free_community",
+                waiverAccepted: req.body.waiverAccepted !== false,
+                waiverSignedAt: new Date().toISOString(),
+                waiverExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
                 checkedIn: false,
                 checkedInAt: null,
                 createdAt: new Date().toISOString()
@@ -300,6 +303,9 @@ module.exports = async (req, res) => {
                 totalUsd: (total / 25).toFixed(2),
                 status: "Confirmado", // Immediately confirmed with receipt verification
                 receiptImage: receiptImageBase64 ? "uploaded" : "pending",
+                waiverAccepted: req.body.waiverAccepted !== false,
+                waiverSignedAt: new Date().toISOString(),
+                waiverExpiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
                 checkedIn: false,
                 checkedInAt: null,
                 createdAt: new Date().toISOString()
