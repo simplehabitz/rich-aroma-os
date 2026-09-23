@@ -105,6 +105,15 @@
                         <span class="text-white/50">Total Pagado:</span>
                         <strong id="res-total" class="text-white font-mono font-black">L. 1,000.00</strong>
                     </div>
+
+                    <!-- Madrugador Perk Banner -->
+                    <div id="res-benefit-box" class="hidden p-3 rounded-xl bg-amber-500/20 border-2 border-amber-400 text-amber-300 text-center space-y-1">
+                        <div class="flex items-center justify-center gap-1.5 font-black text-xs uppercase tracking-wide">
+                            <i class="fas fa-mug-hot text-amber-400"></i>
+                            <span>DESCUENTO MADRUGADOR</span>
+                        </div>
+                        <p class="text-xs text-white font-bold">👉 Aplicar L. 10 OFF en su café o desayuno en caja</p>
+                    </div>
                 </div>
 
                 <button onclick="closeResultModal()" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-sm uppercase tracking-wider active:scale-95 transition">
@@ -234,7 +243,14 @@
             document.getElementById('res-name').innerText = booking.customerName;
             document.getElementById('res-sport').innerText = booking.sport;
             document.getElementById('res-time').innerText = `${booking.startTime} - ${booking.endTime}`;
-            document.getElementById('res-total').innerText = `L. ${(booking.totalLempiras || 500).toLocaleString()}.00`;
+            document.getElementById('res-total').innerText = booking.type === 'madrugador' ? 'L. 0.00 (Gratis)' : `L. ${(booking.totalLempiras || 500).toLocaleString()}.00`;
+
+            const benefitBox = document.getElementById('res-benefit-box');
+            if (booking.type === 'madrugador' || booking.benefit || (booking.id && booking.id.startsWith('MADR-'))) {
+                benefitBox.classList.remove('hidden');
+            } else {
+                benefitBox.classList.add('hidden');
+            }
 
             const title = document.getElementById('result-title');
             const sub = document.getElementById('result-subtitle');

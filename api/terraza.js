@@ -116,6 +116,86 @@ module.exports = async (req, res) => {
         return res.status(200).json({ date, slots });
     }
 
+    // Route: GET /api/terraza/madrugador?date=YYYY-MM-DD
+    if (req.method === 'GET' && (action === 'madrugador' || url.includes('/madrugador'))) {
+        const date = req.query.date || new Date().toISOString().split('T')[0];
+        const bookings = getBookings().filter(b => b.date === date && b.type === 'madrugador' && b.status !== 'Cancelado');
+        const cap = 50;
+        const registeredCount = bookings.length;
+        const availableSlots = Math.max(0, cap - registeredCount);
+        return res.status(200).json({
+            date,
+            cap,
+            registeredCount,
+            availableSlots,
+            isFull: availableSlots === 0
+        });
+    }
+
+    // Route: POST /api/terraza/madrugador
+    if (req.method === 'POST' && (action === 'madrugador' || url.includes('/madrugador'))) {
+        try {
+            const { name, phone, date } = req.body || {};
+            if (!name || !phone || !date) {
+                return res.status(400).json({ error: "Nombre, teléfono y fecha son requeridos." });
+            }
+            const bookings = getBookings();
+            const existing = bookings.filter(b => b.date === date && b.type === 'madrugador' && b.status !== 'Cancelado');
+            if (existing.length >= 50) {
+                return res.status(409).json({ error: "El cupo de 50 madrugadores para esta fecha ya está completo. ¡Puedes asistir gratis de igual manera!" });
+            }
+
+            // Check if phone already registered for this date
+            const cleanPhone = phone.replace(/[^0-9]/g, '');
+            const alreadyRegistered = existing.find(b => b.phone.replace(/[^0-9]/g, '') === cleanPhone);
+            if (alreadyRegistered) {
+                return res.status(200).json({
+                    success: true,
+                    alreadyRegistered: true,
+                    message: "¡Ya tienes tu Pase Madrugador para esta fecha!",
+                    booking: alreadyRegistered,
+                    availableSlots: Math.max(0, 50 - existing.length)
+                });
+            }
+
+            const bookingId = `MADR-${Math.floor(1000 + Math.random() * 9000)}`;
+            const madrugadorPass = {
+                id: bookingId,
+                type: "madrugador",
+                sport: "Club Madrugador (5AM - 7AM)",
+                date,
+                startTime: "05:00",
+                endTime: "07:00",
+                hours: 2,
+                customerName: name.trim(),
+                phone: phone.trim(),
+                peopleCount: 1,
+                ratePerHour: 0,
+                totalLempiras: 0,
+                totalUsd: "0.00",
+                status: "Confirmado",
+                benefit: "L. 10 OFF en tu café matutino",
+                receiptImage: "exempt_free_community",
+                checkedIn: false,
+                checkedInAt: null,
+                createdAt: new Date().toISOString()
+            };
+
+            bookings.push(madrugadorPass);
+            saveBookings(bookings);
+
+            return res.status(201).json({
+                success: true,
+                message: "¡Pase Madrugador reservado con éxito!",
+                booking: madrugadorPass,
+                availableSlots: Math.max(0, 50 - (existing.length + 1))
+            });
+        } catch (e) {
+            console.error("Error creating madrugador pass:", e);
+            return res.status(500).json({ error: "Error en el servidor al registrar pase madrugador." });
+        }
+    }
+
     // Route: POST /api/terraza/book
     if (req.method === 'POST' && (action === 'book' || url.includes('/book'))) {
         try {

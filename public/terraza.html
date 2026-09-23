@@ -130,6 +130,52 @@
             </div>
         </div>
 
+        <!-- Club Madrugador (Open Gym 5AM - 7AM) Community Feature -->
+        <div class="relative overflow-hidden rounded-3xl border border-amber-500/40 bg-gradient-to-br from-[#1c130d] via-[#141b18] to-[#0c1f19] p-5 sm:p-7 shadow-2xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                    <i class="fas fa-sun text-amber-400"></i> Acceso 100% Libre & Gratuito
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="madrugador-spots-pill" class="text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="madrugador-spots-count">Cupos: 50 diarios</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                <div class="md:col-span-8 space-y-2">
+                    <h2 class="font-display font-black text-xl sm:text-2xl text-white tracking-tight uppercase flex items-center gap-2.5">
+                        <span>Club Madrugador 5:00 AM – 7:00 AM</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-white/75 leading-relaxed">
+                        Ven a caminar, trotar o estirar a tu propio ritmo en nuestra cancha sintética profesional con iluminación LED. Entrada libre para todos los vecinos.
+                    </p>
+
+                    <!-- The Coffee Perk Box -->
+                    <div class="mt-3 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg shrink-0">
+                            <i class="fas fa-mug-hot"></i>
+                        </div>
+                        <div class="text-xs text-amber-200/90 leading-snug">
+                            <strong class="text-white block font-black uppercase tracking-wide">Incentivo Matutino: L. 10 OFF en tu Café</strong>
+                            Regístrate gratis para asegurar 1 de los 50 cupos diarios y recibe un pase con <strong>L. 10 de descuento</strong> en tu café o desayuno al terminar tu rutina.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-4 flex flex-col justify-center gap-2.5 bg-black/40 p-4 rounded-2xl border border-white/10 text-center">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-white/40 block">Próxima Sesión Matutina</span>
+                    <span id="madrugador-next-date" class="text-sm font-bold text-white block">Mañana • 5:00 AM</span>
+                    <button onclick="openMadrugadorModal()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                        <i class="fas fa-ticket-alt"></i> Registrarme y Obtener L. 10 OFF
+                    </button>
+                    <span class="text-[9px] text-white/40 italic">Registro voluntario. Asistencia libre sin registro.</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Interactive Booking Engine Card -->
         <div class="glass-card rounded-3xl p-5 sm:p-7 space-y-6">
             <div class="border-b border-white/10 pb-4 flex items-center justify-between">
@@ -361,6 +407,51 @@
         </div>
     </div>
 
+    <!-- Modal: Madrugador Free RSVP + L. 10 Coffee Discount -->
+    <div id="madrugador-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181c] border border-amber-500/40 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+            <button onclick="closeMadrugadorModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg font-bold">
+                    <i class="fas fa-sun"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Pase Club Madrugador</h3>
+                    <p class="text-[11px] text-amber-400/90 font-bold">5:00 AM – 7:00 AM • Cupo limitado a 50</p>
+                </div>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-3 text-xs text-amber-200/90 flex items-center gap-2.5">
+                <i class="fas fa-coffee text-amber-400 text-base"></i>
+                <span>¡Incluye <strong>L. 10 de descuento</strong> en cualquier café o bebida al terminar!</span>
+            </div>
+
+            <form id="madrugador-form" onsubmit="submitMadrugador(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Fecha de Asistencia</label>
+                    <input type="date" id="madr-date" class="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2.5 text-xs text-white focus:border-amber-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Tu Nombre Completo</label>
+                    <input type="text" id="madr-name" placeholder="Ej. Juan Pérez" class="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2.5 text-xs text-white focus:border-amber-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">WhatsApp / Teléfono Móvil</label>
+                    <input type="tel" id="madr-phone" placeholder="Ej. +504 9876-5432" class="w-full bg-black/40 border border-white/15 rounded-xl px-3 py-2.5 text-xs text-white focus:border-amber-400 outline-none" required>
+                </div>
+
+                <div id="madr-error" class="hidden text-rose-400 text-xs font-bold bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-xl"></div>
+
+                <button type="submit" id="btn-submit-madr" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> Confirmar Pase Gratis + L. 10 OFF
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Modal: Customer Digital Wallet Pass (The QR Badge) -->
     <div id="wallet-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-[#0f171d] border border-brand-gold/30 rounded-3xl max-w-sm w-full p-6 space-y-6 shadow-2xl text-center relative">
@@ -404,6 +495,14 @@
                 </div>
             </div>
 
+            <!-- Madrugador Perk Banner (if applicable) -->
+            <div id="pass-benefit-box" class="hidden p-3 rounded-2xl bg-amber-500/20 border border-amber-400/40 text-amber-300 text-xs font-bold space-y-1">
+                <div class="flex items-center justify-center gap-1.5 text-amber-300 font-black">
+                    <i class="fas fa-mug-hot"></i> <span>BENEFICIO EN CAFETERÍA</span>
+                </div>
+                <p class="text-[11px] text-white/90">L. 10 de Descuento en cualquier café o bebida antes de las 8:30 AM.</p>
+            </div>
+
             <p class="text-[10px] text-white/40 leading-relaxed">
                 Presenta este pase digital en caja al llegar a la Terraza Deportiva. El cajero escaneará tu código para el ingreso.
             </p>
@@ -436,6 +535,7 @@
             dateInput.min = selectedDate;
             loadAvailableSlots();
             checkWalletPasses();
+            loadMadrugadorInfo();
         });
 
         function selectSport(sport, btn) {
@@ -713,6 +813,13 @@
                 badge.innerText = "Confirmado • Listo para Ingreso";
             }
 
+            const benefitBox = document.getElementById('pass-benefit-box');
+            if (pass.benefit || pass.type === 'madrugador') {
+                benefitBox.classList.remove('hidden');
+            } else {
+                benefitBox.classList.add('hidden');
+            }
+
             // Generate QR Code
             const qrBox = document.getElementById('qrcode-box');
             qrBox.innerHTML = '';
@@ -745,6 +852,92 @@
 
         function closeWalletModal() {
             document.getElementById('wallet-modal').classList.add('hidden');
+        }
+
+        function getTomorrowDateStr() {
+            const d = new Date();
+            // If before 7 AM, today is still the active morning, otherwise tomorrow
+            if (d.getHours() >= 7) {
+                d.setDate(d.getDate() + 1);
+            }
+            return d.toISOString().split('T')[0];
+        }
+
+        async function loadMadrugadorInfo() {
+            const targetDate = getTomorrowDateStr();
+            const dateInput = document.getElementById('madr-date');
+            if (dateInput) {
+                dateInput.value = targetDate;
+                dateInput.min = new Date().toISOString().split('T')[0];
+            }
+
+            const nextDateElem = document.getElementById('madrugador-next-date');
+            if (nextDateElem) {
+                const parts = targetDate.split('-');
+                const dObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                nextDateElem.innerText = `${days[dObj.getDay()]} ${parts[2]}/${parts[1]} • 5:00 AM`;
+            }
+
+            try {
+                const res = await fetch(`/api/terraza/madrugador?date=${targetDate}`);
+                const data = await res.json();
+                const spotsCount = document.getElementById('madrugador-spots-count');
+                if (spotsCount) {
+                    spotsCount.innerText = `${data.availableSlots || 50} de 50 cupos libres`;
+                }
+            } catch (e) {
+                console.error("Error loading madrugador info:", e);
+            }
+        }
+
+        function openMadrugadorModal() {
+            document.getElementById('madr-error').classList.add('hidden');
+            document.getElementById('madrugador-modal').classList.remove('hidden');
+        }
+
+        function closeMadrugadorModal() {
+            document.getElementById('madrugador-modal').classList.add('hidden');
+        }
+
+        async function submitMadrugador(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-madr');
+            const errDiv = document.getElementById('madr-error');
+            errDiv.classList.add('hidden');
+
+            const name = document.getElementById('madr-name').value.trim();
+            const phone = document.getElementById('madr-phone').value.trim();
+            const date = document.getElementById('madr-date').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Reservando pase...';
+
+            try {
+                const res = await fetch('/api/terraza/madrugador', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, date })
+                });
+                const data = await res.json();
+
+                if (data.success && data.booking) {
+                    savePassToLocalWallet(data.booking);
+                    closeMadrugadorModal();
+                    openWalletModal(data.booking);
+                    loadMadrugadorInfo();
+                } else {
+                    errDiv.innerText = data.error || "No se pudo registrar el pase.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Madrugador submit error:", err);
+                errDiv.innerText = "Error de conexión. Intente nuevamente.";
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Pase Gratis + L. 10 OFF';
+            }
         }
     </script>
 </body>
