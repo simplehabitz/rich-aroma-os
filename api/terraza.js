@@ -54,6 +54,44 @@ function saveBookings(bookings) {
     }
 }
 
+// Optional Supabase client for syncing customer profiles to Master CRM
+let supabase = null;
+try {
+    const sbModule = require('./lib/supabase');
+    supabase = sbModule.supabase;
+} catch (e) {
+    console.log("Supabase not loaded in local terraza context:", e.message);
+}
+
+async function syncCustomerProfile(name, phone, tag = 'Terraza') {
+    if (!supabase || !phone || !name) return null;
+    try {
+        const cleanDigits = phone.replace(/\D/g, '');
+        const phoneToStore = cleanDigits.length === 8 ? `504${cleanDigits}` : cleanDigits;
+
+        const { data: existing } = await supabase.from('customers').select('*').eq('phone', phoneToStore).maybeSingle();
+        if (existing) {
+            const currentTags = existing.tags || [];
+            if (!currentTags.includes(tag)) {
+                currentTags.push(tag);
+                await supabase.from('customers').update({ tags: currentTags }).eq('id', existing.id);
+            }
+            return existing;
+        } else {
+            const { data: created } = await supabase.from('customers').insert({
+                name: name.trim(),
+                phone: phoneToStore,
+                tags: [tag, 'Terraza Deportiva'],
+                loyalty_points: 0
+            }).select().single();
+            return created;
+        }
+    } catch (err) {
+        console.warn("Non-blocking Supabase customer sync error:", err.message);
+        return null;
+    }
+}
+
 // Calculate rate per hour based on hour and weekend
 function calculateHourlyRate(dateStr, hour) {
     const d = new Date(dateStr + "T12:00:00Z");
@@ -184,6 +222,9 @@ module.exports = async (req, res) => {
             bookings.push(madrugadorPass);
             saveBookings(bookings);
 
+            // Sync to CRM Master Database
+            await syncCustomerProfile(name, phone, 'Club Madrugador');
+
             return res.status(201).json({
                 success: true,
                 message: "¡Pase Madrugador reservado con éxito!",
@@ -262,6 +303,9 @@ module.exports = async (req, res) => {
 
             bookings.push(newBooking);
             saveBookings(bookings);
+
+            // Sync to CRM Master Database
+            await syncCustomerProfile(customerName, phone, `Terraza - ${sport}`);
 
             return res.status(201).json({
                 success: true,

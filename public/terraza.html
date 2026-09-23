@@ -515,6 +515,13 @@
                     <i class="fas fa-download"></i> Guardar
                 </button>
             </div>
+
+            <!-- Direct link to unified ordering -->
+            <a href="/order-simplified.html" class="w-full py-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-black text-xs flex items-center justify-center gap-2 transition border border-amber-500/30 shadow-md">
+                <i class="fas fa-coffee text-amber-400"></i>
+                <span>Ver Menú Coffee Shop • Cuenta Vinculada</span>
+                <i class="fas fa-arrow-right text-[10px] text-amber-400"></i>
+            </a>
         </div>
     </div>
 
@@ -777,6 +784,19 @@
             passes = passes.filter(p => p.id !== pass.id);
             passes.unshift(pass);
             localStorage.setItem('rich_aroma_terraza_passes', JSON.stringify(passes));
+
+            // Seamlessly tie customer to Rich Aroma Coffee Shop Ordering & Loyalty
+            if (pass.phone) {
+                const clean = pass.phone.replace(/\D/g, '');
+                const phoneWithCountry = clean.length === 8 ? `504${clean}` : clean;
+                localStorage.setItem('ra_customer_phone', phoneWithCountry);
+                localStorage.setItem('ra_phone', phoneWithCountry);
+            }
+            if (pass.customerName) {
+                localStorage.setItem('ra_customer_name', pass.customerName);
+                localStorage.setItem('ra_name', pass.customerName);
+            }
+
             checkWalletPasses();
         }
 
