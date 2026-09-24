@@ -113,14 +113,19 @@
                 </div>
                 <div>
                     <span class="text-xs sm:text-sm font-display font-black text-white uppercase tracking-wide block">
-                        Tarifa de Apertura: 50% de Descuento
+                        Gran Apertura Octubre: 50% de Descuento
                     </span>
-                    <span class="text-[11px] text-amber-200/90 font-medium">Válido en todas las reservas durante septiembre y octubre.</span>
+                    <span class="text-[11px] text-amber-200/90 font-medium">Reservas oficiales a partir del 1 de Octubre de 2026. 50% OFF en todas las franjas horarias.</span>
                 </div>
             </div>
-            <span class="px-3.5 py-1.5 rounded-full bg-amber-400 text-brand-dark text-xs font-black uppercase tracking-wider shadow-md">
-                50% OFF APLICADO
-            </span>
+            <div class="flex items-center gap-2">
+                <span class="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold">
+                    <i class="fas fa-calendar-check mr-1"></i> Inicia 1 de Octubre
+                </span>
+                <span class="px-3.5 py-1.5 rounded-full bg-amber-400 text-brand-dark text-xs font-black uppercase tracking-wider shadow-md">
+                    50% OFF
+                </span>
+            </div>
         </div>
 
         <!-- Dynamic Pricing Rules Explainer Pill with 50% OFF Display -->
@@ -276,9 +281,10 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div class="space-y-2">
                     <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
-                        2. Fecha de Reserva
+                        2. Fecha de Reserva (A partir del 1 de Octubre)
                     </label>
-                    <input type="date" id="booking-date" onchange="loadAvailableSlots()" class="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <input type="date" id="booking-date" min="2026-10-01" value="2026-10-01" onchange="loadAvailableSlots()" class="w-full bg-white/5 border border-white/15 rounded-2xl px-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500 transition">
+                    <span class="text-[10px] text-emerald-400 font-bold block"><i class="fas fa-calendar-alt"></i> Apertura oficial: A partir del 1 de Octubre de 2026</span>
                 </div>
                 <div class="space-y-2">
                     <label class="text-xs font-black uppercase tracking-wider text-white/80 block">
@@ -641,11 +647,13 @@
     </div>
 
     <script>
+        const OPENING_DATE = "2026-10-01";
+
         // State variables
         let selectedSport = "Futsal";
         let selectedHours = 1;
         let selectedStartHour = null;
-        let selectedDate = new Date().toISOString().split('T')[0];
+        let selectedDate = OPENING_DATE;
         let currentSlots = [];
         let uploadedReceiptBase64 = null;
         let activePass = null;
@@ -653,8 +661,9 @@
         // Initialize today's date
         document.addEventListener('DOMContentLoaded', () => {
             const dateInput = document.getElementById('booking-date');
-            dateInput.value = selectedDate;
-            dateInput.min = selectedDate;
+            dateInput.min = OPENING_DATE;
+            dateInput.value = OPENING_DATE;
+            selectedDate = OPENING_DATE;
             loadAvailableSlots();
             checkWalletPasses();
             loadMadrugadorInfo();
@@ -682,13 +691,22 @@
         }
 
         async function loadAvailableSlots() {
-            selectedDate = document.getElementById('booking-date').value || new Date().toISOString().split('T')[0];
+            const dateInput = document.getElementById('booking-date');
+            if (!dateInput.value || dateInput.value < OPENING_DATE) {
+                dateInput.value = OPENING_DATE;
+            }
+            selectedDate = dateInput.value;
             const grid = document.getElementById('slots-grid');
             grid.innerHTML = '<div class="col-span-full py-8 text-center text-white/40 text-xs"><i class="fas fa-circle-notch fa-spin text-emerald-400 text-lg mr-2"></i> Consultando disponibilidad...</div>';
 
             try {
                 const res = await fetch(`/api/terraza/slots?date=${selectedDate}`);
                 const data = await res.json();
+                if (data.isOpen === false) {
+                    grid.innerHTML = `<div class="col-span-full py-8 text-center text-amber-300 text-xs"><i class="fas fa-calendar-alt text-lg mr-2"></i> ${data.message}</div>`;
+                    currentSlots = [];
+                    return;
+                }
                 currentSlots = data.slots || [];
                 renderSlots();
             } catch (e) {
@@ -1012,7 +1030,8 @@
             if (d.getHours() >= 7) {
                 d.setDate(d.getDate() + 1);
             }
-            return d.toISOString().split('T')[0];
+            const dateStr = d.toISOString().split('T')[0];
+            return dateStr < OPENING_DATE ? OPENING_DATE : dateStr;
         }
 
         async function loadMadrugadorInfo() {
@@ -1020,7 +1039,7 @@
             const dateInput = document.getElementById('madr-date');
             if (dateInput) {
                 dateInput.value = targetDate;
-                dateInput.min = new Date().toISOString().split('T')[0];
+                dateInput.min = OPENING_DATE;
             }
 
             const nextDateElem = document.getElementById('madrugador-next-date');
@@ -1028,7 +1047,10 @@
                 const parts = targetDate.split('-');
                 const dObj = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                nextDateElem.innerText = `${days[dObj.getDay()]} ${parts[2]}/${parts[1]} • 5:00 AM`;
+                const isGrandOpening = targetDate === OPENING_DATE && new Date().toISOString().split('T')[0] < OPENING_DATE;
+                nextDateElem.innerText = isGrandOpening 
+                    ? `Jueves 01/10 • 5:00 AM (Gran Apertura)` 
+                    : `${days[dObj.getDay()]} ${parts[2]}/${parts[1]} • 5:00 AM`;
             }
 
             try {

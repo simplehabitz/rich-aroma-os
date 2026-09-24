@@ -111,6 +111,8 @@ function calculateHourlyRate(dateStr, hour) {
     return 125; // Promo Diurno Estándar (Reg L. 250)
 }
 
+const OPENING_DATE = '2026-10-01';
+
 module.exports = async (req, res) => {
     // Enable CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -124,7 +126,17 @@ module.exports = async (req, res) => {
 
     // Route: GET /api/terraza/slots?date=YYYY-MM-DD
     if (req.method === 'GET' && (action === 'slots' || url.includes('/slots'))) {
-        const date = req.query.date || new Date().toISOString().split('T')[0];
+        const date = req.query.date || OPENING_DATE;
+
+        if (date < OPENING_DATE) {
+            return res.status(200).json({
+                date,
+                isOpen: false,
+                message: "La Terraza Deportiva inicia operaciones el 1 de Octubre de 2026.",
+                slots: []
+            });
+        }
+
         const bookings = getBookings().filter(b => b.date === date && b.status !== 'Cancelado');
 
         // Operating hours: 07:00 to 22:00 (15 hourly slots)
@@ -160,7 +172,20 @@ module.exports = async (req, res) => {
 
     // Route: GET /api/terraza/madrugador?date=YYYY-MM-DD
     if (req.method === 'GET' && (action === 'madrugador' || url.includes('/madrugador'))) {
-        const date = req.query.date || new Date().toISOString().split('T')[0];
+        const date = req.query.date || OPENING_DATE;
+
+        if (date < OPENING_DATE) {
+            return res.status(200).json({
+                date,
+                isOpen: false,
+                message: "El Club Madrugador inicia el 1 de Octubre de 2026.",
+                cap: 50,
+                registeredCount: 0,
+                availableSlots: 50,
+                isFull: false
+            });
+        }
+
         const bookings = getBookings().filter(b => b.date === date && b.type === 'madrugador' && b.status !== 'Cancelado');
         const cap = 50;
         const registeredCount = bookings.length;
@@ -181,6 +206,11 @@ module.exports = async (req, res) => {
             if (!name || !phone || !date) {
                 return res.status(400).json({ error: "Nombre, teléfono y fecha son requeridos." });
             }
+
+            if (date < OPENING_DATE) {
+                return res.status(400).json({ error: "El Club Madrugador inicia oficialmente el 1 de Octubre de 2026. Por favor selecciona una fecha de Octubre." });
+            }
+
             const bookings = getBookings();
             const existing = bookings.filter(b => b.date === date && b.type === 'madrugador' && b.status !== 'Cancelado');
             if (existing.length >= 50) {
@@ -260,6 +290,10 @@ module.exports = async (req, res) => {
 
             if (!sport || !date || !startTime || !hours || !customerName || !phone) {
                 return res.status(400).json({ error: "Faltan campos requeridos para la reserva." });
+            }
+
+            if (date < OPENING_DATE) {
+                return res.status(400).json({ error: "Las reservas de la Terraza Deportiva inician el 1 de Octubre de 2026. No hay fechas disponibles en Septiembre." });
             }
 
             const numHours = parseInt(hours) || 1;
