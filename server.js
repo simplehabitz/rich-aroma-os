@@ -340,6 +340,21 @@ app.all(['/api/terraza', '/api/terraza/:action', '/api/terraza/:action/:id'], as
     } 
 });
 
+const torneoHandler = require('./api/torneo.js');
+app.all(['/api/torneo', '/api/torneo/:action', '/api/torneo/:action/:id'], async (req, res) => { 
+    try { 
+        if (req.params.action) {
+            req.query.action = req.params.action;
+        }
+        if (req.params.id) {
+            req.query.id = req.params.id;
+        }
+        await torneoHandler(req, res); 
+    } catch(e) { 
+        res.status(500).json({error: e.message}); 
+    } 
+});
+
 const fs = require('fs');
 const { exec } = require('child_process');
 
@@ -381,6 +396,8 @@ app.get('/cali/admin', (req, res) => res.sendFile(path.join(__dirname, 'public/c
 app.get('/cali/pos', (req, res) => res.sendFile(path.join(__dirname, 'public/cali/pos.html')));
 app.get('/terraza', (req, res) => res.sendFile(path.join(__dirname, 'public/terraza.html')));
 app.get('/terraza/scanner', (req, res) => res.sendFile(path.join(__dirname, 'public/terraza-scanner.html')));
+app.get('/terraza/torneo', (req, res) => res.sendFile(path.join(__dirname, 'public/torneo.html')));
+app.get('/torneo', (req, res) => res.sendFile(path.join(__dirname, 'public/torneo.html')));
 
 const PORT = process.env.PORT || 8083;
 if (require.main === module) {

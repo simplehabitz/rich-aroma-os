@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copa Apertura Futsal 3v3 | Terraza Deportiva Rich Aroma</title>
+    <meta name="description" content="Portal oficial de la Copa Apertura Futsal 3v3 en la Terraza Deportiva Rich Aroma, Quimistán. Calendario de partidos, marcadores en vivo, tablas de posiciones y registro de equipos y agentes libres.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS (Play CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            gold: '#D4AF37',
+                            dark: '#080E14',
+                            surface: '#0F1720',
+                            card: '#15202B',
+                            border: 'rgba(255, 255, 255, 0.08)'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #080E14;
+            color: #E2E8F0;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(212, 175, 55, 0.04) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(21, 32, 43, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-hover:hover {
+            border-color: rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+        .tab-btn.active {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34D399;
+            border-color: rgba(52, 211, 153, 0.4);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(52, 211, 153, 0.4); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased selection:bg-emerald-500/30 selection:text-emerald-300">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-[#080E14]/90 backdrop-blur-md border-b border-white/10 px-4 py-3">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/terraza" class="w-10 h-10 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="text-[10px] font-black uppercase tracking-widest text-brand-gold">Terraza Deportiva</span>
+                    </div>
+                    <h1 class="text-sm sm:text-base font-display font-black text-white uppercase tracking-tight">
+                        Copa Apertura Futsal 3v3
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex items-center gap-2">
+                <button onclick="openJoinModal()" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold border border-white/10 transition">
+                    <i class="fas fa-key text-brand-gold text-xs"></i> Unirse con Código
+                </button>
+                <button onclick="openRegisterTeamModal()" class="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center gap-1.5">
+                    <i class="fas fa-plus-circle"></i> Inscribir Equipo
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- Tournament Hero Card -->
+        <div class="relative overflow-hidden rounded-3xl border border-brand-gold/40 bg-gradient-to-br from-[#1c130d] via-[#101b17] to-[#0a161f] p-6 sm:p-8 shadow-2xl space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-gold/15 border border-brand-gold/30 text-brand-gold text-xs font-black uppercase tracking-wider">
+                    <i class="fas fa-trophy text-amber-400"></i> Temporada 1 • Octubre 2026
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="badge-spots-left" class="px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
+                        <span id="spots-count-label">Cupo: 7 de 8 Equipos</span>
+                    </span>
+                    <span class="px-3 py-1 rounded-full bg-white/5 text-white/70 border border-white/10 text-xs font-medium">
+                        Quimistán, S.B.
+                    </span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div class="md:col-span-8 space-y-3">
+                    <h2 class="font-display font-black text-2xl sm:text-4xl text-white tracking-tight leading-none uppercase">
+                        Copa Apertura Futsal 3v3 <br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-gold via-amber-300 to-emerald-400">
+                            Rich Aroma 2026
+                        </span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-white/80 leading-relaxed max-w-2xl">
+                        El torneo nocturno callejero más vibrante del Valle de Quimistán. 8 equipos, 2 grupos, fase de cuadrangular, semifinales y gran final bajo luces LED y sonido ambiental en nuestra terraza deportiva.
+                    </p>
+
+                    <!-- Surface notice pill -->
+                    <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-[11px] text-white/90">
+                        <i class="fas fa-shoe-prints text-brand-gold"></i>
+                        <span>Superficie de concreto: <strong>Uso exclusivo de tenis lisos. Prohibido tacos.</strong></span>
+                    </div>
+                </div>
+
+                <!-- Prize Box -->
+                <div class="md:col-span-4 bg-black/50 border border-brand-gold/30 rounded-2xl p-5 text-center space-y-3 relative overflow-hidden">
+                    <div class="absolute -right-6 -bottom-6 text-7xl opacity-5 pointer-events-none">🏆</div>
+                    <span class="text-[10px] font-black uppercase tracking-widest text-brand-gold block">
+                        Bolsa de Premiación Oficial
+                    </span>
+                    <div class="space-y-1">
+                        <div class="text-3xl font-display font-black text-emerald-400 tracking-tight">
+                            L. 5,000 <span class="text-xs text-white/60 font-sans block">Al Equipo Campeón</span>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-white/10 grid grid-cols-2 gap-2 text-[11px] text-white/70">
+                        <div>🥈 <strong>L. 2,000</strong> Subcampeón</div>
+                        <div>🥉 <strong>L. 1,000</strong> 3er Lugar</div>
+                    </div>
+                    <div class="text-[10px] text-brand-gold font-bold">
+                        + Trofeo de Campeón grabado & Medallas
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Bar -->
+            <div class="pt-3 border-t border-white/10 flex flex-wrap gap-2.5 items-center justify-between">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openRegisterTeamModal()" class="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center gap-2">
+                        <i class="fas fa-shield-alt"></i> Inscribir Mi Equipo (L. 1,800)
+                    </button>
+                    <button onclick="openFreeAgentModal()" class="px-4 py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-display font-black text-xs uppercase tracking-wider active:scale-95 transition flex items-center gap-2">
+                        <i class="fas fa-user-plus"></i> Soy Agente Libre (L. 360)
+                    </button>
+                    <button onclick="openJoinModal()" class="px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold text-xs active:scale-95 transition flex items-center gap-2">
+                        <i class="fas fa-qrcode"></i> Tengo Código de Equipo
+                    </button>
+                </div>
+                <div class="text-xs text-white/50">
+                    Inicia: <strong class="text-white">Martes 6 de Octubre</strong> • 7:00 PM
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2 border-b border-white/10" id="tabs-bar">
+            <button onclick="switchTab('calendario')" id="tab-btn-calendario" class="tab-btn active px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-calendar-alt"></i> <span>Calendario & Horarios</span>
+            </button>
+            <button onclick="switchTab('posiciones')" id="tab-btn-posiciones" class="tab-btn px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent text-white/60 hover:text-white transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-table"></i> <span>Tabla de Posiciones</span>
+            </button>
+            <button onclick="switchTab('goleadores')" id="tab-btn-goleadores" class="tab-btn px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent text-white/60 hover:text-white transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-futbol"></i> <span>Goleadores</span>
+            </button>
+            <button onclick="switchTab('equipos')" id="tab-btn-equipos" class="tab-btn px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent text-white/60 hover:text-white transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-users"></i> <span>Equipos & Roster</span>
+            </button>
+            <button onclick="switchTab('agentes')" id="tab-btn-agentes" class="tab-btn px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent text-white/60 hover:text-white transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-user-friends"></i> <span>Agentes Libres (<span id="fa-count-badge">3</span>)</span>
+            </button>
+            <button onclick="switchTab('reglamento')" id="tab-btn-reglamento" class="tab-btn px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider border border-transparent text-white/60 hover:text-white transition shrink-0 flex items-center gap-2">
+                <i class="fas fa-book-open"></i> <span>Reglamento</span>
+            </button>
+        </div>
+
+        <!-- TAB 1: CALENDARIO & HORARIOS (MATCHES) -->
+        <section id="tab-content-calendario" class="space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-display font-black text-lg text-white uppercase">Calendario Oficial de Partidos</h3>
+                    <p class="text-xs text-white/60">Consulta tu día de juego, horario de cancha y marcadores en vivo.</p>
+                </div>
+
+                <!-- Matchday Filter Pills -->
+                <div class="flex items-center gap-1.5 bg-black/40 p-1 rounded-2xl border border-white/10 text-xs">
+                    <button onclick="filterJornada('all', this)" class="jornada-pill active px-3 py-1.5 rounded-xl font-bold bg-emerald-500/20 text-emerald-400">Todos</button>
+                    <button onclick="filterJornada(1, this)" class="jornada-pill px-3 py-1.5 rounded-xl font-bold text-white/60 hover:text-white">Jornada 1</button>
+                    <button onclick="filterJornada(2, this)" class="jornada-pill px-3 py-1.5 rounded-xl font-bold text-white/60 hover:text-white">Jornada 2</button>
+                    <button onclick="filterJornada(3, this)" class="jornada-pill px-3 py-1.5 rounded-xl font-bold text-white/60 hover:text-white">Jornada 3</button>
+                    <button onclick="filterJornada(4, this)" class="jornada-pill px-3 py-1.5 rounded-xl font-bold text-amber-300 hover:text-white">Playoffs</button>
+                </div>
+            </div>
+
+            <!-- Matches List Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5" id="matches-grid">
+                <!-- Injected via JavaScript -->
+                <div class="col-span-full py-12 text-center text-white/40 text-xs">Cargando partidos...</div>
+            </div>
+        </section>
+
+        <!-- TAB 2: TABLA DE POSICIONES (STANDINGS) -->
+        <section id="tab-content-posiciones" class="hidden space-y-6">
+            <div>
+                <h3 class="font-display font-black text-lg text-white uppercase">Tablas de Clasificación</h3>
+                <p class="text-xs text-white/60">Los primeros 2 lugares de cada grupo avanzan a Semifinales.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Grupo A -->
+                <div class="glass-card rounded-3xl p-5 space-y-3">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                        <h4 class="font-display font-black text-sm text-brand-gold uppercase flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-brand-gold/20 text-brand-gold flex items-center justify-center text-xs">A</span>
+                            <span>Grupo A</span>
+                        </h4>
+                        <span class="text-[10px] text-emerald-400 font-bold">Top 2 avanzan</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left" id="table-group-a">
+                            <thead>
+                                <tr class="text-[10px] text-white/40 uppercase border-b border-white/10">
+                                    <th class="py-2 px-2">Pos</th>
+                                    <th class="py-2 px-3">Equipo</th>
+                                    <th class="py-2 px-2 text-center">PJ</th>
+                                    <th class="py-2 px-2 text-center">PG</th>
+                                    <th class="py-2 px-2 text-center">PE</th>
+                                    <th class="py-2 px-2 text-center">PP</th>
+                                    <th class="py-2 px-2 text-center">DIF</th>
+                                    <th class="py-2 px-2 text-center font-bold text-white">PTS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-group-a" class="divide-y divide-white/5">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Grupo B -->
+                <div class="glass-card rounded-3xl p-5 space-y-3">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-3">
+                        <h4 class="font-display font-black text-sm text-emerald-400 uppercase flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs">B</span>
+                            <span>Grupo B</span>
+                        </h4>
+                        <span class="text-[10px] text-emerald-400 font-bold">Top 2 avanzan</span>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs text-left" id="table-group-b">
+                            <thead>
+                                <tr class="text-[10px] text-white/40 uppercase border-b border-white/10">
+                                    <th class="py-2 px-2">Pos</th>
+                                    <th class="py-2 px-3">Equipo</th>
+                                    <th class="py-2 px-2 text-center">PJ</th>
+                                    <th class="py-2 px-2 text-center">PG</th>
+                                    <th class="py-2 px-2 text-center">PE</th>
+                                    <th class="py-2 px-2 text-center">PP</th>
+                                    <th class="py-2 px-2 text-center">DIF</th>
+                                    <th class="py-2 px-2 text-center font-bold text-white">PTS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-group-b" class="divide-y divide-white/5">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: GOLEADORES (STATS) -->
+        <section id="tab-content-goleadores" class="hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="font-display font-black text-lg text-white uppercase">Tabla de Goleadores (Pichichi)</h3>
+                    <p class="text-xs text-white/60">Goles registrados por el Juez de Mesa en cada jornada.</p>
+                </div>
+                <span class="text-xs font-bold text-brand-gold bg-brand-gold/10 px-3 py-1 rounded-full border border-brand-gold/20">
+                    Premio Bota de Oro
+                </span>
+            </div>
+
+            <div class="glass-card rounded-3xl p-5 max-w-2xl mx-auto">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead>
+                            <tr class="text-[10px] text-white/40 uppercase border-b border-white/10">
+                                <th class="py-3 px-3">#</th>
+                                <th class="py-3 px-3">Jugador</th>
+                                <th class="py-3 px-3">Equipo</th>
+                                <th class="py-3 px-3 text-center">Goles</th>
+                                <th class="py-3 px-3 text-center">MVP</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-scorers" class="divide-y divide-white/5">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: EQUIPOS & ROSTER -->
+        <section id="tab-content-equipos" class="hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-display font-black text-lg text-white uppercase">Nómina de Equipos</h3>
+                    <p class="text-xs text-white/60">Plantillas oficiales (máximo 5 jugadores por equipo).</p>
+                </div>
+                <button onclick="openRegisterTeamModal()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark text-xs font-black uppercase tracking-wider transition">
+                    + Inscribir Equipo
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="teams-grid">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- TAB 5: AGENTES LIBRES (FREE AGENTS POOL) -->
+        <section id="tab-content-agentes" class="hidden space-y-6">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h3 class="font-display font-black text-lg text-white uppercase">Bolsa de Agentes Libres</h3>
+                    <p class="text-xs text-white/60">¿No tienes equipo completo? Inscríbete solo (L. 360) y te asignamos a un equipo.</p>
+                </div>
+                <button onclick="openFreeAgentModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-brand-dark font-display font-black text-xs uppercase tracking-wider transition">
+                    + Unirme como Agente Libre (L. 360)
+                </button>
+            </div>
+
+            <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-xs text-amber-200/90 flex items-start gap-3">
+                <i class="fas fa-lightbulb text-amber-400 text-base mt-0.5"></i>
+                <div class="leading-relaxed">
+                    <strong>¿Cómo funciona?</strong> Al registrarte con tu cuota individual de L. 360, entras en la bolsa de jugadores. Los capitanes con cupos vacíos pueden ficharte, o al juntarse 5 agentes libres formamos el <strong>"Equipo Rich Aroma"</strong> con uniforme de la casa.
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5" id="free-agents-grid">
+                <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- TAB 6: REGLAMENTO OFICIAL -->
+        <section id="tab-content-reglamento" class="hidden space-y-6">
+            <div class="glass-card rounded-3xl p-6 sm:p-8 space-y-5 max-w-3xl mx-auto">
+                <div class="flex items-center gap-3 border-b border-white/10 pb-4">
+                    <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-display font-black text-lg text-white uppercase">Reglamento Oficial Futsal 3v3</h3>
+                        <p class="text-xs text-white/50">Copa Apertura 2026 • Terraza Deportiva Rich Aroma</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-xs sm:text-sm text-white/80 leading-relaxed">
+                    <div class="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs">
+                        <strong class="text-rose-400 block font-black uppercase mb-1"><i class="fas fa-exclamation-triangle"></i> Regla Innegociable de Calzado:</strong>
+                        La cancha es una superficie de concreto rígido. Está <strong>TERMINANTEMENTE PROHIBIDO EL USO DE TACOS DE FÚTBOL</strong> (plástico o goma). Solo se permite calzado deportivo de suela lisa (futsal / tenis deportivos). Jugador con tacos no entra a la cancha.
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-white uppercase text-xs tracking-wider mb-1">1. Formato de Juego</h4>
+                        <p class="text-white/70 text-xs">Partidos de 3 contra 3 jugadores en cancha sin portero fijo con manos. Mini-porterías oficiales. Plantilla de 4 a 5 jugadores por equipo con cambios volantes ilimitados.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-white uppercase text-xs tracking-wider mb-1">2. Tiempo de Juego</h4>
+                        <p class="text-white/70 text-xs">2 tiempos de 10 minutos a reloj corrido con 3 minutos de descanso en el medio tiempo.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-white uppercase text-xs tracking-wider mb-1">3. Sistema de Faltas & Arbitraje</h4>
+                        <p class="text-white/70 text-xs">Auto-arbitrado: el jugador atacante canta su falta con respeto deportivo. El Juez de Mesa oficial en cabina de sonido controla el cronómetro, marcador y faltas acumuladas. A la 5ta falta de equipo por tiempo, se sanciona tiro penal libre sin barrera desde mitad de cancha.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-white uppercase text-xs tracking-wider mb-1">4. Área Prohibida de Meta</h4>
+                        <p class="text-white/70 text-xs">Existe un semicírculo de 1 metro frente a cada portería donde ningún jugador defensor o atacante puede pararse de forma continua.</p>
+                    </div>
+
+                    <div>
+                        <h4 class="font-black text-white uppercase text-xs tracking-wider mb-1">5. Puntuación</h4>
+                        <p class="text-white/70 text-xs">Victoria: 3 puntos. Empate: 1 punto. Derrota: 0 puntos. En semifinales y final, en caso de empate tras 20 minutos se define por tanda de 3 penales desde mitad de cancha.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: REGISTRO DE EQUIPO (CAPITÁN) -->
+    <div id="modal-register-team" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181d] border border-emerald-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-register-team')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Inscribir Equipo (Capitán)</h3>
+                    <p class="text-[11px] text-emerald-400 font-bold">Cuota de Inscripción: L. 1,800 por equipo</p>
+                </div>
+            </div>
+
+            <form id="form-register-team" onsubmit="submitRegisterTeam(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Nombre Oficial del Equipo</label>
+                    <input type="text" id="reg-team-name" placeholder="Ej. Los Galácticos FC" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Nombre Completo del Capitán</label>
+                    <input type="text" id="reg-captain-name" placeholder="Ej. Carlos Menjívar" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">WhatsApp del Capitán</label>
+                    <input type="tel" id="reg-phone" placeholder="Ej. +504 9876-5432" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" required>
+                </div>
+
+                <!-- Bank details -->
+                <div class="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2 text-xs">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-brand-gold block">Cuentas Bancarias (Transferencia L. 1,800)</span>
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span>🔴 BAC Credomatic: <strong class="text-brand-gold font-mono">756132311</strong></span>
+                        <button type="button" onclick="navigator.clipboard.writeText('756132311'); alert('BAC copiado');" class="text-[10px] text-white/60 hover:text-white"><i class="fas fa-copy"></i></button>
+                    </div>
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span>🔵 BanPaís: <strong class="text-brand-gold font-mono">21001034567</strong></span>
+                        <button type="button" onclick="navigator.clipboard.writeText('21001034567'); alert('BanPaís copiado');" class="text-[10px] text-white/60 hover:text-white"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- Upload receipt -->
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Comprobante de Transferencia (Captura)</label>
+                    <input type="file" id="reg-receipt" accept="image/*" class="w-full text-xs text-white/50 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-emerald-500 file:text-brand-dark cursor-pointer">
+                </div>
+
+                <!-- Waiver -->
+                <div class="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-start gap-2">
+                    <input type="checkbox" id="reg-waiver" class="mt-0.5 w-4 h-4 rounded text-emerald-500 bg-black/50 border-white/20" required>
+                    <label for="reg-waiver" class="text-[11px] text-white/80 leading-snug">
+                        Acepto el <a href="/terraza" target="_blank" class="text-emerald-400 underline font-bold">Reglamento y Exoneración Anual</a>. Certifico que la cancha es concreto rígido, que está <strong>prohibido el uso de tacos</strong>, y asumo la responsabilidad deportiva por mí y mi equipo.
+                    </label>
+                </div>
+
+                <div id="reg-error" class="hidden text-rose-400 text-xs font-bold bg-rose-500/10 p-2.5 rounded-xl"></div>
+
+                <button type="submit" id="btn-submit-team" class="w-full py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> Inscribir Equipo & Generar Invitación
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: UNIRSE A EQUIPO (CON CÓDIGO) -->
+    <div id="modal-join-team" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181d] border border-white/20 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+            <button onclick="closeModal('modal-join-team')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="w-10 h-10 rounded-2xl bg-white/10 text-brand-gold flex items-center justify-center text-lg">
+                    <i class="fas fa-key"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Unirse a un Equipo</h3>
+                    <p class="text-[11px] text-white/60">Ingresa el código que te compartió tu capitán</p>
+                </div>
+            </div>
+
+            <form id="form-join-team" onsubmit="submitJoinTeam(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Código de Invitación</label>
+                    <input type="text" id="join-code" placeholder="Ej. GALA-101" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-brand-gold font-mono font-bold uppercase tracking-wider focus:border-brand-gold outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Tu Nombre Completo</label>
+                    <input type="text" id="join-player-name" placeholder="Ej. David Paredes" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Tu WhatsApp</label>
+                    <input type="tel" id="join-player-phone" placeholder="Ej. +504 9876-5432" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-emerald-400 outline-none" required>
+                </div>
+
+                <!-- Waiver -->
+                <div class="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-start gap-2">
+                    <input type="checkbox" id="join-waiver" class="mt-0.5 w-4 h-4 rounded text-emerald-500 bg-black/50 border-white/20" required>
+                    <label for="join-waiver" class="text-[11px] text-white/80 leading-snug">
+                        Acepto el <a href="/terraza" target="_blank" class="text-emerald-400 underline font-bold">Reglamento y Exoneración Anual</a>. Certifico que jugaré con tenis lisos y que está <strong>prohibido el uso de tacos</strong>.
+                    </label>
+                </div>
+
+                <div id="join-error" class="hidden text-rose-400 text-xs font-bold bg-rose-500/10 p-2.5 rounded-xl"></div>
+
+                <button type="submit" id="btn-submit-join" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-user-check"></i> Unirme al Roster del Equipo
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: AGENTE LIBRE (FREE AGENT) -->
+    <div id="modal-free-agent" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181d] border border-amber-500/40 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-free-agent')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-white/60">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="flex items-center gap-3 border-b border-white/10 pb-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fas fa-user-tag"></i>
+                </div>
+                <div>
+                    <h3 class="font-display font-black text-base text-white uppercase">Inscripción Agente Libre</h3>
+                    <p class="text-[11px] text-amber-400 font-bold">Cuota individual: L. 360 (Te asignamos a un equipo)</p>
+                </div>
+            </div>
+
+            <form id="form-free-agent" onsubmit="submitFreeAgent(event)" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Tu Nombre Completo</label>
+                    <input type="text" id="fa-name" placeholder="Ej. Alexis Montoya" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">WhatsApp de Contacto</label>
+                    <input type="tel" id="fa-phone" placeholder="Ej. +504 9822-1100" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-400 outline-none" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-white/70 mb-1">Posición Preferida</label>
+                    <select id="fa-pos" class="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-400 outline-none">
+                        <option value="Delantero / Goleador">⚽ Delantero / Goleador</option>
+                        <option value="Medio / Armador">🎯 Medio / Armador</option>
+                        <option value="Defensa / Libre">🛡️ Defensa / Libre</option>
+                        <option value="Polivalente / Donde haga falta">🔥 Polivalente / Donde haga falta</option>
+                    </select>
+                </div>
+
+                <!-- Bank details -->
+                <div class="p-3 rounded-xl bg-black/40 border border-white/10 space-y-2 text-xs">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-brand-gold block">Transferencia Cuota Individual (L. 360)</span>
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span>🔴 BAC Credomatic: <strong class="text-brand-gold font-mono">756132311</strong></span>
+                        <button type="button" onclick="navigator.clipboard.writeText('756132311'); alert('BAC copiado');" class="text-[10px] text-white/60 hover:text-white"><i class="fas fa-copy"></i></button>
+                    </div>
+                    <div class="flex justify-between items-center text-[11px]">
+                        <span>🔵 BanPaís: <strong class="text-brand-gold font-mono">21001034567</strong></span>
+                        <button type="button" onclick="navigator.clipboard.writeText('21001034567'); alert('BanPaís copiado');" class="text-[10px] text-white/60 hover:text-white"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+
+                <!-- Waiver -->
+                <div class="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-start gap-2">
+                    <input type="checkbox" id="fa-waiver" class="mt-0.5 w-4 h-4 rounded text-amber-500 bg-black/50 border-white/20" required>
+                    <label for="fa-waiver" class="text-[11px] text-white/80 leading-snug">
+                        Acepto el <a href="/terraza" target="_blank" class="text-amber-400 underline font-bold">Reglamento y Exoneración Anual</a>. Certifico jugar con tenis lisos (prohibido tacos).
+                    </label>
+                </div>
+
+                <div id="fa-error" class="hidden text-rose-400 text-xs font-bold bg-rose-500/10 p-2.5 rounded-xl"></div>
+
+                <button type="submit" id="btn-submit-fa" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-brand-dark font-display font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 active:scale-95 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-check-circle"></i> Confirmar Agente Libre (L. 360)
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: ÉXITO DE EQUIPO CON CÓDIGO COMPARTIBLE -->
+    <div id="modal-team-success" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-[#12181d] border border-emerald-500/50 rounded-3xl max-w-sm w-full p-6 space-y-5 text-center shadow-2xl relative">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl mx-auto border border-emerald-500/30">
+                🎉
+            </div>
+            <div>
+                <h3 class="font-display font-black text-xl text-white uppercase" id="success-team-name">¡Equipo Inscrito!</h3>
+                <p class="text-xs text-emerald-400 font-bold mt-1">Comparte este código con tus 4 compañeros:</p>
+            </div>
+
+            <div class="bg-black/50 border-2 border-dashed border-brand-gold/60 rounded-2xl p-4 space-y-1">
+                <span class="text-[10px] text-white/40 uppercase font-black tracking-widest block">Código de Equipo</span>
+                <span class="text-2xl font-mono font-black text-brand-gold tracking-widest block" id="success-invite-code">GALA-101</span>
+            </div>
+
+            <div class="space-y-2">
+                <a id="btn-share-team-wa" href="#" target="_blank" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition shadow-lg shadow-emerald-500/20">
+                    <i class="fab fa-whatsapp text-sm"></i> Compartir por WhatsApp
+                </a>
+                <button onclick="closeModal('modal-team-success')" class="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white/70 text-xs font-bold transition">
+                    Ver Calendario y Partidos
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script>
+        let tournamentData = null;
+        let activeJornadaFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTournament();
+
+            // Check if joining from URL link: ?join=CODE
+            const urlParams = new URLSearchParams(window.location.search);
+            const joinCode = urlParams.get('join');
+            if (joinCode) {
+                document.getElementById('join-code').value = joinCode.toUpperCase();
+                openJoinModal();
+            }
+        });
+
+        async function loadTournament() {
+            try {
+                const res = await fetch('/api/torneo');
+                const data = await res.json();
+                tournamentData = data;
+                renderAll();
+            } catch (err) {
+                console.error("Error loading tournament:", err);
+            }
+        }
+
+        function renderAll() {
+            if (!tournamentData) return;
+            renderHeroStats();
+            renderMatches();
+            renderStandings();
+            renderTopScorers();
+            renderTeams();
+            renderFreeAgents();
+        }
+
+        function renderHeroStats() {
+            const confirmed = (tournamentData.teams || []).filter(t => t.status === 'Confirmado').length;
+            const max = tournamentData.tournament.maxTeams || 8;
+            document.getElementById('spots-count-label').innerText = `Cupo: ${confirmed} de ${max} Equipos`;
+            
+            const badge = document.getElementById('badge-spots-left');
+            if (confirmed >= max) {
+                badge.className = "px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span> <span>Cupos Llenos (Lista de Espera)</span>`;
+            } else {
+                badge.className = "px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span>¡Solo ${max - confirmed} cupo${max - confirmed > 1 ? 's' : ''} libre${max - confirmed > 1 ? 's' : ''}!</span>`;
+            }
+
+            document.getElementById('fa-count-badge').innerText = (tournamentData.freeAgents || []).filter(a => a.status === 'Disponible').length;
+        }
+
+        function renderMatches() {
+            const grid = document.getElementById('matches-grid');
+            grid.innerHTML = '';
+
+            const matches = tournamentData.matches || [];
+            const filtered = activeJornadaFilter === 'all' 
+                ? matches 
+                : matches.filter(m => m.jornada === parseInt(activeJornadaFilter));
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-8 text-center text-white/40 text-xs">No hay partidos programados para esta jornada.</div>';
+                return;
+            }
+
+            filtered.forEach(m => {
+                const isFinished = m.status === 'Finalizado';
+                const card = document.createElement('div');
+                card.className = "glass-card glass-card-hover rounded-2xl p-4 space-y-3 transition border";
+
+                const dateParts = m.date.split('-');
+                const dObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+                const formattedDate = `${days[dObj.getDay()]} ${dateParts[2]}/${dateParts[1]}`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between text-[11px] border-b border-white/5 pb-2 text-white/60">
+                        <span class="font-bold text-brand-gold uppercase tracking-wider">
+                            <i class="far fa-calendar-alt"></i> ${formattedDate} • ${m.time}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                            isFinished 
+                                ? 'bg-white/10 text-white/70' 
+                                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }">
+                            ${m.stage} ${m.group !== 'Playoffs' ? '• Grupo ' + m.group : ''}
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between py-1">
+                        <!-- Home Team -->
+                        <div class="flex-1 text-right pr-3">
+                            <span class="text-xs sm:text-sm font-black text-white block truncate">${m.teamHome}</span>
+                        </div>
+
+                        <!-- Score or VS -->
+                        <div class="shrink-0 px-3 py-1.5 rounded-xl bg-black/60 border border-white/10 min-w-[64px] text-center font-display font-black text-base">
+                            ${isFinished 
+                                ? `<span class="text-emerald-400">${m.scoreHome}</span> - <span class="text-emerald-400">${m.scoreAway}</span>`
+                                : `<span class="text-white/40 text-xs tracking-wider">VS</span>`
+                            }
+                        </div>
+
+                        <!-- Away Team -->
+                        <div class="flex-1 text-left pl-3">
+                            <span class="text-xs sm:text-sm font-black text-white block truncate">${m.teamAway}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[10px] text-white/40 pt-1">
+                        <span><i class="fas fa-map-marker-alt text-emerald-400"></i> Terraza Deportiva Rich Aroma</span>
+                        <span class="font-medium text-white/60">${isFinished ? 'Resultado Final' : '2 tiempos de 10 min'}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterJornada(j, btn) {
+            activeJornadaFilter = j;
+            document.querySelectorAll('.jornada-pill').forEach(b => {
+                b.classList.remove('bg-emerald-500/20', 'text-emerald-400');
+                b.classList.add('text-white/60');
+            });
+            btn.classList.add('bg-emerald-500/20', 'text-emerald-400');
+            btn.classList.remove('text-white/60');
+            renderMatches();
+        }
+
+        function renderStandings() {
+            const grpA = (tournamentData.standings && tournamentData.standings.groupA) || [];
+            const grpB = (tournamentData.standings && tournamentData.standings.groupB) || [];
+
+            const renderTable = (list, tbodyId) => {
+                const tbody = document.getElementById(tbodyId);
+                tbody.innerHTML = '';
+
+                list.forEach((row, idx) => {
+                    const tr = document.createElement('tr');
+                    const isAdvancing = idx < 2;
+                    tr.className = isAdvancing ? "bg-emerald-500/5 font-medium" : "text-white/70";
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-2 font-mono font-bold ${isAdvancing ? 'text-emerald-400' : 'text-white/40'}">${idx + 1}</td>
+                        <td class="py-2.5 px-3 font-bold text-white flex items-center gap-2">
+                            ${isAdvancing ? '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>' : ''}
+                            <span>${row.teamName}</span>
+                        </td>
+                        <td class="py-2.5 px-2 text-center text-white/60">${row.pj}</td>
+                        <td class="py-2.5 px-2 text-center text-white/60">${row.pg}</td>
+                        <td class="py-2.5 px-2 text-center text-white/60">${row.pe}</td>
+                        <td class="py-2.5 px-2 text-center text-white/60">${row.pp}</td>
+                        <td class="py-2.5 px-2 text-center font-mono ${row.dif > 0 ? 'text-emerald-400' : (row.dif < 0 ? 'text-rose-400' : 'text-white/40')}">${row.dif > 0 ? '+' : ''}${row.dif}</td>
+                        <td class="py-2.5 px-2 text-center font-display font-black text-sm text-white">${row.pts}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            };
+
+            renderTable(grpA, 'tbody-group-a');
+            renderTable(grpB, 'tbody-group-b');
+        }
+
+        function renderTopScorers() {
+            const tbody = document.getElementById('tbody-scorers');
+            tbody.innerHTML = '';
+            const scorers = tournamentData.topScorers || [];
+
+            scorers.forEach((s, idx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-3 font-mono font-bold ${idx === 0 ? 'text-brand-gold text-base' : 'text-white/50'}">${idx + 1}</td>
+                    <td class="py-3 px-3 font-bold text-white flex items-center gap-2">
+                        ${idx === 0 ? '👑 ' : ''}<span>${s.name}</span>
+                    </td>
+                    <td class="py-3 px-3 text-white/60">${s.team}</td>
+                    <td class="py-3 px-3 text-center font-display font-black text-emerald-400 text-sm">${s.goals}</td>
+                    <td class="py-3 px-3 text-center text-amber-400 text-xs">⭐ ${s.mvpStars}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderTeams() {
+            const grid = document.getElementById('teams-grid');
+            grid.innerHTML = '';
+            const teams = tournamentData.teams || [];
+
+            teams.forEach(t => {
+                const isConfirmed = t.status === 'Confirmado';
+                const card = document.createElement('div');
+                card.className = `glass-card rounded-2xl p-4 space-y-3 border flex flex-col justify-between ${
+                    isConfirmed ? 'border-white/10' : 'border-dashed border-white/20 bg-black/20'
+                }`;
+
+                if (!isConfirmed) {
+                    card.innerHTML = `
+                        <div class="space-y-2 text-center py-6">
+                            <span class="text-3xl">⚽</span>
+                            <h4 class="font-display font-black text-sm text-white uppercase">${t.name}</h4>
+                            <p class="text-[11px] text-white/50">¡Inscribe a tu equipo y toma este puesto en el Grupo B!</p>
+                            <button onclick="openRegisterTeamModal()" class="mt-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-brand-dark font-display font-black text-[11px] uppercase tracking-wider transition">
+                                Inscribir Ahora
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    const roster = t.roster || [];
+                    const rosterCount = roster.length;
+                    const spotsLeft = 5 - rosterCount;
+
+                    card.innerHTML = `
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-brand-gold/15 text-brand-gold">Grupo ${t.group}</span>
+                                <span class="text-[10px] text-white/40 font-mono font-bold">${t.code}</span>
+                            </div>
+                            <h4 class="font-display font-black text-base text-white uppercase truncate">${t.name}</h4>
+                            <p class="text-[11px] text-white/60">Capitán: <strong class="text-white">${t.captain}</strong></p>
+
+                            <!-- Roster Preview -->
+                            <div class="pt-2 border-t border-white/5 space-y-1">
+                                <span class="text-[9px] font-black uppercase text-white/40 tracking-wider block">Plantilla (${rosterCount}/5 Jugadores)</span>
+                                <ul class="text-[11px] text-white/80 space-y-0.5">
+                                    ${roster.map(p => `<li>• ${p.name} <span class="text-[9px] text-brand-gold">#${p.number}</span></li>`).join('')}
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-white/5">
+                            ${spotsLeft > 0 ? `
+                                <button onclick="shareInviteCode('${t.code}', '${t.name}')" class="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold border border-white/10 flex items-center justify-center gap-1.5 transition">
+                                    <i class="fab fa-whatsapp text-emerald-400"></i> Invitar (+${spotsLeft} cupo${spotsLeft > 1 ? 's' : ''})
+                                </button>
+                            ` : `
+                                <span class="text-[10px] text-emerald-400 font-bold block text-center"><i class="fas fa-check-circle"></i> Plantilla Completa (5/5)</span>
+                            `}
+                        </div>
+                    `;
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        function renderFreeAgents() {
+            const grid = document.getElementById('free-agents-grid');
+            grid.innerHTML = '';
+            const list = tournamentData.freeAgents || [];
+
+            if (list.length === 0) {
+                grid.innerHTML = '<div class="col-span-full py-8 text-center text-white/40 text-xs">No hay agentes libres registrados en este momento.</div>';
+                return;
+            }
+
+            list.forEach(a => {
+                const card = document.createElement('div');
+                card.className = "glass-card rounded-2xl p-3.5 border border-white/10 flex items-center justify-between";
+                card.innerHTML = `
+                    <div>
+                        <strong class="text-xs font-bold text-white block">${a.name}</strong>
+                        <span class="text-[10px] text-amber-300 font-medium block">${a.position}</span>
+                        <span class="text-[9px] text-emerald-400 font-bold"><i class="fas fa-check-circle"></i> Cuota de L. 360 al día</span>
+                    </div>
+                    <a href="https://wa.me/50497814474?text=Hola%2C%20quisiera%20fichar%20al%20agente%20libre%20${encodeURIComponent(a.name)}%20para%20mi%20equipo" target="_blank" class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-[11px] font-bold border border-white/10 transition">
+                        Fichar
+                    </a>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            const tabs = ['calendario', 'posiciones', 'goleadores', 'equipos', 'agentes', 'reglamento'];
+            tabs.forEach(t => {
+                document.getElementById(`tab-content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).classList.remove('active');
+                document.getElementById(`tab-btn-${t}`).classList.add('text-white/60');
+            });
+            document.getElementById(`tab-content-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tabName}`).classList.add('active');
+            document.getElementById(`tab-btn-${tabName}`).classList.remove('text-white/60');
+        }
+
+        // Modals Controls
+        function openRegisterTeamModal() {
+            document.getElementById('modal-register-team').classList.remove('hidden');
+        }
+        function openJoinModal() {
+            document.getElementById('modal-join-team').classList.remove('hidden');
+        }
+        function openFreeAgentModal() {
+            document.getElementById('modal-free-agent').classList.remove('hidden');
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Submit Team Registration
+        async function submitRegisterTeam(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-team');
+            const errDiv = document.getElementById('reg-error');
+            errDiv.classList.add('hidden');
+
+            const teamName = document.getElementById('reg-team-name').value.trim();
+            const captainName = document.getElementById('reg-captain-name').value.trim();
+            const phone = document.getElementById('reg-phone').value.trim();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Inscribiendo equipo...';
+
+            try {
+                const res = await fetch('/api/torneo/register-team', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teamName, captainName, phone })
+                });
+                const data = await res.json();
+
+                if (data.success && data.team) {
+                    closeModal('modal-register-team');
+                    document.getElementById('success-team-name').innerText = data.team.name;
+                    document.getElementById('success-invite-code').innerText = data.inviteCode;
+
+                    const waText = encodeURIComponent(`¡Hola equipo! Registré a "${data.team.name}" en la Copa Futsal 3v3 de Rich Aroma. Únanse al roster usando este enlace: ${data.inviteLink} o ingresando el código ${data.inviteCode}.`);
+                    document.getElementById('btn-share-team-wa').href = `https://wa.me/?text=${waText}`;
+
+                    document.getElementById('modal-team-success').classList.remove('hidden');
+                    loadTournament();
+                } else {
+                    errDiv.innerText = data.error || "No se pudo inscribir el equipo.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Team submit error:", err);
+                errDiv.innerText = "Error de conexión. Intente nuevamente.";
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Inscribir Equipo & Generar Invitación';
+            }
+        }
+
+        // Submit Join Team with Code
+        async function submitJoinTeam(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-join');
+            const errDiv = document.getElementById('join-error');
+            errDiv.classList.add('hidden');
+
+            const inviteCode = document.getElementById('join-code').value.trim();
+            const playerName = document.getElementById('join-player-name').value.trim();
+            const phone = document.getElementById('join-player-phone').value.trim();
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Uniéndote al equipo...';
+
+            try {
+                const res = await fetch('/api/torneo/join-team', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ inviteCode, playerName, phone })
+                });
+                const data = await res.json();
+
+                if (data.success && data.team) {
+                    alert(`¡Éxito! Te has unido a la nómina de ${data.team.name}.`);
+                    closeModal('modal-join-team');
+                    loadTournament();
+                    switchTab('equipos');
+                } else {
+                    errDiv.innerText = data.error || "No se pudo unir al equipo.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Join team error:", err);
+                errDiv.innerText = "Error de conexión. Intente nuevamente.";
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-user-check"></i> Unirme al Roster del Equipo';
+            }
+        }
+
+        // Submit Free Agent
+        async function submitFreeAgent(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-fa');
+            const errDiv = document.getElementById('fa-error');
+            errDiv.classList.add('hidden');
+
+            const name = document.getElementById('fa-name').value.trim();
+            const phone = document.getElementById('fa-phone').value.trim();
+            const position = document.getElementById('fa-pos').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Registrando...';
+
+            try {
+                const res = await fetch('/api/torneo/free-agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, phone, position })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    alert("¡Registrado como Agente Libre con éxito! Te contactaremos por WhatsApp en cuanto seas asignado a un equipo.");
+                    closeModal('modal-free-agent');
+                    loadTournament();
+                    switchTab('agentes');
+                } else {
+                    errDiv.innerText = data.error || "No se pudo registrar como agente libre.";
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error("Free agent error:", err);
+                errDiv.innerText = "Error de conexión. Intente nuevamente.";
+                errDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle"></i> Confirmar Agente Libre (L. 360)';
+            }
+        }
+
+        function shareInviteCode(code, teamName) {
+            const text = encodeURIComponent(`¡Únete a mi equipo "${teamName}" en la Copa Futsal 3v3 de Rich Aroma! Código de invitación: ${code}. Ingrésalo en https://richaromacoffee.com/terraza/torneo?join=${code}`);
+            window.open(`https://wa.me/?text=${text}`, '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,519 @@
+{
+  "id": "copa-apertura-2026",
+  "name": "Copa Apertura Futsal 3v3 Rich Aroma",
+  "subtitle": "Edición Octubre 2026 • Terraza Deportiva Quimistán",
+  "season": "Temporada 1 • Octubre 2026",
+  "startDate": "2026-10-06",
+  "endDate": "2026-10-29",
+  "maxTeams": 8,
+  "teamFeeLempiras": 1800,
+  "freeAgentFeeLempiras": 360,
+  "status": "Inscripciones Abiertas",
+  "prizePool": {
+    "first": {
+      "cash": 5000,
+      "trophy": true,
+      "medals": "Oro",
+      "giftCard": 500
+    },
+    "second": {
+      "cash": 2000,
+      "medals": "Plata",
+      "courtHourFree": 1
+    },
+    "third": {
+      "cash": 1000,
+      "medals": "Bronce"
+    }
+  },
+  "rules": {
+    "format": "3 vs 3 (Sin portero con manos / mini porterías)",
+    "matchDuration": "2 tiempos de 10 minutos (20 min total corriendo)",
+    "rosterLimit": "Mínimo 3, Máximo 5 jugadores por equipo",
+    "surface": "Superficie de concreto rígido multiuso",
+    "footwear": "Uso exclusivo de tenis lisos o tenis deportivos. PROHIBIDO EL USO DE TACOS DE FÚTBOL.",
+    "ball": "Balón oficial de futsal sala de bajo rebote (No. 4)",
+    "referee": "Auto-arbitrado (el atacante canta la falta) + Juez de Mesa oficial en cronómetro y marcador",
+    "fouls": "Máximo 4 faltas acumuladas por tiempo. A la 5ta falta: penal directo sin barrera desde mitad de cancha."
+  },
+  "teams": [
+    {
+      "id": "team-1",
+      "name": "Los Galácticos",
+      "captain": "Carlos Menjívar",
+      "phone": "+504 9876-5432",
+      "code": "GALA-101",
+      "group": "A",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Carlos Menjívar",
+          "role": "Capitán",
+          "number": 10
+        },
+        {
+          "name": "Moisés Rivera",
+          "role": "Jugador",
+          "number": 7
+        },
+        {
+          "name": "David Paredes",
+          "role": "Jugador",
+          "number": 9
+        },
+        {
+          "name": "Kevin Aguilar",
+          "role": "Jugador",
+          "number": 5
+        }
+      ]
+    },
+    {
+      "id": "team-2",
+      "name": "Street Boys FC",
+      "captain": "Javier Orellana",
+      "phone": "+504 9912-3344",
+      "code": "STRT-202",
+      "group": "A",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Javier Orellana",
+          "role": "Capitán",
+          "number": 8
+        },
+        {
+          "name": "Brayan López",
+          "role": "Jugador",
+          "number": 11
+        },
+        {
+          "name": "Christian Paz",
+          "role": "Jugador",
+          "number": 3
+        }
+      ]
+    },
+    {
+      "id": "team-3",
+      "name": "Barrio El Centro",
+      "captain": "Mario Pineda",
+      "phone": "+504 9544-1122",
+      "code": "CENT-303",
+      "group": "A",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Mario Pineda",
+          "role": "Capitán",
+          "number": 6
+        },
+        {
+          "name": "Luis Morales",
+          "role": "Jugador",
+          "number": 14
+        },
+        {
+          "name": "Josué Castillo",
+          "role": "Jugador",
+          "number": 4
+        },
+        {
+          "name": "Franklin Gómez",
+          "role": "Jugador",
+          "number": 1
+        }
+      ]
+    },
+    {
+      "id": "team-4",
+      "name": "Deportivo San Juan",
+      "captain": "Eduardo Valle",
+      "phone": "+504 9788-5566",
+      "code": "SJUAN-404",
+      "group": "A",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Eduardo Valle",
+          "role": "Capitán",
+          "number": 5
+        },
+        {
+          "name": "Walter Ramos",
+          "role": "Jugador",
+          "number": 9
+        },
+        {
+          "name": "Samuel Díaz",
+          "role": "Jugador",
+          "number": 12
+        }
+      ]
+    },
+    {
+      "id": "team-5",
+      "name": "Los Cafeteros (Rich Aroma)",
+      "captain": "Oscar Castillo",
+      "phone": "+504 9781-4474",
+      "code": "CAFE-505",
+      "group": "B",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Oscar Castillo",
+          "role": "Capitán",
+          "number": 10
+        },
+        {
+          "name": "Rico Barista",
+          "role": "Jugador",
+          "number": 7
+        },
+        {
+          "name": "Héctor Cruz",
+          "role": "Jugador",
+          "number": 11
+        },
+        {
+          "name": "Anthony Mejía",
+          "role": "Jugador",
+          "number": 8
+        }
+      ]
+    },
+    {
+      "id": "team-6",
+      "name": "La Jauría 3v3",
+      "captain": "Nelson Bueso",
+      "phone": "+504 9633-8877",
+      "code": "JAUR-606",
+      "group": "B",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Nelson Bueso",
+          "role": "Capitán",
+          "number": 9
+        },
+        {
+          "name": "Ángel Flores",
+          "role": "Jugador",
+          "number": 2
+        },
+        {
+          "name": "Marcos Zúniga",
+          "role": "Jugador",
+          "number": 17
+        }
+      ]
+    },
+    {
+      "id": "team-7",
+      "name": "Titanes del Valle",
+      "captain": "Roberto Cárdenas",
+      "phone": "+504 9455-2233",
+      "code": "TITA-707",
+      "group": "B",
+      "status": "Confirmado",
+      "roster": [
+        {
+          "name": "Roberto Cárdenas",
+          "role": "Capitán",
+          "number": 4
+        },
+        {
+          "name": "Geovany Reyes",
+          "role": "Jugador",
+          "number": 10
+        },
+        {
+          "name": "Daniel Serrano",
+          "role": "Jugador",
+          "number": 13
+        }
+      ]
+    },
+    {
+      "id": "team-8",
+      "name": "Cupo Libre #8 (¡Inscribe tu equipo!)",
+      "captain": "Disponible",
+      "phone": "",
+      "code": "OPEN-808",
+      "group": "B",
+      "status": "Disponible",
+      "roster": []
+    }
+  ],
+  "freeAgents": [
+    {
+      "id": "fa-1",
+      "name": "Alexis Montoya",
+      "phone": "+504 9822-1100",
+      "position": "Delantero / Goleador",
+      "status": "Disponible",
+      "registeredAt": "2026-09-23T20:10:00Z"
+    },
+    {
+      "id": "fa-2",
+      "name": "Darwin Sabillón",
+      "phone": "+504 9944-7766",
+      "position": "Defensa / Libre",
+      "status": "Disponible",
+      "registeredAt": "2026-09-23T21:45:00Z"
+    },
+    {
+      "id": "fa-3",
+      "name": "Cristian Umaña",
+      "phone": "+504 9511-3322",
+      "position": "Medio / Armador",
+      "status": "Disponible",
+      "registeredAt": "2026-09-23T22:15:00Z"
+    },
+    {
+      "id": "fa-1790230996772",
+      "name": "Carlos Test",
+      "phone": "50499998888",
+      "position": "Delantero",
+      "status": "Disponible",
+      "receiptImage": "pending",
+      "registeredAt": "2026-09-24T06:23:16.772Z"
+    }
+  ],
+  "matches": [
+    {
+      "id": "match-1",
+      "jornada": 1,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-06",
+      "time": "19:00",
+      "teamHome": "Los Galácticos",
+      "teamAway": "Street Boys FC",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-2",
+      "jornada": 1,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-06",
+      "time": "19:30",
+      "teamHome": "Barrio El Centro",
+      "teamAway": "Deportivo San Juan",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-3",
+      "jornada": 1,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-08",
+      "time": "19:00",
+      "teamHome": "Los Cafeteros (Rich Aroma)",
+      "teamAway": "La Jauría 3v3",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-4",
+      "jornada": 1,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-08",
+      "time": "19:30",
+      "teamHome": "Titanes del Valle",
+      "teamAway": "Cupo Libre #8",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-5",
+      "jornada": 2,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-13",
+      "time": "19:00",
+      "teamHome": "Los Galácticos",
+      "teamAway": "Barrio El Centro",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-6",
+      "jornada": 2,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-13",
+      "time": "19:30",
+      "teamHome": "Street Boys FC",
+      "teamAway": "Deportivo San Juan",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-7",
+      "jornada": 2,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-15",
+      "time": "19:00",
+      "teamHome": "Los Cafeteros (Rich Aroma)",
+      "teamAway": "Titanes del Valle",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-8",
+      "jornada": 2,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-15",
+      "time": "19:30",
+      "teamHome": "La Jauría 3v3",
+      "teamAway": "Cupo Libre #8",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-9",
+      "jornada": 3,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-20",
+      "time": "19:00",
+      "teamHome": "Los Galácticos",
+      "teamAway": "Deportivo San Juan",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-10",
+      "jornada": 3,
+      "stage": "Fase de Grupos",
+      "group": "A",
+      "date": "2026-10-20",
+      "time": "19:30",
+      "teamHome": "Street Boys FC",
+      "teamAway": "Barrio El Centro",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-11",
+      "jornada": 3,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-22",
+      "time": "19:00",
+      "teamHome": "Los Cafeteros (Rich Aroma)",
+      "teamAway": "Cupo Libre #8",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-12",
+      "jornada": 3,
+      "stage": "Fase de Grupos",
+      "group": "B",
+      "date": "2026-10-22",
+      "time": "19:30",
+      "teamHome": "La Jauría 3v3",
+      "teamAway": "Titanes del Valle",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Programado"
+    },
+    {
+      "id": "match-13",
+      "jornada": 4,
+      "stage": "Semifinal 1",
+      "group": "Playoffs",
+      "date": "2026-10-29",
+      "time": "19:00",
+      "teamHome": "1° Lugar Grupo A",
+      "teamAway": "2° Lugar Grupo B",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Por Definir"
+    },
+    {
+      "id": "match-14",
+      "jornada": 4,
+      "stage": "Semifinal 2",
+      "group": "Playoffs",
+      "date": "2026-10-29",
+      "time": "19:30",
+      "teamHome": "1° Lugar Grupo B",
+      "teamAway": "2° Lugar Grupo A",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Por Definir"
+    },
+    {
+      "id": "match-15",
+      "jornada": 4,
+      "stage": "3er Lugar",
+      "group": "Playoffs",
+      "date": "2026-10-29",
+      "time": "20:00",
+      "teamHome": "Perdedor Semifinal 1",
+      "teamAway": "Perdedor Semifinal 2",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Por Definir"
+    },
+    {
+      "id": "match-16",
+      "jornada": 4,
+      "stage": "Gran Final",
+      "group": "Playoffs",
+      "date": "2026-10-29",
+      "time": "20:30",
+      "teamHome": "Ganador Semifinal 1",
+      "teamAway": "Ganador Semifinal 2",
+      "scoreHome": null,
+      "scoreAway": null,
+      "status": "Por Definir"
+    }
+  ],
+  "topScorers": [
+    {
+      "name": "Moisés Rivera",
+      "team": "Los Galácticos",
+      "goals": 0,
+      "mvpStars": 0
+    },
+    {
+      "name": "Rico Barista",
+      "team": "Los Cafeteros",
+      "goals": 0,
+      "mvpStars": 0
+    },
+    {
+      "name": "Brayan López",
+      "team": "Street Boys FC",
+      "goals": 0,
+      "mvpStars": 0
+    },
+    {
+      "name": "Luis Morales",
+      "team": "Barrio El Centro",
+      "goals": 0,
+      "mvpStars": 0
+    }
+  ]
+}

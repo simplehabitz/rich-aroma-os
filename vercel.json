@@ -512,6 +512,22 @@
       "dest": "/api/terraza.js"
     },
     {
+      "src": "/terraza/torneo/?",
+      "dest": "/public/torneo.html"
+    },
+    {
+      "src": "/torneo/?",
+      "dest": "/public/torneo.html"
+    },
+    {
+      "src": "/api/torneo/(.*)",
+      "dest": "/api/torneo.js?action=$1"
+    },
+    {
+      "src": "/api/torneo",
+      "dest": "/api/torneo.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/public/$1"
     }
