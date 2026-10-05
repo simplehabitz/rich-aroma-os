@@ -12,25 +12,7 @@ const DB_PATH = path.join(__dirname, '../data/terraza_bookings.json');
 function getBookings() {
     try {
         if (!fs.existsSync(DB_PATH)) {
-            const initialData = [
-                {
-                    id: "TERR-7001",
-                    sport: "Futsal",
-                    date: new Date().toISOString().split('T')[0],
-                    startTime: "18:00",
-                    hours: 2,
-                    endTime: "20:00",
-                    customerName: "Carlos Menjívar",
-                    phone: "+504 9876-5432",
-                    peopleCount: 10,
-                    ratePerHour: 500,
-                    totalLempiras: 1000,
-                    status: "Confirmado",
-                    receiptUrl: "/assets/sample_receipt.jpg",
-                    checkedIn: false,
-                    createdAt: new Date().toISOString()
-                }
-            ];
+            const initialData = [];
             const dir = path.dirname(DB_PATH);
             if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
             fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2));
@@ -42,6 +24,15 @@ function getBookings() {
         console.error("Error reading terraza DB:", e);
         return [];
     }
+}
+
+// Optional Email Alert Service
+let notifyTerrazaBooking = null;
+try {
+    const emailModule = require('./lib/email-service');
+    notifyTerrazaBooking = emailModule.notifyTerrazaBooking;
+} catch (e) {
+    console.log("Email service not loaded in local terraza context:", e.message);
 }
 
 function saveBookings(bookings) {
@@ -262,6 +253,13 @@ module.exports = async (req, res) => {
             // Sync to CRM Master Database
             await syncCustomerProfile(name, phone, 'Club Madrugador');
 
+            // Send instant email notification to Oscar and Guille (non-blocking)
+            if (notifyTerrazaBooking) {
+                notifyTerrazaBooking(madrugadorPass, null).catch(err => {
+                    console.error("Non-blocking Madrugador email alert error:", err);
+                });
+            }
+
             return res.status(201).json({
                 success: true,
                 message: "¡Pase Madrugador reservado con éxito!",
@@ -350,6 +348,13 @@ module.exports = async (req, res) => {
 
             // Sync to CRM Master Database
             await syncCustomerProfile(customerName, phone, `Terraza - ${sport}`);
+
+            // Send instant email notification to Oscar and Guille (non-blocking)
+            if (notifyTerrazaBooking) {
+                notifyTerrazaBooking(newBooking, receiptImageBase64).catch(err => {
+                    console.error("Non-blocking Terraza email alert error:", err);
+                });
+            }
 
             return res.status(201).json({
                 success: true,

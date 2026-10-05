@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 /**
  * Shared email service using Resend API.
  */
-async function sendEmail({ to, subject, html, from }) {
+async function sendEmail({ to, subject, html, from, attachments }) {
     if (!process.env.RESEND_API_KEY) {
         console.warn("[Email Service] RESEND_API_KEY not found. Skipping email.");
         return;
@@ -12,18 +12,24 @@ async function sendEmail({ to, subject, html, from }) {
     const recipients = Array.isArray(to) ? to : [to];
 
     try {
+        const payload = {
+            from: from || process.env.FROM_EMAIL || 'Rich Aroma <orders@richaromacoffee.com>',
+            to: recipients,
+            subject,
+            html
+        };
+
+        if (attachments && Array.isArray(attachments) && attachments.length > 0) {
+            payload.attachments = attachments;
+        }
+
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
             },
-            body: JSON.stringify({
-                from: from || process.env.FROM_EMAIL || 'Rich Aroma <orders@richaromacoffee.com>',
-                to: recipients,
-                subject,
-                html
-            })
+            body: JSON.stringify(payload)
         });
 
         const data = await res.json();
@@ -284,10 +290,171 @@ async function sendCustomerCaliReceipt(order, customerEmail) {
     });
 }
 
+/**
+ * Instant email alert for Terraza Deportiva bookings and Madrugador passes.
+ * Notifies Oscar (Racscoffee@gmail.com) and Guille (castillog42067@gmail.com)
+ * with complete reservation data, transfer screenshot, and one-tap WhatsApp chat button.
+ */
+async function notifyTerrazaBooking(booking, receiptBase64 = null) {
+    const recipients = [
+        'Racscoffee@gmail.com',
+        'castillog42067@gmail.com'
+    ];
+
+    const isMadrugador = booking.type === 'madrugador';
+    const sportTitle = booking.sport || (isMadrugador ? 'Club Madrugador' : 'Cancha Terraza');
+    const subject = isMadrugador
+        ? `🌅 [MADRUGADOR] Nuevo Pase: ${booking.customerName} (${booking.date} 5:00 - 7:00 AM)`
+        : `⚽ [NUEVA RESERVA] ${sportTitle} - ${booking.customerName} [${booking.id}] (L. ${(booking.totalLempiras || 0).toLocaleString()})`;
+
+    // WhatsApp quick-action URL with pre-filled message
+    const cleanDigits = (booking.phone || '').replace(/\D/g, '');
+    const waPhone = cleanDigits.length === 8 ? `504${cleanDigits}` : cleanDigits;
+    const waMessage = encodeURIComponent(`Hola ${booking.customerName}, te saludamos de Rich Aroma Terraza Deportiva sobre tu reserva ${booking.id} (${sportTitle}) para el ${booking.date} de ${booking.startTime} a ${booking.endTime}.`);
+    const waUrl = `https://wa.me/${waPhone}?text=${waMessage}`;
+
+    // Screenshot attachment & inline preview
+    let attachments = [];
+    let receiptSectionHtml = '';
+
+    if (receiptBase64 && typeof receiptBase64 === 'string' && receiptBase64.includes('base64,')) {
+        try {
+            const parts = receiptBase64.split('base64,');
+            const rawBase64 = parts[1];
+            const mime = parts[0].replace('data:', '').replace(';', '').trim() || 'image/jpeg';
+            const ext = mime.includes('png') ? 'png' : 'jpg';
+
+            attachments.push({
+                filename: `comprobante_${booking.id}.${ext}`,
+                content: rawBase64
+            });
+
+            receiptSectionHtml = `
+                <div style="margin-top: 24px; padding-top: 20px; border-top: 2px dashed #e2e8f0;">
+                    <p style="margin: 0 0 10px 0; font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
+                        📎 Comprobante de Transferencia Bancaria
+                    </p>
+                    <div style="text-align: center; background: #0a0f12; border-radius: 14px; padding: 14px; border: 1px solid #1e293b;">
+                        <img src="${receiptBase64}" alt="Comprobante ${booking.id}" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 10px; display: block; margin: auto;" />
+                    </div>
+                    <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8; text-align: center;">
+                        (También adjunto en este correo como archivo para descargar: <code>comprobante_${booking.id}.${ext}</code>)
+                    </p>
+                </div>
+            `;
+        } catch (e) {
+            console.warn("[Email Service] Could not parse receipt attachment:", e);
+        }
+    } else {
+        receiptSectionHtml = `
+            <div style="margin-top: 20px; padding: 12px 16px; background: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+                ℹ️ <strong>Comprobante:</strong> ${isMadrugador ? 'Pase Comunitario Gratuito (Exento de pago)' : 'Pendiente de verificación / Pago en efectivo'}
+            </div>
+        `;
+    }
+
+    const priceLempiras = (booking.totalLempiras || 0).toLocaleString();
+    const priceUsd = booking.totalUsd || ((booking.totalLempiras || 0) / 25).toFixed(2);
+
+    const html = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; color: #0f172a;">
+            
+            <!-- Header Banner -->
+            <div style="background: linear-gradient(135deg, #0a1f18 0%, #0f2e22 50%, #121c18 100%); padding: 24px 20px; text-align: center; border-bottom: 3px solid #10b981;">
+                <div style="display: inline-block; padding: 4px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 9999px; color: #34d399; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+                    Terraza Deportiva Rich Aroma
+                </div>
+                <h1 style="color: #ffffff; font-size: 22px; font-weight: 900; letter-spacing: -0.5px; margin: 0; text-transform: uppercase;">
+                    ${isMadrugador ? '🌅 Nuevo Pase Madrugador' : '⚽ Nueva Reserva de Cancha'}
+                </h1>
+                <p style="color: #cbd5e1; font-size: 13px; margin: 6px 0 0 0;">
+                    Código: <strong style="color: #f59e0b; font-family: monospace;">${booking.id}</strong>
+                </p>
+            </div>
+
+            <div style="padding: 24px 24px 30px 24px;">
+
+                <!-- Big Call To Action WhatsApp Button -->
+                <div style="margin-bottom: 24px; text-align: center;">
+                    <a href="${waUrl}" target="_blank" style="display: block; background: #25D366; color: #ffffff; text-decoration: none; padding: 15px 20px; border-radius: 14px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); text-align: center; letter-spacing: 0.3px;">
+                        💬 Chatear con ${booking.customerName} por WhatsApp
+                    </a>
+                    <p style="margin: 6px 0 0 0; font-size: 11px; color: #64748b;">
+                        Teléfono: <strong style="color: #0f172a;">${booking.phone}</strong> (Click para abrir chat con mensaje listo)
+                    </p>
+                </div>
+
+                <!-- Reservation Details Card -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px 20px; margin-bottom: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Cliente:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0f172a; font-size: 14px;">${booking.customerName}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Actividad / Deporte:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #10b981;">${sportTitle}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Fecha Reservada:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0f172a;">${booking.date}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Horario:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0f172a;">${booking.startTime} - ${booking.endTime} (${booking.hours || 1} hr${(booking.hours || 1) > 1 ? 's' : ''})</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Personas / Jugadores:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #0f172a;">${booking.peopleCount || 1} personas</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Reglamento / Waiver:</td>
+                            <td style="padding: 6px 0; text-align: right; font-weight: bold; color: #10b981;">${booking.waiverAccepted ? '✓ Firmada Digitalmente' : 'No registrada'}</td>
+                        </tr>
+                        <tr style="border-top: 1px solid #cbd5e1;">
+                            <td style="padding: 10px 0 4px 0; font-size: 14px; font-weight: 800; color: #0f172a;">Total a Cobrar:</td>
+                            <td style="padding: 10px 0 4px 0; text-align: right; font-size: 18px; font-weight: 900; color: #c9a66b; font-family: monospace;">
+                                ${isMadrugador ? 'GRATIS' : `L. ${priceLempiras} <span style="font-size: 12px; color: #64748b;">(≈ $${priceUsd})</span>`}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Screenshot / Comprobante Section -->
+                ${receiptSectionHtml}
+
+                <!-- Quick Admin Links -->
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 12px;">
+                    <a href="https://www.richaromacoffee.com/terraza/reservas" style="color: #10b981; font-weight: bold; text-decoration: none; margin: 0 10px;">
+                        📊 Ver Panel de Reservas
+                    </a>
+                    •
+                    <a href="https://www.richaromacoffee.com/terraza/scanner" style="color: #10b981; font-weight: bold; text-decoration: none; margin: 0 10px;">
+                        📲 Escáner de Check-In
+                    </a>
+                </div>
+
+                <p style="margin: 20px 0 0 0; font-size: 10px; color: #94a3b8; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
+                    Rich Aroma OS • Terraza Deportiva Multiusos • Quimistán, Santa Bárbara
+                </p>
+
+            </div>
+        </div>
+    `;
+
+    return await sendEmail({
+        to: recipients,
+        subject,
+        html,
+        attachments
+    });
+}
+
 module.exports = {
     sendEmail,
     notifyCaliOrder,
     notifyOrder,
-    sendCustomerCaliReceipt
+    sendCustomerCaliReceipt,
+    notifyTerrazaBooking
 };
 
