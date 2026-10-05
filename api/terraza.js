@@ -362,6 +362,15 @@ module.exports = async (req, res) => {
         }
     }
 
+    // Route: GET /api/terraza/bookings
+    if (req.method === 'GET' && (action === 'bookings' || url.includes('/bookings'))) {
+        const bookings = getBookings();
+        return res.status(200).json({
+            count: bookings.length,
+            bookings: bookings.slice().reverse()
+        });
+    }
+
     // Route: GET /api/terraza/booking/:id
     if (req.method === 'GET' && (action === 'booking' || url.includes('/booking/'))) {
         const id = req.query.id || url.split('/').pop();
