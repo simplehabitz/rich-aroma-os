@@ -364,6 +364,13 @@ module.exports = async (req, res) => {
 
     // Route: GET /api/terraza/bookings
     if (req.method === 'GET' && (action === 'bookings' || url.includes('/bookings'))) {
+        // If accessed directly from a browser wanting HTML, redirect to the visual UI
+        const acceptsHtml = req.headers && req.headers.accept && req.headers.accept.includes('text/html');
+        if (acceptsHtml && req.query.format !== 'json') {
+            res.writeHead(302, { Location: '/terraza/reservas' });
+            return res.end();
+        }
+
         const bookings = getBookings();
         return res.status(200).json({
             count: bookings.length,

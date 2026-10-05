@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Panel de Reservas • Terraza Deportiva Rich Aroma</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif']
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#080c0e',
+                            card: '#12191f',
+                            border: 'rgba(255,255,255,0.08)',
+                            gold: '#c9a66b',
+                            emerald: '#10b981',
+                            amber: '#f59e0b',
+                            blue: '#38bdf8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #080c0e; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(18, 25, 31, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glass-panel:hover { border-color: rgba(255, 255, 255, 0.15); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 9999px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#080c0e]">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 bg-[#080c0e]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black shadow-lg shadow-emerald-500/10">
+                <i class="fas fa-futbol text-lg"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-display font-black text-lg sm:text-xl text-white tracking-tight">Terraza Deportiva</h1>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider">Admin</span>
+                </div>
+                <p class="text-xs text-white/50">Control de Reservas & Pases Digitales</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button onclick="fetchBookings()" id="refresh-btn" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold transition flex items-center gap-2 active:scale-95">
+                <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                <span class="hidden sm:inline">Actualizar</span>
+            </button>
+            <a href="/terraza/scanner" class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-bold transition flex items-center gap-2 active:scale-95">
+                <i class="fas fa-qrcode"></i>
+                <span>Escanear QR</span>
+            </a>
+            <a href="/terraza" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white text-xs font-bold transition flex items-center gap-2">
+                <i class="fas fa-external-link-alt"></i>
+                <span class="hidden sm:inline">Ver Cancha</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-8 space-y-6">
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+            <!-- Total Bookings -->
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-1 relative overflow-hidden group">
+                <div class="flex items-center justify-between text-white/50 text-xs font-bold uppercase tracking-wider">
+                    <span>Total Reservas</span>
+                    <i class="fas fa-calendar-check text-emerald-400 group-hover:scale-110 transition"></i>
+                </div>
+                <div class="font-display font-black text-2xl sm:text-3xl text-white" id="stat-total">0</div>
+                <div class="text-[11px] text-emerald-400/80 font-medium flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                    <span>Registros en sistema</span>
+                </div>
+            </div>
+
+            <!-- Cancha Slots Booked -->
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-1 relative overflow-hidden group">
+                <div class="flex items-center justify-between text-white/50 text-xs font-bold uppercase tracking-wider">
+                    <span>Cancha Privada</span>
+                    <i class="fas fa-trophy text-amber-400 group-hover:scale-110 transition"></i>
+                </div>
+                <div class="font-display font-black text-2xl sm:text-3xl text-white" id="stat-cancha">0</div>
+                <div class="text-[11px] text-white/50">Fútbol, Basket & Voley</div>
+            </div>
+
+            <!-- Madrugador Passes -->
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-1 relative overflow-hidden group">
+                <div class="flex items-center justify-between text-white/50 text-xs font-bold uppercase tracking-wider">
+                    <span>Club Madrugador</span>
+                    <i class="fas fa-sun text-yellow-400 group-hover:scale-110 transition"></i>
+                </div>
+                <div class="font-display font-black text-2xl sm:text-3xl text-white" id="stat-madrugador">0</div>
+                <div class="text-[11px] text-amber-400/80">Pases 5:00 AM - 7:00 AM</div>
+            </div>
+
+            <!-- Total Revenue -->
+            <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-1 relative overflow-hidden group">
+                <div class="flex items-center justify-between text-white/50 text-xs font-bold uppercase tracking-wider">
+                    <span>Total Recaudado</span>
+                    <i class="fas fa-receipt text-brand-gold group-hover:scale-110 transition"></i>
+                </div>
+                <div class="font-display font-black text-2xl sm:text-3xl text-brand-gold" id="stat-revenue">L. 0</div>
+                <div class="text-[11px] text-white/50" id="stat-usd">≈ $0.00 USD</div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Controls Toolbar -->
+        <div class="glass-panel rounded-2xl p-4 sm:p-5 space-y-4">
+            <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <!-- Search Input -->
+                <div class="relative flex-1">
+                    <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-white/40 text-sm"></i>
+                    <input type="text" id="search-input" placeholder="Buscar por cliente, teléfono o código (ej. TERR-7001)..." 
+                           class="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-10 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-emerald-500 transition">
+                    <button onclick="clearSearch()" id="clear-search-btn" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white text-xs">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+
+                <!-- Date Filter Selector -->
+                <div class="flex items-center gap-2">
+                    <div class="relative">
+                        <select id="date-filter" onchange="applyFilters()" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500 transition appearance-none pr-8 cursor-pointer">
+                            <option value="all" class="bg-[#12191f]">Todas las Fechas</option>
+                            <option value="today" class="bg-[#12191f]">Hoy</option>
+                            <option value="upcoming" class="bg-[#12191f]">Próximas</option>
+                        </select>
+                        <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-[10px] pointer-events-none"></i>
+                    </div>
+
+                    <div class="relative">
+                        <select id="status-filter" onchange="applyFilters()" class="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white font-bold focus:outline-none focus:border-emerald-500 transition appearance-none pr-8 cursor-pointer">
+                            <option value="all" class="bg-[#12191f]">Todos los Estados</option>
+                            <option value="checkedin" class="bg-[#12191f]">Ya Ingresados</option>
+                            <option value="pending" class="bg-[#12191f]">Pendientes de Check-In</option>
+                        </select>
+                        <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-white/40 text-[10px] pointer-events-none"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sport Category Filter Pills -->
+            <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5 text-xs font-bold">
+                <span class="text-white/40 text-[11px] uppercase tracking-wider mr-1">Filtrar:</span>
+                <button onclick="setSportFilter('all')" data-sport="all" class="filter-pill px-3 py-1.5 rounded-full bg-emerald-500 text-brand-dark font-black transition">
+                    Todos (<span id="count-all">0</span>)
+                </button>
+                <button onclick="setSportFilter('fútbol')" data-sport="fútbol" class="filter-pill px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition">
+                    ⚽ Fútbol 5 (<span id="count-futbol">0</span>)
+                </button>
+                <button onclick="setSportFilter('voleibol')" data-sport="voleibol" class="filter-pill px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition">
+                    🏐 Voleibol (<span id="count-voley">0</span>)
+                </button>
+                <button onclick="setSportFilter('baloncesto')" data-sport="baloncesto" class="filter-pill px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition">
+                    🏀 Baloncesto (<span id="count-basket">0</span>)
+                </button>
+                <button onclick="setSportFilter('madrugador')" data-sport="madrugador" class="filter-pill px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition">
+                    🌅 Madrugador (<span id="count-madrugador">0</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- Bookings List Section -->
+        <div class="space-y-3">
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center gap-2">
+                    <h2 class="font-display font-black text-base text-white uppercase tracking-tight">Listado de Reservas</h2>
+                    <span id="results-count" class="px-2 py-0.5 rounded-full bg-white/10 text-white/70 text-xs font-bold">0 encontradas</span>
+                </div>
+                <span class="text-[11px] text-white/40 italic">Ordenado por fecha más reciente</span>
+            </div>
+
+            <!-- Loading Spinner -->
+            <div id="loading-state" class="glass-panel rounded-2xl p-12 text-center space-y-3">
+                <i class="fas fa-circle-notch fa-spin text-3xl text-emerald-400"></i>
+                <p class="text-sm text-white/60">Cargando reservas en vivo...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden glass-panel rounded-2xl p-12 text-center space-y-3">
+                <div class="w-16 h-16 rounded-full bg-white/5 text-white/30 flex items-center justify-center mx-auto text-2xl">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                <h3 class="font-display font-black text-lg text-white">No se encontraron reservas</h3>
+                <p class="text-xs text-white/50 max-w-sm mx-auto">No hay registros que coincidan con los filtros seleccionados o aún no se han realizado reservas.</p>
+                <button onclick="resetFilters()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-bold transition">
+                    Limpiar Filtros
+                </button>
+            </div>
+
+            <!-- Cards Container -->
+            <div id="bookings-container" class="space-y-3"></div>
+        </div>
+
+    </main>
+
+    <!-- Booking Detail Modal -->
+    <div id="detail-modal" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel bg-[#12191f] border border-white/15 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl relative">
+            <button onclick="closeModal()" class="absolute top-5 right-5 text-white/40 hover:text-white transition">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+
+            <div class="flex items-center gap-3">
+                <div id="modal-sport-icon" class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-xl">
+                    <i class="fas fa-futbol"></i>
+                </div>
+                <div>
+                    <span id="modal-code" class="text-brand-gold font-mono font-black text-xs">TERR-7001</span>
+                    <h3 id="modal-title" class="font-display font-black text-xl text-white">Detalles de Reserva</h3>
+                </div>
+            </div>
+
+            <div class="bg-black/40 rounded-2xl p-4 space-y-3 text-xs border border-white/5">
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Cliente:</span>
+                    <strong id="modal-cust-name" class="text-white font-bold">Carlos Menjívar</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Teléfono:</span>
+                    <strong id="modal-cust-phone" class="text-emerald-400 font-mono font-bold">+504 9876-5432</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Actividad:</span>
+                    <strong id="modal-activity" class="text-white font-bold">Fútbol 5</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Fecha:</span>
+                    <strong id="modal-date" class="text-white font-bold">2026-10-05</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Horario:</span>
+                    <strong id="modal-time" class="text-white font-bold">18:00 - 20:00 (2 hrs)</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Personas Estimadas:</span>
+                    <strong id="modal-people" class="text-white font-bold">10 personas</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Monto Total:</span>
+                    <strong id="modal-total" class="text-brand-gold font-mono font-bold text-sm">L. 1,000</strong>
+                </div>
+                <div class="flex justify-between border-b border-white/5 pb-2">
+                    <span class="text-white/50">Exoneración / Waiver:</span>
+                    <span id="modal-waiver" class="text-emerald-400 font-bold">Firmada</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-white/50">Estado Check-In:</span>
+                    <span id="modal-checkin-badge" class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase">Ingresado</span>
+                </div>
+            </div>
+
+            <!-- Action buttons in modal -->
+            <div class="flex gap-2">
+                <a id="modal-wa-btn" href="#" target="_blank" class="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition text-center flex items-center justify-center gap-2">
+                    <i class="fab fa-whatsapp text-sm"></i> Chatear por WhatsApp
+                </a>
+                <button id="modal-checkin-action-btn" onclick="executeModalCheckIn()" class="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider transition">
+                    Marcar Check-In
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        let allBookings = [];
+        let currentSportFilter = 'all';
+        let currentModalBooking = null;
+
+        // Icons map
+        const sportIcons = {
+            'fútbol': 'fa-futbol text-emerald-400',
+            'fútbol 5': 'fa-futbol text-emerald-400',
+            'voleibol': 'fa-volleyball-ball text-indigo-400',
+            'baloncesto': 'fa-basketball-ball text-amber-500',
+            'madrugador': 'fa-sun text-yellow-400',
+            'club madrugador': 'fa-sun text-yellow-400'
+        };
+
+        async function fetchBookings() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+
+            try {
+                const res = await fetch('/api/terraza/bookings?format=json');
+                const data = await res.json();
+                allBookings = data.bookings || [];
+                updateStats(allBookings);
+                applyFilters();
+            } catch (err) {
+                console.error("Error loading bookings:", err);
+            } finally {
+                icon.classList.remove('fa-spin');
+                document.getElementById('loading-state').classList.add('hidden');
+            }
+        }
+
+        function updateStats(bookings) {
+            document.getElementById('stat-total').innerText = bookings.length;
+
+            const cancha = bookings.filter(b => b.type !== 'madrugador');
+            const madrugadores = bookings.filter(b => b.type === 'madrugador');
+            document.getElementById('stat-cancha').innerText = cancha.length;
+            document.getElementById('stat-madrugador').innerText = madrugadores.length;
+
+            const totalLempiras = bookings.reduce((sum, b) => sum + (parseInt(b.totalLempiras) || 0), 0);
+            document.getElementById('stat-revenue').innerText = `L. ${totalLempiras.toLocaleString()}`;
+            document.getElementById('stat-usd').innerText = `≈ $${(totalLempiras / 25).toFixed(2)} USD`;
+
+            // Category counts
+            document.getElementById('count-all').innerText = bookings.length;
+            document.getElementById('count-futbol').innerText = bookings.filter(b => (b.sport || '').toLowerCase().includes('fútbol')).length;
+            document.getElementById('count-voley').innerText = bookings.filter(b => (b.sport || '').toLowerCase().includes('voleibol')).length;
+            document.getElementById('count-basket').innerText = bookings.filter(b => (b.sport || '').toLowerCase().includes('baloncesto')).length;
+            document.getElementById('count-madrugador').innerText = madrugadores.length;
+        }
+
+        function setSportFilter(sport) {
+            currentSportFilter = sport;
+            document.querySelectorAll('.filter-pill').forEach(btn => {
+                if (btn.getAttribute('data-sport') === sport) {
+                    btn.className = 'filter-pill px-3 py-1.5 rounded-full bg-emerald-500 text-brand-dark font-black transition';
+                } else {
+                    btn.className = 'filter-pill px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition';
+                }
+            });
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = (document.getElementById('search-input').value || '').toLowerCase().trim();
+            const dateFilter = document.getElementById('date-filter').value;
+            const statusFilter = document.getElementById('status-filter').value;
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            let filtered = allBookings.filter(b => {
+                // Sport filter
+                if (currentSportFilter !== 'all') {
+                    const sp = (b.sport || '').toLowerCase();
+                    if (!sp.includes(currentSportFilter)) return false;
+                }
+
+                // Date filter
+                if (dateFilter === 'today' && b.date !== todayStr) return false;
+                if (dateFilter === 'upcoming' && b.date < todayStr) return false;
+
+                // Status filter
+                if (statusFilter === 'checkedin' && !b.checkedIn) return false;
+                if (statusFilter === 'pending' && b.checkedIn) return false;
+
+                // Search query
+                if (query) {
+                    const matchName = (b.customerName || '').toLowerCase().includes(query);
+                    const matchPhone = (b.phone || '').toLowerCase().includes(query);
+                    const matchId = (b.id || '').toLowerCase().includes(query);
+                    const matchSport = (b.sport || '').toLowerCase().includes(query);
+                    if (!matchName && !matchPhone && !matchId && !matchSport) return false;
+                }
+
+                return true;
+            });
+
+            renderBookings(filtered);
+        }
+
+        function renderBookings(bookings) {
+            const container = document.getElementById('bookings-container');
+            const emptyState = document.getElementById('empty-state');
+            document.getElementById('results-count').innerText = `${bookings.length} encontradas`;
+
+            if (bookings.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = bookings.map(b => {
+                const isMadrugador = b.type === 'madrugador';
+                const sportName = b.sport || (isMadrugador ? 'Club Madrugador' : 'Cancha Terraza');
+                const cleanPhone = (b.phone || '').replace(/\D/g, '');
+                const waPhone = cleanPhone.length === 8 ? `504${cleanPhone}` : cleanPhone;
+                const waUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hola ${b.customerName}, te saludamos de Rich Aroma Terraza Deportiva sobre tu reserva ${b.id}.`)}`;
+
+                // Sport Icon
+                let iconClass = 'fa-futbol text-emerald-400';
+                const lowerSport = sportName.toLowerCase();
+                if (lowerSport.includes('voleibol')) iconClass = 'fa-volleyball-ball text-indigo-400';
+                else if (lowerSport.includes('baloncesto')) iconClass = 'fa-basketball-ball text-amber-500';
+                else if (lowerSport.includes('madrugador')) iconClass = 'fa-sun text-yellow-400';
+
+                // Checkin status badge
+                const checkInBadge = b.checkedIn 
+                    ? `<span class="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5"><i class="fas fa-check-circle"></i> Ingresado</span>`
+                    : `<button onclick="event.stopPropagation(); quickCheckIn('${b.id}')" class="px-3 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-black uppercase tracking-wider transition active:scale-95 flex items-center gap-1.5"><i class="fas fa-user-check"></i> Check-In</button>`;
+
+                // Price display
+                const priceBadge = isMadrugador
+                    ? `<span class="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">Gratis • Madrugador</span>`
+                    : `<span class="font-mono font-black text-sm text-brand-gold bg-brand-gold/10 border border-brand-gold/20 px-2.5 py-1 rounded-lg">L. ${(b.totalLempiras || 0).toLocaleString()}</span>`;
+
+                return `
+                    <div onclick="openDetailModal('${b.id}')" class="glass-panel rounded-2xl p-4 sm:p-5 transition hover:border-emerald-500/40 cursor-pointer space-y-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
+                            <div class="flex items-center gap-2.5">
+                                <span class="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-white/80 font-mono font-bold text-xs tracking-wider">
+                                    ${b.id}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 text-xs font-bold text-white">
+                                    <i class="fas ${iconClass}"></i>
+                                    <span>${sportName}</span>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                ${priceBadge}
+                                ${checkInBadge}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <!-- Customer Info -->
+                            <div class="space-y-0.5">
+                                <span class="text-[10px] uppercase font-bold text-white/40 tracking-wider">Cliente</span>
+                                <div class="font-bold text-white text-sm truncate">${b.customerName || 'Sin Nombre'}</div>
+                                <div class="flex items-center gap-2 text-white/60">
+                                    <span class="font-mono">${b.phone || '-'}</span>
+                                    <a href="${waUrl}" target="_blank" onclick="event.stopPropagation()" class="text-emerald-400 hover:text-emerald-300 font-bold" title="WhatsApp">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Date & Time -->
+                            <div class="space-y-0.5">
+                                <span class="text-[10px] uppercase font-bold text-white/40 tracking-wider">Fecha y Turno</span>
+                                <div class="font-bold text-white text-sm flex items-center gap-1.5">
+                                    <i class="fas fa-calendar-day text-emerald-400 text-xs"></i>
+                                    <span>${b.date}</span>
+                                </div>
+                                <div class="text-white/60 flex items-center gap-1.5">
+                                    <i class="fas fa-clock text-white/40 text-xs"></i>
+                                    <span>${b.startTime} - ${b.endTime || (parseInt(b.startTime.split(':')[0]) + (b.hours || 1)) + ':00'} (${b.hours || 1} hr${(b.hours || 1) > 1 ? 's' : ''})</span>
+                                </div>
+                            </div>
+
+                            <!-- Details & Quick Action -->
+                            <div class="flex sm:flex-col justify-between sm:justify-center items-end text-right">
+                                <span class="text-[11px] text-white/40">${b.peopleCount || 1} personas est.</span>
+                                <span class="text-[10px] text-emerald-400 font-bold hover:underline flex items-center gap-1 mt-1">
+                                    <span>Ver ficha completa</span>
+                                    <i class="fas fa-arrow-right text-[9px]"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function quickCheckIn(bookingId) {
+            try {
+                const res = await fetch('/api/terraza/check-in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bookingId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Update local list
+                    const target = allBookings.find(b => b.id.toUpperCase() === bookingId.toUpperCase());
+                    if (target) {
+                        target.checkedIn = true;
+                        target.checkedInAt = new Date().toISOString();
+                    }
+                    applyFilters();
+                } else {
+                    alert(data.error || "No se pudo realizar el check-in.");
+                }
+            } catch (err) {
+                console.error("Check-in error:", err);
+            }
+        }
+
+        function openDetailModal(bookingId) {
+            const b = allBookings.find(item => item.id === bookingId);
+            if (!b) return;
+            currentModalBooking = b;
+
+            document.getElementById('modal-code').innerText = b.id;
+            document.getElementById('modal-title').innerText = b.sport || 'Reserva Terraza';
+            document.getElementById('modal-cust-name').innerText = b.customerName;
+            document.getElementById('modal-cust-phone').innerText = b.phone;
+            document.getElementById('modal-activity').innerText = b.sport;
+            document.getElementById('modal-date').innerText = b.date;
+            document.getElementById('modal-time').innerText = `${b.startTime} - ${b.endTime} (${b.hours} hrs)`;
+            document.getElementById('modal-people').innerText = `${b.peopleCount || 1} personas`;
+            document.getElementById('modal-total').innerText = b.totalLempiras ? `L. ${b.totalLempiras.toLocaleString()}` : 'Gratis (Club Madrugador)';
+
+            // Waiver
+            document.getElementById('modal-waiver').innerText = b.waiverAccepted ? 'Firmada Digitalmente' : 'No registrada';
+
+            // WhatsApp button
+            const cleanPhone = (b.phone || '').replace(/\D/g, '');
+            const waPhone = cleanPhone.length === 8 ? `504${cleanPhone}` : cleanPhone;
+            document.getElementById('modal-wa-btn').href = `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hola ${b.customerName}, te saludamos de Rich Aroma Terraza Deportiva sobre tu reserva ${b.id}.`)}`;
+
+            // CheckIn status & action
+            const badge = document.getElementById('modal-checkin-badge');
+            const actionBtn = document.getElementById('modal-checkin-action-btn');
+
+            if (b.checkedIn) {
+                badge.className = 'px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold';
+                badge.innerText = 'Ingresado';
+                actionBtn.classList.add('hidden');
+            } else {
+                badge.className = 'px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold';
+                badge.innerText = 'Pendiente';
+                actionBtn.classList.remove('hidden');
+            }
+
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+            currentModalBooking = null;
+        }
+
+        async function executeModalCheckIn() {
+            if (!currentModalBooking) return;
+            await quickCheckIn(currentModalBooking.id);
+            openDetailModal(currentModalBooking.id);
+        }
+
+        function clearSearch() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('clear-search-btn').classList.add('hidden');
+            applyFilters();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('date-filter').value = 'all';
+            document.getElementById('status-filter').value = 'all';
+            setSportFilter('all');
+        }
+
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            if (e.target.value) {
+                document.getElementById('clear-search-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('clear-search-btn').classList.add('hidden');
+            }
+            applyFilters();
+        });
+
+        // Auto load on init
+        fetchBookings();
+
+        // Refresh periodically every 30 seconds
+        setInterval(fetchBookings, 30000);
+    </script>
+</body>
+</html>

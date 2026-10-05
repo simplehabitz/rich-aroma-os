@@ -500,6 +500,14 @@
       "dest": "/public/terraza-scanner.html"
     },
     {
+      "src": "/terraza/reservas/?",
+      "dest": "/public/terraza-admin.html"
+    },
+    {
+      "src": "/terraza/admin/?",
+      "dest": "/public/terraza-admin.html"
+    },
+    {
       "src": "/terraza/?",
       "dest": "/public/terraza.html"
     },
