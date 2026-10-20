@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+orders/*.jsonl
+.env

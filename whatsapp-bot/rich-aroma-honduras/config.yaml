@@ -1,0 +1,18 @@
+# Rich Aroma Coffee Shop (Honduras) — non-secret config
+# Secrets (API token) live in Secure Vault, never here.
+# Status: AWAITING SETUP — menu + WhatsApp number TBD.
+business_name: "Rich Aroma Coffee Shop"
+slug: "rich-aroma-honduras"
+waba_id: ""
+phone_number_id: ""
+phone_display: ""
+timezone: "America/Tegucigalpa"
+default_lang: "es"  # Honduras number serves Spanish by default; per-customer detection still applies
+currency: "HNL"
+instagram: "@richaromacoffee"
+# Hours: UNKNOWN — confirm with owner.
+hours: {}
+order_types: []
+payment_options: []
+# Still to confirm: menu (items, sizes, HNL prices), pickup/delivery, hours,
+# staff notification channel, WhatsApp Business number for this location.

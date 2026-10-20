@@ -1,0 +1,39 @@
+# Rich Aroma Coffee Co. — non-secret config
+# Secrets (API token) live in Secure Vault as custom.whatsapp-business, never here.
+business_name: "Rich Aroma Coffee Co."
+waba_id: "1753012639334167"
+phone_number_id: "1354660681066143"
+phone_display: "+504 9905-4412"
+timezone: "America/Los_Angeles"  # SoCal customers; owner may be in Honduras
+default_lang: "en"  # US number serves English by default; per-customer detection still applies
+currency: "USD"  # menu prices in $ + Zelle/Venmo/Cash App offered (US rails)
+instagram: "@richaromacoffee"
+website: "www.richaromacoffee.com"
+# Hours: TEMPORARY placeholder set 2026-10-17 per user — delivery Mon/Wed/Fri.
+# Confirm real days + times with the owner before go-live.
+hours: {}
+delivery_days:
+  - monday
+  - wednesday
+  - friday
+order_types:
+  - delivery
+delivery:
+  location: "Kaiser Baldwin Park"
+  note: "Customer must specify their department break room."
+payment_options:
+  - Zelle: n.avalos88@yahoo.com
+  - Venmo: "@NeeneeRichAroma"
+  - Cash App: "$boredNeeNee"  # owner-confirmed 2026-10-16
+  - Cash
+  - Apple Pay
+# Still to confirm with owner: hours, prep time,
+# staff notification channel (WhatsApp number / email).
+# KDS push (Rich Aroma OS) — env vars only, no secrets committed:
+#   KDS_API_URL=https://rich-aroma-os.vercel.app/api/orders-v2
+#   KDS_API_KEY=<only if the OS requires auth; endpoint is currently public>
+#   KDS_RESTAURANT_ID=rich-aroma  (confirm which id the bottled KDS watches)
+# See server/kds_push.py; orders are always persisted first, so a
+# failed push never loses an order.
+# Webhook verify token — set via env var, not committed
+# verify_token: set in deployment env as WHATSAPP_VERIFY_TOKEN

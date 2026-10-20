@@ -1,0 +1,22 @@
+# Render Blueprint for the Rich Aroma WhatsApp webhook.
+# Reference for a standalone deploy (push this folder to GitHub, then in
+# Render → New → Blueprint → select the repo). Under the approved monorepo
+# plan the bot deploys via the Render dashboard with Root Directory =
+# whatsapp-bot, so this file is not used there. See DEPLOY.md.
+# All secrets are entered in the Render dashboard (never committed).
+services:
+  - type: web
+    name: rich-aroma-whatsapp
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false # you pick a random string; also enter it in Meta's dashboard
+      - key: WHATSAPP_API_TOKEN
+        sync: false # generate a fresh token in Meta Developers dashboard
+      - key: KDS_API_URL
+        sync: false # set once the Rich Aroma OS orders API is confirmed
+      - key: KDS_API_KEY
+        sync: false # only if the OS requires auth
