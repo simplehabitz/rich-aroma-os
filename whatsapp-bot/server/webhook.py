@@ -162,6 +162,14 @@ def incoming():
     return Response("EVENT_RECEIVED", mimetype="text/plain")
 
 
+
+@app.get("/privacy")
+def privacy():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html")
+    with open(path, encoding="utf-8") as f:
+        return Response(f.read(), mimetype="text/html")
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "vault": HAS_VAULT}
