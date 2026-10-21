@@ -288,6 +288,11 @@ def reply_for(convo: Conversation, incoming_text: str) -> str:
     # ---------- main flow ----------
     if convo.state == "GREETING":
         convo.state = "COLLECTING"
+        # If the first message already carries an order intent (bundle request
+        # or recognizable drinks), act on it instead of only greeting — this
+        # also recovers gracefully if conversation memory was reset.
+        if wants_bundle(t) or find_drinks(incoming_text):
+            return reply_for(convo, incoming_text)
         if lang == "es":
             return ("¡Hola! Bienvenido a Rich Aroma Coffee Co. ☕\n"
                     "Vendemos café embotellado premium de 12oz.\n"

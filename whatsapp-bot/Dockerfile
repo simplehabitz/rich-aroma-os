@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY server/ ./server/
 
 # Render/Heroku-style port; defaults to 5000 locally.
-CMD ["sh", "-c", "gunicorn --chdir server webhook:app --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 60"]
+CMD ["sh", "-c", "gunicorn --chdir server webhook:app --bind 0.0.0.0:${PORT:-5000} --workers 1 --worker-class gthread --threads 4 --timeout 60"]
