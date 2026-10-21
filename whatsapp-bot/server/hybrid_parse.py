@@ -29,6 +29,7 @@ _INTENT_SHAPE = """{
     {"type": "change_milk", "target": "<menu item name>"|null, "milk": "whole"|"oat"},
     {"type": "remove", "target": "<menu item name>"|null},
     {"type": "set_qty", "target": "<menu item name>"|null, "qty": <int>},
+    {"type": "split_milk", "target": "<menu item name>", "whole": <int>, "oat": <int>},
     {"type": "bundle_start"}
   ],
   "control": "none"|"done"|"confirm_yes"|"confirm_no"|"cancel"|"menu"|"greeting"
@@ -80,6 +81,11 @@ def _build_prompt(menu, cart_desc, state):
         "- Corrections refer to the cart: 'oat milk instead', 'de avena' -> change_milk; "
         "'make it 2', 'que sean 2' -> set_qty; 'quita el mocha', 'no quiero el chai', "
         "'remove that' -> remove.\n"
+        "- Splitting one drink between the two milks ('5 de avena y 5 entera', "
+        "'half oat half whole', 'mitad y mitad') -> ONE split_milk action with the "
+        "count for EACH milk. NEVER express a split as two change_milk actions. If "
+        "only one milk's count is given, the other milk gets the rest of that "
+        "drink's current quantity.\n"
         "- 'listo'/'done'/'that's all' -> control 'done'. 'si'/'yes' -> 'confirm_yes'. "
         "'no' (rejecting) -> 'confirm_no'. 'cancelar'/'cancel' (whole order) -> 'cancel'. "
         "Asking to see the menu -> 'menu'. A pure hello with no order -> 'greeting'.\n"
@@ -155,6 +161,22 @@ def _validate(raw, menu):
                 continue
             target = _match_name(a.get("target"), menu) if a.get("target") else None
             actions.append({"type": "set_qty", "target": target, "qty": qty})
+        elif t == "split_milk":
+            target = _match_name(a.get("target"), menu)
+            if not target:
+                continue
+
+            def _n(v):
+                try:
+                    return max(0, min(99, int(v)))
+                except (TypeError, ValueError):
+                    return 0
+
+            whole, oat = _n(a.get("whole")), _n(a.get("oat"))
+            if whole + oat < 1:
+                continue
+            actions.append({"type": "split_milk", "target": target,
+                            "whole": whole, "oat": oat})
         elif t == "bundle_start":
             actions.append({"type": "bundle_start"})
     control = raw.get("control") or "none"
@@ -218,6 +240,17 @@ def _apply(convo, intent, e, lang):
     actions = intent["actions"]
     control = intent["control"]
     menu = e.MENU
+
+    def _sig():
+        out = []
+        for i in convo.items:
+            if isinstance(i, e.OrderItem):
+                out.append(("item", i.name, i.milk, i.quantity))
+            else:
+                out.append(("bundle", i.milk, tuple(i.flavors)))
+        return out
+
+    sig_before = _sig()
 
     if control == "cancel":
         reset = getattr(e, "reset_conversation", None)
@@ -310,6 +343,37 @@ def _apply(convo, intent, e, lang):
                     convo.items = [i for i in convo.items
                                    if i is targets[0] or i not in targets]
                 changed = True
+        elif a["type"] == "split_milk":
+            lines = [i for i in convo.items if isinstance(i, e.OrderItem)
+                     and i.name == a["target"]]
+            new_lines = []
+            if a["oat"]:
+                new_lines.append(e.OrderItem(
+                    name=a["target"], milk="oat", quantity=a["oat"],
+                    unit_price=menu[a["target"]]["oat"]))
+            if a["whole"]:
+                new_lines.append(e.OrderItem(
+                    name=a["target"], milk="whole", quantity=a["whole"],
+                    unit_price=menu[a["target"]]["whole"]))
+            if lines:
+                idx = convo.items.index(lines[0])
+                convo.items = [i for i in convo.items if i not in lines]
+                for j, nl in enumerate(new_lines):
+                    convo.items.insert(idx + j, nl)
+            else:
+                convo.items.extend(new_lines)
+            changed = True
+
+    if control == "none" and actions and _sig() == sig_before:
+        # The intent applied to nothing (e.g. two milk changes that cancel
+        # each other out). Never claim an update that didn't happen -- ask.
+        if lang == "es":
+            return ("Tu pedido quedó igual — no logré aplicar el cambio 🙏 "
+                    "¿Me lo repites de otra forma? Por ejemplo: "
+                    "'5 de avena y 5 entera'.")
+        return ("Your order is unchanged — I couldn't apply that edit 🙏 "
+                "Could you say it another way? For example: "
+                "'5 oat and 5 whole'.")
 
     if control == "done":
         if not convo.items:
