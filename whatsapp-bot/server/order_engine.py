@@ -187,6 +187,113 @@ def wants_bundle(text: str) -> bool:
     return any(w in t for w in ["bundle", "paquete", "combo", "3 pack", "trio"])
 
 
+
+# ---------- cart editing (corrections while COLLECTING / CONFIRMING) ----------
+REMOVE_CUES = ("remove", "quita", "quitar", "saca", "sacar", "elimina",
+               "eliminar", "delete", "borra", "borrar", "no quiero",
+               "sin el", "sin la", "drop")
+SET_QTY_CUES = ("make it", "que sean", "que sea", "en vez de", "instead",
+                "actually", "mejor", "change to", "c\u00e1mbialo a", "cambialo a")
+MILK_CHANGE_CUES = ("instead", "en vez", "mejor", "actually", "meant",
+                    "quise decir", "make it", "change", "cambia", "cambiar")
+
+
+def _explicit_quantity(text: str) -> Optional[int]:
+    t = text.lower()
+    m = re.search(r"\b(\d+)\b", t)
+    if m:
+        return int(m.group(1))
+    for word, num in NUMBER_WORDS.items():
+        if re.search(r"\b" + word + r"\b", t):
+            return num
+    return None
+
+
+def _edit_tail(convo: Conversation) -> str:
+    if convo.lang == "es":
+        return "\n\u00bfAlgo m\u00e1s? Escribe 'listo' para confirmar tu pedido."
+    return "\nAnything else? Type 'done' to confirm."
+
+
+def _cart_empty_tail(convo: Conversation) -> str:
+    if convo.lang == "es":
+        return "\nTu carrito qued\u00f3 vac\u00edo. \u00bfQu\u00e9 te gustar\u00eda ordenar?"
+    return "\nYour cart is empty now. What would you like to order?"
+
+
+def try_cart_edit(convo: Conversation, incoming_text: str) -> Optional[str]:
+    """Interpret a message as a correction to the cart being built.
+
+    Handles changing the milk ("oat milk instead", "de avena"), removing an
+    item ("quita el mocha", "no quiero el chai") and fixing a quantity
+    ("make it 2", "que sean 2"). Returns a reply, or None when the message
+    is not a correction (normal order parsing continues). Corrections are
+    consumed here so they can never be misread as new items -- "no quiero
+    el mocha" must not ADD a mocha.
+    """
+    t = incoming_text.lower()
+    lang = convo.lang
+    named = [d for d, _, _ in find_drinks(incoming_text)]
+    drinks_in_cart = [i for i in convo.items if isinstance(i, OrderItem)]
+
+    # --- remove item(s) ---
+    if any(c in t for c in REMOVE_CUES):
+        removed = []
+        if named:
+            kept = []
+            for it in convo.items:
+                if isinstance(it, OrderItem) and it.name in named:
+                    removed.append(it)
+                else:
+                    kept.append(it)
+            convo.items = kept
+        elif convo.items:
+            removed = [convo.items.pop()]
+        if not removed:
+            return ("No encontr\u00e9 eso en tu pedido." if lang == "es"
+                    else "I didn't find that in your order.")
+        what = ", ".join(r.describe() for r in removed)
+        head = (f"Quit\u00e9: {what}" if lang == "es" else f"Removed: {what}")
+        if not convo.items:
+            return head + _cart_empty_tail(convo)
+        return head + "\n" + summary_text(convo) + _edit_tail(convo)
+
+    # --- set quantity ("make it 2", "que sean 2") ---
+    qty = _explicit_quantity(incoming_text)
+    if qty is not None and any(c in t for c in SET_QTY_CUES):
+        targets = ([i for i in drinks_in_cart if i.name in named]
+                   if named else drinks_in_cart)
+        if targets and len({i.name for i in targets}) == 1:
+            first = targets[0]
+            if qty == 0:
+                convo.items = [i for i in convo.items if i not in targets]
+            else:
+                first.quantity = qty
+                convo.items = [i for i in convo.items
+                               if i is first or i not in targets]
+            head = ("\u00a1Listo! Actualic\u00e9 la cantidad \u2705" if lang == "es"
+                    else "Done! Updated the quantity \u2705")
+            if not convo.items:
+                return head + _cart_empty_tail(convo)
+            return head + "\n" + summary_text(convo) + _edit_tail(convo)
+
+    # --- change milk ("oat milk instead", "de avena", "el mocha de avena mejor") ---
+    milk = detect_milk(incoming_text)
+    if milk and (any(c in t for c in MILK_CHANGE_CUES) or not named):
+        targets = [i for i in drinks_in_cart
+                   if (not named or i.name in named)
+                   and i.name != "classic black americano"]
+        if targets:
+            for it in targets:
+                it.milk = milk
+                it.unit_price = MENU[it.name][milk]
+            head = ("\u00a1Listo! Cambi\u00e9 la leche \u2705" if lang == "es"
+                    else "Done! Switched the milk \u2705")
+            return head + "\n" + summary_text(convo) + _edit_tail(convo)
+
+    return None
+
+
 def menu_text() -> str:
     lines = ["*Rich Aroma Coffee Co. — Bottled Coffee 12oz*", ""]
     lines.append("*Core Lattes* — $5 Whole / $6 Oat:")
@@ -323,6 +430,9 @@ def reply_for(convo: Conversation, incoming_text: str) -> str:
             convo.state = "BUNDLE_BUILDER"
             return ("¡Buena elección! ¿El bundle de leche entera ($14) o de avena ($17)?"
                     if lang == "es" else "Great choice! Whole milk bundle ($14) or oat milk bundle ($17)?")
+        edit_reply = try_cart_edit(convo, incoming_text)
+        if edit_reply is not None:
+            return edit_reply
         drinks = find_drinks(incoming_text)
         if drinks:
             milk_msg = detect_milk(incoming_text)
@@ -352,6 +462,10 @@ def reply_for(convo: Conversation, incoming_text: str) -> str:
                 "or try e.g. '2 caramel lattes with oat milk'.")
 
     if convo.state == "CONFIRMING":
+        edit_reply = try_cart_edit(convo, incoming_text)
+        if edit_reply is not None:
+            convo.state = "COLLECTING"
+            return edit_reply
         if t in ("sí", "si", "yes", "s", "y", "confirmo", "correcto", "dale"):
             convo.state = "BREAKROOM"
             if lang == "es":
