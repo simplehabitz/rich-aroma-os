@@ -78,7 +78,9 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
             raise RuntimeError("redirect refused, verify endpoint")
 
     with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:
-        return read_json_response(resp)
+        if HAS_VAULT:
+            return read_json_response(resp)
+        return json.loads(resp.read().decode("utf-8"))
 
 
 def handle_order_message(from_number: str, text: str, phone_number_id: str):
