@@ -154,16 +154,23 @@ def parse_quantity(text: str, drink: str) -> int:
 
 
 def find_drinks(text: str) -> List[Tuple[str, str]]:
-    """Return [(drink_name, milk)] found in text. Milk defaults to whole."""
+    """Return [(drink_name, milk, qty)] found in text. Milk defaults to whole.
+
+    Names are tried longest-first and each matched span is masked out, so a
+    short name can never match inside a longer one ("vanilla" must not fire
+    inside "french vanilla", nor "mocha" inside "white chocolate mocha").
+    """
     t = text.lower()
+    work = t  # spans get blanked out as drinks claim them
     found = []
     for drink in SORTED_DRINKS:
-        names = [drink] + MENU[drink]["aliases"]
+        names = sorted([drink] + MENU[drink]["aliases"], key=len, reverse=True)
         for name in names:
-            if re.search(r"\b" + re.escape(name) + r"\b", t):
+            if re.search(r"\b" + re.escape(name) + r"\b", work):
                 milk = detect_milk(t) or "whole"
                 qty = parse_quantity(t, name)
                 found.append((drink, milk, qty))
+                work = re.sub(r"\b" + re.escape(name) + r"\b", " " * len(name), work)
                 break
     # de-dupe keeping first occurrence
     seen = set()
@@ -273,11 +280,21 @@ def reply_for(convo: Conversation, incoming_text: str) -> str:
             convo.pending_bundle_milk = milk
             return ("Perfecto. Dime los 3 sabores (ej: caramel latte, mocha latte, biscoff)."
                     if lang == "es" else "Great. Tell me the 3 flavors (e.g. caramel latte, mocha latte, biscoff).")
-        flavors = [d for d, _, _ in find_drinks(incoming_text)]
-        if len(flavors) < 3:
+        picks = find_drinks(incoming_text)
+        if not picks:
             return ("Necesito 3 sabores para el bundle. ¿Cuáles eliges?"
                     if lang == "es" else "I need 3 flavors for the bundle. Which ones?")
-        convo.items.append(BundleItem(milk=convo.pending_bundle_milk, flavors=flavors[:3]))
+        flavors: List[str] = []
+        for d, _, q in picks:
+            flavors.extend([d] * q)
+        if len(flavors) != 3:
+            counted = ", ".join(f"{q}x {d.title()}" for d, _, q in picks)
+            if lang == "es":
+                return (f"Conté {len(flavors)} botella(s): {counted}. "
+                        "El bundle es de exactamente 3 — ¿cuáles 3 dejamos?")
+            return (f"I counted {len(flavors)} bottle(s): {counted}. "
+                    "The bundle is exactly 3 — which 3 should we keep?")
+        convo.items.append(BundleItem(milk=convo.pending_bundle_milk, flavors=flavors))
         convo.pending_bundle_milk = None
         convo.state = "COLLECTING"
         msg = ("Bundle agregado ✅\n" + summary_text(convo)
