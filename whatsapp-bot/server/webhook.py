@@ -101,7 +101,21 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str):
         ROUTES.get(phone_number_id, {"slug": "rich-aroma-honduras", "default_lang": "es"})["slug"],
         ROUTES.get(phone_number_id, {"slug": "rich-aroma-honduras", "default_lang": "es"})["default_lang"],
     )
-    reply = reply_for(convo, text)
+    # Hybrid LLM parser (server/hybrid_parse.py + GEMINI_API_KEY env var):
+    # Gemini understands the message, the deterministic engine still validates
+    # and prices everything. Any failure -> None -> the rule engine below
+    # handles it, so this can never make the bot worse, only smarter.
+    reply = None
+    try:
+        from hybrid_parse import try_hybrid_reply
+    except ImportError:
+        from server.hybrid_parse import try_hybrid_reply
+    try:
+        reply = try_hybrid_reply(convo, text)
+    except Exception as e:  # never let the parser break the webhook
+        print(f"[hybrid] fallback to rules: {e}", flush=True)
+    if reply is None:
+        reply = reply_for(convo, text)
     # Order just confirmed: persist, then fan out to staff/KDS before reset.
     if convo.state == "DONE":
         order = build_order(convo)
