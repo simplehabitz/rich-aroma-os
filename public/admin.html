@@ -150,11 +150,6 @@
                 <button onclick="switchTab('overview')" id="tab-overview" class="font-bold text-blue-600 border-b-2 border-blue-600 pb-2 px-2">Overview</button>
                 <button onclick="switchTab('employees')" id="tab-employees" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Employees</button>
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
-                <button onclick="switchTab('inventory')" id="tab-inventory" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Inventory & Recipes</button>
-                <button onclick="switchTab('marketing')" id="tab-marketing" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Marketing & Quests</button>
-                <button onclick="switchTab('promos')" id="tab-promos" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Ads & Promos</button>
-                <button onclick="switchTab('creators')" id="tab-creators" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">UGC Reviews</button>
-                <button onclick="switchTab('quimieats')" id="tab-quimieats" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2 text-cyan-600">QuimiEats</button>
             </div>
             
             <!-- Store Status Toggle -->
@@ -231,30 +226,9 @@
                         <!-- Low stock items injected here -->
                         <p class="text-center text-gray-400 italic py-6 text-sm">Stock levels are healthy.</p>
                     </div>
-                    <button onclick="switchTab('inventory')" class="w-full mt-6 py-4 bg-gray-50 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
-                        Full Inventory View
-                    </button>
                 </div>
             </div>
 
-            <h2 class="text-xl font-bold mb-4">Registered Leads</h2>
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
-                        <tr>
-                            <th class="p-4">Photo</th>
-                            <th class="p-4">Name</th>
-                            <th class="p-4">Phone</th>
-                            <th class="p-4">Submitted</th>
-                            <th class="p-4">Tags</th>
-                            <th class="p-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leadsTable" class="divide-y divide-gray-100 text-sm">
-                        <!-- Injected via JS -->
-                    </tbody>
-                </table>
-            </div>
         </div>
 
         <!-- TAB: EMPLOYEES -->
@@ -1024,8 +998,6 @@
                 if (staffUser && (staffUser.role === 'admin' || staffUser.is_admin)) {
                     logDebug("Admin detected, switching to overview");
                     switchTab('overview');
-                    // Ensure we load the leads/stats
-                    if (typeof loadQuimiLeads === 'function') loadQuimiLeads();
                 } else {
                     logDebug("Staff detected, switching to menu");
                     switchTab('menu');
@@ -1197,34 +1169,24 @@
         function switchTab(tabId) {
             logDebug(`Switching to tab: ${tabId}`);
             try {
-                const sections = ['overview', 'employees', 'menu', 'inventory', 'marketing', 'creators', 'quimieats'];
+
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
                     if (el) el.classList.add('hidden');
 
                     const tab = document.getElementById(`tab-${id}`);
-                    if (tab) {
-                        if (id === 'quimieats') tab.className = "font-bold text-gray-500 hover:text-cyan-600 pb-2 px-2";
-                        else tab.className = "font-bold text-gray-500 hover:text-gray-800 pb-2 px-2";
-                    }
+
                 });
 
                 const activeSection = document.getElementById(`section-${tabId}`);
                 if (activeSection) activeSection.classList.remove('hidden');
 
                 const activeTab = document.getElementById(`tab-${tabId}`);
-                if (activeTab) {
-                    if (tabId === 'quimieats') activeTab.className = "font-bold text-cyan-600 border-b-2 border-cyan-600 pb-2 px-2";
-                    else activeTab.className = "font-bold text-blue-600 border-b-2 border-blue-600 pb-2 px-2";
-                }
+
 
                 if(tabId === 'overview') loadData();
                 if(tabId === 'employees') loadEmployees();
                 if(tabId === 'menu') { loadMenu(); loadModifiersDatabase(); }
-                if(tabId === 'inventory') loadInventory();
-                if(tabId === 'creators') loadUGCSubmissions();
-                if(tabId === 'quimieats') loadQuimiLeads();
-                if(tabId === 'promos') loadPromos();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
@@ -3143,11 +3105,6 @@
                 title: "Linking Modifiers",
                 desc: "Click the blue 'Modifiers' button on any item to choose which options (like Milk Type or Size) apply to that specific drink.",
                 action: () => switchTab('menu')
-            },
-            {
-                title: "Inventory Tracking",
-                desc: "Add your raw ingredients here (like 'Coffee Beans' in grams). Set a 'Min Stock' to get highlighted alerts when you are running low.",
-                action: () => switchTab('inventory')
             },
             {
                 title: "The Magic: Recipe Logic",
