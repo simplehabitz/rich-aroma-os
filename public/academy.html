@@ -1542,9 +1542,15 @@
             document.getElementById('parent-pin-field').value = '';
         }
 
-        function verifyPIN() {
+        async function verifyPIN() {
             const pin = document.getElementById('parent-pin-field').value.trim();
-            if (pin === '4574' || pin === '3620') {
+            let okLogin = false;
+            try {
+                const res = await fetch('/api/store?action=verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+                const data = await res.json();
+                okLogin = !!(data && data.success);
+            } catch (e) { okLogin = false; }
+            if (okLogin) {
                 closePINModal();
                 showTab('parent');
                 showToast("Parent Portal Unlocked! 🔒");

@@ -1561,9 +1561,9 @@
                 });
                 const data = await res.json();
                 if (res.ok) {
-                    alert(`✅ ¡Socio activado! \n\nID de Acceso: ${data.restaurant.id} \nPIN: 4574 \n\nEnviando mensaje de bienvenida...`);
+                    alert(`✅ ¡Socio activado! \n\nID de Acceso: ${data.restaurant.id} \nPIN: (tu PIN de acceso) \n\nEnviando mensaje de bienvenida...`);
                     // Open WhatsApp automatically
-                    const msg = encodeURIComponent(`¡Hola! Bienvenido a QuimiEats. Tu cuenta ha sido activada. \n\nAccede a tu panel en: quimieats.com/partner \nID de Restaurante: ${data.restaurant.id} \nPIN: 4574 \n\n¡Ya puedes empezar a subir tu menú!`);
+                    const msg = encodeURIComponent(`¡Hola! Bienvenido a QuimiEats. Tu cuenta ha sido activada. \n\nAccede a tu panel en: quimieats.com/partner \nID de Restaurante: ${data.restaurant.id} \nPIN: (tu PIN de acceso) \n\n¡Ya puedes empezar a subir tu menú!`);
                     window.open(`https://wa.me/${data.restaurant.contact_phone}?text=${msg}`, '_blank');
                     loadQuimiLeads();
                 } else {

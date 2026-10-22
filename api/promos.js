@@ -1,4 +1,5 @@
 const { supabase } = require('./lib/supabase');
+const { isAdminCredential } = require('./lib/auth');
 
 module.exports = async function handler(req, res) {
     try {
@@ -56,7 +57,7 @@ module.exports = async function handler(req, res) {
         // ADMIN ACTIONS
         const authHeader = req.headers.authorization;
         const pin = authHeader?.replace(/^Bearer\s+/i, '').trim();
-        const isAdmin = (pin === '4574' || pin === '3620' || pin === 'EMP-admin');
+        const isAdmin = isAdminCredential(pin);
 
         if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
 

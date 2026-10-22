@@ -285,7 +285,7 @@
         async function loadDrivers() {
             try {
                 const res = await fetch('/api/employees', {
-                    headers: { 'Authorization': 'Bearer TEST_TOKEN_ADMIN' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 const data = await res.json();
                 if (data.employees) {
@@ -299,7 +299,7 @@
         async function loadOrders() {
             try {
                 const res = await fetch('/api/orders', {
-                    headers: { 'Authorization': 'Bearer TEST_TOKEN_ADMIN' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 const data = await res.json();
                 
@@ -417,7 +417,7 @@
                     method: 'PATCH',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer TEST_TOKEN_ADMIN'
+                        'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                     },
                     body: JSON.stringify({ status: 'preparing' })
                 });
@@ -431,7 +431,7 @@
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer TEST_TOKEN_ADMIN'
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                 },
                 body: JSON.stringify({ status: 'completed' })
             });
@@ -453,7 +453,7 @@
             const list = document.getElementById('historyList');
             list.innerHTML = 'Loading...';
             try {
-                const res = await fetch('/api/orders', { headers: { 'Authorization': 'Bearer TEST_TOKEN_ADMIN' }});
+                const res = await fetch('/api/orders', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }});
                 const data = await res.json();
                 const bumped = (data.orders || [])
                     .filter(o => o.status === 'completed')
@@ -486,7 +486,7 @@
                 method: 'PATCH',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer TEST_TOKEN_ADMIN'
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                 },
                 body: JSON.stringify({ status: 'paid' })
             });
@@ -531,7 +531,7 @@
                     method: 'PATCH',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer TEST_TOKEN_ADMIN'
+                        'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                     },
                     body: JSON.stringify({ driverId })
                 });

@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { supabase: globalSupabase } = require('./lib/supabase');
+const { isMasterPin, isAdminCredential } = require('./lib/auth');
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -18,8 +19,13 @@ export default async function handler(req, res) {
     if (authHeader) {
         const parts = authHeader.split(' ');
         const token = parts.length > 1 ? parts[1] : parts[0];
-        if (token && (token.startsWith('EMP-') || token === 'TEST_TOKEN_ADMIN')) {
-            user = { id: token.startsWith('EMP-') ? token.replace('EMP-', '') : 'admin' };
+        if (token && isAdminCredential(token)) {
+            user = { id: 'admin', role: 'admin' };
+        } else if (token && token.startsWith('EMP-')) {
+            // EMP-<employeeId> is only valid for an existing ACTIVE employee.
+            const empId = token.replace('EMP-', '');
+            const { data: emp } = await globalSupabase.from('employees').select('id').eq('id', empId).eq('active', true).maybeSingle();
+            if (emp) user = { id: emp.id };
         } else if (token && token.length > 20) {
             try {
                 const { data: { user: sbUser }, error } = await globalSupabase.auth.getUser(token);
@@ -51,7 +57,7 @@ export default async function handler(req, res) {
         if (!pin) return res.status(400).json({ error: 'PIN required' });
 
         // Special Case: Oscar Master PIN
-        if (pin === '4574') {
+        if (isMasterPin(pin)) {
             return res.json({ 
                 employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin', restaurant_id: 'rich-aroma' } 
             });

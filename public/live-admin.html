@@ -61,7 +61,7 @@
 
     <script>
         // Use the backdoor admin token
-        const AUTH_TOKEN = "TEST_TOKEN_ADMIN"; 
+        const AUTH_TOKEN = localStorage.getItem('ra_staff_pin') || ''; 
 
         async function updateConfig(isActive) {
             const payload = {

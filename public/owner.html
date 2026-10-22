@@ -309,11 +309,10 @@
     </div>
 
     <script>
-        const OWNER_PINS = ['4574', '3620']; 
         
         window.onload = () => {
             const savedPin = localStorage.getItem('ra_staff_pin');
-            if (OWNER_PINS.includes(savedPin)) {
+            if (savedPin && savedPin.length >= 4) {
                 document.getElementById('login-overlay').classList.add('hidden');
                 loadReports();
                 loadExpenses();
@@ -322,7 +321,13 @@
 
         async function verifyAccess() {
             const pin = document.getElementById('owner-pin').value;
-            if (OWNER_PINS.includes(pin)) {
+            let okLogin = false;
+            try {
+                const res = await fetch('/api/store?action=verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+                const data = await res.json();
+                okLogin = !!(data && data.success && data.employee && (data.employee.role === 'admin' || data.employee.id === 'master' || data.employee.id === 'master_admin'));
+            } catch (e) { okLogin = false; }
+            if (okLogin) {
                 document.getElementById('login-overlay').classList.add('hidden');
                 localStorage.setItem('ra_staff_pin', pin);
                 loadReports();
@@ -385,7 +390,7 @@
             const newLogo = prompt("Pega la URL de una imagen para el LOGO:");
             const newName = prompt("Nuevo nombre del negocio:");
             if (newName || newLogo) {
-                const pin = localStorage.getItem('ra_staff_pin') || '4574';
+                const pin = localStorage.getItem('ra_staff_pin') || '';
                 await fetch(`/api/admin?action=restaurant_update&id=${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
@@ -397,7 +402,7 @@
 
         async function loadReports() {
             try {
-                const pin = localStorage.getItem('ra_staff_pin') || '4574';
+                const pin = localStorage.getItem('ra_staff_pin') || '';
                 const res = await fetch(`/api/staff?action=admin_reports&adminPin=${pin}`);
                 const data = await res.json();
                 renderReports(data);
@@ -448,7 +453,7 @@
 
         async function loadExpenses() {
             try {
-                const pin = localStorage.getItem('ra_staff_pin') || '4574';
+                const pin = localStorage.getItem('ra_staff_pin') || '';
                 const res = await fetch('/api/admin?action=expenses', { headers: { 'Authorization': 'Bearer ' + pin } });
                 const data = await res.json();
                 renderExpenses(data);
@@ -476,7 +481,7 @@
             const category = document.getElementById('exp-cat').value;
             const date = document.getElementById('exp-date').value;
             if (!description || !amount) return alert("Completa los campos");
-            const pin = localStorage.getItem('ra_staff_pin') || '4574';
+            const pin = localStorage.getItem('ra_staff_pin') || '';
             const res = await fetch(`/api/admin?action=expenses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pin}` },
@@ -487,7 +492,7 @@
 
         async function deleteExpense(id) {
             if (!confirm("¿Eliminar?")) return;
-            const pin = localStorage.getItem('ra_staff_pin') || '4574';
+            const pin = localStorage.getItem('ra_staff_pin') || '';
             await fetch(`/api/admin?action=expenses&id=${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${pin}` } });
             loadExpenses(); loadReports();
         }
@@ -499,7 +504,7 @@
             const body = document.getElementById('payouts-table-body');
             body.innerHTML = `<tr><td colspan="5" class="py-8 text-center animate-pulse text-gray-400">Calculando saldos...</td></tr>`;
             try {
-                const pin = localStorage.getItem('ra_staff_pin') || '4574';
+                const pin = localStorage.getItem('ra_staff_pin') || '';
                 const res = await fetch('/api/staff?action=admin_merchant_balances', { headers: { 'Authorization': 'Bearer ' + pin } });
                 const balances = await res.json();
                 body.innerHTML = balances.map(b => `
@@ -525,7 +530,7 @@
             const description = prompt("Concepto o Descripción del cobro (ej: setup_walkthrough, anualidad_elite):");
             if (!description) return;
 
-            const pin = localStorage.getItem('ra_staff_pin') || '4574';
+            const pin = localStorage.getItem('ra_staff_pin') || '';
             try {
                 const res = await fetch('/api/staff?action=admin_create_ledger_entry', {
                     method: 'POST',
@@ -545,7 +550,7 @@
 
         async function processPayout(id, amount, name) {
             if (!confirm(`¿Confirmar pago de L. ${amount.toFixed(2)} a ${name}?`)) return;
-            const pin = localStorage.getItem('ra_staff_pin') || '4574';
+            const pin = localStorage.getItem('ra_staff_pin') || '';
             await fetch('/api/staff?action=admin_process_payout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
@@ -557,7 +562,7 @@
         async function loadShiftHistory() {
             const body = document.getElementById('shift-history-body');
             try {
-                const pin = localStorage.getItem('ra_staff_pin') || '4574';
+                const pin = localStorage.getItem('ra_staff_pin') || '';
                 const res = await fetch('/api/staff?action=shift_history', { headers: { 'Authorization': 'Bearer ' + pin } });
                 const history = await res.json();
                 body.innerHTML = history.map(s => {

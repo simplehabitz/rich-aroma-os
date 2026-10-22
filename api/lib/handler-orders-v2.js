@@ -1,4 +1,4 @@
-const { createOrder } = require('./lib/order-service');
+const { createOrder } = require('./order-service');
 
 module.exports = async (req, res) => {
     // CORS

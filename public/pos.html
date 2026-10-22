@@ -222,7 +222,7 @@
 
     async function refreshMenu() {
         try {
-            const res = await fetch('/api/menu?admin=true', { headers: { 'Authorization': 'Bearer EMP-admin' } });
+            const res = await fetch('/api/menu?admin=true', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
             const data = await res.json();
             menu = (data.items || []).map(i => ({
                 ...i, 
@@ -242,7 +242,7 @@
         
         // 1. ALWAYS ask the server first (Source of Truth)
         try {
-            const token = 'EMP-admin';
+            const token = localStorage.getItem('ra_staff_pin') || '';
             const res = await fetch('/api/cash/current-shift', { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 const data = await res.json();
@@ -477,7 +477,7 @@
     function restoreCart() { const s = localStorage.getItem('pos_cart_state'); if(s) { const d = JSON.parse(s); cart = d.cart || []; currentCustomerId = d.customerId; renderCart(); } }
 
     async function fetchLiveOrders() {
-        const res = await fetch('/api/orders?v=' + Date.now(), { headers: { 'Authorization': 'Bearer EMP-admin' } });
+        const res = await fetch('/api/orders?v=' + Date.now(), { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
         const data = await res.json();
         liveOrders = (data.orders || []).filter(o => ['pending', 'paid', 'preparing', 'ready', 'pending_verification'].includes(o.status));
         renderLiveFeed();

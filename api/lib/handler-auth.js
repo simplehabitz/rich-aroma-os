@@ -1,5 +1,5 @@
 // api/auth.js
-const { supabase } = require('./lib/supabase');
+const { supabase } = require('./supabase');
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');

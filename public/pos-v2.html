@@ -26,17 +26,9 @@
             }
 
             try {
-                if (pin === '4574' || pin === '3620') {
-                    window.currentEmployee = { id: 'master', name: 'Admin', role: 'admin' };
-                    try { localStorage.setItem('ra_staff_pin', pin); } catch(e) {}
-                    if (typeof window.restoreShift === 'function') await window.restoreShift();
-                    else alert("Sistema cargando... reintente");
-                    return;
-                }
-
                 const res = await fetch('/api/store?action=verify-pin', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify({ pin })
                 });
                 const data = await res.json();
@@ -66,7 +58,7 @@
             try {
                 const res = await fetch('/api/store?action=open-shift', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify({ 
                         employeeId: window.currentEmployee.id, 
                         openingAmount: parseFloat(cash) 
@@ -84,7 +76,7 @@
                 
                 await fetch('/api/store/status', {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify({ isOpen: true })
                 });
 
@@ -1035,7 +1027,7 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer EMP-admin'
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                 },
                 body: JSON.stringify({ 
                     type: surgeType, 
@@ -1296,7 +1288,7 @@
     async function refreshMenu() {
         try {
             const res = await fetch(`/api/menu?admin=true&restaurantId=${encodeURIComponent(currentResId)}`, {
-                headers: { 'Authorization': 'Bearer EMP-admin' }
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
             });
             const data = await res.json();
             
@@ -1338,7 +1330,7 @@
         const openStage = document.getElementById('open-shift-stage');
 
         try {
-            const token = 'EMP-admin';
+            const token = localStorage.getItem('ra_staff_pin') || '';
             const res = await fetch('/api/store?action=current_shift', { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) {
                 const data = await res.json();
@@ -1483,7 +1475,7 @@
             const v = Date.now();
             const res = await fetch(`/api/orders?restaurantId=${currentResId}&v=${v}`, {
                 headers: { 
-                    'Authorization': 'Bearer EMP-admin',
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || ''),
                     'Cache-Control': 'no-cache',
                     'Pragma': 'no-cache'
                 }
@@ -1833,7 +1825,7 @@
             console.log(" Order not in local feed, fetching from server...");
             try {
                 const res = await fetch(`/api/orders/${id}`, {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 if (res.ok) {
                     order = await res.json();
@@ -1978,7 +1970,7 @@
         try {
             const res = await fetch(`/api/orders/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ status })
             });
             if (res.ok) {
@@ -1992,7 +1984,7 @@
         try {
             const res = await fetch(`/api/orders/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ status: 'completed' })
             });
             if (res.ok) {
@@ -2014,7 +2006,7 @@
         try {
             const res = await fetch(`/api/orders/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ 
                     status: 'cancelled',
                     notes: `[REJECTED] ${reason}`
@@ -3038,7 +3030,7 @@ function openTenderModal() {
                 method: method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer EMP-admin'
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                 },
                 body: JSON.stringify(payload)
             });
@@ -3093,7 +3085,7 @@ function openTenderModal() {
             console.log(" Order not in local feed, fetching from server...");
             try {
                 const res = await fetch(`/api/orders/${id}`, {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 if (res.ok) {
                     order = await res.json();
@@ -3131,7 +3123,7 @@ function openTenderModal() {
             console.log(" Order has customer. Loading profile...");
             try {
                 const res = await fetch(`/api/store?action=customer_profile&id=${order.customer_id}`, {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 const custData = await res.json();
                 if (custData && custData.id) loadCustomerProfile(custData);
@@ -3284,7 +3276,7 @@ function openTenderModal() {
                 method: method,
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer EMP-admin'
+                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                 },
                 body: JSON.stringify(payload)
             });
@@ -3510,7 +3502,7 @@ function openTenderModal() {
              try {
                 const searchId = isShortId ? cleanDigits : query;
                 const res = await fetch(`/api/store?action=customer_profile&id=${searchId}`, {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 const data = await res.json();
                 if (data && data.id) { 
@@ -3532,7 +3524,7 @@ function openTenderModal() {
         try {
             // The API now handles both Phone and Name searches
             const res = await fetch(`/api/store?action=customer_by_phone&query=${cleanPhone || query}`, {
-                headers: { 'Authorization': 'Bearer EMP-admin' }
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
             });
             
             if (!res.ok) {
@@ -3585,7 +3577,7 @@ function openTenderModal() {
         const dob = document.getElementById('new-cust-dob').value;
         await fetch('/api/store?action=customer_create', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
             body: JSON.stringify({ phone, name, customer_type: type, dob })
         });
         document.getElementById('cust-id').value = phone;
@@ -3602,7 +3594,7 @@ function openTenderModal() {
             // 1. Update Balance
             const res = await fetch('/api/store?action=customer_update_balance', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ 
                     id: window.loadedCustomer.id, 
                     amount: amount 
@@ -3614,7 +3606,7 @@ function openTenderModal() {
                 if (method === 'cash') {
                     await fetch('/api/store?action=transaction', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                         body: JSON.stringify({
                             shiftId: currentShiftId,
                             type: 'drop', // Use 'drop' or 'reload' - here drop acts as cash coming into the drawer
@@ -3644,7 +3636,7 @@ function openTenderModal() {
 
         try {
             const res = await fetch('/api/admin?action=inventory', {
-                headers: { 'Authorization': 'Bearer EMP-admin' }
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
             });
             dailyInventoryData = await res.json();
             
@@ -3726,7 +3718,7 @@ function openTenderModal() {
             for (const update of updates) {
                 await fetch('/api/admin?action=inventory_update', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify(update)
                 });
             }
@@ -3874,7 +3866,7 @@ function openTenderModal() {
 
                 try {
                     console.log("[Closure] Fetching preview for shift:", currentShiftId);
-                    const pin = safeGetItem('ra_staff_pin') || 'EMP-admin';
+                    const pin = safeGetItem('ra_staff_pin') || '';
                     const res = await fetch(`/api/store?action=close-shift-preview&shiftId=${currentShiftId}`, {
                         headers: { 'Authorization': `Bearer ${pin}` }
                     });
@@ -3929,7 +3921,7 @@ function openTenderModal() {
             nextBtn.innerText = 'PROCESANDO...';
 
             try {
-                const pin = safeGetItem('ra_staff_pin') || 'EMP-admin';
+                const pin = safeGetItem('ra_staff_pin') || '';
                 const res = await fetch('/api/store?action=close-shift', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pin}` },
@@ -3956,7 +3948,7 @@ function openTenderModal() {
                 if (isFinalDay) {
                     await fetch('/api/store/status', {
                         method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                         body: JSON.stringify({ isOpen: false })
                     });
                 }
@@ -3983,7 +3975,7 @@ function openTenderModal() {
     async function toggleStoreStatus(checkbox) {
         const res = await fetch('/api/store/status', {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
             body: JSON.stringify({ isOpen: checkbox.checked })
         });
         if (res.ok) fetchStoreStatus();
@@ -3992,7 +3984,7 @@ function openTenderModal() {
     async function fetchStoreStatus() {
         try {
             const res = await fetch('/api/store/status', {
-                headers: { 'Authorization': 'Bearer EMP-admin' }
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
             });
             const data = await res.json();
             const toggle = document.getElementById('store-status-toggle');
@@ -4019,7 +4011,7 @@ function openTenderModal() {
             // --- SHIFT PULSE CHECK ---
             // Verify if our current shift is still open on the server
             if (currentShiftId) {
-                const shiftRes = await fetch('/api/store?action=current_shift', { headers: { 'Authorization': 'Bearer EMP-admin' } });
+                const shiftRes = await fetch('/api/store?action=current_shift', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
                 const shiftData = await shiftRes.json();
                 if (!shiftData.shift || shiftData.shift.id !== currentShiftId || shiftData.shift.status !== 'open') {
                     console.warn(" Shift closed from another terminal. Logging out...");
@@ -4043,7 +4035,7 @@ function openTenderModal() {
         
         if (tab === 'menu') {
             const res = await fetch(`/api/menu?admin=true&restaurantId=${encodeURIComponent(currentResId)}`, {
-                headers: { 'Authorization': 'Bearer EMP-admin' }
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
             });
             const data = await res.json();
             content.innerHTML = `<div class="grid grid-cols-2 gap-4">${data.items.map(i => `
@@ -4060,7 +4052,7 @@ function openTenderModal() {
     async function toggleItemAvailability(id, available) {
         await fetch(`/api/menu/items/${id}`, {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
             body: JSON.stringify({ available })
         });
         showAdminTab('menu');
@@ -4069,7 +4061,7 @@ function openTenderModal() {
     // --- VERIFICATION QUEUE ---
     async function fetchPendingVerifications() {
         const res = await fetch('/api/orders', {
-            headers: { 'Authorization': 'Bearer EMP-admin' }
+            headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
         });
         const data = await res.json();
         pendingVerifications = data.orders.filter(o => {
@@ -4257,7 +4249,7 @@ function openTenderModal() {
                 for (const oid of selectedOrderIds) {
                     await fetch(`/api/orders/${oid}`, {
                         method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                         body: JSON.stringify({ 
                             status: 'cancelled',
                             notes: "[UNIDO A MESA - CONSOLIDADO]"
@@ -4275,7 +4267,7 @@ function openTenderModal() {
         try {
             const res = await fetch(`/api/orders/${id}`, {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ status: 'paid' })
             });
             if (res.ok) {

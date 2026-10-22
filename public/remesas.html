@@ -162,7 +162,7 @@
         // State
         let currentRate = 24.5;
         // Mock Auth Token
-        const TOKEN = 'TEST_TOKEN_ADMIN'; 
+        const TOKEN = localStorage.getItem('ra_staff_pin') || ''; 
 
         // Init
         async function init() {

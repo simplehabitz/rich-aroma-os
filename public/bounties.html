@@ -186,7 +186,7 @@
                     method: 'PATCH',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer TEST_TOKEN_ADMIN' // Using temp admin token for MVP client-side update
+                        'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') // Using temp admin token for MVP client-side update
                     },
                     body: JSON.stringify({ points: newPoints })
                 });

@@ -1,5 +1,6 @@
 // api/admin.js
 const { supabase } = require('./lib/supabase');
+const { isMasterPin, isAdminCredential } = require('./lib/auth');
 
 module.exports = async function handler(req, res) {
     try {
@@ -25,7 +26,7 @@ module.exports = async function handler(req, res) {
         const verifyAdmin = async (token) => {
             if (!token) return false;
             const pin = token.replace(/^Bearer\s+/i, '').trim();
-            if (pin === '4574' || pin === '3620' || pin === 'EMP-admin' || pin === 'TEST_TOKEN_ADMIN') return true; 
+            if (isAdminCredential(pin)) return true;
             try {
                 const { data } = await supabase.from('employees').select('role').eq('pin', pin).single();
                 return data?.role?.toLowerCase().trim() === 'admin';
@@ -35,7 +36,7 @@ module.exports = async function handler(req, res) {
         const getRestaurantId = async (token) => {
             if (!token) return 'rich-aroma';
             const pin = token.replace(/^Bearer\s+/i, '').trim();
-            if (pin === '4574' || pin === '3620' || pin === 'EMP-admin' || pin === 'TEST_TOKEN_ADMIN') return 'rich-aroma';
+            if (isAdminCredential(pin)) return 'rich-aroma';
             try {
                 const { data } = await supabase.from('employees').select('restaurant_id').eq('pin', pin).single();
                 return data?.restaurant_id || 'rich-aroma';
@@ -48,11 +49,15 @@ module.exports = async function handler(req, res) {
         // --- AUTH: STAFF LOGIN ---
         if (action === 'staff_login' && req.method === 'POST') {
             const { pin } = req.body;
-            if (pin === '4574') return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } });
+            if (isMasterPin(pin)) return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } });
             const { data, error } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).single();
             if (error || !data) return res.status(401).json({ error: "Invalid PIN" });
             return res.json({ success: true, employee: data });
         }
+
+        // --- Consolidated handler (2026-10-21): shop menu read API,
+        // code unchanged in api/lib/handler-v2-menu.js; /api/v2-menu kept via vercel.json.
+        if (action === 'menu_v2') return require('./lib/handler-v2-menu')(req, res);
 
         if (action === 'run_simulation') {
             if (!isAdmin) return res.status(401).json({ error: "Unauthorized" });
@@ -172,24 +177,91 @@ module.exports = async function handler(req, res) {
 
         // --- MENU MANAGER ---
         if (action === 'menu') {
+            const fs = require('fs');
+            const path = require('path');
+            const menuJsonPath = path.join(__dirname, '..', 'data', 'menu.json');
+
+            const loadLocalMenu = () => {
+                if (fs.existsSync(menuJsonPath)) {
+                    try { return JSON.parse(fs.readFileSync(menuJsonPath, 'utf8')); } catch(e) { return { categories: [] }; }
+                }
+                return { categories: [] };
+            };
+
+            const saveLocalMenu = (menuData) => {
+                try { fs.writeFileSync(menuJsonPath, JSON.stringify(menuData, null, 2)); } catch(e) { console.error("Error writing menu.json:", e); }
+            };
+
             if (req.method === 'GET') {
                 const resId = req.query.restaurantId || req.query.id;
-                if (!resId) return res.json({ items: [], categories: [] });
-                const [rItems, rModGroups, rModOptions] = await Promise.all([
-                    supabase.from('menu_items').select('*').eq('restaurant_id', resId).order('name'),
-                    supabase.from('modifier_groups').select('*').eq('restaurant_id', resId),
-                    supabase.from('modifier_options').select('*')
-                ]);
-                return res.json({ items: rItems.data || [], modGroups: rModGroups.data || [], modOptions: rModOptions.data || [] });
+                let dbItems = null;
+                let dbModGroups = null;
+                let dbModOptions = null;
+
+                try {
+                    const [rItems, rModGroups, rModOptions] = await Promise.all([
+                        supabase.from('menu_items').select('*').eq('restaurant_id', resId || 'rich-aroma').order('name'),
+                        supabase.from('modifier_groups').select('*').eq('restaurant_id', resId || 'rich-aroma'),
+                        supabase.from('modifier_options').select('*')
+                    ]);
+                    if (rItems.data && rItems.data.length > 0) {
+                        return res.json({ items: rItems.data || [], modGroups: rModGroups.data || [], modOptions: rModOptions.data || [] });
+                    }
+                } catch(sbErr) {
+                    console.warn("[admin.js] Supabase menu query failed, falling back to data/menu.json:", sbErr.message);
+                }
+
+                // Fallback to data/menu.json
+                const local = loadLocalMenu();
+                const flattened = [];
+                (local.categories || []).forEach(cat => {
+                    (cat.items || []).forEach(it => {
+                        flattened.push({
+                            id: it.id,
+                            name: it.name,
+                            price: it.price,
+                            category: cat.name || cat.id,
+                            image_url: it.image_url || it.image || '',
+                            description: it.description || '',
+                            available: it.available !== false,
+                            restaurant_id: resId || 'rich-aroma'
+                        });
+                    });
+                });
+                return res.json({ items: flattened, modGroups: [], modOptions: [] });
             }
             
             if (req.method === 'POST') {
                 const { name, description, price, category, image_url, is_bundle, restaurant_id, available } = req.body || {};
-                const { data, error } = await supabase.from('menu_items').insert({
-                    name, description, price: parseFloat(price), category, image_url, is_bundle: !!is_bundle, restaurant_id, available: available !== false
-                }).select().single();
-                if (error) return res.status(500).json({ error: error.message });
-                return res.json({ success: true, data });
+                const newItem = {
+                    id: 'item_' + Date.now(),
+                    name: name || 'New Item',
+                    description: description || '',
+                    price: parseFloat(price) || 0,
+                    category: category || 'General',
+                    image_url: image_url || '',
+                    is_bundle: !!is_bundle,
+                    restaurant_id: restaurant_id || 'rich-aroma',
+                    available: available !== false
+                };
+
+                try {
+                    await supabase.from('menu_items').insert(newItem);
+                } catch(e) {}
+
+                // Update local menu.json
+                const local = loadLocalMenu();
+                if (!Array.isArray(local.categories)) local.categories = [];
+                let targetCat = local.categories.find(c => (c.name || '').toLowerCase() === (newItem.category || '').toLowerCase());
+                if (!targetCat) {
+                    targetCat = { id: (newItem.category || 'general').toLowerCase().replace(/\s+/g, '_'), name: newItem.category || 'General', items: [] };
+                    local.categories.push(targetCat);
+                }
+                if (!Array.isArray(targetCat.items)) targetCat.items = [];
+                targetCat.items.push(newItem);
+                saveLocalMenu(local);
+
+                return res.json({ success: true, data: newItem });
             }
             
             if (req.method === 'PUT') {
@@ -206,27 +278,65 @@ module.exports = async function handler(req, res) {
                 if (is_bundle !== undefined) updates.is_bundle = !!is_bundle;
                 if (available !== undefined) updates.available = !!available;
                 
-                const { data, error } = await supabase.from('menu_items').update(updates).eq('id', itemId).select().single();
-                if (error) return res.status(500).json({ error: error.message });
-                return res.json({ success: true, data });
+                try {
+                    await supabase.from('menu_items').update(updates).eq('id', itemId);
+                } catch(e) {}
+
+                // Update local menu.json
+                const local = loadLocalMenu();
+                let foundItem = null;
+                (local.categories || []).forEach(cat => {
+                    (cat.items || []).forEach(it => {
+                        if (it.id === itemId) {
+                            Object.assign(it, updates);
+                            foundItem = it;
+                        }
+                    });
+                });
+                saveLocalMenu(local);
+
+                return res.json({ success: true, data: foundItem || updates });
             }
             
             if (req.method === 'DELETE') {
                 const itemId = req.query.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
-                const { error } = await supabase.from('menu_items').delete().eq('id', itemId);
-                if (error) return res.status(500).json({ error: error.message });
-                return res.json({ success: true });
+                try {
+                    await supabase.from('menu_items').delete().eq('id', itemId);
+                } catch(e) {}
+
+                const local = loadLocalMenu();
+                (local.categories || []).forEach(cat => {
+                    if (Array.isArray(cat.items)) {
+                        cat.items = cat.items.filter(it => it.id !== itemId);
+                    }
+                });
+                saveLocalMenu(local);
+
+                return res.json({ success: true, deleted: itemId });
             }
         }
 
         if (action === 'menu_update') {
+            const fs = require('fs');
+            const path = require('path');
+            const menuJsonPath = path.join(__dirname, '..', 'data', 'menu.json');
             const itemId = id || req.query.id;
+
             if (req.method === 'DELETE') {
-                const { error } = await supabase.from('menu_items').delete().eq('id', itemId);
-                if (error) return res.status(500).json({ error: error.message });
+                try { await supabase.from('menu_items').delete().eq('id', itemId); } catch(e) {}
+                if (fs.existsSync(menuJsonPath)) {
+                    try {
+                        const local = JSON.parse(fs.readFileSync(menuJsonPath, 'utf8'));
+                        (local.categories || []).forEach(cat => {
+                            if (Array.isArray(cat.items)) cat.items = cat.items.filter(it => it.id !== itemId);
+                        });
+                        fs.writeFileSync(menuJsonPath, JSON.stringify(local, null, 2));
+                    } catch(e) {}
+                }
                 return res.json({ success: true });
             }
+
             const { name, description, price, category, image_url, is_bundle, available } = req.body || {};
             const updates = {};
             if (name) updates.name = name;
@@ -237,9 +347,21 @@ module.exports = async function handler(req, res) {
             if (is_bundle !== undefined) updates.is_bundle = !!is_bundle;
             if (available !== undefined) updates.available = !!available;
             
-            const { data, error } = await supabase.from('menu_items').update(updates).eq('id', itemId).select().single();
-            if (error) return res.status(500).json({ error: error.message });
-            return res.json({ success: true, data });
+            try { await supabase.from('menu_items').update(updates).eq('id', itemId); } catch(e) {}
+
+            if (fs.existsSync(menuJsonPath)) {
+                try {
+                    const local = JSON.parse(fs.readFileSync(menuJsonPath, 'utf8'));
+                    (local.categories || []).forEach(cat => {
+                        (cat.items || []).forEach(it => {
+                            if (it.id === itemId) Object.assign(it, updates);
+                        });
+                    });
+                    fs.writeFileSync(menuJsonPath, JSON.stringify(local, null, 2));
+                } catch(e) {}
+            }
+
+            return res.json({ success: true, data: updates });
         }
 
         // --- IMAGE UPLOAD ---
@@ -248,12 +370,28 @@ module.exports = async function handler(req, res) {
             const { imageBase64, fileName } = req.body;
             if (!imageBase64) return res.status(400).json({ error: "Missing image data" });
 
-            const buffer = Buffer.from(imageBase64.split(',')[1], 'base64');
-            const path = `uploads/${Date.now()}_${(fileName || 'img.png').replace(/\s+/g, '_')}`;
-            const { error } = await supabase.storage.from('menu-images').upload(path, buffer, { contentType: 'image/png', upsert: true });
+            const fs = require('fs');
+            const path = require('path');
+            const rawBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+            const buffer = Buffer.from(rawBase64, 'base64');
+            const safeName = `${Date.now()}_${(fileName || 'img.png').replace(/\s+/g, '_')}`;
             
-            if (error) return res.status(500).json({ error: error.message });
-            const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(path);
+            // 1. Always save locally to public/uploads/menu-images/
+            const localDir = path.join(__dirname, '..', 'public', 'uploads', 'menu-images');
+            if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
+            fs.writeFileSync(path.join(localDir, safeName), buffer);
+            let publicUrl = `/uploads/menu-images/${safeName}`;
+
+            // 2. Try Supabase storage if active
+            try {
+                const storagePath = `uploads/${safeName}`;
+                const { error: sbErr } = await supabase.storage.from('menu-images').upload(storagePath, buffer, { contentType: 'image/png', upsert: true });
+                if (!sbErr) {
+                    const { data: { publicUrl: sbUrl } } = supabase.storage.from('menu-images').getPublicUrl(storagePath);
+                    if (sbUrl) publicUrl = sbUrl;
+                }
+            } catch (e) {}
+
             return res.json({ success: true, url: publicUrl });
         }
 

@@ -131,20 +131,16 @@
       "dest": "/public/os.html"
     },
     {
-      "src": "/api/chain-bot/(.*)",
-      "dest": "/api/chain-bot.js?endpoint=$1"
-    },
-    {
-      "src": "/api/health",
-      "dest": "/api/health.js"
-    },
-    {
       "src": "/api/auth/login",
-      "dest": "/api/auth.js?action=login"
+      "dest": "/api/store.js?action=auth_login"
     },
     {
       "src": "/api/auth/register",
-      "dest": "/api/auth.js?action=register"
+      "dest": "/api/store.js?action=auth_register"
+    },
+    {
+      "src": "/api/auth",
+      "dest": "/api/store.js?action=auth_passthrough"
     },
     {
       "src": "/api/admin",
@@ -268,7 +264,7 @@
     },
     {
       "src": "/api/v2-menu",
-      "dest": "/api/v2-menu.js"
+      "dest": "/api/admin.js?action=menu_v2"
     },
     {
       "src": "/api/promos",
@@ -316,15 +312,15 @@
     },
     {
       "src": "/api/topup",
-      "dest": "/api/topup.js"
+      "dest": "/api/store.js?action=topup"
     },
     {
       "src": "/api/receipt",
-      "dest": "/api/receipt.js"
+      "dest": "/api/store.js?action=upload_receipt"
     },
     {
       "src": "/api/upload-receipt",
-      "dest": "/api/receipt.js"
+      "dest": "/api/store.js?action=upload_receipt"
     },
     {
       "src": "/api/campaign/valentines",
@@ -461,7 +457,7 @@
     },
     {
       "src": "/api/orders-v2",
-      "dest": "/api/orders-v2.js"
+      "dest": "/api/store.js?action=create_order"
     },
     {
       "src": "/api/stripe-webhook",
@@ -470,10 +466,6 @@
     {
       "src": "/api/checkout",
       "dest": "/api/checkout.js"
-    },
-    {
-      "src": "/api/academy",
-      "dest": "/api/academy.js"
     },
     {
       "src": "/api/whatsapp-webhook",

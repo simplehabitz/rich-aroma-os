@@ -219,7 +219,7 @@
         async function fetchOrders() {
             try {
                 const res = await fetch('/api/orders', {
-                    headers: { 'Authorization': 'Bearer TEST_TOKEN_ADMIN' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 if (!res.ok) throw new Error("API returned " + res.status);
                 const data = await res.json();
@@ -673,7 +673,7 @@
             
             try {
                 const res = await fetch('/api/admin?action=inventory', {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 inventoryData = await res.json();
                 renderInventoryChecklist(role);
@@ -742,7 +742,7 @@
                 for (const update of updates) {
                     await fetch('/api/admin?action=inventory_update', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                         body: JSON.stringify(update)
                     });
                 }

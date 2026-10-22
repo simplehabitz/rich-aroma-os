@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const express = require('express');
+const { isAdminCredential } = require('./api/lib/auth');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env.local') });
@@ -32,7 +33,7 @@ const requireAuth = async (req, res, next) => {
         if (!token) return next();
 
         // Admin PIN bypass
-        if (token === '4574' || token === '3620' || token === 'EMP-admin' || token === 'TEST_TOKEN_ADMIN') {
+        if (isAdminCredential(token)) {
             req.user = { id: 'admin', role: 'admin', email: 'admin@richaroma.com' };
             req.supabase = supabase;
             return next();
@@ -84,7 +85,7 @@ app.all('/api/cash/:action', async (req, res) => {
 });
 
 // Customer & Authentication Local Router Mappings
-const authHandler = require('./api/auth.js');
+const authHandler = require('./api/lib/handler-auth.js');
 app.all('/api/auth/register', async (req, res) => {
     req.query.action = 'register';
     try {
@@ -288,13 +289,13 @@ app.post('/api/tasks', async (req, res) => {
     }
 });
 
-const v2MenuHandler = require('./api/v2-menu.js');
+const v2MenuHandler = require('./api/lib/handler-v2-menu.js');
 app.all('/api/v2-menu', async (req, res) => { try { await v2MenuHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
 const promosHandler = require('./api/promos.js');
 app.all('/api/promos', async (req, res) => { try { await promosHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
-const ordersV2Handler = require('./api/orders-v2.js');
+const ordersV2Handler = require('./api/lib/handler-orders-v2.js');
 app.all('/api/orders-v2', async (req, res) => { try { await ordersV2Handler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
 const whatsappHandler = require('./api/whatsapp-webhook.js');
@@ -316,8 +317,6 @@ app.all('/api/cali', async (req, res) => {
 const checkoutHandler = require('./api/checkout.js');
 app.all('/api/checkout', async (req, res) => { try { await checkoutHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
-const academyHandler = require('./api/academy.js');
-app.all('/api/academy', async (req, res) => { try { await academyHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });
 
 const onrampHandler = require('./api/onramp.js');
 app.all('/api/onramp/:action?', async (req, res) => { try { await onrampHandler(req, res); } catch(e) { res.status(500).json({error: e.message}); } });

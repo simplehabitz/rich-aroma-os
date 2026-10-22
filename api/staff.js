@@ -1,5 +1,6 @@
 // api/staff.js
 const { supabase } = require('./lib/supabase');
+const { isMasterPin } = require('./lib/auth');
 
 const HONDURAS_TZ = 'America/Tegucigalpa';
 function getHondurasDate() {
@@ -260,7 +261,7 @@ module.exports = async function handler(req, res) {
             console.log(`[Admin Auth Attempt] Action: ${action}, PIN: ${cleanPin ? '****' : 'MISSING'}`);
 
             // 1. "GOD MODE" BYPASS FOR OSCAR
-            if (cleanPin === '4574') {
+            if (isMasterPin(cleanPin)) {
                 console.log("[Admin Auth] Oscar Super-Admin Bypass Triggered");
             } else {
                 // 2. Normal database check

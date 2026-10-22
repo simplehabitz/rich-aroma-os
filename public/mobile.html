@@ -1076,7 +1076,6 @@
 
     <script>
         // --- PIN WALL AUTHENTICATION CODE ---
-        const CORRECT_PIN = "4574";
         let enteredPin = "";
 
         window.onload = function() {
@@ -1131,8 +1130,14 @@
             }
         }
 
-        function validatePin() {
-            if (enteredPin === CORRECT_PIN) {
+        async function validatePin() {
+            let okLogin = false;
+            try {
+                const res = await fetch('/api/store?action=verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: enteredPin }) });
+                const data = await res.json();
+                okLogin = !!(data && data.success);
+            } catch (e) { okLogin = false; }
+            if (okLogin) {
                 localStorage.setItem("mobile_authenticated", "true");
                 showConsole();
             } else {

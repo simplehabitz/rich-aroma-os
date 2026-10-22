@@ -309,7 +309,7 @@
 
         async function lookupOrder(id) {
             try {
-                const res = await fetch('/api/orders', { headers: { 'Authorization': 'Bearer EMP-admin' } });
+                const res = await fetch('/api/orders', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
                 const data = await res.json();
                 const order = data.orders.find(o => o.id === id || o.order_number.toString() === id);
                 if (order) {
@@ -324,7 +324,7 @@
                     
                     // Identify customer if possible
                     if (order.customer_id) {
-                        const cres = await fetch(`/api/customer/profile?id=${order.customer_id}`, { headers: { 'Authorization': 'Bearer EMP-admin' } });
+                        const cres = await fetch(`/api/customer/profile?id=${order.customer_id}`, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
                         const cdata = await cres.json();
                         if (!cdata.error) currentCustomerId = cdata.id;
                     }
@@ -339,7 +339,7 @@
 
         async function lookupCustomerByPhone(phone) {
             try {
-                const res = await fetch(`/api/customers/phone/${phone}`, { headers: { 'Authorization': 'Bearer EMP-admin' } });
+                const res = await fetch(`/api/customers/phone/${phone}`, { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
                 const data = await res.json();
                 if (res.ok) {
                     currentCustomerId = data.id;
@@ -364,7 +364,7 @@
 
         async function fetchMenu() {
             try {
-                const res = await fetch('/api/menu?admin=true', { headers: { 'Authorization': 'Bearer EMP-admin' } });
+                const res = await fetch('/api/menu?admin=true', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') } });
                 const data = await res.json();
                 menu = (data.items || []).map(i => ({
                     id: i.id, name: i.name, price: parseFloat(i.price), category: i.category || 'otros', available: i.available !== false,
@@ -418,7 +418,7 @@
             try {
                 // Fetch or Create the staff customer profile
                 const res = await fetch(`/api/store?action=customer_by_phone&query=${encodeURIComponent(currentEmployee.name)}`, {
-                    headers: { 'Authorization': 'Bearer EMP-admin' }
+                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
                 });
                 
                 let customer;
@@ -427,7 +427,7 @@
                 } else {
                     const createRes = await fetch('/api/store?action=customer_create', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                         body: JSON.stringify({
                             name: `[STAFF] ${currentEmployee.name}`,
                             phone: `EMP${currentEmployee.pin}`,
@@ -784,7 +784,7 @@
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer EMP-admin'
+                        'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                     },
                     body: JSON.stringify(payload)
                 });
@@ -804,7 +804,7 @@
                                 method: 'PATCH',
                                 headers: { 
                                     'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer EMP-admin'
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '')
                                 },
                                 body: JSON.stringify({
                                     items: remainingItems,
@@ -817,7 +817,7 @@
                         } else {
                             await fetch(`${window.location.origin}/api/orders/${currentOrderId}`, {
                                 method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                                 body: JSON.stringify({ status: 'completed' })
                             });
                             alert("✅ CUENTA TOTAL PAGADA");
@@ -825,7 +825,7 @@
                     } else if (currentOrderId && !isSplitMode) {
                         await fetch(`${window.location.origin}/api/orders/${currentOrderId}`, {
                             method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                             body: JSON.stringify({ status: 'completed' })
                         });
                         alert("✅ VENTA COMPLETADA");

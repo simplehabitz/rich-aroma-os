@@ -1,4 +1,4 @@
-const { supabase } = require('./lib/supabase');
+const { supabase } = require('./supabase');
 
 module.exports = async function handler(req, res) {
     // Only allow POST

@@ -1,4 +1,5 @@
 const { supabase } = require('./lib/supabase');
+const { isAdminCredential } = require('./lib/auth');
 let stripe;
 try {
     stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -18,9 +19,28 @@ module.exports = async (req, res) => {
 
         // 1. GET PRODUCTS
         if (req.method === 'GET' && action === 'products') {
-            const { data, error } = await supabase.from('cali_products').select('*').order('created_at', { ascending: false });
-            if (error) throw error;
-            return res.json(data || []);
+            const fs = require('fs');
+            const path = require('path');
+            const localFile = path.join(__dirname, '..', 'data', 'cali_products.json');
+
+            try {
+                const { data, error } = await supabase.from('cali_products').select('*').order('created_at', { ascending: false });
+                if (!error && Array.isArray(data) && data.length > 0) {
+                    return res.json(data);
+                }
+            } catch (dbErr) {
+                console.warn("[cali.js] Supabase products error, checking local fallback:", dbErr.message);
+            }
+
+            if (fs.existsSync(localFile)) {
+                try {
+                    const localData = JSON.parse(fs.readFileSync(localFile, 'utf8'));
+                    return res.json(localData || []);
+                } catch (readErr) {
+                    console.error("[cali.js] Error reading local cali_products.json:", readErr);
+                }
+            }
+            return res.json([]);
         }
 
         // 2. GET LOCATIONS
@@ -488,7 +508,7 @@ module.exports = async (req, res) => {
 
         // 4. ADMIN CHECK
         const auth = req.headers.authorization;
-        const isAdmin = auth && (auth.includes('EMP-admin') || auth.includes('TEST_TOKEN_ADMIN') || auth.includes('Bearer 3620'));
+        const isAdmin = !!auth && isAdminCredential(auth);
 
         // 5. SELLERS MANAGEMENT
         if (action === 'sellers' && req.method === 'GET') {
@@ -568,12 +588,29 @@ module.exports = async (req, res) => {
         if (action === 'products' && (req.method === 'POST' || (req.method === 'PUT' && id) || (req.method === 'DELETE' && id))) {
             if (!isAdmin) return res.status(401).json({ error: 'Unauthorized' });
 
-            if (req.method === 'DELETE') {
-                const { error: delErr } = await supabase.from('cali_products').delete().eq('id', id);
-                if (delErr) {
-                    console.error("Product delete error:", delErr);
-                    return res.status(500).json({ error: delErr.message });
+            const fs = require('fs');
+            const path = require('path');
+            const localFile = path.join(__dirname, '..', 'data', 'cali_products.json');
+
+            const loadLocalProds = () => {
+                if (fs.existsSync(localFile)) {
+                    try { return JSON.parse(fs.readFileSync(localFile, 'utf8')) || []; } catch(e) { return []; }
                 }
+                return [];
+            };
+            const saveLocalProds = (prods) => {
+                try { fs.writeFileSync(localFile, JSON.stringify(prods, null, 2)); } catch(e) { console.error("Error saving cali_products.json:", e); }
+            };
+
+            if (req.method === 'DELETE') {
+                try {
+                    await supabase.from('cali_products').delete().eq('id', id);
+                } catch (e) {
+                    console.warn("[cali.js] Supabase delete error (using local):", e.message);
+                }
+                let prods = loadLocalProds();
+                prods = prods.filter(p => p.id !== id);
+                saveLocalProds(prods);
                 return res.json({ success: true, deleted: id });
             }
 
@@ -587,22 +624,33 @@ module.exports = async (req, res) => {
                     const buffer = Buffer.from(base64Data, 'base64');
                     const mimeType = imageBase64.match(/^data:(image\/\w+);base64,/)?.[1] || 'image/jpeg';
                     const ext = (mimeType.split('/')[1] || 'jpeg').replace('jpeg', 'jpg');
-                    const storagePath = `cali_products/PROD_${id || Date.now()}_${Date.now()}.${ext}`;
+                    const filename = `PROD_${id || Date.now()}_${Date.now()}.${ext}`;
 
-                    const { error: uploadError } = await supabase.storage
-                        .from('menu-images')
-                        .upload(storagePath, buffer, { contentType: mimeType, upsert: true });
-
-                    if (!uploadError) {
-                        const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(storagePath);
-                        finalImageUrl = publicUrl;
-                    } else {
-                        console.warn("Storage upload warn, falling back to base64 data URI:", uploadError.message);
-                        finalImageUrl = imageBase64;
+                    // Always save a local copy in public/uploads/cali_products/
+                    try {
+                        const localUploadDir = path.join(__dirname, '..', 'public', 'uploads', 'cali_products');
+                        if (!fs.existsSync(localUploadDir)) fs.mkdirSync(localUploadDir, { recursive: true });
+                        fs.writeFileSync(path.join(localUploadDir, filename), buffer);
+                        finalImageUrl = `/uploads/cali_products/${filename}`;
+                    } catch(diskErr) {
+                        console.error("[cali.js] Failed to save image to disk:", diskErr);
                     }
+
+                    // Also try uploading to Supabase storage if reachable
+                    try {
+                        const storagePath = `cali_products/${filename}`;
+                        const { error: uploadError } = await supabase.storage
+                            .from('menu-images')
+                            .upload(storagePath, buffer, { contentType: mimeType, upsert: true });
+
+                        if (!uploadError) {
+                            const { data: { publicUrl } } = supabase.storage.from('menu-images').getPublicUrl(storagePath);
+                            if (publicUrl) finalImageUrl = publicUrl;
+                        }
+                    } catch (sErr) {}
                 } catch (err) {
                     console.error("Image upload exception, using fallback data URI:", err);
-                    finalImageUrl = imageBase64;
+                    if (!finalImageUrl) finalImageUrl = imageBase64;
                 }
             }
 
@@ -613,29 +661,45 @@ module.exports = async (req, res) => {
             };
 
             const dbPayload = {
+                id: id || require('crypto').randomUUID(),
                 name: name || 'Artisanal Drink',
                 price: parseFloat(price || 0),
                 active: active !== false,
                 bottles_per_pack: bottles_per_pack || 1,
-                options: sanitizedOptions
+                options: sanitizedOptions,
+                created_at: new Date().toISOString()
             };
 
             if (finalImageUrl) {
                 dbPayload.image_url = finalImageUrl;
             }
 
-            let result;
-            if (req.method === 'POST') {
-                result = await supabase.from('cali_products').insert(dbPayload).select();
-            } else {
-                result = await supabase.from('cali_products').update(dbPayload).eq('id', id).select();
+            // Sync with Supabase if online
+            try {
+                if (req.method === 'POST') {
+                    await supabase.from('cali_products').insert(dbPayload);
+                } else {
+                    await supabase.from('cali_products').update(dbPayload).eq('id', id);
+                }
+            } catch (sbErr) {
+                console.warn("[cali.js] Supabase product sync skipped/failed:", sbErr.message);
             }
 
-            if (result.error) {
-                console.error("Product save error:", result.error);
-                return res.status(500).json({ error: result.error.message });
+            // Always update local file
+            let prods = loadLocalProds();
+            if (req.method === 'POST') {
+                prods.unshift(dbPayload);
+            } else {
+                const idx = prods.findIndex(p => p.id === id);
+                if (idx >= 0) {
+                    prods[idx] = { ...prods[idx], ...dbPayload };
+                } else {
+                    prods.push(dbPayload);
+                }
             }
-            return res.json(result.data?.[0] || { success: true, ...dbPayload, id });
+            saveLocalProds(prods);
+
+            return res.json(dbPayload);
         }
 
         // 5. LOCATION MANAGEMENT

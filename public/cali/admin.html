@@ -60,7 +60,7 @@
                 <div id="dot-2" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
                 <div id="dot-3" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
             </div>
-            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN. Try 3620</p>
+            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN.</p>
         </div>
 
         <!-- Numeric Keypad -->
@@ -444,7 +444,7 @@
     <!-- LOGIC & SCRIPTS -->
     <!-- ============================================== -->
     <script>
-        const ADMIN_PIN_DEFAULT = "3620";
+        const ADMIN_PIN_DEFAULT = "";
         let enteredPin = "";
         let adminToken = localStorage.getItem('cali_admin_token') || "";
         
@@ -477,7 +477,7 @@
         // PIN & AUTHENTICATION
         // ----------------------------------------------------
         function initApp() {
-            if (adminToken && (adminToken.includes('3620') || adminToken.includes('admin') || adminToken.includes('EMP'))) {
+            if (adminToken) {
                 unlockDashboard();
             } else {
                 document.getElementById('pin-view').classList.remove('hidden');
@@ -520,7 +520,7 @@
         }
 
         function validatePin() {
-            if (enteredPin === ADMIN_PIN_DEFAULT || enteredPin === "1234" || enteredPin.length === 4) {
+            if (enteredPin.length === 4) {
                 adminToken = `Bearer ${enteredPin}`;
                 localStorage.setItem('cali_admin_token', adminToken);
                 unlockDashboard();

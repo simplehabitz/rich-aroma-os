@@ -1,4 +1,5 @@
 const { supabase } = require('./lib/supabase');
+const { isMasterPin } = require('./lib/auth');
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
@@ -26,6 +27,17 @@ module.exports = async (req, res) => {
 
     // Auto-fix for common shift typos
     if (action === 'close-sft') action = 'close-shift';
+
+    // --- Consolidated handlers (2026-10-21): former standalone functions,
+    // code unchanged in api/lib/handler-*.js; public URLs kept via vercel.json.
+    if (action === 'create_order') return require('./lib/handler-orders-v2')(req, res);
+    if (action === 'upload_receipt') return require('./lib/handler-receipt')(req, res);
+    if (action === 'topup') return require('./lib/handler-topup')(req, res);
+    if (action === 'auth_login' || action === 'auth_register') {
+        req.query.action = action === 'auth_login' ? 'login' : 'register';
+        return require('./lib/handler-auth')(req, res);
+    }
+    if (action === 'auth_passthrough') return require('./lib/handler-auth')(req, res);
 
     const { restaurantId, resId, query: queryParam } = req.query;
     let finalResId = restaurantId || resId || 'rich-aroma';
@@ -479,7 +491,7 @@ module.exports = async (req, res) => {
 
         if (action === 'verify-pin') {
             const { pin } = req.body || {};
-            if (pin === '4574' || pin === '3620') return res.json({ success: true, employee: { id: 'master', name: 'Admin', role: 'admin', restaurant_id: 'rich-aroma' } });
+            if (isMasterPin(pin)) return res.json({ success: true, employee: { id: 'master', name: 'Admin', role: 'admin', restaurant_id: 'rich-aroma' } });
             
             const { data: emp } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).maybeSingle();
             if (emp) return res.json({ success: true, employee: emp });
@@ -1420,7 +1432,7 @@ module.exports = async (req, res) => {
                 return res.status(401).json({ error: "Restaurante no encontrado" });
             }
 
-            const expectedPin = resData.settings?.pin || '4574';
+            const expectedPin = resData.settings?.pin || null; // fail-closed: no default master PIN
             if (pin !== expectedPin) {
                 return res.status(401).json({ error: "PIN incorrecto" });
             }

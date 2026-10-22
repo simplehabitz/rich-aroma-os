@@ -60,7 +60,7 @@
                 <div id="dot-2" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
                 <div id="dot-3" class="w-4 h-4 rounded-full border-2 border-brand-gold/40 transition-all"></div>
             </div>
-            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN. Try 3620</p>
+            <p id="pin-error" class="text-red-400 text-xs font-bold hidden">Invalid PIN.</p>
         </div>
 
         <div class="max-w-xs mx-auto w-full pb-8">
@@ -79,7 +79,7 @@
                 <button type="button" onclick="deletePinDigit()" class="h-16 rounded-2xl bg-white/5 text-white font-bold text-lg active:bg-white/20 transition-all"><i class="fas fa-backspace"></i></button>
             </div>
             <button type="button" onclick="quickDemoLogin()" class="w-full mt-4 text-[10px] text-white/40 uppercase font-black tracking-widest text-center">
-                Tap to auto-fill default PIN (3620)
+                Tap to auto-fill default PIN
             </button>
         </div>
     </div>
@@ -310,7 +310,7 @@
     <!-- LOGIC & ENGINE -->
     <!-- ============================================== -->
     <script>
-        const ADMIN_PIN_DEFAULT = "3620";
+        const ADMIN_PIN_DEFAULT = "";
         let enteredPin = "";
         let adminToken = localStorage.getItem('cali_admin_token') || "";
         
@@ -339,7 +339,7 @@
         // AUTHENTICATION
         // ----------------------------------------------------
         async function initApp() {
-            if (adminToken && (adminToken.includes('3620') || adminToken.includes('admin') || adminToken.includes('EMP'))) {
+            if (adminToken) {
                 unlockPOS();
             } else {
                 document.getElementById('pin-view').classList.remove('hidden');
@@ -403,7 +403,7 @@
         }
 
         function validatePin() {
-            if (enteredPin === ADMIN_PIN_DEFAULT || enteredPin === "1234" || enteredPin.length === 4) {
+            if (enteredPin.length === 4) {
                 adminToken = `Bearer ${enteredPin}`;
                 localStorage.setItem('cali_admin_token', adminToken);
                 unlockPOS();

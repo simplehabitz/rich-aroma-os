@@ -89,9 +89,15 @@
             }
         };
 
-        function verifyAccess() {
+        async function verifyAccess() {
             const pin = document.getElementById('adminPin').value;
-            if (pin === '4574' || pin === '3620') {
+            let okLogin = false;
+            try {
+                const res = await fetch('/api/store?action=verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
+                const data = await res.json();
+                okLogin = !!(data && data.success && data.employee && (data.employee.role === 'admin' || data.employee.id === 'master' || data.employee.id === 'master_admin'));
+            } catch (e) { okLogin = false; }
+            if (okLogin) {
                 authedPin = pin;
                 document.getElementById('admin-login').classList.add('hidden');
                 document.getElementById('main-content').classList.remove('hidden');

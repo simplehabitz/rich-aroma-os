@@ -247,10 +247,19 @@
 
         async function handleLogin() {
             const pin = document.getElementById('login-pin').value;
-            if (pin === '4574' || pin === '3620') {
-                localStorage.setItem('pos_active_shift', JSON.stringify({ shiftId: 'turbo_active', startTime: new Date() }));
-                location.reload();
-            } else { alert("Invalid PIN"); }
+            try {
+                const res = await fetch('/api/store?action=verify-pin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin })
+                });
+                const data = await res.json();
+                if (data && data.success) {
+                    localStorage.setItem('ra_staff_pin', pin);
+                    localStorage.setItem('pos_active_shift', JSON.stringify({ shiftId: 'turbo_active', startTime: new Date() }));
+                    location.reload();
+                } else { alert("Invalid PIN"); }
+            } catch (e) { alert("Invalid PIN"); }
         }
 
         // --- GRID RENDERING ---
@@ -489,7 +498,7 @@
             try {
                 const res = await fetch('/api/orders', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify(payload)
                 });
                 if (res.ok) {
@@ -529,7 +538,7 @@
             const isOpen = cb.checked;
             await fetch('/api/store/status', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer EMP-admin' },
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                 body: JSON.stringify({ isOpen })
             });
             fetchStatus();
