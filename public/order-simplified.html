@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rich Aroma | Menú Simplificado</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="/order-manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="apple-touch-icon" href="/rico-logo.png">
+    <meta name="theme-color" content="#fdfbf7">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: '#c9a66b',
+                        dark: '#120e0c',
+                        charcoal: '#1e1613',
+                        success: '#10B981',
+                        error: '#EF4444'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Playfair Display', 'Georgia', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Rich Espresso Dark Theme Global Overrides */
+        body { 
+            background-color: #120e0c !important; 
+            color: #fdfbf7 !important; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+        
+        .font-display { 
+            font-family: 'Playfair Display', Georgia, serif !important; 
+        }
+        
+        /* Text Color Adaptations (Reversed for dark theme) */
+        .text-white { color: #fdfbf7 !important; }
+        .text-white\/90 { color: #fdfbf7 !important; }
+        .text-white\/80 { color: rgba(253, 251, 247, 0.8) !important; }
+        .text-white\/60 { color: rgba(253, 251, 247, 0.6) !important; }
+        .text-white\/40 { color: rgba(253, 251, 247, 0.4) !important; }
+        .text-white\/30 { color: rgba(253, 251, 247, 0.3) !important; }
+        .text-white\/20 { color: rgba(253, 251, 247, 0.2) !important; }
+        
+        /* Border Adaptations */
+        .border-white\/5 { border-color: rgba(253, 251, 247, 0.05) !important; }
+        .border-white\/10 { border-color: rgba(253, 251, 247, 0.1) !important; }
+        .border-gold\/10 { border-color: rgba(201, 166, 107, 0.1) !important; }
+        .border-gold\/20 { border-color: rgba(201, 166, 107, 0.2) !important; }
+        .border-gold\/30 { border-color: rgba(201, 166, 107, 0.3) !important; }
+        
+        /* Card & Container Adaptations (Warm Mocha) */
+        .glass { 
+            background: #1e1613 !important; 
+            border: 1px solid rgba(201, 166, 107, 0.15) !important; 
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .glass-dark { 
+            background: #1e1613 !important; 
+            border: 1px solid rgba(201, 166, 107, 0.15) !important; 
+        }
+        
+        .item-card { 
+            background-color: #1e1613 !important; 
+            border: 1px solid rgba(201, 166, 107, 0.15) !important; 
+            box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.3) !important;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        
+        .item-card:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 12px 20px -5px rgba(201, 166, 107, 0.2) !important;
+        }
+        
+        .item-card:active { 
+            transform: scale(0.97) !important; 
+        }
+
+        /* Gold Gradient (Luxurious Gold Button) Override */
+        .gold-gradient { 
+            background: linear-gradient(135deg, #c9a66b 0%, #f4e2c0 50%, #c9a66b 100%) !important; 
+            color: #120e0c !important; 
+            border: none !important;
+        }
+        
+        .text-dark {
+            color: #120e0c !important;
+        }
+
+        .btn-gold {
+            background-color: #c9a66b !important;
+            color: #120e0c !important;
+            border-color: #c9a66b !important;
+        }
+        
+        /* Sticky Cats & Navigation Override */
+        #sticky-cats {
+            background-color: rgba(18, 14, 12, 0.95) !important;
+            border-bottom: 1px solid rgba(253, 251, 247, 0.08) !important;
+        }
+        
+        .cat-btn.bg-white\/5 {
+            background-color: #1e1613 !important;
+            color: #c9a66b !important;
+            border: 1px solid rgba(201, 166, 107, 0.2) !important;
+        }
+
+        .cat-btn.bg-gold {
+            background-color: #c9a66b !important;
+            color: #120e0c !important;
+            border: 1px solid #c9a66b !important;
+        }
+        
+        /* Drawer/Modal Adaptations */
+        .drawer { 
+            background-color: #120e0c !important; 
+            border-top: 1px solid rgba(201, 166, 107, 0.2) !important; 
+            color: #fdfbf7 !important;
+            transform: translateY(100%); 
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); 
+        }
+        .drawer.active { transform: translateY(0); }
+        
+        #booking-drawer, #profile-drawer, #mod-drawer, #check-drawer, #reload-modal > div {
+            background-color: #120e0c !important;
+            color: #fdfbf7 !important;
+        }
+        
+        /* Overlay Blur Adaptations */
+        .bg-black\/95, .bg-black\/90, .bg-dark\/95, .bg-dark\/80 { 
+            background-color: rgba(18, 14, 12, 0.96) !important; 
+            backdrop-filter: blur(12px) !important; 
+        }
+        
+        /* Forms & Inputs */
+        input, select, textarea {
+            background-color: #1e1613 !important;
+            border: 1px solid rgba(201, 166, 107, 0.2) !important;
+            color: #fdfbf7 !important;
+            border-radius: 1.25rem !important;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            border-color: #c9a66b !important;
+            background-color: #120e0c !important;
+        }
+        
+        /* Icons & Small badges */
+        .text-gold {
+            color: #c9a66b !important;
+        }
+        
+        .bg-gold\/10 {
+            background-color: rgba(201, 166, 107, 0.1) !important;
+        }
+
+        .bg-gold\/20 {
+            background-color: rgba(201, 166, 107, 0.2) !important;
+        }
+        
+        /* Header & Navigation Bar borders */
+        header {
+            background-color: rgba(18, 14, 12, 0.95) !important;
+            border-bottom: 1px solid rgba(201, 166, 107, 0.15) !important;
+        }
+
+        nav.fixed {
+            background-color: rgba(18, 14, 12, 0.95) !important;
+            border-t: 1px solid rgba(201, 166, 107, 0.15) !important;
+        }
+
+        /* Footer branding */
+        #footer-os-tag {
+            color: rgba(253, 251, 247, 0.2) !important;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        @keyframes bounce-in { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); } }
+        .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    </style>
+    <script>
+        // Disable versions auto-reload for preview page to allow local debug
+        localStorage.setItem('ra_app_version', '3.3.6');
+    </script>
+</head>
+<body class="min-h-screen">
+
+    <!-- OVERLAYS -->
+    <div id="closed-overlay" class="hidden fixed inset-0 bg-dark/95 z-[900] flex flex-col items-center justify-center p-8 text-center backdrop-blur-md">
+        <div class="w-24 h-24 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center text-4xl mb-6 shadow-2xl border border-red-500/20 animate-pulse"><i class="fas fa-clock"></i></div>
+        <h2 class="text-3xl font-display font-bold text-white mb-2 uppercase tracking-tighter">Cerrado</h2>
+        <p class="text-white/40 text-sm max-w-xs leading-relaxed mb-8">Estamos preparando el mejor café para ti. Estaremos cerrados temporalmente y volveremos a abrir la primera semana de julio. ¡Gracias por tu paciencia!</p>
+        <div class="glass p-6 rounded-[2rem] w-full max-w-xs space-y-4">
+            <div class="space-y-2">
+                <p class="text-[10px] font-black text-gold uppercase tracking-widest">Horario Normal</p>
+                <p class="text-xs text-white/60 font-bold">Lun - Sáb: 7am - 7pm</p>
+                <p class="text-xs text-white/60 font-bold">Dom: 8am - 6pm</p>
+            </div>
+            <button onclick="document.getElementById('closed-overlay').classList.add('hidden')" class="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest active:scale-95 transition-all">Ver el Menú</button>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="sticky top-0 z-[100] bg-dark/95 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center shadow-xl">
+        <div class="flex items-center gap-3">
+            <img id="header-logo" src="/rico-logo.png" class="w-10 h-10 rounded-full border border-gold/20 object-cover" alt="RA">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 id="header-name" class="font-display text-lg text-gold font-bold tracking-tight uppercase leading-none">Rich Aroma</h1>
+                    <span id="header-version" class="text-[7px] bg-gold/10 text-gold/40 px-1.5 py-0.5 rounded-full border border-gold/10">v3.3.6</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1">
+                    <p id="store-status-text" class="text-[9px] text-white/30 tracking-[0.2em] uppercase">Cargando...</p>
+                    <span class="text-[7px] text-white/20 uppercase font-black tracking-widest border-l border-white/10 pl-2">7AM - 7PM</span>
+                </div>
+            </div>
+        </div>
+        <div id="user-pill" class="hidden flex items-center gap-2 bg-white/5 pl-3 pr-1 py-1 rounded-full border border-white/10" onclick="window.openProfile()">
+            <span id="user-first-name" class="text-[9px] font-black text-gold uppercase tracking-widest">---</span>
+            <div class="w-6 h-6 bg-gold text-dark rounded-full flex items-center justify-center text-[10px]"><i class="fas fa-user"></i></div>
+        </div>
+        <button id="login-btn" onclick="window.openLogin()" class="px-5 py-2.5 bg-gold text-dark rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-gold/20 active:scale-95 transition-all">
+            Soy Miembro
+        </button>
+    </header>
+
+    <!-- BOOKING DRAWER -->
+    <div id="booking-overlay" class="hidden fixed inset-0 bg-black/90 z-[2100] backdrop-blur-md opacity-0 transition-opacity duration-300" onclick="closeBooking()"></div>
+    <div id="booking-drawer" class="drawer fixed bottom-0 left-0 right-0 z-[2110] bg-dark rounded-t-[3rem] h-[92vh] flex flex-col border-t border-white/10 shadow-2xl overflow-hidden">
+        <div class="p-8 flex justify-between items-center shrink-0 border-b border-white/5">
+            <div>
+                <h3 class="text-2xl font-display font-black text-white uppercase tracking-tight">Reservar Espacio</h3>
+                <p id="booking-item-name" class="text-gold text-[10px] font-black uppercase tracking-[0.3em] mt-1">Cancha Multi-Uso</p>
+            </div>
+            <button onclick="closeBooking()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-8 space-y-10 hide-scrollbar pb-32">
+            <!-- 1. Select Date -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">1. Selecciona el Día</p>
+                <input type="date" id="booking-date" class="w-full bg-white/5 border border-white/10 p-6 rounded-[2rem] text-white text-xl font-bold outline-none focus:border-gold" onchange="updateBookingSlots()">
+            </div>
+
+            <!-- 2. Select Time -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">2. Selecciona la Hora</p>
+                <div id="booking-slots-grid" class="grid grid-cols-2 gap-3">
+                    <!-- Slots injected via JS -->
+                </div>
+            </div>
+
+            <!-- 3. Duration -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">3. Duración (Horas)</p>
+                <div class="flex items-center gap-6 bg-white/5 p-4 rounded-[2rem] border border-white/5 w-max">
+                    <button onclick="changeBookingDuration(-1)" class="w-12 h-12 rounded-2xl bg-white/5 text-white flex items-center justify-center active:scale-90 transition-all border border-white/5"><i class="fas fa-minus"></i></button>
+                    <span id="booking-duration" class="text-2xl font-black text-white w-8 text-center">1</span>
+                    <button onclick="changeBookingDuration(1)" class="w-12 h-12 rounded-2xl bg-gold text-dark flex items-center justify-center active:scale-90 transition-all shadow-lg"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Bottom -->
+        <div class="p-8 border-t border-white/5 shrink-0 bg-dark/80 backdrop-blur-md">
+            <div class="flex justify-between items-end mb-6">
+                <div>
+                    <p class="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">Total Reserva</p>
+                    <p id="booking-total-price" class="text-3xl font-black text-white">L 0.00</p>
+                </div>
+                <p id="booking-time-label" class="text-gold font-black text-[10px] uppercase tracking-widest italic">Selecciona horario</p>
+            </div>
+            <button onclick="submitBookingToCart()" id="booking-add-btn" class="w-full gold-gradient py-6 rounded-[2.5rem] font-black text-sm uppercase tracking-widest text-dark shadow-2xl active:scale-95 transition-all">Agregar Reserva a Bolsa</button>
+        </div>
+    </div>
+
+    <!-- RICO PROFILE / WALLET DRAWER -->
+    <div id="profile-overlay" class="hidden fixed inset-0 bg-black/90 z-[2100] backdrop-blur-md opacity-0 transition-opacity duration-300" onclick="window.closeProfile()"></div>
+    <div id="profile-drawer" class="drawer fixed bottom-0 left-0 right-0 z-[2110] bg-dark rounded-t-[3rem] max-h-[92vh] flex flex-col border-t border-white/10 shadow-2xl overflow-hidden">
+        <div class="p-8 flex justify-between items-center shrink-0">
+            <h3 class="text-2xl font-display font-black text-white uppercase tracking-tight">Mi Perfil</h3>
+            <button onclick="window.closeProfile()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-8 pb-12 space-y-8 hide-scrollbar">
+            <!-- User Info Header -->
+            <div class="flex items-center gap-6 bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+                <div class="w-20 h-20 bg-gold text-dark rounded-full flex items-center justify-center text-3xl font-black">
+                    <span id="prof-initial">R</span>
+                </div>
+                <div>
+                    <h4 id="prof-name" class="text-xl font-black text-white uppercase tracking-tight">---</h4>
+                    <p id="prof-phone" class="text-xs text-white/40 font-mono tracking-widest mt-1">---</p>
+                    <div id="prof-vip-badge" class="hidden mt-2 inline-flex items-center gap-1.5 bg-gold/20 text-gold px-3 py-1 rounded-full text-[9px] font-black uppercase border border-gold/30">
+                        <i class="fas fa-crown"></i> VIP Member
+                    </div>
+                    <div id="prof-coffee-badge" class="hidden mt-2 inline-flex items-center gap-1.5 bg-amber-500 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase shadow-lg shadow-amber-500/20 animate-pulse">
+                        <i class="fas fa-coffee"></i> Café Gratis Disponible
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="glass p-6 rounded-[2rem] space-y-1 hover:border-gold/30 active:scale-95 transition-all cursor-pointer" onclick="window.openPointsHistory()">
+                    <p class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em] flex items-center justify-between">Rico Points <i class="fas fa-chevron-right text-[8px] text-white/20"></i></p>
+                    <p id="prof-points" class="text-2xl font-black text-white">0</p>
+                </div>
+                <div class="glass p-6 rounded-[2rem] space-y-1 border-2 border-gold/10" onclick="window.rechargeBalance()">
+                    <p class="text-[9px] font-black text-gold uppercase tracking-[0.2em]">Mi Billetera <i class="fas fa-plus-circle ml-1"></i></p>
+                    <p id="prof-balance" class="text-2xl font-black text-gold">L 0.00</p>
+                </div>
+            </div>
+
+            <!-- Drink Streak Card -->
+            <div class="glass p-6 rounded-[2.5rem] flex items-center justify-between border border-gold/10">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-gold/10 text-gold rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fas fa-mug-hot"></i>
+                    </div>
+                    <div>
+                        <p class="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">Drink Streak</p>
+                        <p id="prof-streak-msg" class="text-[11px] font-bold text-white/80">Cargando streak...</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p id="prof-streak-count" class="text-2xl font-black text-gold font-mono">0/6</p>
+                </div>
+            </div>
+
+            <!-- RICO REWARDS -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h5 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Canjear Rico Points</h5>
+                    <span id="prof-points-badge" class="bg-gold text-dark text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">0 PTS</span>
+                </div>
+                <div id="prof-rewards-list" class="space-y-3">
+                    <!-- Rewards injected here -->
+                </div>
+            </div>
+
+            <!-- Member QR Section -->
+            <div class="bg-white p-6 rounded-[2.5rem] flex flex-col items-center gap-4 shadow-xl">
+                <p class="text-[10px] font-black text-dark/40 uppercase tracking-[0.3em]">Mi QR de Miembro</p>
+                <div id="prof-qr" class="w-40 h-40 flex items-center justify-center"></div>
+                <p class="text-[9px] font-black text-gold uppercase tracking-widest">Escanea para Puntos y Pagos</p>
+            </div>
+
+            <!-- NEW MEMBERSHIP HUB -->
+            <div id="membership-hub" class="space-y-6">
+                <div class="flex justify-between items-center px-2">
+                    <h5 class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Rich Aroma Legacy</h5>
+                    <span id="tier-status-badge" class="text-[8px] font-black text-white/40 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded-full border border-white/5">Classic Member</span>
+                </div>
+
+                <!-- TIER PYRAMID / PATH -->
+                <div class="bg-gradient-to-br from-[#1A1410] to-[#120C09] p-8 rounded-[3rem] border border-gold/20 relative overflow-hidden">
+                    <div id="tier-path-container" class="relative z-10 space-y-8">
+                        <div class="flex justify-between items-center relative">
+                            <div class="absolute left-6 right-6 top-1/2 h-0.5 bg-white/5 -z-10"></div>
+                            <div id="path-Bronze" class="w-12 h-12 rounded-2xl bg-dark border-2 border-white/10 flex items-center justify-center text-white/20 transition-all duration-500"><i class="fas fa-shield-alt"></i></div>
+                            <div id="path-Silver" class="w-12 h-12 rounded-2xl bg-dark border-2 border-white/10 flex items-center justify-center text-white/20 transition-all duration-500"><i class="fas fa-medal"></i></div>
+                            <div id="path-Gold" class="w-12 h-12 rounded-2xl bg-dark border-2 border-white/10 flex items-center justify-center text-white/20 transition-all duration-500"><i class="fas fa-crown"></i></div>
+                            <div id="path-Diamond" class="w-14 h-14 rounded-2xl bg-dark border-2 border-white/10 flex items-center justify-center text-white/20 shadow-2xl transition-all duration-500"><i class="fas fa-gem"></i></div>
+                        </div>
+
+                        <div id="tier-details" class="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+                            <!-- Active tier details injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- REGISTRATION MODAL -->
+            <div id="application-modal" class="hidden fixed inset-0 bg-black/95 z-[4000] backdrop-blur-xl flex items-center justify-center p-6">
+                <div class="w-full max-w-sm space-y-8 text-center">
+                    <div class="w-20 h-20 bg-gold/10 rounded-[2rem] flex items-center justify-center mx-auto border border-gold/20">
+                        <i class="fas fa-paper-plane text-3xl text-gold"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h2 id="app-title" class="text-3xl font-display font-black text-white italic tracking-tight">Aplicar Invitación</h2>
+                        <p class="text-white/40 text-[10px] font-black uppercase tracking-widest">Solo 10 personas en el mundo tienen este nivel</p>
+                    </div>
+                    <div class="space-y-4 text-left">
+                        <div class="space-y-2">
+                            <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-2">¿A qué te dedicas?</p>
+                            <input type="text" id="app-job" placeholder="Ej: Fundador de..." class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold font-bold">
+                        </div>
+                        <div class="space-y-2">
+                            <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-2">¿Por qué quieres ser parte?</p>
+                            <textarea id="app-reason" placeholder="Cuéntanos un poco sobre ti..." class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold font-bold h-32 resize-none"></textarea>
+                        </div>
+                    </div>
+                    <button onclick="window.submitApplication()" class="w-full gold-gradient py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest text-dark shadow-2xl active:scale-95 transition-all">Enviar Solicitud</button>
+                    <button onclick="document.getElementById('application-modal').classList.add('hidden')" class="text-white/20 text-[10px] font-black uppercase tracking-widest">Cancelar</button>
+                </div>
+            </div>
+
+            <!-- Favorites -->
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Mis Favoritos</h5>
+                <div id="prof-favorites" class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2 text-center py-8 border-2 border-dashed border-white/5 rounded-[2rem] text-white/20 text-xs italic">Aún no tienes favoritos</div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div class="space-y-4">
+                <h5 class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Configuración</h5>
+                <button onclick="window.updatePIN()" class="w-full py-4 rounded-[1.5rem] bg-white/5 border border-white/10 text-white/60 font-black text-[9px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-key text-gold"></i> Cambiar mi PIN Secreto
+                </button>
+            </div>
+
+            <!-- Link to Full Wallet -->
+            <div class="pt-4">
+                <button onclick="window.location.href='/dashboard.html'" class="w-full bg-gold text-dark py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+                    Ver mi Billetera <i class="fas fa-wallet ml-2"></i>
+                </button>
+            </div>
+
+            <button onclick="window.logout()" class="w-full py-4 text-error/40 font-black text-[10px] uppercase tracking-widest mt-2">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <!-- LOGIN MODAL -->
+    <div id="login-overlay" class="hidden fixed inset-0 bg-black/95 z-[3000] backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-300">
+        <div class="w-full max-w-sm space-y-8 text-center">
+            <div class="space-y-2">
+                <div class="w-20 h-20 bg-gold/10 rounded-[2rem] flex items-center justify-center mx-auto border border-gold/20 mb-4">
+                    <i class="fas fa-user-lock text-3xl text-gold"></i>
+                </div>
+                <h2 class="text-3xl font-display font-black text-white tracking-tight italic">¡Hola de nuevo!</h2>
+                <p class="text-white/40 text-[10px] font-black uppercase tracking-widest">Ingresa tu número y PIN para continuar</p>
+            </div>
+
+            <div class="space-y-4">
+                <div class="flex gap-2">
+                    <select id="login-country" class="bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-xs font-black text-gold outline-none">
+                        <option value="+504">🇭🇳 +504</option>
+                        <option value="+1">🇺🇸 +1</option>
+                    </select>
+                    <input type="tel" id="login-phone" placeholder="WhatsApp" class="flex-1 bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold font-bold">
+                </div>
+                
+                <!-- PIN Display Dots -->
+                <div class="flex justify-center gap-3 py-4">
+                    <div id="lpin-1" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                    <div id="lpin-2" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                    <div id="lpin-3" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                    <div id="lpin-4" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3">
+                    <button onclick="typeLoginPin('1')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">1</button>
+                    <button onclick="typeLoginPin('2')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">2</button>
+                    <button onclick="typeLoginPin('3')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">3</button>
+                    <button onclick="typeLoginPin('4')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">4</button>
+                    <button onclick="typeLoginPin('5')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">5</button>
+                    <button onclick="typeLoginPin('6')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">6</button>
+                    <button onclick="typeLoginPin('7')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">7</button>
+                    <button onclick="typeLoginPin('8')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">8</button>
+                    <button onclick="typeLoginPin('9')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">9</button>
+                    <button onclick="clearLoginPin()" class="h-16 rounded-2xl bg-white/5 text-white/20 font-black text-sm active:bg-red-500/20"><i class="fas fa-backspace"></i></button>
+                    <button onclick="typeLoginPin('0')" class="h-16 rounded-2xl bg-white/5 text-white font-black text-xl active:bg-gold active:text-dark transition-all">0</button>
+                    <button id="login-submit-btn" onclick="submitLogin()" class="h-16 rounded-2xl bg-gold/20 text-gold font-black text-sm uppercase tracking-widest active:scale-95 transition-all">OK</button>
+                </div>
+            </div>
+
+            <button onclick="window.closeLogin()" class="text-white/20 text-[10px] font-black uppercase tracking-widest pt-4">Cancelar</button>
+            <div class="pt-8 border-t border-white/5 mt-8">
+                <p class="text-white/40 text-[10px] font-black uppercase tracking-widest mb-4">¿Eres nuevo?</p>
+                <button onclick="window.openRegister()" class="w-full py-4 rounded-2xl bg-white/5 border border-white/10 text-gold font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all">Únete a la Familia - Crear Cuenta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REGISTRATION MODAL -->
+    <div id="reg-overlay" class="hidden fixed inset-0 bg-black/95 z-[3001] backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-300">
+        <div class="w-full max-w-sm space-y-8 text-center">
+            <div class="space-y-2">
+                <div class="w-20 h-20 bg-gold/10 rounded-[2rem] flex items-center justify-center mx-auto border border-gold/20 mb-4">
+                    <i class="fas fa-user-plus text-3xl text-gold"></i>
+                </div>
+                <h2 class="text-3xl font-display font-black text-white tracking-tight italic">Únete a la Familia</h2>
+                <p class="text-white/40 text-[10px] font-black uppercase tracking-widest">Obtén beneficios exclusivos y puntos gratis</p>
+            </div>
+
+            <div class="space-y-4 text-left">
+                <div class="space-y-2">
+                    <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-2">Tu Nombre</p>
+                    <input type="text" id="reg-name" placeholder="Nombre completo" class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold font-bold">
+                </div>
+                <div class="space-y-2">
+                    <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-2">Tu WhatsApp</p>
+                    <div class="flex gap-2">
+                        <select id="reg-country" class="bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-xs font-black text-gold outline-none">
+                            <option value="+504">🇭🇳 +504</option>
+                            <option value="+1">🇺🇸 +1</option>
+                        </select>
+                        <input type="tel" id="reg-phone" placeholder="9999-9999" class="flex-1 bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold font-bold">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-2">Crea un PIN (4 números)</p>
+                    
+                    <!-- PIN Display Dots -->
+                    <div class="flex justify-center gap-3 py-2">
+                        <div id="rpin-1" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                        <div id="rpin-2" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                        <div id="rpin-3" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                        <div id="rpin-4" class="w-4 h-4 rounded-full border-2 border-white/20"></div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="typeRegisterPin('1')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">1</button>
+                        <button onclick="typeRegisterPin('2')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">2</button>
+                        <button onclick="typeRegisterPin('3')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">3</button>
+                        <button onclick="typeRegisterPin('4')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">4</button>
+                        <button onclick="typeRegisterPin('5')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">5</button>
+                        <button onclick="typeRegisterPin('6')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">6</button>
+                        <button onclick="typeRegisterPin('7')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">7</button>
+                        <button onclick="typeRegisterPin('8')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">8</button>
+                        <button onclick="typeRegisterPin('9')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">9</button>
+                        <button onclick="clearRegisterPin()" class="h-12 rounded-2xl bg-white/5 text-white/20 font-black text-sm active:bg-red-500/20 flex items-center justify-center"><i class="fas fa-backspace"></i></button>
+                        <button onclick="typeRegisterPin('0')" class="h-12 rounded-2xl bg-white/5 text-white font-black text-lg active:bg-gold active:text-dark transition-all">0</button>
+                        <button id="reg-submit-btn" onclick="submitRegister()" class="h-12 rounded-2xl bg-gold/20 text-gold font-black text-[10px] uppercase tracking-widest active:scale-95 transition-all">OK</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 pt-4">
+                <button onclick="window.closeRegister()" class="text-white/20 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors">Ya tengo cuenta / Atrás</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- POINTS HISTORY MODAL -->
+    <div id="points-history-modal" class="hidden fixed inset-0 bg-black/95 z-[3001] backdrop-blur-xl flex items-center justify-center p-6 animate-in fade-in duration-300">
+        <div class="w-full max-w-sm space-y-6 flex flex-col h-[75vh]">
+            <div class="space-y-2 text-center shrink-0">
+                <div class="w-16 h-16 bg-gold/10 rounded-[1.5rem] flex items-center justify-center mx-auto border border-gold/20 mb-2">
+                    <i class="fas fa-history text-2xl text-gold"></i>
+                </div>
+                <h2 class="text-2xl font-display font-black text-white tracking-tight italic">Historial de Puntos</h2>
+                <p class="text-white/40 text-[9px] font-black uppercase tracking-widest">Tus transacciones y puntos acumulados</p>
+            </div>
+
+            <!-- Scrollable Ledger List -->
+            <div id="points-ledger-list" class="flex-1 overflow-y-auto space-y-4 p-2 pr-4 border border-white/5 bg-white/[0.01] rounded-[2rem] hide-scrollbar">
+                <!-- Points list injected here -->
+            </div>
+
+            <div class="space-y-4 text-center shrink-0">
+                <button onclick="window.closePointsHistory()" class="w-full gold-gradient py-4 rounded-[2rem] font-black text-xs uppercase tracking-widest text-dark shadow-2xl active:scale-95 transition-all">Cerrar Historial</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY CATEGORIES -->
+    <nav id="sticky-cats" class="sticky top-[68px] z-50 bg-dark/80 backdrop-blur-sm border-b border-white/5 flex gap-2 overflow-x-auto p-4 hide-scrollbar"></nav>
+
+    <!-- MENU FEED -->
+    <main id="menu-feed" class="px-6 space-y-12 pb-[80vh] pt-6">
+        <!-- CLOSED BANNER -->
+        <div id="closed-banner" class="hidden bg-error/10 border border-error/20 rounded-[2.5rem] p-6 text-center shadow-xl mb-8">
+            <p class="text-[10px] font-black text-error uppercase tracking-[0.4em] mb-1">Tienda Cerrada</p>
+            <h4 class="text-lg font-display font-black text-white italic tracking-tight leading-tight">Actualmente no aceptamos pedidos online. ¡Te esperamos pronto!</h4>
+        </div>
+
+        <div id="loading-msg" class="py-20 text-center text-white/20 italic animate-pulse">Sincronizando el menú...</div>
+        <div id="menu-container"></div>
+    </main>
+
+    <!-- CART BAR -->
+    <div id="cart-bar" class="fixed bottom-24 left-4 right-4 z-[3000] transform translate-y-[250%] opacity-0 transition-all duration-500 cursor-pointer" onclick="window.openCheckout()">
+        <div class="gold-gradient p-4 rounded-[2rem] flex justify-between items-center shadow-[0_10px_35px_rgba(201,166,107,0.4)] border border-white/20 active:scale-98 transition-all">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-dark rounded-2xl flex items-center justify-center text-gold shadow-xl"><i class="fas fa-shopping-bag text-lg"></i></div>
+                <div>
+                    <p id="cart-count-text" class="text-[10px] font-black text-dark/60 uppercase tracking-widest leading-none">0 Items</p>
+                    <p id="cart-total-text" class="text-xl font-black text-dark leading-tight mt-1">L 0.00</p>
+                </div>
+            </div>
+            <div class="bg-dark text-gold px-5 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg">
+                <span>Ver Bolsa</span>
+                <i class="fas fa-chevron-right text-xs"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- UNIVERSAL BOTTOM NAVIGATION -->
+    <nav class="fixed bottom-0 left-0 right-0 z-[2000] bg-dark/95 backdrop-blur-2xl border-t border-white/10 px-4 pb-6 pt-3 flex justify-around items-center safe-area-inset-bottom shadow-[0_-20px_50px_rgba(0,0,0,0.9)]">
+        <a href="/order-simplified.html" class="flex flex-col items-center gap-1 transition-all active:scale-90 text-gold">
+            <div class="w-10 h-10 rounded-2xl bg-gold/10 flex items-center justify-center border border-gold/20 shadow-[0_0_15px_rgba(201,166,107,0.1)]">
+                <i class="fas fa-mug-hot text-base"></i>
+            </div>
+            <span class="text-[8px] font-black uppercase tracking-[0.2em]">Menú</span>
+        </a>
+        <button onclick="window.openCheckout()" class="flex flex-col items-center gap-1 transition-all active:scale-90 text-white/60 hover:text-gold relative">
+            <div class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 relative">
+                <i class="fas fa-shopping-bag text-base"></i>
+                <span id="nav-cart-badge" class="hidden absolute -top-1.5 -right-1.5 bg-emerald-500 text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-dark">0</span>
+            </div>
+            <span class="text-[8px] font-bold uppercase tracking-[0.2em]">Mi Bolsa</span>
+        </button>
+        <a href="/dashboard.html" class="flex flex-col items-center gap-1 transition-all active:scale-90 text-white/30 hover:text-gold">
+            <div class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                <i class="fas fa-wallet text-base"></i>
+            </div>
+            <span class="text-[8px] font-bold uppercase tracking-[0.2em]">Billetera</span>
+        </a>
+        <button onclick="window.openProfile()" class="flex flex-col items-center gap-1 transition-all active:scale-90 text-white/30 hover:text-gold">
+            <div class="w-10 h-10 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                <i class="fas fa-user-circle text-base"></i>
+            </div>
+            <span class="text-[8px] font-bold uppercase tracking-[0.2em]">Mi Perfil</span>
+        </button>
+    </nav>
+
+    <!-- RELOAD MODAL -->
+    <div id="reload-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[2200] flex flex-col justify-end">
+        <div class="bg-white w-full max-h-[90vh] rounded-t-[3rem] shadow-2xl flex flex-col overflow-hidden border-t border-gold/20 relative">
+            <div class="p-8 pb-4 border-b border-white/5 flex justify-between items-center">
+                <h2 class="text-2xl font-black text-white uppercase tracking-tight" id="modal-title">Recargar Billetera</h2>
+                <button onclick="window.closeReloadModal()" class="w-12 h-12 rounded-full bg-white/5 text-white/40 flex items-center justify-center transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-8 space-y-8 pb-32 hide-scrollbar">
+                <div class="text-center space-y-2">
+                    <p class="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">Monto a transferir</p>
+                    <h3 class="text-5xl font-black text-gold font-mono tracking-tighter" id="modal-amount">L 0.00</h3>
+                    <p id="modal-vip-note" class="text-[10px] text-gold/60 font-black uppercase tracking-widest hidden">Incluye L. 500 de Cash y beneficios VIP</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button onclick="window.copyBank('bac')" class="bg-red-600/10 border border-red-600/20 text-red-500 p-6 rounded-[2rem] font-black flex flex-col items-center gap-2 active:scale-95 transition-all">
+                        <span class="text-[10px] uppercase tracking-widest">BAC</span>
+                        <i class="fas fa-copy text-2xl"></i>
+                    </button>
+                    <button onclick="window.copyBank('banpais')" class="bg-blue-600/10 border border-blue-600/20 text-blue-500 p-6 rounded-[2rem] font-black flex flex-col items-center gap-2 active:scale-95 transition-all">
+                        <span class="text-[10px] uppercase tracking-widest">Banpaís</span>
+                        <i class="fas fa-copy text-2xl"></i>
+                    </button>
+                </div>
+
+                <div class="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center space-y-4">
+                    <p class="text-xs font-bold text-white/60">Sube la captura de tu transferencia aquí:</p>
+                    <input type="file" id="reload-receipt" accept="image/*" class="w-full text-xs text-white/40 file:mr-4 file:py-3 file:px-6 file:rounded-2xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-gold file:text-dark hover:file:bg-gold/80 cursor-pointer" onchange="window.submitReload()">
+                    <div id="reload-status" class="mt-4 text-xs font-black uppercase tracking-widest hidden text-gold animate-pulse">Optimizando imagen...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODIFIER DRAWER -->
+    <div id="mod-overlay" class="hidden fixed inset-0 bg-black/80 z-[2100] backdrop-blur-sm opacity-0 transition-opacity duration-300" onclick="closeModifier()"></div>
+    <div id="mod-drawer" class="drawer fixed bottom-0 left-0 right-0 z-[2110] bg-dark rounded-t-[3rem] h-[92vh] flex flex-col border-t border-white/10 shadow-2xl">
+        <!-- Compact Header -->
+        <div class="px-6 py-4 flex justify-between items-center shrink-0 border-b border-white/5">
+            <div class="flex items-center gap-4">
+                <div id="mod-image" class="hidden w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10 shadow-lg bg-charcoal"></div>
+                <div>
+                    <h3 id="mod-name" class="text-lg font-display font-black text-white uppercase leading-none truncate max-w-[180px]">Product Name</h3>
+                    <p id="mod-price" class="text-sm font-black text-gold font-mono mt-1">L 0.00</p>
+                </div>
+            </div>
+            <button onclick="closeModifier()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 border border-white/5"><i class="fas fa-times"></i></button>
+        </div>
+
+        <!-- Scrollable Options Area -->
+        <div class="flex-1 overflow-y-auto p-8 pt-6 space-y-10 hide-scrollbar">
+            <div id="mod-options" class="space-y-10">
+                <!-- Modifiers injected here -->
+            </div>
+
+            <div class="space-y-4 pt-6 border-t border-white/5">
+                <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Notas Especiales</p>
+                <input type="text" id="mod-note" placeholder="Ej: Sin azúcar, extra hielo..." class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold">
+            </div>
+            
+            <div class="h-20"></div> <!-- Buffer -->
+        </div>
+
+        <!-- Sticky Bottom Bar -->
+        <div class="p-8 border-t border-white/5 shrink-0 bg-dark/80 backdrop-blur-md">
+            <div class="flex items-center justify-between gap-6">
+                <div class="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/5">
+                    <button onclick="window.changeQty(-1)" class="w-10 h-10 rounded-xl bg-white/5 text-white flex items-center justify-center active:scale-90 transition-all"><i class="fas fa-minus text-xs"></i></button>
+                    <span id="mod-qty" class="text-xl font-black text-white w-6 text-center">1</span>
+                    <button onclick="window.changeQty(1)" class="w-10 h-10 rounded-xl bg-gold text-dark flex items-center justify-center active:scale-90 transition-all"><i class="fas fa-plus text-xs"></i></button>
+                </div>
+                <button onclick="window.add()" class="flex-1 gold-gradient py-5 rounded-[2rem] font-black text-sm uppercase tracking-widest text-dark shadow-2xl active:scale-95 transition-all">
+                    <span id="add-btn-text">Agregar a Bolsa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHECKOUT DRAWER -->
+    <div id="check-overlay" class="hidden fixed inset-0 bg-black/95 z-[2100] backdrop-blur-md opacity-0 transition-opacity duration-300" onclick="closeCheckout()"></div>
+    <div id="check-drawer" class="drawer fixed bottom-0 left-0 right-0 z-[2110] bg-dark rounded-t-[3rem] h-[92vh] flex flex-col border-t border-white/10 shadow-2xl">
+        <div class="p-6 flex justify-between items-center shrink-0 border-b border-white/5">
+            <h3 class="text-2xl font-display font-black text-white uppercase tracking-tight">Finalizar Pedido</h3>
+            <button onclick="closeCheckout()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-8 space-y-10 pb-48 pt-6 hide-scrollbar">
+            <div id="check-items" class="space-y-4"></div>
+
+            <!-- Customer Contact Information -->
+            <div class="space-y-3">
+                <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Tus Datos de Contacto</p>
+                <div class="space-y-2">
+                    <input type="text" id="check-name" placeholder="Tu Nombre Completo *" class="w-full bg-white/5 border border-white/10 p-4 rounded-[1.25rem] text-white outline-none focus:border-gold text-xs font-bold" value="Cliente">
+                    <input type="tel" id="check-phone" placeholder="Número de WhatsApp *" class="w-full bg-white/5 border border-white/10 p-4 rounded-[1.25rem] text-white outline-none focus:border-gold text-xs font-mono" placeholder="9999-9999">
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Tipo de Entrega</p>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="setFulfill('delivery')" id="fbtn-delivery" class="p-3.5 rounded-2xl border transition-all text-center space-y-1.5 flex flex-col items-center justify-center bg-gold/20 border-gold text-white">
+                        <i class="fas fa-motorcycle text-lg text-gold"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">A Domicilio</span>
+                    </button>
+                    <button onclick="setFulfill('pickup')" id="fbtn-pickup" class="p-3.5 rounded-2xl border transition-all text-center space-y-1.5 flex flex-col items-center justify-center border-white/10 text-white/60">
+                        <i class="fas fa-store text-lg"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">En Barra</span>
+                    </button>
+                    <button onclick="setFulfill('table')" id="fbtn-table" class="p-3.5 rounded-2xl border transition-all text-center space-y-1.5 flex flex-col items-center justify-center border-white/10 text-white/60">
+                        <i class="fas fa-chair text-lg"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">En Mesa</span>
+                    </button>
+                    <button onclick="setFulfill('drivethru')" id="fbtn-drivethru" class="p-3.5 rounded-2xl border transition-all text-center space-y-1.5 flex flex-col items-center justify-center border-white/10 text-white/60">
+                        <i class="fas fa-car text-lg"></i>
+                        <span class="text-[8px] font-black uppercase tracking-wider">Autoservicio</span>
+                    </button>
+                </div>
+
+                <!-- Delivery Address & Driver Selector Section -->
+                <div id="delivery-info-container" class="space-y-4 pt-2">
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-1">Barrio / Colonia</p>
+                        <select id="check-barrio" class="w-full bg-white/5 border border-white/10 p-4 rounded-[1.25rem] text-white outline-none focus:border-gold font-bold text-xs">
+                            <option value="Bo. El Centro">Barrio El Centro</option>
+                            <option value="Col. Los Maestros">Colonia Los Maestros</option>
+                            <option value="Bo. San José">Barrio San José</option>
+                            <option value="Bo. Buenos Aires">Barrio Buenos Aires</option>
+                            <option value="Col. El Carrizal">Colonia El Carrizal</option>
+                            <option value="Pinalejo">Pinalejo (Centro)</option>
+                            <option value="Otro">Otro Sector</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-1">Dirección Exacta o Referencia</p>
+                        <input type="text" id="check-address" placeholder="Ej: Casa verde frente a pulpería Don Juan" class="w-full bg-white/5 border border-white/10 p-4 rounded-[1.25rem] text-white outline-none focus:border-gold text-xs">
+                    </div>
+
+                    <!-- Driver Picker -->
+                    <div class="space-y-3 pt-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-1">🛵 Asignar Repartidor</p>
+                            <span class="text-[8px] font-bold text-white/40 uppercase">Envío: L. 35.00</span>
+                        </div>
+                        
+                        <div class="space-y-2" id="driver-options-grid">
+                            <!-- Option 1: Express -->
+                            <label onclick="selectDriver('express', '⚡ Repartidor Express')" class="flex items-center justify-between p-3.5 rounded-2xl border border-gold/40 bg-gold/10 cursor-pointer transition-all active:scale-98">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-gold/20 flex items-center justify-center text-gold text-sm font-black">
+                                        ⚡
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-xs font-black text-white uppercase tracking-tight">Repartidor Express</p>
+                                        <p class="text-[8px] text-emerald-400 font-bold uppercase tracking-widest">Más Rápido • Asignación Inmediata</p>
+                                    </div>
+                                </div>
+                                <input type="radio" name="driver_choice" value="express" checked class="w-4 h-4 text-gold accent-gold">
+                            </label>
+
+                            <!-- Option 2: Pool Driver Juan -->
+                            <label onclick="selectDriver('juan', 'Juan Pérez 🏍️')" class="flex items-center justify-between p-3.5 rounded-2xl border border-white/10 bg-white/5 cursor-pointer transition-all active:scale-98">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-sm font-black">
+                                        <i class="fas fa-user-check"></i>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-xs font-black text-white uppercase tracking-tight">Juan Pérez (⭐ 4.9)</p>
+                                        <p class="text-[8px] text-white/40 font-bold uppercase tracking-widest">Moto Roja • Flota QuimiEats</p>
+                                    </div>
+                                </div>
+                                <input type="radio" name="driver_choice" value="juan" class="w-4 h-4 text-gold accent-gold">
+                            </label>
+
+                            <!-- Option 3: Custom Driver -->
+                            <button type="button" onclick="openCustomDriverModal()" class="w-full py-3.5 px-4 rounded-2xl border border-dashed border-gold/40 bg-gold/5 text-gold hover:bg-gold/10 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                                <i class="fas fa-plus-circle text-xs"></i>
+                                <span id="custom-driver-label">Asignar Mi Propio Repartidor</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="table-number-container" class="hidden space-y-2">
+                    <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em] ml-1">Número de Mesa</p>
+                    <input type="number" id="check-table" placeholder="Mesa #" class="w-full bg-white/5 border border-white/10 p-4 rounded-[1.25rem] text-white outline-none focus:border-gold font-bold">
+                </div>
+            </div>
+
+            <!-- Payment Method -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Método de Pago</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="setPayment('balance')" id="pbtn-balance" class="p-5 rounded-[2rem] border transition-all text-center space-y-2 flex flex-col items-center justify-center">
+                        <i class="fas fa-wallet text-xl"></i>
+                        <div class="space-y-0.5">
+                            <span class="text-[9px] font-black uppercase tracking-widest block">Mi Billetera</span>
+                            <span id="check-wallet-bal" class="text-[8px] font-bold text-white/40 block">L 0.00</span>
+                        </div>
+                    </button>
+                    <button onclick="setPayment('cash')" id="pbtn-cash" class="p-5 rounded-[2rem] border transition-all text-center space-y-2 flex flex-col items-center justify-center">
+                        <i class="fas fa-money-bill-wave text-xl"></i>
+                        <span class="text-[9px] font-black uppercase tracking-widest block">Efectivo / POS</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Order Notes -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em]">Instrucciones Especiales</p>
+                <input type="text" id="check-note" placeholder="Ej: Cubiertos, salsa extra, servilletas..." class="w-full bg-white/5 border border-white/10 p-5 rounded-[1.5rem] text-white outline-none focus:border-gold">
+            </div>
+        </div>
+
+        <div class="p-8 border-t border-white/5 shrink-0 bg-dark/80 backdrop-blur-md">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-[10px] font-black text-white/30 uppercase tracking-widest leading-none mb-1">Total Pedido</p>
+                    <p id="check-total" class="text-3xl font-black text-white">L 0.00</p>
+                </div>
+                <div class="text-right">
+                    <p id="discount-label" class="text-[9px] font-black text-emerald-400 uppercase tracking-widest leading-none hidden">Descuento Aplicado</p>
+                </div>
+            </div>
+            <button onclick="window.submitOrder()" id="pay-submit-btn" class="w-full gold-gradient py-6 rounded-[2.5rem] font-black text-sm uppercase tracking-widest text-dark shadow-2xl active:scale-95 transition-all">Enviar Pedido</button>
+        </div>
+    </div>
+
+    <!-- CUSTOM DRIVER MODAL -->
+    <div id="custom-driver-modal" class="hidden fixed inset-0 bg-black/90 z-[3000] backdrop-blur-xl flex items-center justify-center p-6">
+        <div class="max-w-xs w-full bg-[#120C09] rounded-[2.5rem] p-6 border border-gold/30 shadow-2xl space-y-6 text-center">
+            <div class="w-16 h-16 bg-gold/10 text-gold rounded-2xl flex items-center justify-center mx-auto text-2xl border border-gold/20">
+                <i class="fas fa-motorcycle"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-display font-black text-white uppercase tracking-tight">Tu Repartidor de Confianza</h3>
+                <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1">Ingresa los datos de tu motomandado</p>
+            </div>
+            
+            <div class="space-y-3 text-left">
+                <div>
+                    <label class="text-[8px] font-black text-gold uppercase tracking-widest block mb-1 ml-1">Nombre Completo</label>
+                    <input type="text" id="cust-driver-name" placeholder="Ej: Luis Mendoza" class="w-full bg-white/5 border border-white/10 p-3.5 rounded-xl text-white outline-none focus:border-gold text-xs">
+                </div>
+                <div>
+                    <label class="text-[8px] font-black text-gold uppercase tracking-widest block mb-1 ml-1">WhatsApp del Repartidor</label>
+                    <input type="tel" id="cust-driver-phone" placeholder="Ej: 9876-5432" class="w-full bg-white/5 border border-white/10 p-3.5 rounded-xl text-white outline-none focus:border-gold text-xs">
+                </div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="closeCustomDriverModal()" class="flex-1 py-3.5 bg-white/5 hover:bg-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest text-white/60">Cancelar</button>
+                <button onclick="saveCustomDriver()" class="flex-1 py-3.5 bg-gold text-dark rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TICKET / RECEIPT DRAWER -->
+    <div id="receipt-overlay" class="hidden fixed inset-0 bg-black/95 z-[2500] backdrop-blur-xl opacity-0 transition-opacity duration-300"></div>
+    <div id="receipt-drawer" class="drawer fixed bottom-0 left-0 right-0 z-[2510] bg-[#120C09] rounded-t-[3rem] h-[95vh] flex flex-col border-t border-gold/20 shadow-2xl overflow-hidden">
+        <div class="p-8 pb-4 flex justify-between items-center shrink-0 border-b border-white/5">
+            <h3 class="text-2xl font-display font-black text-white uppercase tracking-tight">Comprobante y Rastreo</h3>
+            <button onclick="closeReceipt()" class="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-white/40 border border-white/5"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-8 space-y-8 hide-scrollbar pb-32">
+            <!-- Top Status -->
+            <div class="text-center space-y-4">
+                <div class="w-20 h-20 bg-emerald-500/10 text-emerald-500 rounded-[2rem] border border-emerald-500/20 flex items-center justify-center mx-auto animate-bounce-in">
+                    <i class="fas fa-check-circle text-4xl"></i>
+                </div>
+                <div>
+                    <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em] mb-1">¡Pedido Registrado con Éxito!</p>
+                    <h2 class="text-4xl font-display font-black text-white italic tracking-tight uppercase" id="receipt-code">#000</h2>
+                    <p id="receipt-status-badge" class="mt-2 inline-flex items-center gap-1.5 bg-gold/10 text-gold px-3 py-1 rounded-full text-[9px] font-black uppercase border border-gold/20 tracking-wider">Recibido en Cocina</p>
+                </div>
+            </div>
+
+            <!-- Live Order Progress Tracker Bar -->
+            <div class="glass p-5 rounded-[2rem] space-y-3">
+                <div class="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-white/40 px-1">
+                    <span id="step-1" class="text-gold"><i class="fas fa-check-circle"></i> Recibido</span>
+                    <span id="step-2"><i class="fas fa-fire"></i> Cocinando</span>
+                    <span id="step-3"><i class="fas fa-box"></i> Listo</span>
+                    <span id="step-4"><i class="fas fa-motorcycle"></i> En Ruta</span>
+                </div>
+                <div class="w-full bg-white/10 h-2 rounded-full overflow-hidden">
+                    <div id="order-progress-bar" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full w-1/4 transition-all duration-500"></div>
+                </div>
+                <p id="order-eta-label" class="text-[9px] font-bold text-center text-white/60">Tiempo estimado: <span class="text-gold font-black">15 - 20 min</span></p>
+            </div>
+
+            <!-- 1-Tap WhatsApp Dispatch Button -->
+            <a id="whatsapp-dispatch-btn" href="#" target="_blank" class="w-full py-4 px-6 rounded-2xl bg-emerald-500 text-black font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(16,185,129,0.3)] active:scale-95 transition-all">
+                <i class="fab fa-whatsapp text-lg"></i>
+                <span>Enviar Notificación a WhatsApp</span>
+            </a>
+
+            <!-- QR Code Box -->
+            <div class="glass p-6 rounded-[2rem] text-center space-y-3 flex flex-col items-center justify-center">
+                <p class="text-[9px] font-black text-gold uppercase tracking-[0.3em]">Código QR del Pedido</p>
+                <div id="receipt-qrcode" class="p-3 bg-white rounded-2xl shadow-xl inline-block"></div>
+                <p class="text-[8px] text-white/40 font-bold uppercase tracking-wider">Muestra este código al repartidor al recibir tu comida</p>
+            </div>
+
+            <!-- Receipt Info Grid -->
+            <div class="glass p-6 rounded-[2rem] space-y-4">
+                <div class="flex justify-between text-xs">
+                    <span class="text-white/40 font-bold uppercase tracking-wider">Cliente</span>
+                    <span class="font-bold text-white/95" id="receipt-cust-name">---</span>
+                </div>
+                <div class="flex justify-between text-xs border-t border-white/5 pt-4">
+                    <span class="text-white/40 font-bold uppercase tracking-wider">Repartidor Asignado</span>
+                    <span class="font-bold text-gold" id="receipt-driver-assigned">⚡ Repartidor Express</span>
+                </div>
+                <div class="flex justify-between text-xs border-t border-white/5 pt-4">
+                    <span class="text-white/40 font-bold uppercase tracking-wider">Método de Pago</span>
+                    <span class="font-bold text-white/95" id="receipt-pay-method">---</span>
+                </div>
+                <div class="flex justify-between text-xs border-t border-white/5 pt-4">
+                    <span class="text-white/40 font-bold uppercase tracking-wider">Entrega</span>
+                    <span class="font-bold text-white/95" id="receipt-delivery">---</span>
+                </div>
+                <div class="flex justify-between text-xs border-t border-white/5 pt-4">
+                    <span class="text-white/40 font-bold uppercase tracking-wider">Fecha / Hora</span>
+                    <span class="font-mono text-white/60" id="receipt-time">---</span>
+                </div>
+            </div>
+
+            <!-- Cart Items -->
+            <div class="space-y-4">
+                <p class="text-[10px] font-black text-white/30 uppercase tracking-[0.3em]">Detalle del Pedido</p>
+                <div id="receipt-items" class="space-y-3">
+                    <!-- Items injected here -->
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-3 pt-4">
+                <button onclick="showTracking()" class="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest active:scale-95 transition-all">
+                    <i class="fas fa-sync-alt mr-2"></i> Actualizar Estado en Vivo
+                </button>
+                <button onclick="location.href = window.location.hostname.includes('quimieats.com') ? '/' : '/order-simplified.html'" class="w-full py-5 bg-gold text-dark rounded-[2rem] font-black text-xs uppercase tracking-widest shadow-xl active:scale-95 transition-all">Pide Algo Más</button>
+                <button onclick="localStorage.clear(); sessionStorage.clear(); location.reload(true);" class="text-[8px] text-white/10 font-bold uppercase tracking-[0.3em] hover:text-white/40 pt-4">Forzar Actualización</button>
+                <p id="footer-os-tag" class="text-[9px] text-white/20 uppercase font-bold tracking-widest">Rich Aroma OS v3.4</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- Audio Chimes -->
+    <audio id="chime-prep" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+    <audio id="chime-ready" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" preload="auto"></audio>
+    <audio id="chime-shipped" src="https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3" preload="auto"></audio>
+
+    <script src="/order_script.js?v=3.4.0"></script>
+    <script src="/quimi-nav.js?v=1.0.1"></script>
+</body>
+</html>

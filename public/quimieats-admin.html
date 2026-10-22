@@ -68,13 +68,12 @@
                     <i class="fas fa-compass text-orange-400 text-xs"></i>
                     <select onchange="if(this.value) window.location.href = this.value;" class="bg-transparent text-xs font-bold text-white outline-none cursor-pointer">
                         <option value="" class="bg-[#1A1A1C]">⚡ Ir a Página del Ecosistema...</option>
-                        <option value="/dev-hub.html" class="bg-[#1A1A1C]">🛠️ Dev Hub & Simulador Móvil</option>
                         <option value="/quimieats.html" class="bg-[#1A1A1C]">📱 Marketplace QuimiEats (Cliente)</option>
                         <option value="/order.html" class="bg-[#1A1A1C]">🛒 Menú de Pedidos Online</option>
-                        <option value="/partner.html" class="bg-[#1A1A1C]">👨‍🍳 Portal de Socios / Restaurantes</option>
+                        <option value="/partner-os.html" class="bg-[#1A1A1C]">👨‍🍳 Portal de Socios / Restaurantes</option>
                         <option value="/driver-portal.html" class="bg-[#1A1A1C]">🛵 Portal de Motoristas (Drivers)</option>
                         <option value="/kitchen.html" class="bg-[#1A1A1C]">🍳 KDS Pantalla de Cocina</option>
-                        <option value="/pos.html" class="bg-[#1A1A1C]">💳 Caja POS de Mostrador</option>
+                        <option value="/pos-v2.html" class="bg-[#1A1A1C]">💳 Caja POS de Mostrador</option>
                     </select>
                 </div>
                 <button onclick="openQuickAdd()" class="bg-orange-500 text-white px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-orange-500/25 hover:scale-105 transition-all">
@@ -401,10 +400,10 @@
                             <span class="text-[8px] font-mono text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded">📱 Cliente</span>
                         </button>
 
-                        <button type="button" onclick="openAdminSimPartner('/partner.html')" class="w-full p-3 bg-white/5 hover:bg-cyan/20 border border-white/5 hover:border-cyan/30 rounded-2xl text-left transition-all group flex justify-between items-center">
+                        <button type="button" onclick="openAdminSimPartner('/partner-os.html')" class="w-full p-3 bg-white/5 hover:bg-cyan/20 border border-white/5 hover:border-cyan/30 rounded-2xl text-left transition-all group flex justify-between items-center">
                             <div>
                                 <span class="font-bold text-white group-hover:text-cyan block"><i class="fas fa-store text-cyan mr-1"></i> Portal de Socios / KDS</span>
-                                <span class="text-[8px] text-white/40 font-mono">/partner.html • PIN: ••••</span>
+                                <span class="text-[8px] text-white/40 font-mono">/partner-os.html</span>
                             </div>
                             <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
                         </button>
@@ -417,10 +416,10 @@
                             <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
                         </button>
 
-                        <button type="button" onclick="openAdminSimPartner('/pos.html')" class="w-full p-3 bg-white/5 hover:bg-blue-500/20 border border-white/5 hover:border-blue-500/30 rounded-xl text-left transition-all group flex justify-between items-center">
+                        <button type="button" onclick="openAdminSimPartner('/pos-v2.html')" class="w-full p-3 bg-white/5 hover:bg-blue-500/20 border border-white/5 hover:border-blue-500/30 rounded-xl text-left transition-all group flex justify-between items-center">
                             <div>
                                 <span class="font-bold text-white group-hover:text-blue-400 block"><i class="fas fa-cash-register text-blue-400 mr-1"></i> Caja POS Mostrador</span>
-                                <span class="text-[8px] text-white/40 font-mono">/pos.html • PIN: 1234</span>
+                                <span class="text-[8px] text-white/40 font-mono">/pos-v2.html</span>
                             </div>
                             <span class="text-[8px] font-mono text-cyan bg-cyan/10 px-2 py-0.5 rounded">🖥️ Socio</span>
                         </button>
@@ -485,14 +484,14 @@
                             <span class="text-[10px] font-black text-cyan uppercase tracking-widest flex items-center gap-1.5">
                                 <i class="fas fa-tablet-alt"></i> Partner OS (POS / Calendario)
                             </span>
-                            <span id="admin-partner-url-label" class="text-[8px] text-white/40 font-mono truncate max-w-[160px]">/partner.html</span>
+                            <span id="admin-partner-url-label" class="text-[8px] text-white/40 font-mono truncate max-w-[160px]">/partner-os.html</span>
                         </div>
                         
                         <div class="w-[360px] h-[720px] bg-[#0E0E12] rounded-[3.5rem] border-8 border-cyan/30 p-1 relative overflow-hidden shadow-2xl flex flex-col">
                             <div class="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-4 bg-cyan/20 rounded-b-xl z-50 flex items-center justify-center">
                                 <div class="w-10 h-1 bg-black rounded-full mb-0.5"></div>
                             </div>
-                            <iframe id="iframe-admin-partner" src="/partner.html" class="w-full flex-1 bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
+                            <iframe id="iframe-admin-partner" src="/partner-os.html" class="w-full flex-1 bg-dark rounded-[2.8rem] border-0" sandbox="allow-same-origin allow-scripts allow-modals allow-forms allow-popups"></iframe>
                         </div>
                     </div>
 

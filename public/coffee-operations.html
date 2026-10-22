@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rich Aroma Coffee Shop • Quimistán Plaza Pro-Forma & Staffing Model</title>
+    <meta name="description" content="Detailed financial pro-forma, staffing requirements, equipment CapEx, unit economics, and operational blueprint for Rich Aroma Coffee Shop in Quimistán, Santa Bárbara.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #06090e;
+            --bg-surface: #0a0f18;
+            --bg-card: rgba(15, 22, 35, 0.88);
+            --bg-card-hover: rgba(22, 33, 50, 0.95);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-amber: rgba(245, 158, 11, 0.35);
+            --border-glow: rgba(16, 185, 129, 0.35);
+            --border-coffee: rgba(217, 119, 6, 0.4);
+            --coffee-gold: #fbbf24;
+            --coffee-bronze: #d97706;
+            --coffee-cream: #fef3c7;
+            --emerald: #10b981;
+            --emerald-glow: rgba(16, 185, 129, 0.4);
+            --cyan: #06b6d4;
+            --rose: #f43f5e;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --font-mono: 'JetBrains Mono', monospace;
+            --gradient-coffee: linear-gradient(135deg, #d97706 0%, #b45309 50%, #78350f 100%);
+            --gradient-accent: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            --gradient-emerald: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-deep);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 12%, rgba(217, 119, 6, 0.08) 0%, transparent 45%),
+                radial-gradient(circle at 88% 25%, rgba(16, 185, 129, 0.07) 0%, transparent 45%),
+                radial-gradient(circle at 50% 85%, rgba(245, 158, 11, 0.05) 0%, transparent 50%);
+            background-attachment: fixed;
+            line-height: 1.5;
+        }
+
+        h1, h2, h3, h4, .brand, .stat-value, .num {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+        }
+
+        /* Top Nav */
+        header {
+            background: rgba(6, 9, 14, 0.88);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-inner {
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .brand-badge {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--gradient-coffee);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            box-shadow: 0 4px 18px rgba(217, 119, 6, 0.35);
+        }
+
+        .brand-title {
+            font-size: 1.18rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title span.tag {
+            font-size: 0.72rem;
+            color: #fbbf24;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .nav-link {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.86rem;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #fbbf24;
+        }
+
+        .btn-nav-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-nav-action:hover {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        /* Container */
+        main {
+            max-width: 1320px;
+            margin: 32px auto 80px auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 56px;
+        }
+
+        /* Hero Banner */
+        .coffee-hero {
+            background: linear-gradient(145deg, rgba(18, 26, 40, 0.96), rgba(9, 13, 20, 0.98));
+            border: 1px solid var(--border-coffee);
+            border-radius: 28px;
+            padding: 42px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(217, 119, 6, 0.12);
+        }
+
+        .coffee-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #d97706, #fbbf24, #10b981);
+        }
+
+        .hero-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .badge-pill.gold {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid var(--border-amber);
+            color: #fbbf24;
+        }
+
+        .badge-pill.green {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--border-glow);
+            color: #34d399;
+        }
+
+        .badge-pill.coffee {
+            background: rgba(217, 119, 6, 0.2);
+            border: 1px solid rgba(217, 119, 6, 0.45);
+            color: #fde68a;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1.25fr 0.75fr;
+            gap: 40px;
+            align-items: center;
+        }
+
+        .hero-text h1 {
+            font-size: 3.3rem;
+            line-height: 1.1;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #fef3c7 40%, #fde68a 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-text p.lead {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 28px;
+        }
+
+        .executive-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .exec-stat {
+            background: rgba(0, 0, 0, 0.45);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 18px;
+        }
+
+        .exec-stat .label {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .exec-stat .val {
+            font-size: 1.85rem;
+            font-weight: 800;
+            color: #ffffff;
+        }
+
+        .exec-stat .sub {
+            font-size: 0.76rem;
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        /* Breakeven Gauge Card */
+        .breakeven-card {
+            background: rgba(7, 10, 15, 0.9);
+            border: 1px solid var(--border-coffee);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .b-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .b-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fbbf24;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .b-big-number {
+            font-size: 3.6rem;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .b-big-number span {
+            font-size: 1.3rem;
+            color: #fbbf24;
+            font-weight: 700;
+        }
+
+        .b-sub {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .b-bullet-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.82rem;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Section Cards */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .panel-head h2 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .panel-head p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+        }
+
+        /* 4 Revenue Streams Grid */
+        .stream-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .stream-card {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .stream-card:hover {
+            border-color: var(--border-coffee);
+            transform: translateY(-2px);
+        }
+
+        .s-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .s-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(245, 158, 11, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #fbbf24;
+        }
+
+        .s-monthly {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: var(--font-mono);
+        }
+
+        .s-title {
+            font-size: 1.12rem;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .s-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .s-pill {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            color: #fbbf24;
+            font-family: var(--font-mono);
+        }
+
+        /* Unit Economics Table & Cards */
+        .unit-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 28px;
+            align-items: center;
+        }
+
+        .unit-box {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 24px;
+        }
+
+        table.cogs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        table.cogs-table th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        table.cogs-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .margin-highlight-card {
+            background: linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(16, 185, 129, 0.1));
+            border: 1px solid var(--border-coffee);
+            border-radius: 20px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            text-align: center;
+        }
+
+        .margin-highlight-card .big-pct {
+            font-size: 3.8rem;
+            font-weight: 900;
+            color: #34d399;
+            line-height: 1;
+        }
+
+        .margin-highlight-card .pct-sub {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .margin-stat-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: left;
+        }
+
+        .margin-stat-row .m-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        .margin-stat-row .m-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: var(--font-mono);
+        }
+
+        /* Staffing Table */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table.pro-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        table.pro-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        table.pro-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        table.pro-table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .role-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #ffffff;
+            display: inline-block;
+        }
+
+        .hnl-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+        }
+
+        /* CapEx Equipment Grid */
+        .capex-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .capex-box {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .capex-box .c-category {
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .capex-box .c-cost {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #fbbf24;
+            font-family: var(--font-mono);
+        }
+
+        .capex-box .c-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        /* P&L Table */
+        .pnl-container {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .pnl-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 14px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .pnl-row.header {
+            background: rgba(255, 255, 255, 0.04);
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .pnl-row.section-title {
+            background: rgba(245, 158, 11, 0.08);
+            color: #fbbf24;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .pnl-row.section-title.expense {
+            background: rgba(244, 63, 94, 0.08);
+            color: #fb7185;
+        }
+
+        .pnl-row.total-row {
+            background: rgba(255, 255, 255, 0.06);
+            font-weight: 800;
+            font-size: 1.05rem;
+            color: #ffffff;
+            border-top: 2px solid var(--border-subtle);
+        }
+
+        .pnl-row.net-income {
+            background: linear-gradient(90deg, rgba(217, 119, 6, 0.2), rgba(16, 185, 129, 0.2));
+            border-top: 2px solid #fbbf24;
+            border-bottom: 2px solid #fbbf24;
+            font-weight: 900;
+            font-size: 1.2rem;
+            color: #ffffff;
+        }
+
+        /* Interactive Simulator */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 36px;
+            align-items: center;
+        }
+
+        .slider-box {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sim-slider-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sim-slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .sim-slider-header .s-name {
+            color: var(--text-secondary);
+        }
+
+        .sim-slider-header .s-val {
+            font-weight: 700;
+            color: #ffffff;
+            font-family: var(--font-mono);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #fbbf24;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .sim-result-card {
+            background: rgba(7, 10, 15, 0.9);
+            border: 1px solid var(--border-coffee);
+            border-radius: 24px;
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .sim-metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .sim-metric-row .m-label {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        .sim-metric-row .m-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #ffffff;
+            font-family: var(--font-mono);
+        }
+
+        .sim-metric-row.highlight {
+            background: rgba(245, 158, 11, 0.12);
+            padding: 14px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border-amber);
+        }
+
+        .sim-metric-row.highlight .m-val {
+            font-size: 1.65rem;
+            color: #fbbf24;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero-grid { grid-template-columns: 1fr; }
+            .stream-grid { grid-template-columns: repeat(2, 1fr); }
+            .unit-grid { grid-template-columns: 1fr; }
+            .capex-grid { grid-template-columns: repeat(2, 1fr); }
+            .sim-grid { grid-template-columns: 1fr; }
+            .executive-stats-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 640px) {
+            .hero-text h1 { font-size: 2.3rem; }
+            .stream-grid { grid-template-columns: 1fr; }
+            .capex-grid { grid-template-columns: 1fr; }
+            .pnl-row { grid-template-columns: 1.5fr 1fr; }
+            .pnl-row div:nth-child(3), .pnl-row div:nth-child(4) { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="nav-inner">
+            <a href="/eco-park.html" class="brand-block">
+                <div class="brand-badge">☕</div>
+                <div class="brand-title">
+                    Rich Aroma Coffee Shop
+                    <span class="tag">Quimistán Plaza • Specialty Roastery & Café</span>
+                </div>
+            </a>
+
+            <div class="nav-links">
+                <a href="#revenue" class="nav-link">Revenue Streams</a>
+                <a href="#economics" class="nav-link">Unit Economics (76% Margin)</a>
+                <a href="#staffing" class="nav-link">Staffing (4 FTE)</a>
+                <a href="#capex" class="nav-link">Startup CapEx ($32.5k)</a>
+                <a href="#pnl" class="nav-link">P&L Forecast</a>
+                <a href="#simulator" class="nav-link">Interactive Model</a>
+                <a href="/operations" class="btn-nav-action">
+                    <span>🏟️ Sports Model</span> ↗
+                </a>
+                <a href="/eco-park" class="btn-nav-action" style="border-color: rgba(16, 185, 129, 0.4); color: #34d399;">
+                    <span>🌱 Eco-Park Portal</span> ↗
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+
+        <!-- Executive Hero Banner -->
+        <section class="coffee-hero">
+            <div class="hero-grid">
+                <div class="hero-text">
+                    <div class="hero-meta-row">
+                        <div class="badge-pill gold">☕ Single-Origin Santa Bárbara Specialty Coffee</div>
+                        <div class="badge-pill green">⚡ 100% Blackout-Proof Solar Powered</div>
+                        <div class="badge-pill coffee">📍 CA-4 Copán Highway Transit Corridor</div>
+                    </div>
+
+                    <h1>Quimistán's Premier Solar-Powered Specialty Coffee Experience.</h1>
+                    <p class="lead">
+                        Positioned as the flagship anchor café inside the Eco-Solar Plaza, <strong>Rich Aroma</strong> captures three lucrative customer segments: daily local morning commuters, remote workers and digital nomads living in the 4 plaza apartments, and thousands of international tourists traveling between San Pedro Sula and Copán Ruinas. Powered 24/7 with $0 electricity interruptions.
+                    </p>
+
+                    <div class="executive-stats-grid">
+                        <div class="exec-stat">
+                            <div class="label">Monthly Gross Revenue</div>
+                            <div class="val">$19,850</div>
+                            <div class="sub">Base Case (130 Cups/Day)</div>
+                        </div>
+                        <div class="exec-stat">
+                            <div class="label">Gross Profit Margin</div>
+                            <div class="val" style="color:#34d399;">76.6%</div>
+                            <div class="sub">+$2.49 Net Profit / Cup</div>
+                        </div>
+                        <div class="exec-stat">
+                            <div class="label">Net Operating Income</div>
+                            <div class="val" style="color:#fbbf24;">$6,840</div>
+                            <div class="sub">Monthly Net Profit ($82k/yr)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Breakeven Peace of Mind Card -->
+                <div class="breakeven-card">
+                    <div class="b-header">
+                        <span class="b-title">Daily Breakeven Threshold</span>
+                        <div class="badge-pill green">FAST PAYBACK</div>
+                    </div>
+
+                    <div class="b-big-number">
+                        34 <span>cups / day</span>
+                    </div>
+
+                    <p class="b-sub">
+                        At an average ticket of $3.25 USD (~80 HNL), Rich Aroma covers <strong>100% of its monthly staff payroll, rent, utilities, and coffee beans</strong> with just <strong>34 transactions per day</strong>. Every cup sold beyond #34 is pure operational profit.
+                    </p>
+
+                    <div class="b-bullet-box">
+                        <span>⚡</span>
+                        <span><strong>Zero Spoiled Milk/Ice:</strong> 24/7 solar microgrid guarantees walk-in refrigeration never shuts down.</span>
+                    </div>
+
+                    <div class="b-bullet-box">
+                        <span>💰</span>
+                        <span><strong>CapEx Payback:</strong> $32,500 turnkey equipment investment is 100% recovered in <strong>under 5 months</strong>.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 1: The 4 Revenue Streams -->
+        <section class="panel" id="revenue">
+            <div class="panel-head">
+                <div>
+                    <h2><span>☕</span> The 4 Diversified Revenue Streams</h2>
+                    <p>Combining high-volume daily beverage sales with high-margin retail coffee bean exports and health nutrition.</p>
+                </div>
+                <div class="badge-pill gold">Total Monthly Gross: ~$19,850 / mo ($238k/yr)</div>
+            </div>
+
+            <div class="stream-grid">
+                <!-- Stream 1 -->
+                <div class="stream-card">
+                    <div class="s-top">
+                        <div class="s-icon">☕</div>
+                        <div class="s-monthly">$12,675 <span style="font-size:0.75rem; color:var(--text-muted);">/ mo</span></div>
+                    </div>
+                    <div class="s-title">Espresso & Specialty Brew Bar</div>
+                    <div class="s-desc">
+                        Signature lattes, cappuccinos, flat whites, cold brews, and single-origin Santa Bárbara pour-overs (V60 / Chemex). High recurring daily volume.
+                    </div>
+                    <div class="s-pill">130 Cups/Day @ $3.25 Avg Ticket</div>
+                </div>
+
+                <!-- Stream 2 -->
+                <div class="stream-card">
+                    <div class="s-top">
+                        <div class="s-icon">🥐</div>
+                        <div class="s-monthly">$3,840 <span style="font-size:0.75rem; color:var(--text-muted);">/ mo</span></div>
+                    </div>
+                    <div class="s-title">Artisan Bakery & Brunch</div>
+                    <div class="s-desc">
+                        Fresh butter croissants, toasted ham & gouda paninis, avocado sourdough, and banana walnut bread baked daily in-house.
+                    </div>
+                    <div class="s-pill">42% Ticket Attachment Rate</div>
+                </div>
+
+                <!-- Stream 3 -->
+                <div class="stream-card">
+                    <div class="s-top">
+                        <div class="s-icon">📦</div>
+                        <div class="s-monthly">$1,980 <span style="font-size:0.75rem; color:var(--text-muted);">/ mo</span></div>
+                    </div>
+                    <div class="s-title">Whole Bean Retail Bags</div>
+                    <div class="s-desc">
+                        12 oz (340g) roasted whole bean bags (Medium Pacas & Honey Bourbon) branded <i>Rich Aroma - Quimistán</i>. Sold to tourists driving to Copán.
+                    </div>
+                    <div class="s-pill">180 Bags/Mo @ $11.00 USD ea</div>
+                </div>
+
+                <!-- Stream 4 -->
+                <div class="stream-card">
+                    <div class="s-top">
+                        <div class="s-icon">🏃</div>
+                        <div class="s-monthly">$1,355 <span style="font-size:0.75rem; color:var(--text-muted);">/ mo</span></div>
+                    </div>
+                    <div class="s-title">Sports Nutrition & Smoothies</div>
+                    <div class="s-desc">
+                        Acai smoothie bowls, whey protein recovery shakes, and chilled matcha drinks catering to athletes and runners from the sports track next door.
+                    </div>
+                    <div class="s-pill">Track Athlete Cross-Monetization</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Unit Economics & COGS -->
+        <section class="panel" id="economics">
+            <div class="panel-head">
+                <div>
+                    <h2><span>💰</span> Unit Economics: Anatomy of a $3.25 Latte</h2>
+                    <p>Direct farm sourcing from local Santa Bárbara mountain producers delivers world-class quality at rock-bottom COGS.</p>
+                </div>
+                <div class="badge-pill green">76.6% Gross Product Margin</div>
+            </div>
+
+            <div class="unit-grid">
+                <div class="unit-box">
+                    <table class="cogs-table">
+                        <thead>
+                            <tr>
+                                <th>Ingredient / Component</th>
+                                <th>Quantity per Drink</th>
+                                <th>Unit Cost (USD)</th>
+                                <th>% of Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>Specialty Santa Bárbara Beans</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Direct Trade green beans ($3.20/lb + in-house roast)</div>
+                                </td>
+                                <td class="mono">18g Double Shot</td>
+                                <td class="mono" style="font-weight:700; color:#ffffff;">$0.22 USD</td>
+                                <td class="mono" style="color:var(--text-muted);">6.8%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Whole Dairy / Oat Milk</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Fresh pasteurized whole milk or barista oat milk</div>
+                                </td>
+                                <td class="mono">6 oz Steamed</td>
+                                <td class="mono" style="font-weight:700; color:#ffffff;">$0.28 USD</td>
+                                <td class="mono" style="color:var(--text-muted);">8.6%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Compostable Cup, Lid & Sleeve</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Eco-friendly branded kraft cup with sip lid</div>
+                                </td>
+                                <td class="mono">1 Set</td>
+                                <td class="mono" style="font-weight:700; color:#ffffff;">$0.16 USD</td>
+                                <td class="mono" style="color:var(--text-muted);">4.9%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>House-Made Vanilla / Sugar</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Cane sugar or organic vanilla infusion</div>
+                                </td>
+                                <td class="mono">1 Pump / Packet</td>
+                                <td class="mono" style="font-weight:700; color:#ffffff;">$0.07 USD</td>
+                                <td class="mono" style="color:var(--text-muted);">2.1%</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <strong>Solar Energy & Filtered Water</strong>
+                                    <div style="font-size:0.75rem; color:var(--text-muted);">Plaza 24/7 solar power + Reverse Osmosis water</div>
+                                </td>
+                                <td class="mono">Per Extraction</td>
+                                <td class="mono" style="font-weight:700; color:#ffffff;">$0.03 USD</td>
+                                <td class="mono" style="color:var(--text-muted);">0.9%</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr style="background: rgba(255, 255, 255, 0.05); font-weight:800;">
+                                <td colspan="2">TOTAL DIRECT COST (COGS):</td>
+                                <td class="mono" style="color:#fb7185; font-size:1.1rem;">$0.76 USD</td>
+                                <td class="mono" style="color:#fb7185;">23.4%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Margin Highlight Card -->
+                <div class="margin-highlight-card">
+                    <div style="font-size:0.85rem; font-weight:700; color:#fbbf24; text-transform:uppercase; letter-spacing:0.06em;">
+                        Gross Margin Per Beverage
+                    </div>
+
+                    <div class="big-pct">+76.6%</div>
+                    <div class="pct-sub">Rich Aroma makes <strong>$2.49 in gross profit</strong> on every single $3.25 cup sold.</div>
+
+                    <div class="margin-stat-row">
+                        <div>
+                            <div class="m-label">Daily Gross Profit</div>
+                            <div class="m-val" style="color:#34d399;">$323.70 / day</div>
+                        </div>
+                        <div>
+                            <div class="m-label">Monthly Gross Profit</div>
+                            <div class="m-val" style="color:#34d399;">$9,711 / mo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 3: Staffing & Payroll Budget -->
+        <section class="panel" id="staffing">
+            <div class="panel-head">
+                <div>
+                    <h2><span>👥</span> Coffee Shop Staffing & Payroll Budget</h2>
+                    <p>Benchmarked to Honduran Labor Standards (Código del Trabajo de Honduras / Santa Bárbara Commercial Wage Brackets).</p>
+                </div>
+                <div class="badge-pill cyan">Total Team: 4 Positions • $1,730 / mo All-In</div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="pro-table">
+                    <thead>
+                        <tr>
+                            <th>Position & Responsibilities</th>
+                            <th>Schedule & Headcount</th>
+                            <th>Monthly Base Pay</th>
+                            <th>Benefits & Legal Provisions</th>
+                            <th>Total Monthly Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div style="font-weight:700; color:#ffffff;">Head Barista & Store Manager</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);">Dialing in espresso grinders, milk texturing quality, inventory bean orders, POS cash reconciliations, staff training.</div>
+                            </td>
+                            <td>
+                                <span class="role-badge">1 Full-Time</span>
+                                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Tues – Sun (06:30 – 15:30)</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:700;">$480 USD</div>
+                                <div class="hnl-sub">~12,000 HNL / mo</div>
+                            </td>
+                            <td>
+                                <div style="font-size:0.8rem; color:#34d399;">14th-Month + IHSS + Tips</div>
+                                <div class="hnl-sub">~$85 USD / mo</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:800; color:#ffffff;">$565 USD</div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                <div style="font-weight:700; color:#ffffff;">Barista & Counter Cashier (Shift 1)</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);">Customer greeting, espresso pull, latte art, smoothie preparation, POS terminal operation, order packaging.</div>
+                            </td>
+                            <td>
+                                <span class="role-badge">1 Full-Time</span>
+                                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Morning Shift (06:30 – 14:30)</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:700;">$340 USD</div>
+                                <div class="hnl-sub">~8,500 HNL / mo</div>
+                            </td>
+                            <td>
+                                <div style="font-size:0.8rem; color:#34d399;">14th-Month + IHSS</div>
+                                <div class="hnl-sub">~$60 USD / mo</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:800; color:#ffffff;">$400 USD</div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                <div style="font-weight:700; color:#ffffff;">Barista & Afternoon Cashier (Shift 2)</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);">Afternoon coffee rush, serving track athletes, whole bean sales to highway travelers, evening closing procedures.</div>
+                            </td>
+                            <td>
+                                <span class="role-badge">1 Full-Time</span>
+                                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Afternoon Shift (13:00 – 21:00)</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:700;">$340 USD</div>
+                                <div class="hnl-sub">~8,500 HNL / mo</div>
+                            </td>
+                            <td>
+                                <div style="font-size:0.8rem; color:#34d399;">14th-Month + IHSS</div>
+                                <div class="hnl-sub">~$60 USD / mo</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:800; color:#ffffff;">$400 USD</div>
+                            </td>
+                        </tr>
+
+                        <tr>
+                            <td>
+                                <div style="font-weight:700; color:#ffffff;">Bakery Prep, Panini Cook & Dishwasher</div>
+                                <div style="font-size:0.8rem; color:var(--text-secondary);">Croissant baking, panini grilling, food plating, dishwashing, dining area sanitization, water carafes.</div>
+                            </td>
+                            <td>
+                                <span class="role-badge">1 Full-Time</span>
+                                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">Morning/Midday (07:00 – 15:00)</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:700;">$310 USD</div>
+                                <div class="hnl-sub">~7,750 HNL / mo</div>
+                            </td>
+                            <td>
+                                <div style="font-size:0.8rem; color:#34d399;">14th-Month + IHSS</div>
+                                <div class="hnl-sub">~$55 USD / mo</div>
+                            </td>
+                            <td>
+                                <div class="mono" style="font-weight:800; color:#ffffff;">$365 USD</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr style="background: rgba(255, 255, 255, 0.05); font-weight: 800;">
+                            <td colspan="4" style="text-align: right; color: var(--text-muted);">TOTAL MONTHLY COFFEE SHOP PAYROLL (All Provisions):</td>
+                            <td class="mono" style="color: #fbbf24; font-size: 1.15rem;">$1,730 / mo</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 4: Startup Equipment & Turnkey CapEx ($32,500) -->
+        <section class="panel" id="capex">
+            <div class="panel-head">
+                <div>
+                    <h2><span>⚙️</span> Turnkey Equipment & Buildout CapEx ($32,500 USD)</h2>
+                    <p>Commercial Italian espresso equipment, Reverse Osmosis water treatment, and Honduran hardwood interior styling.</p>
+                </div>
+                <div class="badge-pill gold">Fully Recovered in ~4.8 Months</div>
+            </div>
+
+            <div class="capex-grid">
+                <div class="capex-box">
+                    <div class="c-category">Espresso Machine & Grinders</div>
+                    <div class="c-cost">$10,800</div>
+                    <div class="c-desc">
+                        Commercial 2-Group Dual Boiler Espresso Machine (La Marzocco Linea / Nuova Simonelli) + 2 Eureka Zenith on-demand espresso grinders.
+                    </div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Reverse Osmosis Water System</div>
+                    <div class="c-cost">$1,600</div>
+                    <div class="c-desc">
+                        Commercial 5-stage RO filtration system with remineralization cartridge tuned to optimal SCAA extraction parameters (130-150 ppm TDS).
+                    </div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Refrigeration & Ice Machine</div>
+                    <div class="c-cost">$4,400</div>
+                    <div class="c-desc">
+                        Commercial undercounter 2-door stainless milk fridge, undercounter ice maker (50kg/day), and glass curved pastry display case.
+                    </div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Bakery & Food Prep Gear</div>
+                    <div class="c-cost">$2,200</div>
+                    <div class="c-desc">
+                        Countertop convection baking oven, commercial cast-iron panini press, Vitamix heavy-duty blender, and stainless prep tables.
+                    </div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Furniture & Interior Styling</div>
+                    <div class="c-cost">$6,800</div>
+                    <div class="c-desc">
+                        Local Honduran cedar & laurel hardwood café tables, ergonomic leather stools, outdoor shaded patio seating, and warm acoustic lighting.
+                    </div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">POS & Digital Display Tech</div>
+                    <div class="c-cost">$1,500</div>
+                    <div class="c-desc">
+                        Rich Aroma OS Touch POS dual-screen terminals, thermal receipt printers, barcode scanner for retail bags, and Starlink Wi-Fi hub.
+                    </div>
+                </div>
+
+                <div class="capex-box" style="grid-column: span 2; background: rgba(245, 158, 11, 0.05); border-color: var(--border-amber);">
+                    <div class="c-category" style="color:#fbbf24;">Opening Inventory & Working Capital</div>
+                    <div class="c-cost" style="color:#ffffff;">$5,200</div>
+                    <div class="c-desc">
+                        Initial 500 lbs of specialty Santa Bárbara green beans, wholesale compostable cups/sleeves, local milk supply contract, branded retail bags, and 60 days of cash reserves.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 5: Monthly Overhead & Plaza Lease (OPEX) -->
+        <section class="panel">
+            <div class="panel-head">
+                <div>
+                    <h2><span>🏢</span> Monthly Fixed Operating Overhead (OPEX)</h2>
+                    <p>Operating inside the plaza guarantees predictable, fixed costs with zero utility rate spikes.</p>
+                </div>
+                <div class="badge-pill green">Fixed Overhead: $1,385 / month</div>
+            </div>
+
+            <div class="capex-grid">
+                <div class="capex-box">
+                    <div class="c-category">Plaza Commercial Rent</div>
+                    <div class="c-cost">$650 <span style="font-size:0.8rem; color:var(--text-muted);">/ mo</span></div>
+                    <div class="c-desc">Paid to the Plaza S. de R.L. for prime corner storefront space with shaded patio access.</div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">24/7 Solar Microgrid Power</div>
+                    <div class="c-cost">$380 <span style="font-size:0.8rem; color:var(--text-muted);">/ mo</span></div>
+                    <div class="c-desc">100% clean, blackout-proof solar electricity. Powers espresso boilers, refrigeration, and AC continuously.</div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Espresso Maintenance & Filters</div>
+                    <div class="c-cost">$120 <span style="font-size:0.8rem; color:var(--text-muted);">/ mo</span></div>
+                    <div class="c-desc">Monthly grouphead gasket replacement, shower screens, water filter cartridge swaps, and grinder burr care.</div>
+                </div>
+
+                <div class="capex-box">
+                    <div class="c-category">Wi-Fi, Software & Supplies</div>
+                    <div class="c-cost">$235 <span style="font-size:0.8rem; color:var(--text-muted);">/ mo</span></div>
+                    <div class="c-desc">Starlink commercial Wi-Fi, Spotify business music license, POS cloud software, cleaning chemicals, napkins.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 6: Pro-Forma Income Statement (P&L) -->
+        <section class="panel" id="pnl">
+            <div class="panel-head">
+                <div>
+                    <h2><span>📑</span> Pro-Forma Income Statement (P&L Scenarios)</h2>
+                    <p>Conservative, Base Case, and Accelerated growth forecasts for Rich Aroma Coffee Shop in Quimistán.</p>
+                </div>
+                <div class="badge-pill gold">Base Case Net Profit: $6,840 USD / month ($82k/yr)</div>
+            </div>
+
+            <div class="pnl-container">
+                <div class="pnl-row header">
+                    <div>P&L Account Category</div>
+                    <div style="text-align:right;">Conservative (85 cups)</div>
+                    <div style="text-align:right; color:#fbbf24;">Base Case (130 cups)</div>
+                    <div style="text-align:right; color:#34d399;">Accelerated (190 cups)</div>
+                </div>
+
+                <!-- Revenues -->
+                <div class="pnl-row section-title">
+                    <div colspan="4">I. GROSS OPERATING REVENUE</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Espresso & Specialty Coffee Drinks ($3.25 avg)</div>
+                    <div style="text-align:right;" class="mono">$8,287</div>
+                    <div style="text-align:right;" class="mono">$12,675</div>
+                    <div style="text-align:right;" class="mono">$18,525</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Artisan Bakery, Paninis & Breakfast</div>
+                    <div style="text-align:right;" class="mono">$2,450</div>
+                    <div style="text-align:right;" class="mono">$3,840</div>
+                    <div style="text-align:right;" class="mono">$5,450</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Whole Bean Retail Gift Bags ($11/bag)</div>
+                    <div style="text-align:right;" class="mono">$1,100</div>
+                    <div style="text-align:right;" class="mono">$1,980</div>
+                    <div style="text-align:right;" class="mono">$2,860</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Sports Protein Shakes & Smoothies</div>
+                    <div style="text-align:right;" class="mono">$850</div>
+                    <div style="text-align:right;" class="mono">$1,355</div>
+                    <div style="text-align:right;" class="mono">$1,950</div>
+                </div>
+
+                <div class="pnl-row total-row">
+                    <div>TOTAL GROSS SALES</div>
+                    <div style="text-align:right;" class="mono">$12,687</div>
+                    <div style="text-align:right;" class="mono" style="color:#fbbf24;">$19,850</div>
+                    <div style="text-align:right;" class="mono" style="color:#34d399;">$28,785</div>
+                </div>
+
+                <!-- COGS -->
+                <div class="pnl-row section-title expense">
+                    <div colspan="4">II. COST OF GOODS SOLD (COGS ~ 23.4%)</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Coffee Beans, Milk, Syrups & Bakery Ingredients</div>
+                    <div style="text-align:right;" class="mono">-$2,968</div>
+                    <div style="text-align:right;" class="mono">-$4,645</div>
+                    <div style="text-align:right;" class="mono">-$6,735</div>
+                </div>
+
+                <div class="pnl-row total-row" style="color:#34d399;">
+                    <div>GROSS PROFIT (SALES - COGS)</div>
+                    <div style="text-align:right;" class="mono">$9,719 (76.6%)</div>
+                    <div style="text-align:right;" class="mono">$15,205 (76.6%)</div>
+                    <div style="text-align:right;" class="mono">$22,050 (76.6%)</div>
+                </div>
+
+                <!-- Operating Expenses -->
+                <div class="pnl-row section-title expense">
+                    <div colspan="4">III. OPERATING EXPENSES (PAYROLL & OVERHEAD)</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Staff Payroll & Benefits (4 Employees)</div>
+                    <div style="text-align:right;" class="mono">-$1,730</div>
+                    <div style="text-align:right;" class="mono">-$1,730</div>
+                    <div style="text-align:right;" class="mono">-$2,100</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Plaza Rent & 24/7 Solar Electricity</div>
+                    <div style="text-align:right;" class="mono">-$1,030</div>
+                    <div style="text-align:right;" class="mono">-$1,030</div>
+                    <div style="text-align:right;" class="mono">-$1,150</div>
+                </div>
+
+                <div class="pnl-row">
+                    <div>Maintenance, Wi-Fi, Packaging & Supplies</div>
+                    <div style="text-align:right;" class="mono">-$355</div>
+                    <div style="text-align:right;" class="mono">-$355</div>
+                    <div style="text-align:right;" class="mono">-$450</div>
+                </div>
+
+                <div class="pnl-row total-row" style="color:#fb7185;">
+                    <div>TOTAL OPERATING EXPENSES (OPEX)</div>
+                    <div style="text-align:right;" class="mono">-$3,115</div>
+                    <div style="text-align:right;" class="mono">-$3,115</div>
+                    <div style="text-align:right;" class="mono">-$3,700</div>
+                </div>
+
+                <!-- Net Profit -->
+                <div class="pnl-row net-income">
+                    <div>NET OPERATING INCOME (MONTHLY PROFIT)</div>
+                    <div style="text-align:right;" class="mono" style="color:#34d399;">$6,604 / mo</div>
+                    <div style="text-align:right;" class="mono" style="color:#fbbf24;">$12,090 / mo</div>
+                    <div style="text-align:right;" class="mono" style="color:#34d399;">$18,350 / mo</div>
+                </div>
+
+                <div class="pnl-row" style="background: rgba(255, 255, 255, 0.04); font-weight:800;">
+                    <div>ANNUALIZED NET OPERATING PROFIT</div>
+                    <div style="text-align:right;" class="mono">$79,248 / yr</div>
+                    <div style="text-align:right;" class="mono" style="color:#fbbf24;">$145,080 / yr</div>
+                    <div style="text-align:right;" class="mono" style="color:#34d399;">$220,200 / yr</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 7: Interactive Coffee Financial Simulator -->
+        <section class="panel" id="simulator">
+            <div class="panel-head">
+                <div>
+                    <h2><span>🎛️</span> Dynamic Coffee Pro-Forma Simulator</h2>
+                    <p>Model custom financial performance with preset scenarios tailored to Quimistán's real purchasing power and foot traffic.</p>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="button" onclick="setPreset('quimistan')" style="background: rgba(245, 158, 11, 0.2); border: 1px solid #f59e0b; color: #fbbf24; padding: 7px 14px; border-radius: 8px; font-weight:700; cursor:pointer; font-size:0.82rem;">
+                        📍 Quimistán Ground Reality (L. 50 / $2.00 avg)
+                    </button>
+                    <button type="button" onclick="setPreset('highway')" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; padding: 7px 14px; border-radius: 8px; font-weight:700; cursor:pointer; font-size:0.82rem;">
+                        🚗 CA-4 Highway & Weekend Surge
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ground Reality Callout Card -->
+            <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 16px; padding: 20px; margin-bottom: 24px;">
+                <div style="display: flex; gap: 14px; align-items: flex-start;">
+                    <span style="font-size: 1.8rem; line-height: 1;">💡</span>
+                    <div>
+                        <h4 style="color: #fbbf24; font-size: 1rem; margin-bottom: 4px;">The Quimistán Reality Check: Who actually buys and what can they afford?</h4>
+                        <p style="color: #cbd5e1; font-size: 0.88rem; line-height: 1.5;">
+                            In a municipality where the average daily wage is <strong>L. 250 – L. 350 ($10 – $14 USD)</strong>, expecting 160 cups a day at $3.25 (81 Lempiras) from everyday locals is completely unrealistic. A viable Quimistán shop operates on a <strong>Two-Tier Model</strong>:
+                            <br>• <strong>Locals (50% of orders):</strong> Café con leche, drip coffee, baleadas, and sweet bread at <strong>L. 25 – L. 45 ($1.00 – $1.80)</strong>.
+                            <br>• <strong>Highway Travelers & Weekend Remittance Spenders (50% of orders):</strong> CA-4 transit drivers, soccer players, and families celebrating with iced caramel coffees, frappes, and burritos at <strong>L. 65 – L. 110 ($2.60 – $4.40)</strong>.
+                            <br>• <strong>Realistic Foot Traffic:</strong> 45–60 orders on slow weekdays; 85–110 on weekends/game nights (average <strong>~65 tickets/day</strong>).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sim-grid">
+                <div class="slider-box">
+                    <div class="sim-slider-item">
+                        <div class="sim-slider-header">
+                            <span class="s-name">Daily Cups Sold</span>
+                            <span class="s-val" id="cupsVal">65 cups / day</span>
+                        </div>
+                        <input type="range" id="cupsSlider" min="25" max="180" step="5" value="65" oninput="recalcCoffee()">
+                    </div>
+
+                    <div class="sim-slider-item">
+                        <div class="sim-slider-header">
+                            <span class="s-name">Average Blended Price (USD / HNL)</span>
+                            <span class="s-val" id="priceVal">$2.10 USD (52.50 HNL)</span>
+                        </div>
+                        <input type="range" id="priceSlider" min="1.25" max="3.75" step="0.10" value="2.10" oninput="recalcCoffee()">
+                    </div>
+
+                    <div class="sim-slider-item">
+                        <div class="sim-slider-header">
+                            <span class="s-name">Food / Pastry Attachment Rate</span>
+                            <span class="s-val" id="foodVal">35% of tickets</span>
+                        </div>
+                        <input type="range" id="foodSlider" min="10" max="65" step="1" value="35" oninput="recalcCoffee()">
+                    </div>
+
+                    <div class="sim-slider-item">
+                        <div class="sim-slider-header">
+                            <span class="s-name">Monthly Retail Bean Bags ($9.00 ea)</span>
+                            <span class="s-val" id="bagsVal">45 bags / mo</span>
+                        </div>
+                        <input type="range" id="bagsSlider" min="10" max="250" step="5" value="45" oninput="recalcCoffee()">
+                    </div>
+                </div>
+
+                <div class="sim-result-card">
+                    <div style="font-size:0.85rem; font-weight:700; color:#fbbf24; text-transform:uppercase; letter-spacing:0.05em;">
+                        Simulated Monthly Performance
+                    </div>
+
+                    <div class="sim-metric-row">
+                        <span class="m-label">Gross Monthly Sales</span>
+                        <span class="m-val" id="simGross">$19,850 / mo</span>
+                    </div>
+
+                    <div class="sim-metric-row">
+                        <span class="m-label">Product Cost (COGS @ 23.4%)</span>
+                        <span class="m-val" style="color:#fb7185;" id="simCogs">-$4,645 / mo</span>
+                    </div>
+
+                    <div class="sim-metric-row">
+                        <span class="m-label">Operating Overhead (Staff & Rent)</span>
+                        <span class="m-val" style="color:#fb7185;" id="simOpex">-$3,115 / mo</span>
+                    </div>
+
+                    <div class="sim-metric-row highlight">
+                        <span class="m-label" style="font-weight:700; color:#ffffff;">Net Monthly Take-Home Profit</span>
+                        <span class="m-val" id="simNet">$12,090 / mo</span>
+                    </div>
+
+                    <div class="sim-metric-row">
+                        <span class="m-label">Days to 100% Equipment Payback ($32.5k)</span>
+                        <span class="m-val" style="color:#34d399;" id="simPayback">81 Days</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="border-top: 1px solid var(--border-subtle); padding: 40px 24px; max-width: 1320px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 0.88rem;">
+        <div>
+            <strong>Rich Aroma Coffee Shop</strong> • An Anchor Business of Quimistán Eco-Solar Plaza
+        </div>
+        <div>
+            Direct Trade Specialty Coffee • Santa Bárbara, Honduras
+        </div>
+    </footer>
+
+    <script>
+        let currentCapEx = 15200;
+        let currentOpex = 1700;
+
+        function setPreset(mode) {
+            if (mode === 'quimistan') {
+                document.getElementById('cupsSlider').value = 65;
+                document.getElementById('priceSlider').value = 2.10;
+                document.getElementById('foodSlider').value = 35;
+                document.getElementById('bagsSlider').value = 45;
+                currentCapEx = 15200;
+                currentOpex = 1700;
+            } else if (mode === 'highway') {
+                document.getElementById('cupsSlider').value = 140;
+                document.getElementById('priceSlider').value = 3.10;
+                document.getElementById('foodSlider').value = 45;
+                document.getElementById('bagsSlider').value = 120;
+                currentCapEx = 28000;
+                currentOpex = 2950;
+            }
+            recalcCoffee();
+        }
+
+        function recalcCoffee() {
+            const cups = parseFloat(document.getElementById('cupsSlider').value);
+            const price = parseFloat(document.getElementById('priceSlider').value);
+            const foodPct = parseFloat(document.getElementById('foodSlider').value) / 100;
+            const bags = parseFloat(document.getElementById('bagsSlider').value);
+
+            const hnlPrice = (price * 25).toFixed(0);
+            document.getElementById('cupsVal').innerText = `${cups} cups / day`;
+            document.getElementById('priceVal').innerText = `$${price.toFixed(2)} USD (L. ${hnlPrice})`;
+            document.getElementById('foodVal').innerText = `${Math.round(foodPct * 100)}% of tickets`;
+            document.getElementById('bagsVal').innerText = `${bags} bags / mo`;
+
+            // Beverage sales (30 days)
+            const monthlyCoffee = cups * price * 30;
+            // Food sales (average $2.20 in Quimistan, e.g. baleadas, pastries, sandwiches)
+            const avgFoodPrice = price < 2.50 ? 2.00 : 3.20;
+            const monthlyFood = cups * foodPct * avgFoodPrice * 30;
+            // Retail beans
+            const beanPrice = price < 2.50 ? 8.50 : 11.00;
+            const monthlyBags = bags * beanPrice;
+            // Smoothies / cold drinks
+            const monthlySmoothies = cups < 90 ? 450 : 1200;
+
+            const totalGross = monthlyCoffee + monthlyFood + monthlyBags + monthlySmoothies;
+
+            // COGS: 24% on drinks/food, 35% on bean bags
+            const cogs = (monthlyCoffee * 0.24) + (monthlyFood * 0.28) + (monthlyBags * 0.35) + (monthlySmoothies * 0.25);
+
+            // Dynamic OPEX based on scale
+            const opex = cups < 90 ? 1700 : (cups < 150 ? 2650 : 3300);
+            const capex = cups < 90 ? 15200 : 32500;
+
+            const netProfit = Math.max(0, totalGross - cogs - opex);
+            const dailyNet = netProfit / 30;
+            const daysToPayback = dailyNet > 0 ? Math.round(capex / dailyNet) : 'N/A';
+            const hnlNet = Math.round(netProfit * 25);
+
+            document.getElementById('simGross').innerText = `$${Math.round(totalGross).toLocaleString()} / mo (L. ${Math.round(totalGross * 25).toLocaleString()})`;
+            document.getElementById('simCogs').innerText = `-$${Math.round(cogs).toLocaleString()} / mo`;
+            document.getElementById('simOpex').innerText = `-$${opex.toLocaleString()} / mo (${cups < 90 ? 'Lean 2-Staff' : '4-Staff Full'})`;
+            document.getElementById('simNet').innerText = `$${Math.round(netProfit).toLocaleString()} / mo (L. ${hnlNet.toLocaleString()})`;
+            document.getElementById('simPayback').innerText = `${daysToPayback} Days ($${(capex/1000).toFixed(1)}k CapEx)`;
+        }
+
+        recalcCoffee();
+    </script>
+</body>
+</html>

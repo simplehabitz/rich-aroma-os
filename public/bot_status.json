@@ -1,0 +1,15 @@
+{
+  "status": "active",
+  "rpc_url": "https://rpc.mainnet.chain.robinhood.com",
+  "current_block": 55640141,
+  "wallet_address": "0x1E832ba8E59F1182FdD36218F6889887Eec641Fe",
+  "last_update": 1788663681.2700968,
+  "active_monitors_count": 0,
+  "balances": {
+    "native_eth": 0.002360084281829703,
+    "weth": 0.038078136491514834
+  },
+  "daily_profit_goal_pct": 50.0,
+  "today_gain_pct": 0.0,
+  "daily_profit_goal_hit": false
+}

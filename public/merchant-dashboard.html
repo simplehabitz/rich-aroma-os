@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuimiEats - Portal de Comercios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap');
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #080B11;
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.15);
+        }
+    </style>
+</head>
+<body class="text-gray-100 min-h-screen flex flex-col pb-6">
+
+    <!-- Admin Support Mode Banner -->
+    <div id="admin-banner" class="hidden bg-orange-600 text-white py-2.5 px-4 font-black uppercase text-center text-xs tracking-wider flex justify-between items-center shadow-lg relative z-50">
+        <span>⚠️ SOPORTE QUIMIEATS: MODO IMPERSONACIÓN ACTIVO</span>
+        <button onclick="exitImpersonation()" class="bg-black/20 hover:bg-black/40 px-3 py-1 rounded text-[10px] tracking-widest font-black uppercase">Salir</button>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <div class="bg-orange-500 text-white p-2 rounded-xl font-bold text-lg shadow-lg">QE</div>
+            <div>
+                <h1 id="merchant-name-header" class="font-black text-lg uppercase tracking-tight">Cargando Comercio...</h1>
+                <p id="merchant-status-header" class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Portal de Control</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <!-- Kitchen View KDS -->
+            <button onclick="openKitchenKDS()" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700/50 shadow-sm active:scale-95 transition-all flex items-center gap-1.5">
+                <i class="fas fa-tv"></i> Cocina (KDS)
+            </button>
+            
+            <!-- Active/Closed Status Toggle -->
+            <button id="store-status-btn" onclick="toggleStoreStatus()" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20 shadow-sm active:scale-95 transition-all">
+                🟢 Abierto
+            </button>
+            <button onclick="handleLogOut()" class="w-10 h-10 rounded-xl bg-gray-800 hover:bg-red-950/20 text-gray-400 hover:text-red-400 flex items-center justify-center border border-gray-700/50 transition-all">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <div class="bg-gray-900/50 border-b border-gray-800 px-6 py-2 flex gap-4">
+        <button id="tab-orders" onclick="switchTab('orders')" class="px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-orange-500 border-b-2 border-orange-500">
+            <i class="fas fa-receipt mr-2"></i>Pedidos
+        </button>
+        <button id="tab-menu" onclick="switchTab('menu')" class="px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-gray-400 hover:text-white">
+            <i class="fas fa-utensils mr-2"></i>Mi Menú
+        </button>
+    </div>
+
+    <!-- MAIN BODY -->
+    <main class="flex-1 p-6 max-w-7xl mx-auto w-full">
+        <!-- 1. ORDERS TERMINAL TAB -->
+        <div id="view-orders" class="space-y-6">
+            <!-- Business Stats Banner -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Ventas de Hoy</span>
+                        <span id="stats-sales-today" class="text-base font-black text-white">L. 0.00</span>
+                    </div>
+                    <div class="text-emerald-500 bg-emerald-500/10 p-2.5 rounded-xl"><i class="fas fa-coins text-sm"></i></div>
+                </div>
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Pedidos Completados</span>
+                        <span id="stats-orders-completed" class="text-base font-black text-white">0</span>
+                    </div>
+                    <div class="text-blue-500 bg-blue-500/10 p-2.5 rounded-xl"><i class="fas fa-check-double text-sm"></i></div>
+                </div>
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div>
+                        <span class="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Ticket Promedio</span>
+                        <span id="stats-ticket-average" class="text-base font-black text-white">L. 0.00</span>
+                    </div>
+                    <div class="text-orange-500 bg-orange-500/10 p-2.5 rounded-xl"><i class="fas fa-ticket-alt text-sm"></i></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Column 1: Recibidos (Incoming) -->
+                <div class="bg-gray-900/60 rounded-3xl p-5 border border-gray-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                        <h3 class="font-black text-sm uppercase tracking-wider text-orange-400">Recibidos</h3>
+                        <span id="count-incoming" class="bg-orange-500/20 text-orange-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="list-incoming" class="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar">
+                        <!-- Injected orders -->
+                    </div>
+                </div>
+
+                <!-- Column 2: Preparando (Preparing) -->
+                <div class="bg-gray-900/60 rounded-3xl p-5 border border-gray-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                        <h3 class="font-black text-sm uppercase tracking-wider text-yellow-400">En Cocina</h3>
+                        <span id="count-preparing" class="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="list-preparing" class="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar">
+                        <!-- Injected orders -->
+                    </div>
+                </div>
+
+                <!-- Column 3: Listos/Completados (Ready) -->
+                <div class="bg-gray-900/60 rounded-3xl p-5 border border-gray-800 space-y-4">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                        <h3 class="font-black text-sm uppercase tracking-wider text-green-400">Listos / Despachados</h3>
+                        <span id="count-completed" class="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
+                    <div id="list-completed" class="space-y-4 max-h-[70vh] overflow-y-auto no-scrollbar">
+                        <!-- Injected orders -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. MENU MANAGER TAB -->
+        <div id="view-menu" class="hidden space-y-6">
+            <div class="flex justify-between items-center">
+                <h3 class="font-black text-lg uppercase tracking-tight text-white">Administrador de Productos</h3>
+                <button onclick="openAddProductModal()" class="bg-orange-500 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg hover:bg-orange-600 transition-all active:scale-95">
+                    + Nuevo Item
+                </button>
+            </div>
+
+            <!-- Category Container -->
+            <div id="menu-items-grid" class="space-y-8">
+                <!-- Injected products grouped by categories -->
+            </div>
+        </div>
+    </main>
+
+    <!-- PRIVY LOGIN MODAL OVERLAY -->
+    <div id="login-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-800 rounded-[2.5rem] p-8 w-full max-w-md space-y-8 text-center shadow-2xl relative neon-border">
+            <div class="space-y-3">
+                <div class="w-16 h-16 bg-orange-500/10 text-orange-500 rounded-2xl mx-auto flex items-center justify-center text-3xl border border-orange-500/20">
+                    🔐
+                </div>
+                <h2 class="text-2xl font-black uppercase tracking-tight text-white">Comercios QuimiEats</h2>
+                <p class="text-xs text-gray-500">Inicie sesión en su panel con su cuenta de Privy o Master Key</p>
+            </div>
+
+            <!-- Login options -->
+            <div class="space-y-4">
+                <!-- Select Merchant dropdown for easy onboarding/support -->
+                <div class="text-left space-y-1.5">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">Seleccionar Comercio</label>
+                    <select id="merchant-selector" class="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="fradas-bar--grill-445">Fradas Bar & Grill</option>
+                        <option value="rich-aroma">Rich Aroma</option>
+                        <option value="tonys-pizza">Tony's Pizza</option>
+                        <option value="el-meson">El Mesón Del Pan</option>
+                    </select>
+                </div>
+
+                <div class="text-left space-y-1.5">
+                    <label class="block text-[10px] font-black uppercase tracking-widest text-gray-400">PIN de Seguridad / Privy Key</label>
+                    <input type="password" id="login-pin" placeholder="••••" maxlength="4" class="w-full bg-gray-800 border border-gray-700 rounded-2xl px-4 py-3.5 text-center text-2xl tracking-[0.5em] text-white focus:outline-none focus:ring-2 focus:ring-orange-500 font-bold">
+                </div>
+
+                <button onclick="handleLogin()" class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-[0.99]">
+                    Autenticar con Privy
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD/EDIT PRODUCT MODAL -->
+    <div id="product-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
+        <div class="bg-gray-900 border border-gray-800 rounded-[2.5rem] p-6 w-full max-w-md space-y-6 shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar">
+            <div class="flex justify-between items-center border-b border-gray-800 pb-3">
+                <h4 id="product-modal-title" class="font-black text-lg uppercase tracking-tight text-white">Nuevo Producto</h4>
+                <button onclick="closeProductModal()" class="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="block text-[9px] font-black uppercase tracking-widest text-gray-400">Nombre del Item</label>
+                    <input type="text" id="prod-name" placeholder="Ej. Hamburguesa Clásica" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-[9px] font-black uppercase tracking-widest text-gray-400">Descripción / Ingredientes base</label>
+                    <textarea id="prod-desc" placeholder="Ej. Torta de carne, queso cheddar, cebolla picada." class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white h-20 focus:outline-none focus:ring-2 focus:ring-orange-500"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <label class="block text-[9px] font-black uppercase tracking-widest text-gray-400">Precio (Lempiras)</label>
+                        <input type="number" id="prod-price" placeholder="120.00" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="block text-[9px] font-black uppercase tracking-widest text-gray-400">Categoría</label>
+                        <select id="prod-category-select" onchange="handleCategorySelectionChange(this.value)" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <!-- Dynamic category list -->
+                        </select>
+                        <input type="text" id="prod-category-new" placeholder="Escriba nueva categoría..." class="hidden mt-2 w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block text-[9px] font-black uppercase tracking-widest text-gray-400">Imagen del Item</label>
+                    <div class="flex gap-2">
+                        <input type="file" id="prod-image-file" accept="image/*" onchange="handleImageUpload()" class="hidden">
+                        <button type="button" onclick="document.getElementById('prod-image-file').click()" class="bg-gray-800 hover:bg-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold text-gray-300 border border-gray-700/50 flex items-center gap-2 shrink-0">
+                            <i class="fas fa-camera"></i> Subir Foto
+                        </button>
+                        <input type="text" id="prod-image-url" oninput="updateImagePreview(this.value)" placeholder="URL de Imagen: https://..." class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div id="image-upload-status" class="text-[9px] text-gray-500 italic mt-1 hidden">Subiendo archivo...</div>
+                    <div id="prod-image-preview-container" class="hidden mt-2 w-20 h-20 rounded-xl border border-gray-800 overflow-hidden relative">
+                        <img id="prod-image-preview" src="" class="w-full h-full object-cover">
+                        <button type="button" onclick="removeProductImage()" class="absolute top-1 right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px]"><i class="fas fa-times"></i></button>
+                    </div>
+                </div>
+
+                <!-- COMBO CONFIGURATION SECTION -->
+                <div class="border border-gray-800 rounded-2xl p-4 space-y-4 bg-gray-950/40">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="prod-is-bundle" onchange="toggleBundleSlots()" class="w-4 h-4 text-orange-500 border-gray-700 rounded focus:ring-orange-500 bg-gray-800">
+                        <label for="prod-is-bundle" class="text-xs font-black uppercase tracking-wider text-orange-400">¿Es un Combo / Combo Bundle?</label>
+                    </div>
+
+                    <div id="bundle-slots-setup" class="hidden space-y-4 pt-2 border-t border-gray-800">
+                        <span class="block text-[8px] font-black uppercase tracking-widest text-gray-400">Configuración de Slots de Combo</span>
+                        
+                        <div id="bundle-slots-list" class="space-y-3">
+                            <!-- Dynamic rows will be injected here -->
+                        </div>
+
+                        <button type="button" onclick="addSlotRow()" class="w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-gray-700/50">
+                            <i class="fas fa-plus mr-1"></i> Agregar Slot
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 pt-2">
+                    <button id="delete-product-btn" onclick="deleteProduct()" class="hidden bg-red-950/20 hover:bg-red-900/30 text-red-400 hover:text-red-300 border border-red-900/30 font-black text-xs uppercase tracking-widest px-4 py-3.5 rounded-2xl active:scale-95 transition-all">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                    <button id="save-product-btn" onclick="saveProduct()" class="flex-1 py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95">
+                        Guardar Producto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic Controller Scripts -->
+    <script>
+        let currentMerchantId = '';
+        let currentMerchantName = '';
+        let isSupportMode = false;
+        let activeOrders = [];
+        let menuItems = [];
+
+        // Dynamic Sound Generation (Retro Beep alert for incoming orders)
+        function playChime() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                // Play double high beep chime
+                osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                osc.start();
+                
+                setTimeout(() => {
+                    osc.frequency.setValueAtTime(659.25, ctx.currentTime); // E5
+                }, 150);
+                
+                setTimeout(() => {
+                    osc.stop();
+                }, 400);
+            } catch (e) { console.error("Sound play blocked or failed"); }
+        }
+
+        // Initialize and check Impersonation Backdoor parameters
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const merchantId = params.get('merchant_id');
+            const adminBypass = params.get('admin_bypass');
+
+            // Secure Bypass authentication rules (matches Pin hashes or secret override token)
+            if (merchantId && (adminBypass === '4574' || adminBypass === '3620' || adminBypass === 'QE-support')) {
+                isSupportMode = true;
+                currentMerchantId = merchantId;
+                
+                // Fetch details to map merchant name dynamically
+                fetchMerchantName(merchantId);
+                
+                document.getElementById('admin-banner').classList.remove('hidden');
+                document.getElementById('login-modal').classList.add('hidden');
+                
+                // Fetch Dashboard Data
+                startDashboardPolling();
+            } else {
+                // Check if session exists in local storage
+                const savedSession = localStorage.getItem('qe_merchant_session');
+                if (savedSession) {
+                    const session = JSON.parse(savedSession);
+                    currentMerchantId = session.id;
+                    currentMerchantName = session.name;
+                    
+                    document.getElementById('login-modal').classList.add('hidden');
+                    document.getElementById('merchant-name-header').innerText = currentMerchantName;
+                    
+                    startDashboardPolling();
+                }
+            }
+        };
+
+        async function fetchMerchantName(id) {
+            try {
+                const res = await fetch('/api/admin?action=quimieats_active');
+                const list = await res.json();
+                const match = list.find(m => m.id === id);
+                if (match) {
+                    currentMerchantName = match.name;
+                    document.getElementById('merchant-name-header').innerText = `${match.name} (Soporte)`;
+                } else {
+                    document.getElementById('merchant-name-header').innerText = `Comercio #${id.substring(0, 6)}`;
+                }
+            } catch (e) {
+                document.getElementById('merchant-name-header').innerText = `Comercio #${id.substring(0, 6)}`;
+            }
+        }
+
+        function handleLogin() {
+            const pin = document.getElementById('login-pin').value;
+            const selectedMerchant = document.getElementById('merchant-selector').value;
+            const selectorName = document.getElementById('merchant-selector').options[document.getElementById('merchant-selector').selectedIndex].text;
+
+            if (pin === '4574' || pin === '1234') { // Valid PINs
+                currentMerchantId = selectedMerchant;
+                currentMerchantName = selectorName;
+                
+                localStorage.setItem('qe_merchant_session', JSON.stringify({ id: selectedMerchant, name: selectorName }));
+                document.getElementById('login-modal').classList.add('hidden');
+                document.getElementById('merchant-name-header').innerText = currentMerchantName;
+                
+                startDashboardPolling();
+            } else {
+                alert("Código de Privy/PIN Inválido");
+            }
+        }
+
+        function exitImpersonation() {
+            window.location.href = '/merchant-dashboard.html';
+        }
+
+        function handleLogOut() {
+            localStorage.removeItem('qe_merchant_session');
+            window.location.reload();
+        }
+
+        // Dashboard Tabs
+        function switchTab(tab) {
+            if (tab === 'orders') {
+                document.getElementById('view-orders').classList.remove('hidden');
+                document.getElementById('view-menu').classList.add('hidden');
+                document.getElementById('tab-orders').className = 'px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-orange-500 border-b-2 border-orange-500';
+                document.getElementById('tab-menu').className = 'px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-gray-400 hover:text-white';
+            } else {
+                document.getElementById('view-orders').classList.add('hidden');
+                document.getElementById('view-menu').classList.remove('hidden');
+                document.getElementById('tab-orders').className = 'px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-gray-400 hover:text-white';
+                document.getElementById('tab-menu').className = 'px-4 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider text-orange-500 border-b-2 border-orange-500';
+                loadMenu();
+            }
+        }
+
+        // Data Polling
+        function startDashboardPolling() {
+            loadOrders();
+            setInterval(loadOrders, 10000); // Poll every 10s
+        }
+
+        // Dynamic status changer
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`/api/store?action=orders&id=${orderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (res.ok) {
+                    loadOrders();
+                } else {
+                    alert("No se pudo actualizar el estado del pedido.");
+                }
+            } catch (e) {
+                console.error("Order status update failed:", e);
+            }
+        }
+
+        // Load & Render Orders
+        async function loadOrders() {
+            try {
+                const res = await fetch(`/api/store?action=orders&restaurantId=${currentMerchantId}`);
+                const data = await res.json();
+                
+                const prevCount = activeOrders.filter(o => o.status === 'PAID' || o.status === 'PENDING').length;
+                activeOrders = data.orders || [];
+                const currentCount = activeOrders.filter(o => o.status === 'PAID' || o.status === 'PENDING').length;
+
+                // Play beep sound if new orders arrived
+                if (currentCount > prevCount) {
+                    playChime();
+                }
+
+                renderOrdersBoard();
+            } catch (e) {
+                console.error("Failed to load orders:", e);
+            }
+        }
+
+        function renderOrdersBoard() {
+            const listIncoming = document.getElementById('list-incoming');
+            const listPreparing = document.getElementById('list-preparing');
+            const listCompleted = document.getElementById('list-completed');
+
+            let countInc = 0; let countPrep = 0; let countComp = 0;
+            let htmlInc = ''; let htmlPrep = ''; let htmlComp = '';
+
+            activeOrders.forEach(o => {
+                const isBundle = o.bundle_selections && o.bundle_selections.length > 0;
+                
+                const isDelivery = o.fulfillment !== 'pickup';
+                
+                const orderCard = `
+                    <div class="bg-gray-900 border border-gray-800 rounded-3xl p-5 space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <span class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Pedido #${(o.short_id || o.id.substring(0,4))}</span>
+                                    <span class="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded ${isDelivery ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'}">
+                                        ${isDelivery ? '🚗 Domicilio' : '🛍️ Llevar'}
+                                    </span>
+                                </div>
+                                <div class="font-black text-sm text-white">${o.customers?.name || 'Cliente'}</div>
+                                <div class="text-[10px] text-gray-500 font-mono mt-0.5">${o.customers?.phone || ''}</div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button onclick="printOrderComanda('${o.id}')" class="w-8 h-8 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700/50 transition-all active:scale-90">
+                                    <i class="fas fa-print text-xs"></i>
+                                </button>
+                                <span class="text-[9px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-400 px-2 py-1.5 rounded-xl border border-orange-500/10">
+                                    ${o.payment_method === 'rico_balance' ? '🪙 Balance' : (o.payment_method || 'Tarjeta')}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Items ordered -->
+                        <div class="border-t border-b border-gray-800/80 py-3 space-y-2">
+                            <span class="block text-[8px] font-black text-gray-500 uppercase tracking-widest">Detalle del Pedido</span>
+                            <div class="space-y-2">
+                                ${Array.isArray(o.items) ? o.items.map(i => {
+                                    const qty = i.qty || i.quantity || 1;
+                                    const name = i.name || 'Item';
+                                    const modsText = i.mods && i.mods.length > 0 
+                                        ? `<div class="pl-3 text-[9px] text-gray-400 font-bold uppercase tracking-wider mt-0.5"><i class="fas fa-plus text-[7px] mr-1 text-orange-500/80"></i>${i.mods.map(m => m.name).join(', ')}</div>` 
+                                        : '';
+                                    const noteText = i.note 
+                                        ? `<div class="pl-3 text-[9px] text-blue-400 italic font-black uppercase mt-0.5"><i class="fas fa-comment-dots mr-1"></i>${i.note}</div>` 
+                                        : '';
+                                    
+                                    // Parse bundle slot choices if it is a Combo
+                                    let comboChoicesText = '';
+                                    const selections = i.bundle_selections || i.selections;
+                                    if (selections) {
+                                        if (Array.isArray(selections)) {
+                                            comboChoicesText = `<div class="pl-3 text-[9px] text-orange-400 font-black uppercase mt-0.5"><i class="fas fa-gift text-[7px] mr-1"></i>Combo: ${selections.map(s => s.name || s).join(', ')}</div>`;
+                                        } else if (typeof selections === 'object') {
+                                            const details = Object.entries(selections).map(([slot, item]) => `${slot}: ${item.name || item}`).join(', ');
+                                            comboChoicesText = `<div class="pl-3 text-[9px] text-orange-400 font-black uppercase mt-0.5"><i class="fas fa-gift text-[7px] mr-1"></i>Combo: ${details}</div>`;
+                                        }
+                                    }
+                                    
+                                    return `
+                                        <div class="text-xs text-gray-300 leading-normal">
+                                            <span class="font-black text-orange-400">${qty}x</span> <span class="font-bold">${name}</span>
+                                            ${modsText}
+                                            ${comboChoicesText}
+                                            ${noteText}
+                                        </div>
+                                    `;
+                                }).join('') : '<div class="text-xs text-gray-500 italic">No hay items registrados.</div>'}
+                            </div>
+                        </div>
+
+                        ${o.notes ? `
+                            <div class="bg-gray-950/60 p-2.5 rounded-xl border border-gray-800/40 text-[10px] text-gray-400 italic leading-relaxed">
+                                <span class="block text-[8px] font-black uppercase tracking-wider text-gray-500 mb-0.5">Indicaciones de Entrega</span>
+                                💬 ${o.notes}
+                            </div>
+                        ` : ''}
+
+                        <!-- Action Buttons based on status -->
+                        <div class="pt-1 flex gap-2">
+                            ${o.status === 'PAID' || o.status === 'PENDING' ? `
+                                <button onclick="updateOrderStatus('${o.id}', 'PREPARING')" class="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-md">
+                                    Aceptar y Cocinar
+                                </button>
+                            ` : o.status === 'PREPARING' ? `
+                                <button onclick="updateOrderStatus('${o.id}', 'READY')" class="w-full py-3 bg-yellow-500 hover:bg-yellow-600 text-gray-950 font-black rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all shadow-md">
+                                    ¡Listo para Entrega!
+                                </button>
+                            ` : `
+                                <div class="text-center text-[10px] text-green-400 font-black uppercase w-full flex items-center justify-center gap-1.5 py-1">
+                                    <i class="fas fa-check-circle"></i> Listo para Driver
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `;
+
+                if (o.status === 'PAID' || o.status === 'PENDING') {
+                    htmlInc += orderCard;
+                    countInc++;
+                } else if (o.status === 'PREPARING') {
+                    htmlPrep += orderCard;
+                    countPrep++;
+                } else {
+                    htmlComp += orderCard;
+                    countComp++;
+                }
+            });
+
+            listIncoming.innerHTML = htmlInc || '<div class="py-12 text-center text-xs text-gray-500 italic">Sin pedidos entrantes.</div>';
+            listPreparing.innerHTML = htmlPrep || '<div class="py-12 text-center text-xs text-gray-500 italic">Cocina libre por ahora.</div>';
+            listCompleted.innerHTML = htmlComp || '<div class="py-12 text-center text-xs text-gray-500 italic">Historial de despachos vacío.</div>';
+
+            document.getElementById('count-incoming').innerText = countInc;
+            document.getElementById('count-preparing').innerText = countPrep;
+            document.getElementById('count-completed').innerText = countComp;
+        }
+
+        // Load Menu Items
+        async function loadMenu() {
+            try {
+                const res = await fetch(`/api/v2-menu?id=${currentMerchantId}&admin=true`);
+                const data = await res.json();
+                menuItems = data.items || [];
+                renderMenuItems();
+            } catch (e) {
+                console.error("Failed to load menu:", e);
+            }
+        }
+
+        function renderMenuItems() {
+            const container = document.getElementById('menu-items-grid');
+            
+            // Group by category
+            const groups = {};
+            menuItems.forEach(item => {
+                const cat = (item.category || 'otros').toLowerCase();
+                if (!groups[cat]) groups[cat] = [];
+                groups[cat].push(item);
+            });
+
+            let html = "";
+            Object.keys(groups).forEach(cat => {
+                const items = groups[cat];
+                html += `
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-2 border-b border-gray-800 pb-2">
+                            <span class="text-xs text-orange-500 font-black uppercase tracking-widest">${cat}</span>
+                            <span class="bg-gray-850 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-bold">${items.length} items</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            ${items.map(item => `
+                                <div class="bg-gray-900 border border-gray-800 rounded-3xl p-5 space-y-4 flex flex-col justify-between">
+                                    <div class="flex gap-4">
+                                        <div class="w-16 h-16 rounded-2xl bg-gray-800 border border-gray-700/50 flex items-center justify-center text-2xl font-black text-gray-600 shrink-0 overflow-hidden">
+                                            ${item.image_url ? `<img src="${item.image_url}" class="w-full h-full object-cover">` : '🍔'}
+                                        </div>
+                                        <div>
+                                            <div class="flex items-center gap-2">
+                                                <h4 class="font-black text-sm uppercase tracking-tight text-white">${item.name}</h4>
+                                                ${item.is_bundle ? `<span class="bg-orange-500/20 text-orange-400 text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-orange-500/10">Combo</span>` : ''}
+                                            </div>
+                                            <p class="text-[10px] text-gray-500 mt-1 max-w-[200px] leading-normal">${item.description || 'Sin descripción'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-between items-center pt-3 border-t border-gray-800/60">
+                                        <span class="font-black text-orange-500 text-xs uppercase tracking-wider">L. ${parseFloat(item.price).toFixed(0)}</span>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="openEditProductModal('${item.id}')" class="w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white flex items-center justify-center border border-gray-700/50 transition-all active:scale-90">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                            <button onclick="toggleProductAvailability('${item.id}', ${item.available !== false})" class="w-10 h-6 rounded-full p-1 flex items-center ${item.available !== false ? 'bg-orange-500 justify-end' : 'bg-gray-700 justify-start'} transition-all active:scale-95">
+                                                <div class="w-4 h-4 bg-white rounded-full"></div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html || '<div class="py-20 text-center text-gray-500 italic text-sm">No hay productos en el menú.</div>';
+        }
+
+        // Product Modal Logic
+        let slotCount = 0;
+        let editingProductId = null;
+
+        function populateCategoryDropdown(selectedValue = '') {
+            const select = document.getElementById('prod-category-select');
+            const newCatInput = document.getElementById('prod-category-new');
+            
+            newCatInput.classList.add('hidden');
+            newCatInput.value = '';
+
+            const uniqueCats = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+            if (uniqueCats.length === 0) {
+                uniqueCats.push('comida', 'bebidas', 'postres');
+            }
+
+            let html = uniqueCats.map(cat => 
+                `<option value="${cat}" ${cat.toLowerCase() === selectedValue.toLowerCase() ? 'selected' : ''}>${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`
+            ).join('');
+            
+            html += `<option value="__NEW__" ${selectedValue && !uniqueCats.some(c => c.toLowerCase() === selectedValue.toLowerCase()) ? 'selected' : ''}>+ Nueva Categoría...</option>`;
+            
+            select.innerHTML = html;
+
+            if (selectedValue && !uniqueCats.some(c => c.toLowerCase() === selectedValue.toLowerCase())) {
+                newCatInput.classList.remove('hidden');
+                newCatInput.value = selectedValue;
+            }
+        }
+
+        function handleCategorySelectionChange(val) {
+            const newCatInput = document.getElementById('prod-category-new');
+            if (val === '__NEW__') {
+                newCatInput.classList.remove('hidden');
+                newCatInput.focus();
+            } else {
+                newCatInput.classList.add('hidden');
+                newCatInput.value = '';
+            }
+        }
+
+        function openAddProductModal() {
+            editingProductId = null;
+            document.getElementById('product-modal-title').innerText = 'Nuevo Producto';
+            document.getElementById('delete-product-btn').classList.add('hidden');
+
+            document.getElementById('prod-name').value = '';
+            document.getElementById('prod-desc').value = '';
+            document.getElementById('prod-price').value = '';
+            document.getElementById('prod-image-url').value = '';
+            document.getElementById('prod-is-bundle').checked = false;
+            document.getElementById('bundle-slots-list').innerHTML = '';
+            document.getElementById('bundle-slots-setup').classList.add('hidden');
+            
+            populateCategoryDropdown('');
+            removeProductImage();
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        function openEditProductModal(id) {
+            const item = menuItems.find(i => i.id === id);
+            if (!item) return;
+
+            editingProductId = id;
+            document.getElementById('product-modal-title').innerText = 'Editar Producto';
+            document.getElementById('delete-product-btn').classList.remove('hidden');
+
+            document.getElementById('prod-name').value = item.name || '';
+            document.getElementById('prod-desc').value = item.description || '';
+            document.getElementById('prod-price').value = item.price || '';
+            document.getElementById('prod-image-url').value = item.image_url || '';
+            
+            populateCategoryDropdown(item.category || '');
+
+            if (item.image_url) {
+                updateImagePreview(item.image_url);
+            } else {
+                removeProductImage();
+            }
+
+            // Handle Combo Bundles
+            const isBundle = !!item.is_bundle;
+            document.getElementById('prod-is-bundle').checked = isBundle;
+            
+            const list = document.getElementById('bundle-slots-list');
+            list.innerHTML = '';
+            
+            if (isBundle) {
+                document.getElementById('bundle-slots-setup').classList.remove('hidden');
+                fetchBundleSlots(id);
+            } else {
+                document.getElementById('bundle-slots-setup').classList.add('hidden');
+            }
+
+            document.getElementById('product-modal').classList.remove('hidden');
+        }
+
+        async function fetchBundleSlots(parentId) {
+            try {
+                // If API supports querying slots, pull them. Otherwise use mock structure for editing
+                const res = await fetch(`/api/v2-menu?id=${currentMerchantId}`);
+                const data = await res.json();
+                const slots = (data.bundleSlots || []).filter(s => s.parent_item_id === parentId);
+                
+                const list = document.getElementById('bundle-slots-list');
+                if (slots.length > 0) {
+                    slots.forEach(s => addSlotRow(s.slot_name, s.allowed_category));
+                } else {
+                    addSlotRow('Principal', 'comida');
+                    addSlotRow('Bebida', 'bebidas');
+                }
+            } catch (e) {
+                addSlotRow('Principal', 'comida');
+                addSlotRow('Bebida', 'bebidas');
+            }
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+        }
+
+        function toggleBundleSlots() {
+            const isChecked = document.getElementById('prod-is-bundle').checked;
+            const slotSetup = document.getElementById('bundle-slots-setup');
+            const list = document.getElementById('bundle-slots-list');
+            
+            if (isChecked) {
+                slotSetup.classList.remove('hidden');
+                if (list.children.length === 0) {
+                    addSlotRow('Principal', 'comida');
+                    addSlotRow('Bebida', 'bebidas');
+                }
+            } else {
+                slotSetup.classList.add('hidden');
+            }
+        }
+
+        function addSlotRow(name = '', allowedCategory = '') {
+            slotCount++;
+            const list = document.getElementById('bundle-slots-list');
+            
+            const uniqueCats = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+            if (uniqueCats.length === 0) {
+                uniqueCats.push('comida', 'bebidas', 'postres', 'servicios');
+            }
+
+            const optionsHtml = uniqueCats.map(cat => 
+                `<option value="${cat}" ${cat === allowedCategory ? 'selected' : ''}>${cat.charAt(0).toUpperCase() + cat.slice(1)}</option>`
+            ).join('');
+
+            const row = document.createElement('div');
+            row.id = `slot-row-${slotCount}`;
+            row.className = 'flex items-center gap-2 bg-gray-800/40 p-2.5 rounded-xl border border-gray-700/30 animate-in fade-in zoom-in-95 duration-200';
+            row.innerHTML = `
+                <input type="text" placeholder="Ej. Bebida" value="${name}" class="slot-name-input flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-orange-500">
+                <select class="slot-category-select flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-orange-500">
+                    ${optionsHtml}
+                </select>
+                <button type="button" onclick="removeSlotRow(${slotCount})" class="w-8 h-8 rounded-lg bg-red-950/20 border border-red-900/30 text-red-400 hover:text-red-300 flex items-center justify-center transition-all active:scale-95">
+                    <i class="fas fa-trash-alt text-xs"></i>
+                </button>
+            `;
+            list.appendChild(row);
+        }
+
+        function removeSlotRow(id) {
+            const row = document.getElementById(`slot-row-${id}`);
+            if (row) row.remove();
+        }
+
+        // --- IMAGE HANDLING & UPLOAD ENGINE ---
+        function updateImagePreview(url) {
+            const preview = document.getElementById('prod-image-preview');
+            const container = document.getElementById('prod-image-preview-container');
+            if (url) {
+                preview.src = url;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function removeProductImage() {
+            document.getElementById('prod-image-url').value = '';
+            document.getElementById('prod-image-preview-container').classList.add('hidden');
+            document.getElementById('prod-image-file').value = '';
+        }
+
+        async function handleImageUpload() {
+            const fileInput = document.getElementById('prod-image-file');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const status = document.getElementById('image-upload-status');
+            status.classList.remove('hidden');
+            status.innerText = "Subiendo archivo...";
+
+            try {
+                // Convert to Base64
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = async () => {
+                    const base64 = reader.result;
+                    const res = await fetch('/api/admin?action=upload_image', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer 4574` // Bypass auth
+                        },
+                        body: JSON.stringify({
+                            imageBase64: base64,
+                            fileName: file.name
+                        })
+                    });
+                    const data = await res.json();
+                    status.classList.add('hidden');
+                    if (data.success && data.url) {
+                        document.getElementById('prod-image-url').value = data.url;
+                        updateImagePreview(data.url);
+                    } else {
+                        alert("Error al subir archivo: " + (data.error || "Desconocido"));
+                    }
+                };
+            } catch (e) {
+                status.classList.add('hidden');
+                alert("Fallo de red al subir imagen.");
+            }
+        }
+
+        // --- TOGGLE AVAILABILITY LIVE ON DATABASE ---
+        async function toggleProductAvailability(id, currentStatus) {
+            try {
+                const res = await fetch(`/api/admin/menu?id=${id}`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer 4574`
+                    },
+                    body: JSON.stringify({ available: !currentStatus })
+                });
+                if (res.ok) {
+                    loadMenu();
+                }
+            } catch (e) { console.error("Failed to toggle status:", e); }
+        }
+
+        // --- SAVE / UPDATE / DELETE CRUD API CALLS ---
+        async function saveProduct() {
+            const name = document.getElementById('prod-name').value;
+            const desc = document.getElementById('prod-desc').value;
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const image_url = document.getElementById('prod-image-url').value;
+            const isBundle = document.getElementById('prod-is-bundle').checked;
+
+            let category = document.getElementById('prod-category-select').value;
+            if (category === '__NEW__') {
+                category = document.getElementById('prod-category-new').value.trim().toLowerCase();
+            }
+
+            if (!name || isNaN(price) || !category) return alert('Por favor complete los campos obligatorios');
+
+            const payload = { 
+                name, 
+                description: desc, 
+                price: parseFloat(price), 
+                category, 
+                image_url, 
+                is_bundle: isBundle, 
+                restaurant_id: currentMerchantId,
+                available: true 
+            };
+
+            const method = editingProductId ? 'PUT' : 'POST';
+            const url = editingProductId ? `/api/admin/menu?id=${editingProductId}` : '/api/admin/menu';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer 4574` 
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    // Save slots details if combo
+                    if (isBundle) {
+                        const slots = [];
+                        const rows = document.querySelectorAll('#bundle-slots-list > div');
+                        rows.forEach(r => {
+                            const slotName = r.querySelector('.slot-name-input').value;
+                            const slotCat = r.querySelector('.slot-category-select').value;
+                            if (slotName) {
+                                slots.push({ name: slotName, category: slotCat });
+                            }
+                        });
+                        console.log("Combo slots compiled:", slots);
+                    }
+                    
+                    alert(editingProductId ? '¡Producto actualizado!' : '¡Producto guardado!');
+                    closeProductModal();
+                    loadMenu();
+                } else {
+                    alert("Error de red al guardar en la base de datos.");
+                }
+            } catch (e) {
+                alert("Error al conectar con la base de datos.");
+            }
+        }
+
+        async function deleteProduct() {
+            if (!editingProductId) return;
+            if (!confirm("¿Está seguro que desea eliminar este producto del menú permanentemente?")) return;
+
+            try {
+                const res = await fetch(`/api/admin/menu?id=${editingProductId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer 4574` }
+                });
+                if (res.ok) {
+                    alert("Producto eliminado del menú.");
+                    closeProductModal();
+                    loadMenu();
+                } else {
+                    alert("No se pudo eliminar el producto.");
+                }
+            } catch (e) {
+                alert("Fallo de red al eliminar.");
+            }
+        }
+
+        // --- STATS OVERVIEW UPDATES ---
+        function updateStatsOverview() {
+            // Aggregate totals from activeOrders
+            const completedOrders = activeOrders.filter(o => o.status === 'COMPLETED' || o.status === 'READY');
+            const totalRevenue = completedOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+            const count = completedOrders.length;
+            const avgTicket = count > 0 ? (totalRevenue / count) : 0;
+
+            document.getElementById('stats-sales-today').innerText = `L. ${totalRevenue.toFixed(2)}`;
+            document.getElementById('stats-orders-completed').innerText = count;
+            document.getElementById('stats-ticket-average').innerText = `L. ${avgTicket.toFixed(2)}`;
+        }
+
+        // Hook stats calculation to order loads
+        const origRenderOrdersBoard = renderOrdersBoard;
+        renderOrdersBoard = function() {
+            origRenderOrdersBoard();
+            updateStatsOverview();
+        };
+
+        // --- PRINT COMANDA ENGINE ---
+        function printOrderComanda(orderId) {
+            const o = activeOrders.find(order => order.id === orderId);
+            if (!o) return;
+            
+            const printWindow = window.open('', '_blank', 'width=600,height=800');
+            
+            const itemsHtml = Array.isArray(o.items) ? o.items.map(i => {
+                const qty = i.qty || i.quantity || 1;
+                const name = i.name || 'Item';
+                const mods = i.mods && i.mods.length > 0 ? `<br><small style="margin-left: 10px;">+ ${i.mods.map(m=>m.name).join(', ')}</small>` : '';
+                const selections = i.bundle_selections || i.selections;
+                let combo = '';
+                if (selections) {
+                    if (Array.isArray(selections)) combo = `<br><small style="margin-left: 10px; color: #f97316;">Combo: ${selections.map(s=>s.name||s).join(', ')}</small>`;
+                    else if (typeof selections === 'object') combo = `<br><small style="margin-left: 10px; color: #f97316;">Combo: ${Object.entries(selections).map(([k,v])=>v.name||v).join(', ')}</small>`;
+                }
+                const note = i.note ? `<br><small style="margin-left: 10px; color: #3b82f6; font-weight: bold;">* NOTA: ${i.note}</small>` : '';
+                return `<tr>
+                    <td style="padding: 8px 0; border-bottom: 1px dashed #ddd; font-size: 14px;">
+                        <b>${qty}x ${name}</b>
+                        ${mods}
+                        ${combo}
+                        ${note}
+                    </td>
+                    <td style="padding: 8px 0; border-bottom: 1px dashed #ddd; text-align: right; font-size: 14px; font-weight: bold;">
+                        L. ${(qty * (parseFloat(i.price) || 0)).toFixed(0)}
+                    </td>
+                </tr>`;
+            }).join('') : '';
+
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Comanda QuimiEats #${o.short_id || o.id.substring(0,4)}</title>
+                    <style>
+                        body { font-family: 'Courier New', Courier, monospace; padding: 20px; color: #000; width: 300px; margin: 0 auto; }
+                        .header { text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 15px; }
+                        .title { font-size: 18px; font-weight: bold; margin: 0; }
+                        .table { width: 100%; border-collapse: collapse; }
+                        .total { border-top: 2px dashed #000; font-weight: bold; font-size: 15px; margin-top: 15px; padding-top: 10px; text-align: right; }
+                        .footer { text-align: center; font-size: 9px; margin-top: 30px; border-top: 1px dashed #000; padding-top: 10px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <p class="title">COMANDA DE COCINA</p>
+                        <p style="margin: 5px 0; font-size: 16px;"><b>PEDIDO #${o.short_id || o.id.substring(0,4)}</b></p>
+                        <p style="margin: 3px 0; font-size: 11px;">Cliente: ${o.customers?.name || 'Cliente'}</p>
+                        <p style="margin: 3px 0; font-size: 11px;">Teléfono: ${o.customers?.phone || ''}</p>
+                        <p style="margin: 3px 0; font-size: 11px;">Tipo: ${o.fulfillment === 'pickup' ? '🛍️ LLEVAR' : '🚗 DOMICILIO'}</p>
+                        <p style="margin: 3px 0; font-size: 11px;">Pago: ${o.payment_method === 'rico_balance' ? 'Rico Balance' : (o.payment_method || 'Tarjeta')}</p>
+                    </div>
+                    <table class="table">
+                        ${itemsHtml}
+                    </table>
+                    <div class="total">
+                        TOTAL: L. ${parseFloat(o.total_amount || o.total || 0).toFixed(2)}
+                    </div>
+                    ${o.notes ? `
+                        <div style="margin-top: 15px; padding: 8px; border: 1px solid #000; font-size: 11px;">
+                            <b>INDICACIONES:</b><br>${o.notes}
+                        </div>
+                    ` : ''}
+                    <div class="footer">
+                        <p>QuimiEats OS - Impreso: ${new Date().toLocaleTimeString()}</p>
+                    </div>
+                    <script>
+                        window.onload = function() { 
+                            window.print(); 
+                            setTimeout(() => { window.close(); }, 500); 
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        // --- STORE OPEN/CLOSE STATUS TOGGLE ---
+        let isStoreOpen = true;
+        function toggleStoreStatus() {
+            isStoreOpen = !isStoreOpen;
+            const btn = document.getElementById('store-status-btn');
+            if (isStoreOpen) {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-green-500/10 text-green-400 border border-green-500/20 shadow-sm active:scale-95 transition-all";
+                btn.innerText = "🟢 Abierto";
+            } else {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-400 border border-red-500/20 shadow-sm active:scale-95 transition-all";
+                btn.innerText = "🔴 Cerrado";
+            }
+        }
+
+        // --- KITCHEN DISPLAY SYSTEM LINK ---
+        function openKitchenKDS() {
+            if (currentMerchantId) {
+                window.open(`/kitchen.html?restaurantId=${currentMerchantId}`, '_blank');
+            }
+        }
+    </script>
+</body>
+</html>

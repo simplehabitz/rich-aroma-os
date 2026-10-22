@@ -1,0 +1,175 @@
+"Rank","Item Name","Quantity Sold","Average Unit Price (Lps)","Total Sales (Lps)"
+1,"Cappuccino",249,92.21,22960.00
+2,"Americano",206,NaN,NaN
+3,"Baleadas",197,56.68,11166.00
+4,"Supreme Frappe",161,154.29,24840.00
+5,"Coffee Frappe",148,128.28,18985.00
+6,"Empanadillas de Cuajada",132,269.92,35630.00
+7,"Latte",127,74.92,9515.00
+8,"Crepas (Una)",86,105.35,9060.00
+9,"Fresa Frappe",85,NaN,NaN
+10,"Pan de Banano",79,48.89,3862.50
+11,"Avocado Toast con Huevo",77,173.18,13335.00
+12,"Jugo",77,64.22,4945.00
+13,"Frescos",77,50.29,3872.50
+14,"Combo 2: Chicken Melt + Papas + Jugo",75,280.20,21015.00
+15,"Caramel Iced Coffee",72,84.31,6070.00
+16,"Combo 1: Chicken Salad Bowl + Jugo",72,NaN,NaN
+17,"Fresa Granita",62,151.37,9385.00
+18,"Licuado",61,70.41,4295.00
+19,"Agua",52,28.85,1500.00
+20,"Combo 3: Grill Cheese con Jamón + Papas + Jugo",49,267.24,13095.00
+21,"Chicken Melt",47,199.71,9386.25
+22,"Mocha",43,77.79,3345.00
+23,"Cheesecake",43,118.60,5100.00
+24,"Almuerzo Tipico",41,269.39,11045.00
+25,"French Vanilla",41,108.78,4460.00
+26,"Granita de mango",40,128.00,5120.00
+27,"Flan",39,105.38,4110.00
+28,"Grill Cheese con Jamón",39,147.31,5745.00
+29," Granita de limon",37,98.11,3630.00
+30,"Pastelitos de Piña",36,43.33,1560.00
+31,"Chai Latte",34,83.09,2825.00
+32,"Magoneada",32,120.00,3840.00
+33,"Banano y Almond Butter Toast",29,104.31,3025.00
+34,"Chicken Salad Bowl",28,166.07,4650.00
+35,"Chai Frappe",28,116.07,3250.00
+36,"Desayuno Tipico",28,200.00,5600.00
+37,"Crepas (Tres)",24,304.38,7305.00
+38,"Burrito Mexicano",23,238.70,5490.00
+39,"Burrito (Breakfast)",22,230.45,5070.00
+40,"Papas",22,167.73,3690.00
+41,"Hot Chocolate",17,97.94,1665.00
+42,"Iced Matcha",16,82.19,1315.00
+43,"Classic Latte",13,66.15,860.00
+44,"Niah's Licuadito",13,90.38,1175.00
+45,"French Vanilla ",13,93.08,1210.00
+46,"Empanadillas de Queso Crema con Fresa",13,52.31,680.00
+47,"Baleada",12,35.00,420.00
+48,"Combo 4: Grill Cheese + Papas + Jugo",11,205.45,2260.00
+49,"Espresso",10,40.00,400.00
+50,"Grill Cheese",9,88.33,795.00
+51,"Jamon de Pavo",9,42.78,385.00
+52,"Chicken Salad Bowl w/ Hummus",8,140.00,1120.00
+53,"Matcha Latte",8,66.88,535.00
+54,"Galletas de Almendra (Sin Gluten)",8,43.75,350.00
+55,"Test Coffee",6,43.33,260.00
+56,"Açaí Bowl",6,125.00,750.00
+57,"Cena Tipica",6,100.00,600.00
+58,"preparado",6,10.00,60.00
+59,"Pollo",6,60.00,360.00
+60,"Tortilla (De harina)",6,33.33,200.00
+61,"focaccia canela",6,300.00,1800.00
+62,"Test Muffin",5,40.00,200.00
+63,"Dirty Matcha",5,88.00,440.00
+64,"fresa",5,24.00,120.00
+65,"dividido",5,10.00,50.00
+66,"focaccia",5,108.00,540.00
+67,"cinnamon foccacia",5,90.00,450.00
+68,"Super Veggie Bowl",4,150.00,600.00
+69,"queso crema",4,85.00,340.00
+70,"Membresía VIP (L.1500)",4,1500.00,6000.00
+71,"agua",4,20.00,80.00
+72,"Aguacate",4,21.25,85.00
+73,"Huevo",4,22.50,90.00
+74,"Croissant",3,45.00,135.00
+75,"Nutty Power Smoothie",3,85.00,255.00
+76,"Green Giant Juice",3,65.00,195.00
+77,"Açaí Cup",3,85.00,255.00
+78,"Hot Latte",3,55.00,165.00
+79,"Recarga Rico Cash (+L.150 Bono)",3,1650.00,4950.00
+80,"PASTELITOS",3,93.33,280.00
+81,"cheesecake preparado",3,10.00,30.00
+82,"banana bread masa madre",3,90.00,270.00
+83,"burrito mexicano",3,266.67,800.00
+84,"almuerzo tipico",3,480.00,1440.00
+85,"Latte de Prueba",2,50.00,100.00
+86,"Recarga Rico Cash (+L.25 Bono)",2,525.00,1050.00
+87,"galletas de almendra",2,20.00,40.00
+88,"coca",2,30.00,60.00
+89,"queso crema x2",2,80.00,160.00
+90,"crema",2,7.50,15.00
+91,"fresca",2,30.00,60.00
+92,"2x queso crema con fresa",2,80.00,160.00
+93,"pastelito queso crema",2,40.00,80.00
+94,"1x galletas de almendra",2,40.00,80.00
+95,"Toast (Pan masa madre)",2,50.00,100.00
+96,"Frijoles",2,15.00,30.00
+97,"queso crema con fresa masa madre",2,85.00,170.00
+98,"extra toast",2,10.00,20.00
+99,"latte",2,110.00,220.00
+100,"ficoccia",2,95.00,190.00
+101,"divido en 2",2,12.50,25.00
+102,"kreatina",2,32.50,65.00
+103,"add fresa",2,7.50,15.00
+104,"burrito breakfast",2,160.00,320.00
+105,"caramelo iceed coffee",2,75.00,150.00
+106,"americano",2,50.00,100.00
+107,"BREAKFAST BURRITO",2,320.00,640.00
+108,"creatina",2,70.00,140.00
+109,"Diagnostico",1,100.00,100.00
+110,"Combo Savory",1,350.00,350.00
+111,"Chicken Avo Sandwich",1,145.00,145.00
+112,"Crepe Sweet",1,90.00,90.00
+113,"Avo Toast",1,75.00,75.00
+114,"Chipotle Burrito",1,180.00,180.00
+115,"Test Latte",1,50.00,50.00
+116,"Test Clawd Coffee",1,0.00,0.00
+117,"French Vanilla Chai",1,65.00,65.00
+118,"Lemonade Granita",1,55.00,55.00
+119,"caramelo frappe",1,90.00,90.00
+120,"burrito (Custom)",1,180.00,180.00
+121,"Recarga Rico Cash (+L.100 Bono)",1,1100.00,1100.00
+122,"Recarga Rico Cash (+L.0 Bono)",1,150.00,150.00
+123,"queso crema x3",1,120.00,120.00
+124,"Test Item",1,10.00,10.00
+125,"3x queso crema",1,120.00,120.00
+126,"Latte (Free)",1,0.00,0.00
+127,"matcha frappe",1,90.00,90.00
+128,"cafe  insta x2",1,80.00,80.00
+129,"cheesecream",1,80.00,80.00
+130,"pqueso crema x2",1,80.00,80.00
+131,"side order of pollo",1,50.00,50.00
+132,"vanilla latte",1,85.00,85.00
+133,"papas",1,80.00,80.00
+134,"pollo",1,40.00,40.00
+135,"pan tostado",1,10.00,10.00
+136,"jamon",1,40.00,40.00
+137,"5x galletas de almendra",1,150.00,150.00
+138,"cokeemployee",1,20.00,20.00
+139,"pollo x3",1,180.00,180.00
+140,"6 x tortillas de mais",1,30.00,30.00
+141,"6x tortillas de mais",1,30.00,30.00
+142,"2x meal employee",1,350.00,350.00
+143,"2oz of milk",1,5.00,5.00
+144,"vanilla frappe",1,90.00,90.00
+145,"tortilla de harina",1,0.00,0.00
+146,"acai cup  x2",1,300.00,300.00
+147,"Quesadilla Mexicana",1,200.00,200.00
+148,"choco frap.",1,40.00,40.00
+149,"acai bowl",1,150.00,150.00
+150,"foam",1,10.00,10.00
+151,"shot",1,5.00,5.00
+152,"chicken melt wih no drink",1,200.00,200.00
+153,"mangonada",1,50.00,50.00
+154,"idk",1,120.00,120.00
+155,"vasso",1,15.00,15.00
+156,"copia",1,5.00,5.00
+157,"drizzle",1,5.00,5.00
+158,"event rental",1,500.00,500.00
+159,"cuajada",1,30.00,30.00
+160,"coffee frappe con oat milk",1,110.00,110.00
+161,"burrito",1,160.00,160.00
+162,"pan de masa madre",1,250.00,250.00
+163,"mantequilla y queso",1,10.00,10.00
+164,"UBE",1,10.00,10.00
+165,"Custom Item",1,10.00,10.00
+166,"whipcream",1,20.00,20.00
+167,"Bandejas",1,5.00,5.00
+168,"banano",1,90.00,90.00
+169,"granita de fresa",1,90.00,90.00
+170,"pan de banano",1,90.00,90.00
+171,"cappucino",1,60.00,60.00
+172,"envio",1,30.00,30.00
+173,"cinnamon focaccia",1,100.00,100.00
+174,"quesocrema con fresa",1,100.00,100.00

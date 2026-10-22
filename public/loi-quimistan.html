@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Términos de Inversión y Carta de Intención | Micro-Red Solar Quimistán</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cinzel:wght@600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #c9a66b;
+            --emerald: #059669;
+            --emerald-dark: #064e3b;
+            --dark: #0f172a;
+            --gray-light: #f8fafc;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+            background: #0b0f19;
+            color: var(--text-main);
+            padding: 24px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .action-bar {
+            width: 100%;
+            max-width: 850px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 12px;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-weight: 700;
+            font-size: 0.9rem;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .back-link {
+            color: #94a3b8;
+            text-decoration: none;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .back-link:hover {
+            color: #ffffff;
+        }
+
+        /* Institutional Document Sheet */
+        .sheet {
+            width: 100%;
+            max-width: 850px;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 44px 50px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            line-height: 1.45;
+            position: relative;
+        }
+
+        /* Letterhead */
+        .header-letterhead {
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .brand-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .brand-sub {
+            font-size: 0.78rem;
+            color: #475569;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .doc-badge {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 6px;
+            text-align: right;
+        }
+
+        .doc-badge .code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #047857;
+        }
+
+        .doc-badge .date {
+            font-size: 0.72rem;
+            color: #64748b;
+        }
+
+        .title-block {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .title-block h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .title-block .subtitle {
+            font-size: 0.82rem;
+            color: #475569;
+            margin-top: 4px;
+            font-weight: 600;
+        }
+
+        .intro-p {
+            font-size: 0.82rem;
+            color: #334155;
+            text-align: justify;
+            margin-bottom: 16px;
+        }
+
+        /* Terms Table / Grid */
+        .terms-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            font-size: 0.80rem;
+        }
+
+        .terms-table th, .terms-table td {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            vertical-align: middle;
+        }
+
+        .terms-table th {
+            background: #f8fafc;
+            color: #0f172a;
+            font-weight: 700;
+            width: 32%;
+            text-align: left;
+        }
+
+        .terms-table td {
+            color: #1e293b;
+            background: #ffffff;
+        }
+
+        .terms-table .highlight {
+            font-weight: 700;
+            color: #047857;
+        }
+
+        /* Callout Box */
+        .callout-box {
+            background: #ecfdf5;
+            border-left: 4px solid #10b981;
+            padding: 10px 14px;
+            margin-bottom: 18px;
+            border-radius: 0 8px 8px 0;
+            font-size: 0.78rem;
+            color: #065f46;
+            line-height: 1.4;
+        }
+
+        .callout-box strong {
+            color: #047857;
+        }
+
+        /* Legal Clauses */
+        .clauses-block {
+            font-size: 0.74rem;
+            color: #334155;
+            text-align: justify;
+            margin-bottom: 22px;
+            line-height: 1.4;
+        }
+
+        .clauses-block p {
+            margin-bottom: 6px;
+        }
+
+        .clauses-block strong {
+            color: #0f172a;
+        }
+
+        /* Signatures */
+        .signatures-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+            padding-top: 10px;
+        }
+
+        .sig-box {
+            text-align: center;
+        }
+
+        .sig-line {
+            border-top: 1.5px solid #0f172a;
+            margin-bottom: 6px;
+            padding-top: 4px;
+        }
+
+        .sig-name {
+            font-size: 0.80rem;
+            font-weight: 700;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .sig-role {
+            font-size: 0.70rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .watermark {
+            position: absolute;
+            bottom: 12px;
+            right: 50px;
+            font-size: 0.65rem;
+            color: #94a3b8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Print Optimization for Exact 1-Page Letter/A4 */
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+                color: black;
+            }
+            .action-bar {
+                display: none !important;
+            }
+            .sheet {
+                box-shadow: none;
+                padding: 24px 30px;
+                max-width: 100%;
+                border-radius: 0;
+            }
+            @page {
+                size: letter;
+                margin: 1.2cm 1.5cm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="action-bar">
+        <a href="/eco-park" class="back-link">
+            ← Volver al Portal Quimistán Eco-Park
+        </a>
+        <button class="btn-print" onclick="window.print()">
+            🖨️ Imprimir / Guardar en PDF (1 Página)
+        </button>
+    </div>
+
+    <div class="sheet">
+        <!-- Letterhead -->
+        <div class="header-letterhead">
+            <div>
+                <div class="brand-title">PLAZA ROSA DE CASTILLO</div>
+                <div class="brand-sub">Proyecto Micro-Red Solar & Centro de Energía Sostenible • Quimistán, Santa Bárbara, Honduras</div>
+            </div>
+            <div class="doc-badge">
+                <div class="code">TS-SOLAR-2026-01</div>
+                <div class="date">Quimistán, S.B. — Septiembre 2026</div>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="title-block">
+            <h1>CARTA DE INTENCIÓN Y HOJA DE TÉRMINOS (TERM SHEET)</h1>
+            <div class="subtitle">FINANCIAMIENTO SENIOR CON GARANTÍA MOBILIARIA • PROYECTO SOLAR FOTOVOLTAICO 120 kW</div>
+        </div>
+
+        <p class="intro-p">
+            Por medio del presente documento, <strong>PLAZA ROSA DE CASTILLO</strong> (representada por su propietario Don Oscar René Castillo Pacheco) y el <strong>INVERSIONISTA / ACREEDOR</strong> acuerdan los términos y condiciones esenciales para la estructuración de un crédito privado garantizado destinado a la instalación y puesta en marcha de la micro-red solar comercial del complejo:
+        </p>
+
+        <!-- Terms Table -->
+        <table class="terms-table">
+            <tbody>
+                <tr>
+                    <th>1. Prestatario / Emisor</th>
+                    <td><strong>Plaza Rosa de Castillo</strong> (Quimistán, Santa Bárbara) / Proyecto Micro-Red Solar.</td>
+                </tr>
+                <tr>
+                    <th>2. Inversionista / Acreedor</th>
+                    <td><span style="color: #64748b;">[Nombre Completo / Empresa Inversionista / DNI / RTN]</span></td>
+                </tr>
+                <tr>
+                    <th>3. Monto del Crédito</th>
+                    <td><strong>$10,000.00 USD</strong> (o en múltiplos de $5,000 hasta completar tramo de $50,000 USD).</td>
+                </tr>
+                <tr>
+                    <th>4. Tasa de Interés Fija</th>
+                    <td><strong class="highlight">15.00% Anual Fijo en Dólares (USD)</strong> — Muy superior a depósitos a plazo fijo bancarios locales.</td>
+                </tr>
+                <tr>
+                    <th>5. Plazo de Amortización</th>
+                    <td><strong>36 Meses (3 Años)</strong> mediante 36 cuotas fijas mensuales consecutivas de capital e intereses.</td>
+                </tr>
+                <tr>
+                    <th>6. Cuota Mensual a Percibir</th>
+                    <td><strong class="highlight">$346.65 USD / mes</strong> (por cada $10,000 USD aportados). Retorno total pactado: <strong>$12,479.40 USD</strong>.</td>
+                </tr>
+                <tr>
+                    <th>7. Respaldo y Garantía Real</th>
+                    <td>
+                        <strong>Garantía Mobiliaria de Primer Grado</strong> sobre los paneles solares Tier-1, inversores híbridos industriales y bancos de baterías LiFePO4, inscrita formalmente bajo la <em>Ley de Garantías Mobiliarias de Honduras</em> (Decreto 182-2009). Cesión preferente de los flujos de facturación eléctrica de los locales comerciales de la Plaza.
+                    </td>
+                </tr>
+                <tr>
+                    <th>8. Uso de los Fondos</th>
+                    <td>Adquisición e instalación de equipamiento solar, acometidas inteligentes y sincronización de micro-red.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Neighbor Sweetener Benefit -->
+        <div class="callout-box">
+            <strong>🏡 BENEFICIO EXCLUSIVO PARA VECINOS RESIDENCIALES:</strong><br>
+            El Acreedor tendrá el derecho preferente de interconexión directa desde la Plaza a su residencia o finca mediante acometida privada de 24/7 energía limpia ininterrumpida a tarifa preferencial fija de <strong>$0.26 / kWh</strong> (ahorro directo de 15%–25% vs. tarifa ENEE comercial/diésel y eliminación total del gasto de combustible de generadores diésel en apagones).
+        </div>
+
+        <!-- Binding / Legal Summary Clauses -->
+        <div class="clauses-block">
+            <p>
+                <strong>NATURALEZA JURÍDICA:</strong> La presente Hoja de Términos formaliza la intención mutua de suscribir un <em>Contrato de Préstamo con Garantía Mobiliaria</em> y emisión de <em>Pagaré Cambiario con Fuerza Ejecutiva</em> con firma autenticada ante Notario Público de Quimistán o San Pedro Sula.
+            </p>
+            <p>
+                <strong>PROTECCIÓN CAMBIARIA:</strong> Todas las obligaciones se pactan y pagarán en Dólares de los Estados Unidos de América (USD) o su equivalente en Lempiras a la tasa de cambio oficial del Banco Central de Honduras (BCH) a la fecha de pago, protegiendo al inversionista contra devaluaciones.
+            </p>
+            <p>
+                <strong>JURISDICCIÓN:</strong> Las partes se someten a la legislación mercantil de la República de Honduras y a los tribunales competentes de Quimistán o Santa Bárbara, renunciando a cualquier fuero domiciliario.
+            </p>
+        </div>
+
+        <!-- Signatures Block -->
+        <div class="signatures-container">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-name">Oscar René Castillo Pacheco</div>
+                <div class="sig-role">Por: Plaza Rosa de Castillo / Desarrollador<br>DNI: 1618-1969-00075 • Quimistán, S.B.</div>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <div class="sig-name">[Firma del Inversionista / Acreedor]</div>
+                <div class="sig-role">Por: El Inversionista / Acreedor Hipotecario<br>DNI / RTN: _______________________</div>
+            </div>
+        </div>
+
+        <div class="watermark">
+            REGISTRO: QUIMISTÁN-SOLAR-SECURED-NOTE-2026
+        </div>
+    </div>
+
+</body>
+</html>

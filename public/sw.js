@@ -1,8 +1,7 @@
-const CACHE_NAME = 'rich-aroma-v3';
+const CACHE_NAME = 'rich-aroma-v4';
 const ASSETS = [
     '/',
     '/index.html',
-    '/remesas.html',
     '/js/localforage.min.js',
     '/offline-manager.js',
     '/src/pos/pos.html',

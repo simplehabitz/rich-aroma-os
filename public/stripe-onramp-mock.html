@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <link rel="icon" type="image/png" href="/favicon.png">    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Stripe Crypto Onramp</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stripe: '#635BFF',
+                        dark: '#1E293B',
+                        slate: '#0F172A'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; color: #1E293B; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white rounded-[2rem] p-8 shadow-2xl border border-gray-100 space-y-6">
+        
+        <!-- Stripe Header -->
+        <div class="flex justify-between items-center pb-4 border-b border-gray-100">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-stripe flex items-center justify-center text-white font-extrabold text-lg">s</div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate tracking-tight">stripe</h1>
+                    <p class="text-[9px] text-stripe font-black uppercase tracking-widest leading-none">crypto onramp</p>
+                </div>
+            </div>
+            <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold uppercase tracking-tight border border-emerald-200">Modo de Prueba</span>
+        </div>
+
+        <!-- Checkout Info -->
+        <div class="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-3">
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-slate/60 font-medium">Compra de Crypto:</span>
+                <span class="text-slate font-bold flex items-center gap-1.5">
+                    <img src="https://cryptologos.cc/logos/usd-coin-usdc-logo.png" class="w-4 h-4"> USDC (Base Network)
+                </span>
+            </div>
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-slate/60 font-medium">Billetera de Destino:</span>
+                <span id="display-wallet" class="font-mono text-slate/80">0x0000...0000</span>
+            </div>
+            <div class="flex justify-between items-center pt-3 border-t border-slate-200/60">
+                <span class="text-sm text-slate/60 font-bold">Total a Pagar:</span>
+                <span id="display-total" class="text-2xl font-extrabold text-slate">$0.00 USD</span>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <div id="payment-form" class="space-y-4">
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate/40 uppercase tracking-wider">Titular de la Tarjeta</label>
+                <input type="text" id="cardholder" placeholder="ej. John Doe" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-stripe text-slate">
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-[10px] font-bold text-slate/40 uppercase tracking-wider">Número de Tarjeta</label>
+                <div class="relative">
+                    <input type="text" id="cardnumber" placeholder="4242 4242 4242 4242" maxlength="19" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-4 pr-10 py-3 text-xs focus:outline-none focus:border-stripe text-slate font-mono">
+                    <i class="fas fa-credit-card absolute right-4 top-1/2 -translate-y-1/2 text-slate/30 text-xs"></i>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate/40 uppercase tracking-wider">Vencimiento</label>
+                    <input type="text" id="expiry" placeholder="MM/YY" maxlength="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-stripe text-slate font-mono text-center">
+                </div>
+                <div class="space-y-2">
+                    <label class="block text-[10px] font-bold text-slate/40 uppercase tracking-wider">CVC</label>
+                    <input type="password" id="cvc" placeholder="•••" maxlength="3" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-stripe text-slate font-mono text-center">
+                </div>
+            </div>
+
+            <button onclick="processMockPayment()" id="btn-pay" class="w-full h-14 bg-stripe hover:bg-[#5048E5] text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-stripe/20 active:scale-98 transition-all flex items-center justify-center gap-2 mt-2">
+                <span>Pagar con Tarjeta</span>
+            </button>
+        </div>
+
+        <!-- Success Animation Card -->
+        <div id="success-view" class="hidden text-center py-10 space-y-6">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-3xl mx-auto border border-green-200 shadow-[0_0_30px_rgba(22,163,74,0.08)] animate-bounce">
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="space-y-2">
+                <h3 class="text-xl font-extrabold text-slate">¡Compra Completada!</h3>
+                <p class="text-xs text-slate/50">USDC transferido al instante a la billetera de tu familiar.</p>
+            </div>
+            <div class="p-4 bg-slate-50 border border-slate-100 rounded-2xl max-w-xs mx-auto text-xs">
+                <span class="block text-[8px] font-black uppercase text-stripe tracking-widest mb-1">Recibo de Remesa</span>
+                <div class="flex justify-between text-[10px] text-slate/60">
+                    <span>Acreditado:</span>
+                    <span id="receipt-hnl" class="font-bold text-slate">L. 0.00 HNL</span>
+                </div>
+            </div>
+            <p class="text-[9px] text-slate/30 animate-pulse uppercase tracking-widest">Cerrando ventana...</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Get URL Query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const wallet = urlParams.get('wallet') || '0x0000000000000000000000000000000000000000';
+        const amount = parseFloat(urlParams.get('amount')) || 10.00;
+
+        document.getElementById('display-wallet').innerText = `${wallet.substring(0, 6)}...${wallet.substring(wallet.length - 4)}`;
+        document.getElementById('display-total').innerText = `$${amount.toFixed(2)} USD`;
+        document.getElementById('btn-pay').querySelector('span').innerText = `Pagar $${amount.toFixed(2)} USD`;
+
+        // Format Card Input fields
+        document.getElementById('cardnumber').addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/[^\d]/g, '').replace(/(.{4})/g, '$1 ').trim();
+        });
+        document.getElementById('expiry').addEventListener('input', function (e) {
+            e.target.value = e.target.value.replace(/[^\d]/g, '').replace(/(.{2})/, '$1/').trim();
+        });
+
+        async function processMockPayment() {
+            const btn = document.getElementById('btn-pay');
+            const cardholder = document.getElementById('cardholder').value.trim();
+            const cardnumber = document.getElementById('cardnumber').value.replace(/\s/g, '');
+            const expiry = document.getElementById('expiry').value;
+            const cvc = document.getElementById('cvc').value;
+
+            if (!cardholder || cardnumber.length < 16 || expiry.length < 5 || cvc.length < 3) {
+                return alert('Por favor complete todos los datos de la tarjeta.');
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-circle-notch animate-spin text-lg"></i> <span>PROCESANDO...</span>`;
+
+            try {
+                // Call backend callback to credit the recipient
+                const res = await fetch('/api/onramp/callback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        walletAddress: wallet,
+                        amountUsd: amount
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    // Update receipt details
+                    document.getElementById('receipt-hnl').innerText = `L. ${data.hnlCredited.toFixed(2)} HNL`;
+                    
+                    // Transition to success screen
+                    document.getElementById('payment-form').classList.add('hidden');
+                    document.getElementById('success-view').classList.remove('hidden');
+
+                    // Notify parent PWA window
+                    setTimeout(() => {
+                        if (window.parent) {
+                            window.parent.postMessage({
+                                type: 'onramp_success',
+                                walletAddress: wallet,
+                                amountUsd: amount,
+                                hnlCredited: data.hnlCredited
+                            }, '*');
+                        }
+                    }, 2500);
+
+                } else {
+                    alert(`Error en el callback: ${data.error || 'Desconocido'}`);
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>Pagar $${amount.toFixed(2)} USD</span>`;
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error de red al procesar el pago.");
+                btn.disabled = false;
+                btn.innerHTML = `<span>Pagar $${amount.toFixed(2)} USD</span>`;
+            }
+        }
+    </script>
+</body>
+</html>

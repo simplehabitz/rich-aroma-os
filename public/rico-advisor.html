@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rico Advisor - AI-Native Wealth Manager on Robinhood Chain</title>
+    <!-- SEO Best Practices -->
+    <meta name="description" content="Rico Advisor is the first AI-native, non-custodial wealth manager and automated stock/RWA advisor deployed on the Robinhood Chain.">
+    <!-- Premium Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg: #030408;
+            --card-bg: rgba(13, 17, 28, 0.6);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(255, 255, 255, 0.12);
+            --primary: #10b981; /* Emerald */
+            --primary-glow: rgba(16, 185, 129, 0.2);
+            --secondary: #3b82f6; /* Electric Blue */
+            --secondary-glow: rgba(59, 130, 246, 0.25);
+            --text: #f3f4f6;
+            --text-muted: #9ca3af;
+            --font-main: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-main);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Background Glows */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(120px);
+            z-index: -1;
+        }
+
+        #orb-1 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+            top: -100px;
+            left: -100px;
+        }
+
+        #orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--secondary-glow) 0%, transparent 70%);
+            top: 300px;
+            right: -150px;
+        }
+
+        #orb-3 {
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+            bottom: -100px;
+            left: 20%;
+        }
+
+        /* Layout Containers */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            background: rgba(3, 4, 8, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 16px 0;
+        }
+
+        .nav-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo img {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+        }
+
+        .logo-text {
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: #fff;
+        }
+
+        .btn-connect {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            color: #60a5fa;
+            padding: 10px 20px;
+            border-radius: 99px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.05);
+        }
+
+        .btn-connect:hover {
+            background: var(--secondary);
+            color: #fff;
+            box-shadow: 0 0 15px var(--secondary-glow);
+            transform: translateY(-1px);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0 120px;
+            text-align: center;
+            position: relative;
+        }
+
+        .badge-new {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.06);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            animation: pulse-glow 2s infinite;
+        }
+
+        @keyframes pulse-glow {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.3); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        h1 {
+            font-size: 54px;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -1.5px;
+            margin-bottom: 20px;
+            background: linear-gradient(to bottom right, #fff 40%, #888 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-desc {
+            font-size: 18px;
+            color: var(--text-muted);
+            max-width: 640px;
+            margin: 0 auto 36px;
+        }
+
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 80px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary) 0%, #1d4ed8 100%);
+            color: #fff;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.25);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.07);
+            border-color: var(--border-hover);
+        }
+
+        /* Glassmorphic UI Mockup */
+        .mockup-container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid var(--border);
+            padding: 6px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+        }
+
+        .mockup-header {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            padding-left: 16px;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top-left-radius: 14px;
+            border-top-right-radius: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .mockup-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--border);
+        }
+
+        .mockup-dot.red { background-color: #ef4444; }
+        .mockup-dot.yellow { background-color: #f59e0b; }
+        .mockup-dot.green { background-color: #10b981; }
+
+        .mockup-body {
+            background: #090d16;
+            border-bottom-left-radius: 14px;
+            border-bottom-right-radius: 14px;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 20px;
+            text-align: left;
+        }
+
+        /* Interactive Simulator Panel */
+        .sim-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(20px);
+        }
+
+        .sim-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+
+        .slider-group {
+            margin-bottom: 24px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .slider-val {
+            font-family: var(--font-mono);
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .custom-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+            -webkit-appearance: none;
+            transition: all 0.2s;
+        }
+
+        .custom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary);
+            transition: transform 0.1s;
+        }
+
+        .custom-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .strategy-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .strat-btn {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .strat-btn.active {
+            background: var(--primary-glow);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.05);
+        }
+
+        .burn-stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .burn-stat-row span {
+            font-family: var(--font-mono);
+            font-weight: 700;
+        }
+
+        /* Mockup Feed (Right Column) */
+        .feed-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feed-card {
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .feed-token {
+            font-weight: 700;
+            font-size: 13px;
+            color: #60a5fa;
+        }
+
+        .feed-badge {
+            background: var(--primary-glow);
+            color: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .feed-badge.sell {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .feed-desc {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        /* Core Pillars Section */
+        .pillars {
+            padding: 100px 0;
+            position: relative;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            background: linear-gradient(to bottom right, #fff, #999);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-desc {
+            font-size: 16px;
+            color: var(--text-muted);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .pillar-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s;
+            cursor: default;
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-hover);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+
+        .pillar-icon {
+            font-size: 32px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        .pillar-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .pillar-desc {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Call To Action Modal/Section */
+        .cta-section {
+            padding: 80px 0 120px;
+            text-align: center;
+        }
+
+        .cta-card {
+            background: radial-gradient(circle at top left, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%), var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 60px 40px;
+            backdrop-filter: blur(20px);
+        }
+
+        .cta-title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .cta-desc {
+            font-size: 16px;
+            color: var(--text-muted);
+            max-width: 550px;
+            margin: 0 auto 32px;
+        }
+
+        /* Interactive Web3 Connect Modal */
+        #auth-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(3, 4, 8, 0.85);
+            backdrop-filter: blur(12px);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-card {
+            background: #0d111c;
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            max-width: 400px;
+            width: 100%;
+            padding: 30px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            position: relative;
+            text-align: center;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .modal-logo {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        .wallet-option {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .wallet-option:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-hover);
+        }
+
+        .wallet-option span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .wallet-badge {
+            background: var(--primary-glow);
+            color: var(--primary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Disclaimer Modal */
+        #disclaimer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(3, 4, 8, 0.9);
+            backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .disclaimer-card {
+            background: rgba(13, 17, 28, 0.95);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 580px;
+            width: 90%;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
+
+        .disclaimer-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ef4444;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .disclaimer-intro {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .disclaimer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .disclaimer-item {
+            display: flex;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .disclaimer-bullet {
+            color: #ef4444;
+            font-weight: 700;
+        }
+
+        .disclaimer-btn {
+            width: 100%;
+            background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+            border: none;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 14px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .disclaimer-btn:hover {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Disclaimer Modal -->
+    <div id="disclaimer-overlay">
+        <div class="disclaimer-card">
+            <div class="disclaimer-title">⚠️ Experimental Software — Please Read</div>
+            <div class="disclaimer-intro">Before you connect a wallet or interact with Rico Advisor, please read and acknowledge the following:</div>
+            
+            <div class="disclaimer-list">
+                <div class="disclaimer-item">
+                    <span class="disclaimer-bullet">▸</span>
+                    <span>Rico Advisor is experimental software on Robinhood Chain mainnet.</span>
+                </div>
+                <div class="disclaimer-item">
+                    <span class="disclaimer-bullet">▸</span>
+                    <span>Nothing on this site is financial, investment, legal, or tax advice. Nothing here is an offer or solicitation to buy or sell any security. This is Not Financial Advice (NFA).</span>
+                </div>
+                <div class="disclaimer-item">
+                    <span class="disclaimer-bullet">▸</span>
+                    <span>Crypto assets, NFTs, and tokens launched through this platform are highly volatile. Their value can fall sharply — including to zero — at any time and for any reason.</span>
+                </div>
+                <div class="disclaimer-item">
+                    <span class="disclaimer-bullet">▸</span>
+                    <span>There is no guarantee of stock token drops, dividends, activation returns, or any other outcome. Past activity is not a promise of future results.</span>
+                </div>
+                <div class="disclaimer-item">
+                    <span class="disclaimer-bullet">▸</span>
+                    <span>You are solely responsible for your own research, for complying with the laws and regulations of your jurisdiction, and for any taxes owed on your activity. Never invest, stake, activate, or trade with more than you can afford to lose completely.</span>
+                </div>
+            </div>
+            
+            <button class="disclaimer-btn" onclick="acceptDisclaimer()">I Acknowledge and Accept</button>
+        </div>
+    </div>
+
+    <div class="glow-orb" id="orb-1"></div>
+    <div class="glow-orb" id="orb-2"></div>
+    <div class="glow-orb" id="orb-3"></div>
+
+    <!-- Navigation Header -->
+    <nav>
+        <div class="container nav-flex">
+            <a href="#" class="logo">
+                <img src="/rico-logo.png" alt="Rico Mascot">
+                <span class="logo-text">RICO ADVISOR</span>
+            </a>
+            <div class="nav-links">
+                <a href="#simulator">Simulator</a>
+                <a href="#pillars">Core Pillars</a>
+                <button class="btn-connect" id="nav-connect-btn" onclick="openAuthModal()">Connect Wallet</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="container hero">
+        <div class="badge-new">
+            <span>🔥 Robinhood Chain Exclusive</span>
+        </div>
+        <h1>
+            The First AI-Native Wealth Advisor<br>
+            Deployed on Robinhood Chain
+        </h1>
+        <p class="hero-desc">
+            Connect your wallet, delegate session keys, and let Rico execute institutional-grade algorithmic portfolios 24/7. Fully non-custodial. No keys exported. No constant transaction approvals.
+        </p>
+        <div class="hero-actions">
+            <button class="btn-primary" onclick="openAuthModal()">Get Started Prototype</button>
+            <a href="#simulator" class="btn-secondary">View Live Simulator</a>
+        </div>
+
+        <!-- Interactive UI Simulator Mockup -->
+        <div class="mockup-container" id="simulator">
+            <div class="mockup-header">
+                <div class="mockup-dot red"></div>
+                <div class="mockup-dot yellow"></div>
+                <div class="mockup-dot green"></div>
+            </div>
+            <div class="mockup-body">
+                <!-- Left panel: Interactive sliders -->
+                <div class="sim-panel">
+                    <div class="sim-title">Protocol Calculator</div>
+                    
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Initial Capital</span>
+                            <span class="slider-val" id="capital-val">$500 WETH</span>
+                        </div>
+                        <input type="range" class="custom-slider" id="capital-slider" min="100" max="5000" step="100" value="500" oninput="calculateSimulatorValues()">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Strategy Target Profit</span>
+                            <span class="slider-val" id="target-val">30%</span>
+                        </div>
+                        <input type="range" class="custom-slider" id="target-slider" min="10" max="150" step="5" value="30" oninput="calculateSimulatorValues()">
+                    </div>
+
+                    <div class="sim-title" style="margin-top: 20px;">Execution Mode</div>
+                    <div class="strategy-toggle">
+                        <button class="strat-btn active" id="mode-rwa" onclick="selectStrategy('rwa')">24/7 Tokenized Stocks</button>
+                        <button class="strat-btn" id="mode-meme" onclick="selectStrategy('meme')">High-Yield Meme Reclaims</button>
+                    </div>
+
+                    <div class="burn-stat-row">
+                        <span>Expected Annual Yield:</span>
+                        <span id="stat-yield" style="color: var(--primary);">+28.4% APY</span>
+                    </div>
+                    <div class="burn-stat-row">
+                        <span>$RICO Token Buyback:</span>
+                        <span id="stat-burn" style="color: #60a5fa;">$150 USD/yr burned</span>
+                    </div>
+                </div>
+
+                <!-- Right panel: Simulated Activity Feed -->
+                <div class="feed-panel">
+                    <div class="sim-title" style="margin-left: 6px;">Live Protocol Activity</div>
+                    
+                    <div class="feed-card">
+                        <div class="feed-header">
+                            <span>Timestamp: 3:12:05 AM</span>
+                            <span class="feed-badge">BUY</span>
+                        </div>
+                        <div class="feed-token" id="feed-token-1">aTSLA (Tesla Stock Token)</div>
+                        <p class="feed-desc" style="color: var(--text-muted); margin-top: 4px; font-size:11px;">
+                            Triggered momentum reclaim at +30% off local support of $180.50. Executed manually via session key.
+                        </p>
+                    </div>
+
+                    <div class="feed-card">
+                        <div class="feed-header">
+                            <span>Timestamp: 1:30:12 AM</span>
+                            <span class="feed-badge sell">SELL</span>
+                        </div>
+                        <div class="feed-token" id="feed-token-2">aAAPL (Apple Stock Token)</div>
+                        <p class="feed-desc" style="color: var(--text-muted); margin-top: 4px; font-size:11px;">
+                            Hit Take Profit target TP1 (+15.0%). Sold 40% of position. $0.35 USD processed for $RICO buyback & burn.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Core Pillars Section -->
+    <section class="pillars" id="pillars">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-title">Core Pillars of Rico Wealth</div>
+                <p class="section-desc">Traditional asset protection combined with next-gen automated execution rails.</p>
+            </div>
+            
+            <div class="pillars-grid">
+                <div class="pillar-card">
+                    <div class="pillar-icon">🔒</div>
+                    <div class="pillar-title">Smart Session Keys</div>
+                    <p class="pillar-desc">
+                        Deploy your trading bot securely without exporting private keys. Authorize only specific Uniswap swap functions and spending floors. Revoke access with a single transaction.
+                    </p>
+                </div>
+
+                <div class="pillar-card">
+                    <div class="pillar-icon">⚡</div>
+                    <div class="pillar-title">24/7 Automated RWA</div>
+                    <p class="pillar-desc">
+                        The stock market never closes on Robinhood Chain. Capitalize on momentum, breakout reclaims, and support bounces at 2:00 AM on a Sunday. Fully hands-off.
+                    </p>
+                </div>
+
+                <div class="pillar-card">
+                    <div class="pillar-icon">🔥</div>
+                    <div class="pillar-title">$RICO Deflationary Loop</div>
+                    <p class="pillar-desc">
+                        Every profitable trade contributes to the ecosystem. 1% of profits are routed to buy back $RICO from the Uniswap pool and burn it forever, driving deflation.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action Section -->
+    <section class="container cta-section">
+        <div class="cta-card">
+            <div class="cta-title">Ready to Automate Your Capital?</div>
+            <p class="cta-desc">
+                Connect your wallet to deploy your personal smart account proxy, configure your risk bounds, and let Rico Advisor manage the rest.
+            </p>
+            <button class="btn-primary" onclick="openAuthModal()" style="font-size:18px; padding: 16px 36px;">Deploy Your Bot Now</button>
+        </div>
+    </section>
+
+    <!-- Authentication Web3 Modal (Frictionless Web3 Sign-in Simulation) -->
+    <div id="auth-modal">
+        <div class="modal-card">
+            <button class="close-modal" onclick="closeAuthModal()">✕</button>
+            <div class="modal-logo">🔒</div>
+            <div class="modal-title">Authorize Bot Session Key</div>
+            <div class="modal-desc">Select a wallet to deploy your ERC-4337 smart proxy and authorize session trading keys.</div>
+            
+            <div class="wallet-option" onclick="simulateAuth('MetaMask')">
+                <span>MetaMask</span>
+                <span class="wallet-badge">Active</span>
+            </div>
+            <div class="wallet-option" onclick="simulateAuth('Coinbase Wallet')">
+                <span>Coinbase Wallet</span>
+                <span class="wallet-badge">Supported</span>
+            </div>
+            <div class="wallet-option" onclick="simulateAuth('Robinhood Wallet')">
+                <span>Robinhood Wallet</span>
+                <span class="wallet-badge">Native</span>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>© 2026 Rico Advisor. Deployed on Robinhood Chain L2. Developed for automated wealth management.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Interactive Simulator Logic
+        let activeStrategy = 'rwa';
+
+        function selectStrategy(type) {
+            activeStrategy = type;
+            document.getElementById('mode-rwa').classList.toggle('active', type === 'rwa');
+            document.getElementById('mode-meme').classList.toggle('active', type === 'meme');
+
+            // Dynamic feed changes
+            const token1 = document.getElementById('feed-token-1');
+            const token2 = document.getElementById('feed-token-2');
+
+            if (type === 'rwa') {
+                token1.innerText = "aTSLA (Tesla Stock Token)";
+                token2.innerText = "aAAPL (Apple Stock Token)";
+            } else {
+                token1.innerText = "TENDIES 📈";
+                token2.innerText = "HOPPY 📈";
+            }
+
+            calculateSimulatorValues();
+        }
+
+        function calculateSimulatorValues() {
+            const capital = parseInt(document.getElementById('capital-slider').value);
+            const target = parseInt(document.getElementById('target-slider').value);
+
+            // Update Labels
+            document.getElementById('capital-val').innerText = `$${capital.toLocaleString()} WETH`;
+            document.getElementById('target-val').innerText = `${target}%`;
+
+            // Calculate simulated returns
+            let yieldVal = 0;
+            let burnVal = 0;
+
+            if (activeStrategy === 'rwa') {
+                // Lower risk, steady returns
+                yieldVal = 12 + (target * 0.4);
+                burnVal = capital * 0.05 * (target / 30);
+            } else {
+                // High risk, high volatility returns
+                yieldVal = 25 + (target * 0.9);
+                burnVal = capital * 0.15 * (target / 30);
+            }
+
+            document.getElementById('stat-yield').innerText = `+${yieldVal.toFixed(1)}% APY`;
+            document.getElementById('stat-burn').innerText = `$${burnVal.toFixed(2)} USD/yr burned`;
+        }
+
+        // Web3 Modal Simulation
+        function openAuthModal() {
+            document.getElementById('auth-modal').style.display = 'flex';
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').style.display = 'none';
+        }
+
+        function simulateAuth(walletName) {
+            closeAuthModal();
+            const btn = document.getElementById('nav-connect-btn');
+            btn.innerText = "0x1E83...41Fe 🐒";
+            btn.style.color = "var(--primary)";
+            btn.style.borderColor = "rgba(16, 185, 129, 0.4)";
+            btn.style.background = "var(--primary-glow)";
+            alert(`Prototype Web3 Success:\nDeployed smart proxy wallet & authorized trading session key via ${walletName}!`);
+        }
+
+        // Check disclaimer acceptance
+        if (localStorage.getItem("disclaimer_accepted") === "true") {
+            document.getElementById("disclaimer-overlay").style.display = "none";
+        }
+
+        function acceptDisclaimer() {
+            localStorage.setItem("disclaimer_accepted", "true");
+            document.getElementById("disclaimer-overlay").style.display = "none";
+        }
+
+        // Run initial calculation
+        calculateSimulatorValues();
+    </script>
+</body>
+</html>

@@ -120,18 +120,38 @@
             }
         }
 
+        function tile(path, icon, color, title, sub, newTab) {
+            const click = newTab ? `window.open('${path}', '_blank')` : `window.location.href='${path}'`;
+            return `
+            <button onclick="${click}" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
+                <div class="w-12 h-12 bg-${color}/20 rounded-2xl flex items-center justify-center text-${color} border border-${color}/30 shrink-0">
+                    <i class="fas ${icon} text-xl"></i>
+                </div>
+                <div class="text-left">
+                    <p class="font-black text-sm uppercase tracking-tight">${title}</p>
+                    <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">${sub}</p>
+                </div>
+            </button>`;
+        }
+
+        function section(label) {
+            return `<p class="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 mt-4 mb-1 text-center">${label}</p>`;
+        }
+
         function renderUnifiedMenu(emp) {
             const loadSec = document.getElementById('loading-section');
             const masterMenu = document.getElementById('master-menu');
             const grid = document.getElementById('menu-grid');
             const title = document.getElementById('menu-title');
-            
+
             const role = (emp.role || '').toLowerCase();
             const isAdmin = role === 'admin' || role === 'manager';
             const isMobile = window.innerWidth < 1024;
-            
+            const isPartner = !!(emp.restaurant_id && emp.restaurant_id !== 'rich-aroma');
+            const rid = emp.restaurant_id || 'rich-aroma';
+
             // Dynamic tenant branding fetch
-            if (emp.restaurant_id && emp.restaurant_id !== 'rich-aroma') {
+            if (isPartner) {
                 fetch(`/api/store?action=restaurant_info&id=${emp.restaurant_id}`)
                     .then(res => res.json())
                     .then(info => {
@@ -148,89 +168,55 @@
 
             loadSec.classList.add('hidden');
             masterMenu.classList.remove('hidden');
-            title.innerText = isAdmin ? "Panel de Administrador" : "Menú de Personal";
-            const isPartner = emp.restaurant_id && emp.restaurant_id !== 'rich-aroma';
+            title.innerText = isAdmin ? "Panel de Control" : "Menú de Personal";
 
             let html = '';
 
-            // 1. Owner Dashboard (Admin Only)
+            // ===== CONTROL (admins/managers only) =====
             if (isAdmin) {
-                const ownerPath = isPartner ? '/partner-os' : '/owner';
-                const ownerTitle = isPartner ? 'Panel de Administrador' : 'Owner Dashboard';
-                const ownerSub = isPartner ? 'Ventas, Menú y Horarios' : 'Ventas y Métricas';
-                html += `
-                <button onclick="window.location.href='${ownerPath}'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
-                    <div class="w-12 h-12 bg-gold/20 rounded-2xl flex items-center justify-center text-gold border border-gold/30">
-                        <i class="fas fa-chart-line text-xl"></i>
-                    </div>
-                    <div class="text-left">
-                        <p class="font-black text-sm uppercase tracking-tight">${ownerTitle}</p>
-                        <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">${ownerSub}</p>
-                    </div>
-                </button>`;
+                html += section('Control');
+                if (isPartner) {
+                    html += tile('/partner-os', 'fa-chart-line', 'gold', 'Panel del Negocio', 'Ventas, Menú y Horarios');
+                } else {
+                    html += tile('/owner', 'fa-chart-line', 'gold', 'Owner Dashboard', 'Ventas y Métricas');
+                    html += tile('/admin', 'fa-cog', 'gold', 'Administración', 'Empleados, Menú, Inventario y Marketing');
+                    html += tile('/partner-os', 'fa-gear', 'gold', 'Configuración del Negocio', 'Banco, Horarios y Métodos de Pago');
+                    html += tile('/quimieats-admin', 'fa-globe', 'gold', 'QuimiEats Plataforma', 'Socios, Comisiones y Marketplace');
+                }
             }
 
-            // 2. POS Option (Cashiers or Admins or Desktop)
+            // ===== OPERACIÓN =====
+            html += section('Operación');
             if (isAdmin || role.includes('caja') || role.includes('cashier') || !isMobile) {
-                const posPath = isPartner ? `/pos-v2.html?restaurantId=${emp.restaurant_id}` : '/pos-v2.html';
-                const posTitle = isPartner ? 'Punto de Venta (POS)' : 'POS Command Center';
-                const posSub = isPartner ? 'Terminal de Caja' : 'Caja y Registro';
-                html += `
-                <button onclick="window.location.href='${posPath}'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
-                    <div class="w-12 h-12 bg-blue-500/20 rounded-2xl flex items-center justify-center text-blue-400 border border-blue-500/30">
-                        <i class="fas fa-cash-register text-xl"></i>
-                    </div>
-                    <div class="text-left">
-                        <p class="font-black text-sm uppercase tracking-tight">${posTitle}</p>
-                        <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">${posSub}</p>
-                    </div>
-                </button>`;
+                const posPath = isPartner ? `/pos-v2.html?restaurantId=${rid}` : '/pos-v2.html';
+                html += tile(posPath, 'fa-cash-register', 'blue-400', 'Punto de Venta (POS)', 'Caja y Registro');
             }
-
-            // 3. Kitchen Option (Cooks, Baristas or Admins)
             if (isAdmin || role.includes('barista') || role.includes('cook') || role.includes('cocina')) {
-                const hubPath = isPartner ? `/kitchen.html?restaurantId=${emp.restaurant_id}` : '/kitchen.html';
-                const kitchenTitle = isPartner ? 'Pantalla de Cocina (KDS)' : 'Order Hub';
-                const kitchenSub = isPartner ? 'Pedidos en Preparación' : 'Gestión de Pedidos';
-                html += `
-                <button onclick="window.location.href='${hubPath}'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
-                    <div class="w-12 h-12 bg-orange-500/20 rounded-2xl flex items-center justify-center text-orange-400 border border-orange-500/30">
-                        <i class="fas fa-fire-alt text-xl"></i>
-                    </div>
-                    <div class="text-left">
-                        <p class="font-black text-sm uppercase tracking-tight">${kitchenTitle}</p>
-                        <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">${kitchenSub}</p>
-                    </div>
-                </button>`;
+                const hubPath = isPartner ? `/kitchen.html?restaurantId=${rid}` : '/kitchen.html';
+                html += tile(hubPath, 'fa-fire-alt', 'orange-400', 'Cocina (KDS)', 'Pedidos en Preparación');
             }
-
-            // 3.5 Driver Option (Only for Rich Aroma staff or direct driver role)
             if (!isPartner && (isAdmin || role.includes('driver') || role.includes('repartidor'))) {
-                html += `
-                <button onclick="window.location.href='/driver-portal'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all">
-                    <div class="w-12 h-12 bg-green-500/20 rounded-2xl flex items-center justify-center text-green-400 border border-green-500/30">
-                        <i class="fas fa-motorcycle text-xl"></i>
-                    </div>
-                    <div class="text-left">
-                        <p class="font-black text-sm uppercase tracking-tight">Driver Portal</p>
-                        <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">Entregas a Domicilio</p>
-                    </div>
-                </button>`;
+                html += tile('/driver-portal', 'fa-motorcycle', 'green-400', 'Driver Portal', 'Entregas a Domicilio');
             }
+            if (!isPartner && isAdmin) {
+                html += tile('/cali/admin', 'fa-box', 'purple-400', 'Cali Admin', 'Botellas: Pedidos, Producción y Rutas');
+                html += tile('/cali/pos', 'fa-mobile', 'purple-400', 'Cali POS', 'Venta Móvil de Botellas');
+                html += tile('/timeclock.html', 'fa-clock', 'teal-400', 'Reloj de Personal', 'Entradas y Salidas');
+            }
+            html += tile('/alerts', 'fa-bell', 'gold', 'Alertas en Vivo', 'Sonido de Pedidos');
 
-            // 4. Alerts (EVERYONE)
-            const alertTitle = isPartner ? 'Alertas de Sonido' : 'Alertas en Vivo';
-            const alertSub = isPartner ? 'Alertas de Pedido Entrante' : 'Sonido de Pedidos';
-            html += `
-            <button onclick="window.location.href='/alerts'" class="glass p-5 rounded-[2rem] w-full flex items-center gap-4 active:scale-95 transition-all ${isAdmin ? 'border-gold/30 bg-gold/5' : ''}">
-                <div class="w-12 h-12 bg-gold/20 rounded-2xl flex items-center justify-center text-gold border border-gold/30">
-                    <i class="fas fa-bell text-xl ${isAdmin ? 'animate-swing' : ''}"></i>
-                </div>
-                <div class="text-left">
-                    <p class="font-black text-sm uppercase tracking-tight">${alertTitle}</p>
-                    <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest">${alertSub}</p>
-                </div>
-            </button>`;
+            // ===== CANALES (view-only, new tab) =====
+            if (isAdmin) {
+                html += section('Canales');
+                if (!isPartner) {
+                    html += tile('/order', 'fa-store', 'pink-400', 'Ver Tienda', 'Página del Cliente — Quimistán', true);
+                    html += tile('/cali', 'fa-wine-bottle', 'pink-400', 'Ver Cali', 'Tienda de Botellas — SoCal', true);
+                }
+                html += tile('/quimieats.html', 'fa-utensils', 'pink-400', 'Ver QuimiEats', 'Marketplace de Quimistán', true);
+                if (!isPartner) {
+                    html += tile('https://wa.me/50499054412', 'fa-whatsapp', 'green-400', 'WhatsApp del Negocio', '+504 9905-4412', true);
+                }
+            }
 
             grid.innerHTML = html;
         }

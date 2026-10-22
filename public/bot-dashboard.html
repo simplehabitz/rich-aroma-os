@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robinhood Chain Bot - Dashboard</title>
+    <!-- Modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(20, 28, 48, 0.6);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #ffffff;
+            --text-secondary: #8f9cae;
+            --primary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(59, 130, 246, 0.08) 0px, transparent 50%);
+            background-attachment: fixed;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            backdrop-filter: blur(12px);
+        }
+
+        .logo-section h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-section p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 0.2rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        /* Metrics grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.2rem;
+        }
+
+        .metric-sub {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Two column layout for charts and active positions */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .content-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        /* Period filter tabs */
+        .filter-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 0.3rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .filter-tab {
+            padding: 0.4rem 1rem;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab.active {
+            background: linear-gradient(to right, #10b981, #3b82f6);
+            color: var(--text-primary);
+        }
+
+        /* Active monitors grid */
+        .active-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .position-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .position-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .pos-info h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .pos-info p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .pos-metrics {
+            text-align: right;
+        }
+
+        .pos-roi {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 0.2rem;
+        }
+
+        .pos-roi.up { color: var(--primary); }
+        .pos-roi.down { color: var(--danger); }
+
+        .pos-prices {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        /* Table section */
+        .table-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 1.2rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .exit-reason-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-tp { background: rgba(16, 185, 129, 0.15); color: var(--primary); }
+        .badge-sl { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
+
+        @keyframes blink {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; filter: drop-shadow(0 0 4px currentColor); }
+        }
+        @keyframes pulseBorder {
+            0% { border-color: rgba(255, 255, 255, 0.08); }
+            50% { border-color: currentColor; box-shadow: 0 0 8px rgba(255, 255, 255, 0.05); }
+            100% { border-color: rgba(255, 255, 255, 0.08); }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo-section">
+                <h1>Robinhood Chain Trading Bot</h1>
+                <p id="wallet-display">Loading wallet address...</p>
+            </div>
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span id="status-label">ACTIVE</span>
+            </div>
+        </header>
+
+        <!-- Bots Battle Arena -->
+        <div class="table-card" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(20, 28, 48, 0.8), rgba(15, 23, 42, 0.8)); border: 1px solid rgba(255, 255, 255, 0.15);">
+            <div class="card-header">
+                <div class="card-title" style="font-size: 1.5rem; background: linear-gradient(to right, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🏆 BOTS BATTLE ARENA</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);" id="arena-update">Last Update: ...</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 1rem;">
+                <!-- Robinhood Bot Card -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 id="rh-header-label" style="color: #10b981; font-weight: 800; font-size: 1.2rem;">Robinhood Bot (Live)</h3>
+                        <span id="rh-target-badge" class="exit-reason-badge badge-sl" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); font-size: 0.75rem;">Target: 50%</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">ACCOUNT VALUE</div>
+                            <div style="font-size: 1.5rem; font-weight: 800;" id="rh-val">$0.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">WIN RATE</div>
+                            <div style="font-size: 1.5rem; font-weight: 800;" id="rh-win">0.0%</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem;">
+                            <span>Daily Goal Progress</span>
+                            <span id="rh-prog-text">0.0%</span>
+                        </div>
+                        <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden;">
+                            <div id="rh-bar" style="width: 0%; height: 100%; background: #10b981; border-radius: 99px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.6rem; letter-spacing: 0.05em; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="display: inline-block; width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: blink 1.5s infinite;"></span>
+                            LIVE BUY TARGETS
+                        </div>
+                        <div id="rh-candidates-list" style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.6rem; letter-spacing: 0.05em; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="display: inline-block; width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: blink 1.5s infinite;"></span>
+                            LIVE TRADES FEED
+                        </div>
+                        <div id="rh-trades-feed" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 180px; overflow-y: auto;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solana Bot Card -->
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 id="sol-header-label" style="color: #3b82f6; font-weight: 800; font-size: 1.2rem;">Solana Bot (Paper)</h3>
+                        <span id="sol-target-badge" class="exit-reason-badge badge-sl" style="background: rgba(239, 68, 68, 0.15); color: var(--danger); font-size: 0.75rem;">Target: 50%</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">ACCOUNT VALUE</div>
+                            <div style="font-size: 1.5rem; font-weight: 800;" id="sol-val">$0.00</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">WIN RATE</div>
+                            <div style="font-size: 1.5rem; font-weight: 800;" id="sol-win">0.0%</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.3rem;">
+                            <span>Daily Goal Progress</span>
+                            <span id="sol-prog-text">0.0%</span>
+                        </div>
+                        <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden;">
+                            <div id="sol-bar" style="width: 0%; height: 100%; background: #3b82f6; border-radius: 99px; transition: width 0.5s ease;"></div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.6rem; letter-spacing: 0.05em; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="display: inline-block; width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; animation: blink 1.5s infinite;"></span>
+                            LIVE BUY TARGETS
+                        </div>
+                        <div id="sol-candidates-list" style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+                    <div style="margin-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.6rem; letter-spacing: 0.05em; font-weight: 700; display: flex; align-items: center; gap: 0.4rem;">
+                            <span style="display: inline-block; width: 6px; height: 6px; background: #3b82f6; border-radius: 50%; animation: blink 1.5s infinite;"></span>
+                            LIVE TRADES FEED
+                        </div>
+                        <div id="sol-trades-feed" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 180px; overflow-y: auto;">
+                            <!-- Filled dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Native Balance</div>
+                <div class="metric-value" id="native-balance">0.0000 ETH</div>
+                <div class="metric-sub" id="block-height">Current Block: ...</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">WETH Balance</div>
+                <div class="metric-value" id="weth-balance">0.0000 WETH</div>
+                <div class="metric-sub">Capital Pool</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Historical Win Rate</div>
+                <div class="metric-value" id="win-rate">0.0%</div>
+                <div class="metric-sub" id="trade-count">0 trades analyzed</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Daily profit goal</div>
+                <div class="metric-value" id="daily-progress">0.0%</div>
+                <div class="metric-sub" id="daily-status">Target: +50%</div>
+            </div>
+        </div>
+
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Chart Section -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">Net Profit Over Time</div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" onclick="setPeriod('daily')">Daily</button>
+                        <button class="filter-tab" onclick="setPeriod('weekly')">Weekly</button>
+                        <button class="filter-tab" onclick="setPeriod('monthly')">Monthly</button>
+                    </div>
+                </div>
+                <div style="height: 350px; position: relative;">
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Active Positions -->
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="card-title">Active Positions</div>
+                </div>
+                <div class="active-grid" id="active-list">
+                    <p style="color: var(--text-secondary); text-align: center;">No active positions monitored.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Historical Trades Table -->
+        <div class="table-card">
+            <div class="card-header">
+                <div class="card-title">Recent Trade Logs</div>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Entry Price</th>
+                        <th>Exit Price</th>
+                        <th>Net Profit</th>
+                        <th>Exit Reason</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody id="trade-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-secondary);">Loading logs...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let profitChart;
+        let activePeriod = 'daily';
+        let tradeHistory = [];
+
+        async function fetchDashboardData() {
+            try {
+                // Fetch status snapshot
+                const statusRes = await fetch('/bot_status.json');
+                const status = await statusRes.json();
+                
+                document.getElementById('wallet-display').textContent = `Wallet: ${status.wallet_address}`;
+                document.getElementById('native-balance').textContent = `${status.balances.native_eth.toFixed(6)} ETH`;
+                document.getElementById('weth-balance').textContent = `${status.balances.weth.toFixed(6)} WETH`;
+                document.getElementById('block-height').textContent = `Current Block: ${status.current_block}`;
+                document.getElementById('daily-progress').textContent = `${status.today_gain_pct.toFixed(2)}%`;
+                document.getElementById('daily-status').textContent = status.daily_profit_goal_hit ? 'Goal Achieved! 🎉' : `Target: +${status.daily_profit_goal_pct}%`;
+                
+                // Fetch active positions
+                const posRes = await fetch('/active_positions.json');
+                const positions = await posRes.json();
+                
+                const activeContainer = document.getElementById('active-list');
+                activeContainer.innerHTML = '';
+                
+                const posKeys = Object.keys(positions);
+                if (posKeys.length === 0) {
+                    activeContainer.innerHTML = `<p style="color: var(--text-secondary); text-align: center; padding: 1rem;">No active positions monitored.</p>`;
+                } else {
+                    posKeys.forEach(addr => {
+                        const pos = positions[addr];
+                        const prices = pos.prices || [pos.entry_price];
+                        const currentPrice = prices[prices.length - 1];
+                        const roi = ((currentPrice - pos.entry_price) / pos.entry_price) * 100;
+                        const roiClass = roi >= 0 ? 'up' : 'down';
+                        const roiSign = roi >= 0 ? '+' : '';
+                        
+                        const item = document.createElement('div');
+                        item.className = 'position-item';
+                        item.innerHTML = `
+                            <div class="pos-info">
+                                <h4>${pos.symbol}</h4>
+                                <p>Stop Loss: $${(pos.entry_price * pos.stop_loss_mult).toFixed(8)}</p>
+                            </div>
+                            <div class="pos-metrics">
+                                <div class="pos-roi ${roiClass}">${roiSign}${roi.toFixed(2)}%</div>
+                                <div class="pos-prices">Entry: $${pos.entry_price.toFixed(8)} | Cur: $${currentPrice.toFixed(8)}</div>
+                            </div>
+                        `;
+                        activeContainer.appendChild(item);
+                    });
+                }
+                
+                // Fetch Competition Arena details
+                try {
+                    const compRes = await fetch('/competition_status.json');
+                    const comp = await compRes.json();
+                    
+                    document.getElementById('arena-update').textContent = `Last Update: ${new Date(comp.last_update * 1000).toLocaleTimeString()}`;
+                    
+                    // Robinhood
+                    document.getElementById('rh-header-label').textContent = comp.robinhood.label || 'Robinhood Bot (Live)';
+                    document.getElementById('rh-val').textContent = `$${comp.robinhood.balance_usd.toFixed(2)}`;
+                    document.getElementById('rh-win').textContent = `${comp.robinhood.win_rate_pct.toFixed(1)}% (${comp.robinhood.total_trades} trades)`;
+                    const rhProg = Math.max(0, Math.min(100, comp.robinhood.daily_gain_pct));
+                    document.getElementById('rh-prog-text').textContent = `${comp.robinhood.daily_gain_pct.toFixed(2)}%`;
+                    document.getElementById('rh-bar').style.width = `${rhProg * 2}%`; // Scaled (50% goal = 100% bar width)
+                    if (comp.robinhood.daily_target_hit) {
+                        document.getElementById('rh-target-badge').className = 'exit-reason-badge badge-tp';
+                        document.getElementById('rh-target-badge').textContent = 'Goal Hit! 🎉';
+                    } else {
+                        document.getElementById('rh-target-badge').className = 'exit-reason-badge badge-sl';
+                        document.getElementById('rh-target-badge').textContent = 'Target: 50%';
+                    }
+                    
+                    
+                    // Render Robinhood candidates
+                    const rhCandList = document.getElementById('rh-candidates-list');
+                    rhCandList.innerHTML = '';
+                    if (comp.robinhood.candidates && comp.robinhood.candidates.length > 0) {
+                        comp.robinhood.candidates.forEach(cand => {
+                            const item = document.createElement('div');
+                            item.style.display = 'flex';
+                            item.style.flexDirection = 'column';
+                            item.style.gap = '0.3rem';
+                            item.style.background = 'rgba(255,255,255,0.01)';
+                            item.style.padding = '0.5rem';
+                            item.style.borderRadius = '8px';
+                            item.style.border = '1px solid rgba(255,255,255,0.03)';
+                            
+                            item.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                    <span style="font-weight: 700; color: #f3f4f6;">${cand.symbol}</span>
+                                    <span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">${cand.metric}</span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; position: relative;">
+                                    <div style="width: ${cand.progress_pct}%; height: 100%; background: linear-gradient(to right, #047857, #10b981); border-radius: 99px; transition: width 0.5s ease;"></div>
+                                </div>
+                            `;
+                            rhCandList.appendChild(item);
+                        });
+                    } else {
+                        rhCandList.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">Scanning deployments...</div>';
+                    }
+
+                    // Render Robinhood feeds
+                    const rhFeed = document.getElementById('rh-trades-feed');
+                    rhFeed.innerHTML = '';
+                    if (comp.robinhood.recent_trades && comp.robinhood.recent_trades.length > 0) {
+                        comp.robinhood.recent_trades.forEach((trade, index) => {
+                            const item = document.createElement('div');
+                            item.style.display = 'flex';
+                            item.style.justify = 'space-between';
+                            item.style.alignItems = 'center';
+                            item.style.fontSize = '0.8rem';
+                            item.style.padding = '0.4rem 0.6rem';
+                            item.style.background = 'rgba(255,255,255,0.02)';
+                            item.style.borderRadius = '6px';
+                            item.style.border = '1px solid rgba(255,255,255,0.05)';
+                            if (index === 0) {
+                                item.style.borderLeft = '3px solid #10b981';
+                                item.style.color = '#10b981';
+                                item.style.animation = 'pulseBorder 2s infinite';
+                            }
+                            const sign = trade.pnl_usd >= 0 ? '+' : '';
+                            const color = trade.pnl_usd >= 0 ? '#10b981' : '#ef4444';
+                            item.innerHTML = `
+                                <span style="font-weight: 700; color: #f3f4f6;">${trade.symbol}</span>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary);">${trade.reason.replace(/_/g, ' ')}</span>
+                                <span style="color: ${color}; font-weight: 800;">${sign}${trade.pnl_pct.toFixed(1)}%</span>
+                            `;
+                            rhFeed.appendChild(item);
+                        });
+                    } else {
+                        rhFeed.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">Waiting for swaps...</div>';
+                    }
+                    
+                    // Solana
+                    document.getElementById('sol-header-label').textContent = comp.solana.label || 'Solana Bot (Paper)';
+                    document.getElementById('sol-val').textContent = `$${comp.solana.balance_usd.toFixed(2)}`;
+                    document.getElementById('sol-win').textContent = `${comp.solana.win_rate_pct.toFixed(1)}% (${comp.solana.total_trades} trades)`;
+                    const solProg = Math.max(0, Math.min(100, comp.solana.daily_gain_pct));
+                    document.getElementById('sol-prog-text').textContent = `${comp.solana.daily_gain_pct.toFixed(2)}%`;
+                    document.getElementById('sol-bar').style.width = `${solProg * 2}%`; // Scaled (50% goal = 100% bar width)
+                    if (comp.solana.daily_target_hit) {
+                        document.getElementById('sol-target-badge').className = 'exit-reason-badge badge-tp';
+                        document.getElementById('sol-target-badge').textContent = 'Goal Hit! 🎉';
+                    } else {
+                        document.getElementById('sol-target-badge').className = 'exit-reason-badge badge-sl';
+                        document.getElementById('sol-target-badge').textContent = 'Target: 50%';
+                    }
+
+                    // Render Solana candidates
+                    const solCandList = document.getElementById('sol-candidates-list');
+                    solCandList.innerHTML = '';
+                    if (comp.solana.candidates && comp.solana.candidates.length > 0) {
+                        comp.solana.candidates.forEach(cand => {
+                            const item = document.createElement('div');
+                            item.style.display = 'flex';
+                            item.style.flexDirection = 'column';
+                            item.style.gap = '0.3rem';
+                            item.style.background = 'rgba(255,255,255,0.01)';
+                            item.style.padding = '0.5rem';
+                            item.style.borderRadius = '8px';
+                            item.style.border = '1px solid rgba(255,255,255,0.03)';
+                            
+                            item.innerHTML = `
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;">
+                                    <span style="font-weight: 700; color: #f3f4f6;">${cand.symbol}</span>
+                                    <span style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">${cand.metric}</span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 99px; overflow: hidden; position: relative;">
+                                    <div style="width: ${cand.progress_pct}%; height: 100%; background: linear-gradient(to right, #1d4ed8, #3b82f6); border-radius: 99px; transition: width 0.5s ease;"></div>
+                                </div>
+                            `;
+                            solCandList.appendChild(item);
+                        });
+                    } else {
+                        solCandList.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">Scanning pump.fun...</div>';
+                    }
+
+                    // Render Solana feeds
+                    const solFeed = document.getElementById('sol-trades-feed');
+                    solFeed.innerHTML = '';
+                    if (comp.solana.recent_trades && comp.solana.recent_trades.length > 0) {
+                        comp.solana.recent_trades.forEach((trade, index) => {
+                            const item = document.createElement('div');
+                            item.style.display = 'flex';
+                            item.style.justify = 'space-between';
+                            item.style.alignItems = 'center';
+                            item.style.fontSize = '0.8rem';
+                            item.style.padding = '0.4rem 0.6rem';
+                            item.style.background = 'rgba(255,255,255,0.02)';
+                            item.style.borderRadius = '6px';
+                            item.style.border = '1px solid rgba(255,255,255,0.05)';
+                            if (index === 0) {
+                                item.style.borderLeft = '3px solid #3b82f6';
+                                item.style.color = '#3b82f6';
+                                item.style.animation = 'pulseBorder 2s infinite';
+                            }
+                            const sign = trade.pnl_usd >= 0 ? '+' : '';
+                            const color = trade.pnl_usd >= 0 ? '#10b981' : '#ef4444';
+                            item.innerHTML = `
+                                <span style="font-weight: 700; color: #f3f4f6;">${trade.symbol}</span>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary);">${trade.reason.replace(/_/g, ' ')}</span>
+                                <span style="color: ${color}; font-weight: 800;">${sign}${trade.pnl_pct.toFixed(1)}%</span>
+                            `;
+                            solFeed.appendChild(item);
+                        });
+                    } else {
+                        solFeed.innerHTML = '<div style="font-size: 0.75rem; color: var(--text-secondary); text-align: center; padding: 0.5rem 0;">Waiting for swaps...</div>';
+                    }
+                } catch (e) {
+                    console.error("Error loading competition details:", e);
+                }
+
+                // Fetch trade history
+                const histRes = await fetch('/trade_history.json');
+                tradeHistory = await histRes.json();
+                
+                updateTradeLogs(tradeHistory);
+                updateCharts(tradeHistory);
+            } catch (e) {
+                console.error("Error loading dashboard data: ", e);
+            }
+        }
+
+        function updateTradeLogs(history) {
+            const tbody = document.getElementById('trade-table-body');
+            tbody.innerHTML = '';
+            
+            if (history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-secondary);">No trade logs found.</td></tr>`;
+                return;
+            }
+            
+            // Update win rate
+            const profitable = history.filter(t => t.p_l_usd > 0).length;
+            const winRate = (profitable / history.length) * 100;
+            document.getElementById('win-rate').textContent = `${winRate.toFixed(1)}%`;
+            document.getElementById('trade-count').textContent = `${history.length} trades analyzed`;
+            
+            history.forEach(t => {
+                const dateStr = new Date(t.timestamp * 1000).toLocaleString();
+                const sign = t.p_l_usd >= 0 ? '+' : '';
+                const profitClass = t.p_l_usd >= 0 ? 'color: var(--primary); font-weight: 800;' : 'color: var(--danger); font-weight: 800;';
+                const isTp = t.exit_reason.includes('take_profit') || t.exit_reason.includes('tp');
+                const badgeClass = isTp ? 'badge-tp' : 'badge-sl';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${t.symbol}</strong></td>
+                    <td>$${t.entry_price.toFixed(8)}</td>
+                    <td>$${t.exit_price.toFixed(8)}</td>
+                    <td style="${profitClass}">${sign}$${t.p_l_usd.toFixed(2)} (${sign}${t.p_l_pct.toFixed(2)}%)</td>
+                    <td><span class="exit-reason-badge ${badgeClass}">${t.exit_reason.replace('_', ' ')}</span></td>
+                    <td style="color: var(--text-secondary); font-size: 0.8rem;">${dateStr}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function setPeriod(period) {
+            activePeriod = period;
+            document.querySelectorAll('.filter-tab').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateCharts(tradeHistory);
+        }
+
+        function updateCharts(history) {
+            if (history.length === 0) return;
+            
+            const labels = [];
+            const profits = [];
+            let cumulative = 0;
+            
+            // Sort by timestamp ascending for timeline
+            const sorted = [...history].sort((a, b) => a.timestamp - b.timestamp);
+            
+            sorted.forEach(t => {
+                cumulative += t.p_l_usd;
+                labels.push(new Date(t.timestamp * 1000).toLocaleDateString());
+                profits.push(cumulative);
+            });
+
+            if (profitChart) {
+                profitChart.destroy();
+            }
+
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            profitChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Net USD P/L ($)',
+                        data: profits,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                            ticks: { color: '#8f9cae', font: { family: 'Outfit' } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255, 255, 255, 0.03)' },
+                            ticks: { color: '#8f9cae', font: { family: 'Outfit' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Fetch updates every 10 seconds
+        fetchDashboardData();
+        setInterval(fetchDashboardData, 10000);
+    </script>
+</body>
+</html>

@@ -29,12 +29,49 @@
         let currentItem = null;
         let currentMods = {};
         
-        let fulfillmentType = 'pickup'; // default
+        let fulfillmentType = 'delivery'; // default to delivery for QuimiEats
         let activeOrder = null;
         let statusSubscription = null;
         let pollingInterval = null;
         let isAddonMode = false;
         let currentSelectedPayment = 'cash';
+
+        // QuimiEats Driver Selection State
+        let selectedDriverType = 'express';
+        let selectedDriverName = '⚡ Repartidor Express';
+        let customDriverPhone = '';
+        let customDriverName = '';
+
+        window.selectDriver = (type, name) => {
+            selectedDriverType = type;
+            selectedDriverName = name;
+        };
+
+        window.openCustomDriverModal = () => {
+            const m = document.getElementById('custom-driver-modal');
+            if (m) m.classList.remove('hidden');
+        };
+
+        window.closeCustomDriverModal = () => {
+            const m = document.getElementById('custom-driver-modal');
+            if (m) m.classList.add('hidden');
+        };
+
+        window.saveCustomDriver = () => {
+            const name = document.getElementById('cust-driver-name')?.value.trim();
+            const phone = document.getElementById('cust-driver-phone')?.value.trim();
+            if (!name || !phone) return alert("Por favor ingresa el nombre y teléfono del repartidor");
+
+            customDriverName = name;
+            customDriverPhone = phone;
+            selectedDriverType = 'custom';
+            selectedDriverName = `${name} 🛵 (${phone})`;
+
+            const label = document.getElementById('custom-driver-label');
+            if (label) label.innerText = `Asignado: ${name} (${phone})`;
+
+            window.closeCustomDriverModal();
+        };
 
         let currentBookingItem = null;
         let selectedBookingDate = "";
@@ -601,14 +638,29 @@
         };
 
         function updateCartUI() {
-            const total = cart.reduce((sum, item) => sum + item.finalPrice, 0);
+            const total = cart.reduce((sum, item) => sum + (item.finalPrice || item.price || 0), 0);
             const counter = document.getElementById('cart-count-text');
             const totalEl = document.getElementById('cart-total-text');
             if (counter) counter.innerText = `${cart.length} Artículos`;
             if (totalEl) totalEl.innerText = `L ${total.toFixed(2)}`;
+
+            const badge = document.getElementById('nav-cart-badge');
+            if (badge) {
+                badge.innerText = cart.length;
+                if (cart.length > 0) badge.classList.remove('hidden');
+                else badge.classList.add('hidden');
+            }
+
             const cartBar = document.getElementById('cart-bar');
-            if (cart.length > 0) { cartBar.classList.remove('translate-y-[200%]', 'opacity-0'); cartBar.classList.add('translate-y-0', 'opacity-100'); }
-            else { cartBar.classList.add('translate-y-[200%]', 'opacity-0'); cartBar.classList.remove('translate-y-0', 'opacity-100'); }
+            if (cartBar) {
+                if (cart.length > 0) {
+                    cartBar.classList.remove('translate-y-[250%]', 'translate-y-[200%]', 'opacity-0', 'pointer-events-none');
+                    cartBar.classList.add('translate-y-0', 'opacity-100');
+                } else {
+                    cartBar.classList.add('translate-y-[250%]', 'opacity-0', 'pointer-events-none');
+                    cartBar.classList.remove('translate-y-0', 'opacity-100');
+                }
+            }
         }
 
         function initTimeSlots() {
@@ -754,27 +806,28 @@
                 return;
             }
 
-            const btn = document.getElementById('final-btn');
-            const name = document.getElementById('check-name').value.trim();
-            const phone = document.getElementById('check-phone').value.trim();
+            const btn = document.getElementById('pay-submit-btn') || document.getElementById('final-btn');
+            const name = (document.getElementById('check-name')?.value || '').trim() || (currentCustomer?.name || 'Cliente');
+            const phone = (document.getElementById('check-phone')?.value || '').trim() || (currentCustomer?.phone || '9999-9999');
             
             if(!name) return alert("Por favor ingresa tu nombre");
-            if(!currentCustomer && !phone) return alert("Por favor ingresa tu número de WhatsApp para contactarte sobre tu pedido");
             
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
-            btn.disabled = true;
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+                btn.disabled = true;
+            }
 
             const urlParams = new URLSearchParams(window.location.search);
-            const resId = urlParams.get('restaurantId') || 'rich-aroma';
+            const resId = urlParams.get('restaurantId') || urlParams.get('store') || 'rich-aroma';
 
             const itemsMap = {};
             cart.forEach(item => {
-                const key = item.id + JSON.stringify(item.mods); 
+                const key = item.id + JSON.stringify(item.mods || []); 
                 if (!itemsMap[key]) itemsMap[key] = { ...item, qty: 0 };
-                itemsMap[key].qty += 1;
+                itemsMap[key].qty += (item.qty || 1);
             });
-            const subtotal = cart.reduce((sum, item) => sum + item.finalPrice, 0);
-            const scheduleVal = document.getElementById('check-schedule').value;
+            const subtotal = cart.reduce((sum, item) => sum + (item.finalPrice || item.price || 0), 0);
+            const scheduleVal = document.getElementById('check-schedule')?.value || 'asap';
             
             const bookingItem = cart.find(i => i.scheduledFor);
             const finalSchedule = bookingItem ? bookingItem.scheduledFor : (scheduleVal === 'asap' ? null : scheduleVal);
@@ -784,22 +837,34 @@
             const cashChangeVal = document.getElementById('check-cash-change')?.value || '';
             const tableVal = document.getElementById('check-table')?.value.trim() || '';
 
+            const deliveryFee = (fulfillmentType === 'delivery') ? 35 : 0;
+            const finalTotal = subtotal + deliveryFee;
+
             let orderNotes = `Cliente: ${name} [${fulfillmentType.toUpperCase()}]`;
             if (tableVal) orderNotes += ` | MESA: ${tableVal}`;
             if (fulfillmentType === 'delivery') {
                 if (barrioVal) orderNotes += ` | BARRIO: ${barrioVal}`;
                 if (addressVal) orderNotes += ` | REF: ${addressVal}`;
+                orderNotes += ` | REPARTIDOR: ${selectedDriverName}`;
             }
             if (currentSelectedPayment === 'cash' && cashChangeVal) {
                 orderNotes += ` | CAMBIO: ${cashChangeVal}`;
             }
 
             const payload = {
-                items: Object.values(itemsMap), subtotal, tax: 0, discount: 0, total: subtotal, 
+                items: Object.values(itemsMap),
+                subtotal,
+                tax: 0,
+                deliveryFee,
+                discount: 0,
+                total: finalTotal, 
                 paymentMethod: currentSelectedPayment,
                 fulfillment: fulfillmentType,
                 restaurantId: resId,
                 guestPhone: phone,
+                driverName: selectedDriverName,
+                driverType: selectedDriverType,
+                customDriverPhone: customDriverPhone,
                 scheduledFor: finalSchedule,
                 notes: orderNotes
             };
@@ -825,9 +890,65 @@
                 activeOrder = saved;
                 localStorage.setItem('ra_active_order', JSON.stringify(saved));
                 preUploadBase64 = null; // Clear for next time
+
+                // Render Live Receipt / Tracking Modal
+                const receiptNum = document.getElementById('receipt-code');
+                if (receiptNum) receiptNum.innerText = `#${saved.order_number || saved.id.slice(-4)}`;
+
+                const custNameEl = document.getElementById('receipt-cust-name');
+                if (custNameEl) custNameEl.innerText = name;
+
+                const driverAssignedEl = document.getElementById('receipt-driver-assigned');
+                if (driverAssignedEl) driverAssignedEl.innerText = selectedDriverName;
+
+                const payMethodEl = document.getElementById('receipt-pay-method');
+                if (payMethodEl) payMethodEl.innerText = currentSelectedPayment.toUpperCase();
+
+                const deliveryEl = document.getElementById('receipt-delivery');
+                if (deliveryEl) deliveryEl.innerText = fulfillmentType === 'delivery' ? `A Domicilio (${barrioVal || 'Bo. El Centro'})` : fulfillmentType.toUpperCase();
+
+                const timeEl = document.getElementById('receipt-time');
+                if (timeEl) timeEl.innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                // Render QR Code
+                const qrContainer = document.getElementById('receipt-qrcode');
+                if (qrContainer && typeof QRCode !== 'undefined') {
+                    qrContainer.innerHTML = '';
+                    new QRCode(qrContainer, {
+                        text: `https://quimieats.com/order-simplified.html?orderId=${saved.id}`,
+                        width: 130,
+                        height: 130
+                    });
+                }
+
+                // Format WhatsApp Dispatch Message Link
+                const waSummary = `🧾 *PEDIDO #${saved.order_number || saved.id.slice(-4)} - ${globalRestaurantName}*\n` +
+                    `👤 *Cliente:* ${name} (${phone || 'N/A'})\n` +
+                    `🛵 *Repartidor:* ${selectedDriverName}\n` +
+                    `📍 *Entrega:* ${barrioVal || 'Bo. El Centro'} ${addressVal ? '(' + addressVal + ')' : ''}\n` +
+                    `💰 *Total a Pagar:* L. ${finalTotal.toFixed(2)} (${currentSelectedPayment.toUpperCase()})\n` +
+                    `⏱️ *Tiempo Estimado:* 15 - 20 min\n\n` +
+                    `🔗 *Rastreo en Vivo:* https://quimieats.com/order-simplified.html?orderId=${saved.id}`;
+
+                const waBtn = document.getElementById('whatsapp-dispatch-btn');
+                if (waBtn) {
+                    const targetNum = (selectedDriverType === 'custom' && customDriverPhone) ? customDriverPhone.replace(/[^0-9]/g, '') : '';
+                    waBtn.href = targetNum ? `https://wa.me/${targetNum}?text=${encodeURIComponent(waSummary)}` : `https://wa.me/?text=${encodeURIComponent(waSummary)}`;
+                }
+
+                // Open Receipt Drawer
+                document.getElementById('receipt-drawer')?.classList.add('active');
+                const receiptOverlay = document.getElementById('receipt-overlay');
+                if (receiptOverlay) {
+                    receiptOverlay.classList.remove('hidden');
+                    setTimeout(() => receiptOverlay.style.opacity = '1', 10);
+                }
+
                 showTracking();
             } catch(e) { alert("Error al enviar. Intenta de nuevo."); btn.innerHTML = "Enviar Pedido Ahora 🚀"; btn.disabled = false; }
         };
+
+        window.submitOrder = window.submitFinalOrder;
 
         window.uploadReceipt = async (input) => {
             if (!input.files || !input.files[0] || !activeOrder) return;

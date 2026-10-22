@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shred OS | Daily Tracker</title>
+    <!-- SEO Best Practices -->
+    <meta name="description" content="Custom calorie, protein, and fasting window tracker for Oscar's fitness goals.">
+    <!-- Premium Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gold: '#C9A66B',
+                        dark: '#120C09',
+                        darker: '#0B0705',
+                        success: '#10B981',
+                        warning: '#F59E0B',
+                        danger: '#EF4444'
+                    },
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: radial-gradient(circle at 50% 0%, #1e1510 0%, #120c09 70%, #0b0705 100%);
+            color: #f5f0eb;
+            overflow-x: hidden;
+            font-family: 'Outfit', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass {
+            background: rgba(30, 22, 16, 0.35);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(201, 166, 107, 0.08);
+        }
+        .glass-dark {
+            background: rgba(11, 7, 5, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+        .gold-border {
+            border: 1px solid rgba(201, 166, 107, 0.25);
+        }
+        .gold-border-active {
+            border: 1px solid #C9A66B;
+            box-shadow: 0 0 15px rgba(201, 166, 107, 0.15);
+        }
+        .gold-glow {
+            text-shadow: 0 0 10px rgba(201, 166, 107, 0.4);
+        }
+        .gold-gradient {
+            background: linear-gradient(135deg, #C9A66B 0%, #F4E2C0 50%, #C9A66B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(201, 166, 107, 0.3);
+            border-radius: 99px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-28">
+
+    <!-- Top Branding / Fasting Indicator Banner -->
+    <header class="w-full border-b border-white/5 py-4 px-6 glass sticky top-0 z-50">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 group">
+                <img src="/rico-logo.png" alt="Captain Rico" class="w-9 h-9 rounded-full border border-gold/30 group-hover:scale-105 transition-transform" onerror="this.src='/favicon.png'">
+                <div>
+                    <h1 class="text-base font-black tracking-tight text-white uppercase italic">SHRED <span class="gold-gradient">OS</span></h1>
+                    <p class="text-[9px] text-white/40 font-bold uppercase tracking-widest leading-none">Cap. Rico Diet</p>
+                </div>
+            </a>
+            
+            <!-- Sound Toggle and Date Display / Nav -->
+            <div class="flex items-center gap-2">
+                <button id="sound-toggle-btn" onclick="toggleMute()" class="w-8 h-8 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-gold flex items-center justify-center transition-all text-xs" title="Toggle sound effects">
+                    <i class="fa-solid fa-volume-xmark"></i>
+                </button>
+                <div class="flex items-center gap-2 glass-dark px-3 py-1 rounded-full text-xs font-bold border border-white/5">
+                    <button onclick="changeDate(-1)" class="text-gold hover:text-white transition px-1"><i class="fa-solid fa-chevron-left text-[10px]"></i></button>
+                    <span id="current-date-str" class="min-w-[85px] text-center font-mono text-[11px] tracking-tight">2026-08-04</span>
+                    <button onclick="changeDate(1)" class="text-gold hover:text-white transition px-1"><i class="fa-solid fa-chevron-right text-[10px]"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTAINER FOR TABS -->
+    <main class="max-w-md mx-auto px-4 mt-6 space-y-6">
+
+        <!-- ================= DIET TAB CONTENT ================= -->
+        <div id="diet-tab-content" class="space-y-6">
+            
+            <!-- FASTING BANNER / TIMER -->
+            <section class="glass rounded-[2rem] p-5 relative overflow-hidden">
+                <!-- Glow effect -->
+                <div class="absolute -right-16 -top-16 w-32 h-32 bg-gold/10 rounded-full blur-2xl"></div>
+                
+                <div class="flex justify-between items-start relative z-10">
+                    <div>
+                        <span id="fasting-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-success/20 text-success border border-success/30">
+                            Feeding Window Open
+                        </span>
+                        <h2 class="text-2xl font-black mt-2 tracking-tight">12 PM - 6 PM</h2>
+                        <p id="fasting-desc" class="text-xs text-white/40 mt-0.5 font-bold uppercase tracking-wide">Fasting window begins at 6:00 PM</p>
+                    </div>
+                    
+                    <div class="text-right">
+                        <p class="text-[9px] text-white/30 font-black uppercase tracking-widest">Time Remaining</p>
+                        <div id="fasting-countdown" class="text-2xl font-mono font-bold text-white tracking-tight mt-1">03:27:03</div>
+                    </div>
+                </div>
+                
+                <!-- Progress Bar inside window -->
+                <div class="w-full bg-white/5 h-1.5 rounded-full mt-4 overflow-hidden relative border border-white/5">
+                    <div id="fasting-progress" class="bg-gold h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(201,166,107,0.5)]" style="width: 50%;"></div>
+                </div>
+            </section>
+
+            <!-- MAIN MACRO DASHBOARD -->
+            <section class="grid grid-cols-2 gap-4">
+                
+                <!-- Calorie Card (SVG Ring) -->
+                <div class="glass rounded-[2.5rem] p-5 flex flex-col items-center justify-center text-center relative">
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-3">Calories</p>
+                    
+                    <!-- SVG Ring -->
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="64" cy="64" r="50" stroke="rgba(255,255,255,0.03)" stroke-width="8" fill="transparent" />
+                            <circle id="calorie-ring" cx="64" cy="64" r="50" stroke="#C9A66B" stroke-width="8" fill="transparent"
+                                    stroke-dasharray="314.15" stroke-dashoffset="314.15" class="progress-ring__circle" />
+                        </svg>
+                        <div class="absolute flex flex-col items-center justify-center">
+                            <span id="calorie-val" class="text-2xl font-black tracking-tighter">0</span>
+                            <span class="text-[9px] text-white/30 font-bold uppercase tracking-wider">/ 1700 kcal</span>
+                        </div>
+                    </div>
+                    
+                    <div id="calorie-status" class="text-[10px] font-bold text-gold mt-3 bg-gold/5 px-3 py-1 rounded-full uppercase tracking-wider">
+                        1700 remaining
+                    </div>
+                </div>
+
+                <!-- Protein Card (SVG Ring) -->
+                <div class="glass rounded-[2.5rem] p-5 flex flex-col items-center justify-center text-center relative">
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/40 mb-3">Protein</p>
+                    
+                    <!-- SVG Ring -->
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="64" cy="64" r="50" stroke="rgba(255,255,255,0.03)" stroke-width="8" fill="transparent" />
+                            <circle id="protein-ring" cx="64" cy="64" r="50" stroke="#10B981" stroke-width="8" fill="transparent"
+                                    stroke-dasharray="314.15" stroke-dashoffset="314.15" class="progress-ring__circle" />
+                        </svg>
+                        <div class="absolute flex flex-col items-center justify-center">
+                            <span id="protein-val" class="text-2xl font-black tracking-tighter">0</span>
+                            <span class="text-[9px] text-white/30 font-bold uppercase tracking-wider">/ 185 g</span>
+                        </div>
+                    </div>
+                    
+                    <div id="protein-status" class="text-[10px] font-bold text-success mt-3 bg-success/5 px-3 py-1 rounded-full uppercase tracking-wider">
+                        185g remaining
+                    </div>
+                </div>
+                
+            </section>
+
+            <!-- SUB MACROS (CARBS / FATS) -->
+            <section class="glass rounded-[2rem] p-5 space-y-4">
+                <div class="flex justify-between items-center text-xs font-black uppercase tracking-widest text-white/40 border-b border-white/5 pb-2">
+                    <span>Secondary Macros</span>
+                    <span class="font-mono text-[10px]" id="carb-fat-summary">C: 0g | F: 0g</span>
+                </div>
+                
+                <!-- Carbs Progress -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span class="text-white/60">Carbohydrates</span>
+                        <span id="carb-text" class="font-mono text-gold">0g / 130g</span>
+                    </div>
+                    <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
+                        <div id="carb-bar" class="bg-gold h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Fats Progress -->
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs font-bold">
+                        <span class="text-white/60">Dietary Fats</span>
+                        <span id="fat-text" class="font-mono text-sky-400">0g / 50g</span>
+                    </div>
+                    <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden border border-white/5">
+                        <div id="fat-bar" class="bg-sky-400 h-full rounded-full transition-all duration-500" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Predefined Meals Section -->
+            <section class="space-y-4">
+                <div class="flex justify-between items-center px-1">
+                    <h3 class="text-xs font-black uppercase tracking-[0.3em] text-gold">Daily Meals Menu</h3>
+                    <span class="text-[9px] text-white/30 font-bold uppercase tracking-wider leading-none">Tap 📚 for recipe SOP / accuracy info</span>
+                </div>
+
+                <!-- MEAL 1 -->
+                <div id="meal-card-1" class="glass rounded-[2rem] p-5 border border-white/5 transition-all duration-300 relative">
+                    <div class="flex items-center justify-between cursor-pointer" onclick="toggleMeal(1)">
+                        <div class="flex items-start gap-4">
+                            <div id="meal-check-1" class="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center text-xs text-white/20 transition-all duration-300">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black text-gold uppercase tracking-widest font-mono">12:00 PM - Apertura</span>
+                                    <button onclick="openRecipeDrawer(1); event.stopPropagation();" class="bg-white/5 hover:bg-gold/20 border border-white/5 px-2 py-0.5 rounded text-[8px] font-bold text-white/70 flex items-center gap-1 transition">
+                                        <i class="fa-solid fa-book-open"></i> <span>SOP</span>
+                                    </button>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mt-0.5">Pollo y Claras 🍳</h4>
+                                <p class="text-[11px] text-white/40 font-medium">9oz Pechuga + 1taza Claras + 2tazas Espinaca</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="meal-calories-display-1" class="text-sm font-black tracking-tight block">414 kcal</span>
+                            <span id="meal-protein-display-1" class="text-[10px] text-success font-black uppercase tracking-wider block mt-0.5">81g P</span>
+                        </div>
+                    </div>
+
+                    <!-- Accordion Adjuster Options -->
+                    <div class="mt-4 pt-4 border-t border-white/5 space-y-4 hidden" id="meal-adjuster-1">
+                        <div class="text-xs font-black uppercase tracking-wider text-white/30 flex justify-between">
+                            <span>Adjust Ingredients</span>
+                            <button onclick="resetMealToDefault(1)" class="text-gold font-bold hover:underline lowercase text-[10px]">reset to default</button>
+                        </div>
+                        
+                        <!-- Chicken Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Grilled Chicken Breast</span>
+                                <span class="font-mono text-gold font-bold" id="chicken-val-label">9 oz</span>
+                            </div>
+                            <input type="range" min="0" max="16" step="0.5" value="9" id="chicken-slider" 
+                                   oninput="updateIngredientLabel(1); recalculateMealMacros(1);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Egg Whites Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Egg Whites</span>
+                                <span class="font-mono text-gold font-bold" id="eggwhite-val-label">1.0 cup</span>
+                            </div>
+                            <input type="range" min="0" max="3" step="0.25" value="1" id="eggwhite-slider" 
+                                   oninput="updateIngredientLabel(1); recalculateMealMacros(1);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Spinach Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Spinach</span>
+                                <span class="font-mono text-gold font-bold" id="spinach-val-label">2 cups</span>
+                            </div>
+                            <input type="range" min="0" max="5" step="1" value="2" id="spinach-slider" 
+                                   oninput="updateIngredientLabel(1); recalculateMealMacros(1);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <!-- Expand trigger icon button -->
+                        <div class="flex justify-center text-white/20 text-xs">
+                            <button onclick="toggleAdjusterAccordion(1)" class="hover:text-gold transition p-1"><i class="fa-solid fa-chevron-up"></i> Collapse</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Edit Button Icon -->
+                    <button onclick="toggleAdjusterAccordion(1); event.stopPropagation();" class="absolute bottom-4 right-4 text-white/20 hover:text-gold transition text-xs p-1">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+
+                <!-- MEAL 2 -->
+                <div id="meal-card-2" class="glass rounded-[2rem] p-5 border border-white/5 transition-all duration-300 relative">
+                    <div class="flex items-center justify-between cursor-pointer" onclick="toggleMeal(2)">
+                        <div class="flex items-start gap-4">
+                            <div id="meal-check-2" class="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center text-xs text-white/20 transition-all duration-300">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black text-gold uppercase tracking-widest font-mono">3:00 PM - Almuerzo</span>
+                                    <button onclick="openRecipeDrawer(2); event.stopPropagation();" class="bg-white/5 hover:bg-gold/20 border border-white/5 px-2 py-0.5 rounded text-[8px] font-bold text-white/70 flex items-center gap-1 transition">
+                                        <i class="fa-solid fa-book-open"></i> <span>SOP</span>
+                                    </button>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mt-0.5">Res y Papas 🥩🥔</h4>
+                                <p class="text-[11px] text-white/40 font-medium">8oz Molida + 150g Papa + Cebolla/Chiles</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="meal-calories-display-2" class="text-sm font-black tracking-tight block">500 kcal</span>
+                            <span id="meal-protein-display-2" class="text-[10px] text-success font-black uppercase tracking-wider block mt-0.5">50g P</span>
+                        </div>
+                    </div>
+
+                    <!-- Accordion Adjuster Options -->
+                    <div class="mt-4 pt-4 border-t border-white/5 space-y-4 hidden" id="meal-adjuster-2">
+                        <div class="text-xs font-black uppercase tracking-wider text-white/30 flex justify-between">
+                            <span>Adjust Ingredients</span>
+                            <button onclick="resetMealToDefault(2)" class="text-gold font-bold hover:underline lowercase text-[10px]">reset to default</button>
+                        </div>
+                        
+                        <!-- Beef Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Lean Ground Beef</span>
+                                <span class="font-mono text-gold font-bold" id="beef-val-label">8 oz</span>
+                            </div>
+                            <input type="range" min="0" max="16" step="0.5" value="8" id="beef-slider" 
+                                   oninput="updateIngredientLabel(2); recalculateMealMacros(2);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Potatoes Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Diced Potatoes (Air Fried)</span>
+                                <span class="font-mono text-gold font-bold" id="potato-val-label">150 g</span>
+                            </div>
+                            <input type="range" min="0" max="500" step="10" value="150" id="potato-slider" 
+                                   oninput="updateIngredientLabel(2); recalculateMealMacros(2);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Peppers/Onions Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Onions & Bell Peppers</span>
+                                <span class="font-mono text-gold font-bold" id="veg-val-label">1.0 cup</span>
+                            </div>
+                            <input type="range" min="0" max="3" step="0.25" value="1" id="veg-slider" 
+                                   oninput="updateIngredientLabel(2); recalculateMealMacros(2);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <div class="flex justify-center text-white/20 text-xs">
+                            <button onclick="toggleAdjusterAccordion(2)" class="hover:text-gold transition p-1"><i class="fa-solid fa-chevron-up"></i> Collapse</button>
+                        </div>
+                    </div>
+                    
+                    <button onclick="toggleAdjusterAccordion(2); event.stopPropagation();" class="absolute bottom-4 right-4 text-white/20 hover:text-gold transition text-xs p-1">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+
+                <!-- MEAL 3 -->
+                <div id="meal-card-3" class="glass rounded-[2rem] p-5 border border-white/5 transition-all duration-300 relative">
+                    <div class="flex items-center justify-between cursor-pointer" onclick="toggleMeal(3)">
+                        <div class="flex items-start gap-4">
+                            <div id="meal-check-3" class="w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center text-xs text-white/20 transition-all duration-300">
+                                <i class="fa-solid fa-check"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[9px] font-black text-gold uppercase tracking-widest font-mono">6:00 PM - Cierre / Postre</span>
+                                    <button onclick="openRecipeDrawer(3); event.stopPropagation();" class="bg-white/5 hover:bg-gold/20 border border-white/5 px-2 py-0.5 rounded text-[8px] font-bold text-white/70 flex items-center gap-1 transition">
+                                        <i class="fa-solid fa-book-open"></i> <span>SOP</span>
+                                    </button>
+                                </div>
+                                <h4 class="text-lg font-bold text-white mt-0.5">Smoothie Bowl 🍌🍓</h4>
+                                <p class="text-[11px] text-white/40 font-medium">1.5taza Yogurt Griego + Bayas + 1 Banano</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span id="meal-calories-display-3" class="text-sm font-black tracking-tight block">365 kcal</span>
+                            <span id="meal-protein-display-3" class="text-[10px] text-success font-black uppercase tracking-wider block mt-0.5">36g P</span>
+                        </div>
+                    </div>
+
+                    <!-- Accordion Adjuster Options -->
+                    <div class="mt-4 pt-4 border-t border-white/5 space-y-4 hidden" id="meal-adjuster-3">
+                        <div class="text-xs font-black uppercase tracking-wider text-white/30 flex justify-between">
+                            <span>Adjust Ingredients</span>
+                            <button onclick="resetMealToDefault(3)" class="text-gold font-bold hover:underline lowercase text-[10px]">reset to default</button>
+                        </div>
+                        
+                        <!-- Yogurt Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Nonfat Greek Yogurt</span>
+                                <span class="font-mono text-gold font-bold" id="yogurt-val-label">1.5 cups</span>
+                            </div>
+                            <input type="range" min="0" max="4" step="0.25" value="1.5" id="yogurt-slider" 
+                                   oninput="updateIngredientLabel(3); recalculateMealMacros(3);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Berries Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Frozen Mixed Berries</span>
+                                <span class="font-mono text-gold font-bold" id="berries-val-label">1.0 cup</span>
+                            </div>
+                            <input type="range" min="0" max="3" step="0.25" value="1" id="berries-slider" 
+                                   oninput="updateIngredientLabel(3); recalculateMealMacros(3);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Banana Slider -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-white/60">Banana</span>
+                                <span class="font-mono text-gold font-bold" id="banana-val-label">1 medium</span>
+                            </div>
+                            <input type="range" min="0" max="3" step="0.5" value="1" id="banana-slider" 
+                                   oninput="updateIngredientLabel(3); recalculateMealMacros(3);" 
+                                   class="w-full accent-gold h-1 bg-white/5 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        
+                        <div class="flex justify-center text-white/20 text-xs">
+                            <button onclick="toggleAdjusterAccordion(3)" class="hover:text-gold transition p-1"><i class="fa-solid fa-chevron-up"></i> Collapse</button>
+                        </div>
+                    </div>
+                    
+                    <button onclick="toggleAdjusterAccordion(3); event.stopPropagation();" class="absolute bottom-4 right-4 text-white/20 hover:text-gold transition text-xs p-1">
+                        <i class="fa-solid fa-sliders"></i>
+                    </button>
+                </div>
+                
+            </section>
+
+            <!-- WATER AND FAST DETAILS -->
+            <section class="grid grid-cols-2 gap-4">
+                
+                <!-- Water Tracker -->
+                <div class="glass rounded-[2rem] p-5 flex flex-col justify-between">
+                    <div>
+                        <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1">Water Intake</h4>
+                        <span id="water-progress-label" class="text-xl font-black">0 / 8 <span class="text-xs text-white/40 font-bold">cups</span></span>
+                    </div>
+                    
+                    <!-- Cup Toggles -->
+                    <div class="grid grid-cols-4 gap-2 mt-4">
+                        <button onclick="toggleWaterCup(1)" id="cup-1" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(2)" id="cup-2" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(3)" id="cup-3" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(4)" id="cup-4" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(5)" id="cup-5" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(6)" id="cup-6" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(7)" id="cup-7" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                        <button onclick="toggleWaterCup(8)" id="cup-8" class="aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all"><i class="fa-solid fa-droplet"></i></button>
+                    </div>
+                </div>
+
+                <!-- Absolute Shred Checklist -->
+                <div class="glass rounded-[2rem] p-5 space-y-3">
+                    <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40 mb-1">Shred Checklist</h4>
+                    
+                    <!-- Task Items -->
+                    <div class="space-y-2 text-xs">
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="check-fast" onchange="toggleChecklist('fast')" class="rounded accent-gold w-4 h-4 bg-white/5 border-white/10">
+                            <span class="text-white/60 font-bold">18h Fast Hit</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="check-water" onchange="toggleChecklist('water')" class="rounded accent-gold w-4 h-4 bg-white/5 border-white/10">
+                            <span class="text-white/60 font-bold">3L+ Water (8c)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="check-lift" onchange="toggleChecklist('lift')" class="rounded accent-gold w-4 h-4 bg-white/5 border-white/10">
+                            <span class="text-white/60 font-bold">Gym Workout</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="check-cardio" onchange="toggleChecklist('cardio')" class="rounded accent-gold w-4 h-4 bg-white/5 border-white/10">
+                            <span class="text-white/60 font-bold">Cardio Hit</span>
+                        </label>
+                    </div>
+                </div>
+                
+            </section>
+
+            <!-- QUICK ADD LOGS -->
+            <section class="glass rounded-[2rem] p-5 space-y-4">
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40 border-b border-white/5 pb-2">Quick Log Extras</h4>
+                
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="quickAdd('Whey Shake', 120, 25, 2, 1.5)" class="bg-white/5 hover:bg-gold/10 hover:border-gold/30 border border-white/5 rounded-xl py-2 px-1 text-center transition">
+                        <span class="text-xs font-bold block text-white">+Whey</span>
+                        <span class="text-[8px] text-white/40 block mt-0.5">120 kcal / 25g P</span>
+                    </button>
+                    <button onclick="quickAdd('Olive Oil', 120, 0, 0, 14)" class="bg-white/5 hover:bg-gold/10 hover:border-gold/30 border border-white/5 rounded-xl py-2 px-1 text-center transition">
+                        <span class="text-xs font-bold block text-white">+1tbsp Oil</span>
+                        <span class="text-[8px] text-white/40 block mt-0.5">120 kcal / 14g F</span>
+                    </button>
+                    <button onclick="quickAdd('Almonds 1oz', 160, 6, 6, 14)" class="bg-white/5 hover:bg-gold/10 hover:border-gold/30 border border-white/5 rounded-xl py-2 px-1 text-center transition">
+                        <span class="text-xs font-bold block text-white">+1oz Almonds</span>
+                        <span class="text-[8px] text-white/40 block mt-0.5">160 kcal / 6g P</span>
+                    </button>
+                </div>
+
+                <!-- Custom Add Drawer Trigger -->
+                <div class="flex justify-between items-center text-xs mt-2 pt-2 border-t border-white/5">
+                    <button onclick="toggleCustomLogPanel()" class="text-gold font-bold hover:text-white transition flex items-center gap-1.5"><i class="fa-solid fa-plus text-[10px]"></i> Add Custom Item</button>
+                    <button onclick="clearCustomLogs()" class="text-white/20 hover:text-danger transition text-[10px]">Clear Custom Logs</button>
+                </div>
+
+                <!-- Custom Log Inputs Panel -->
+                <div id="custom-log-panel" class="space-y-3 pt-2 hidden">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="custom-name" placeholder="Item Name (e.g. Rice)" class="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-gold">
+                        <input type="number" id="custom-calories" placeholder="Calories" class="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-gold">
+                    </div>
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" id="custom-protein" placeholder="Protein (g)" class="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-gold">
+                        <input type="number" id="custom-carbs" placeholder="Carbs (g)" class="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-gold">
+                        <input type="number" id="custom-fat" placeholder="Fat (g)" class="bg-white/5 border border-white/5 rounded-xl px-3 py-2 text-xs text-white placeholder-white/20 focus:outline-none focus:border-gold">
+                    </div>
+                    <button onclick="logCustomItem()" class="w-full bg-gold hover:bg-gold-light text-dark font-black py-2 rounded-xl text-xs uppercase tracking-wider transition">Log Custom Item</button>
+                </div>
+
+                <!-- Logged Extra Items List -->
+                <div id="extra-items-list" class="space-y-2 mt-3 pt-2 border-t border-white/5 hidden">
+                    <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">Logged Extras Today</p>
+                    <div id="extra-items-container" class="space-y-1.5">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- HISTORICAL STREAK HISTORY -->
+            <section class="glass rounded-[2rem] p-5 space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40">Compliance Streak</h4>
+                        <p class="text-[10px] text-white/30 mt-0.5">Consecutive days on target (Calories &le; 1700, Protein &ge; 185g)</p>
+                    </div>
+                    <div class="text-right">
+                        <span id="streak-count" class="text-3xl font-black text-gold gold-glow italic tracking-tighter">0</span>
+                        <span class="text-[10px] text-white/40 block leading-none font-bold uppercase">Days</span>
+                    </div>
+                </div>
+
+                <!-- 14-Day compliance circles -->
+                <div class="flex items-center justify-between gap-1 overflow-x-auto py-2 border-t border-white/5" id="compliance-history-row">
+                    <!-- Dynamically populated 14 circles -->
+                </div>
+            </section>
+
+            <!-- DATA BACKUP / CLEAR -->
+            <section class="flex gap-4 justify-between text-xs text-white/20 px-2">
+                <button onclick="exportData()" class="hover:text-gold transition"><i class="fa-solid fa-file-export mr-1"></i> Export Backup</button>
+                <button onclick="importDataPrompt()" class="hover:text-gold transition"><i class="fa-solid fa-file-import mr-1"></i> Import Backup</button>
+                <button onclick="resetAllData()" class="hover:text-danger transition"><i class="fa-solid fa-trash-can mr-1"></i> Reset Logs</button>
+            </section>
+
+        </div>
+
+        <!-- ================= WORKOUT TAB CONTENT ================= -->
+        <div id="workout-tab-content" class="space-y-6 hidden">
+            
+            <!-- CURRENT DAY WORKOUT FOCUS BANNER -->
+            <section class="glass rounded-[2rem] p-5 relative overflow-hidden">
+                <!-- Glow effect -->
+                <div class="absolute -right-16 -top-16 w-32 h-32 bg-success/10 rounded-full blur-2xl"></div>
+                
+                <div class="flex justify-between items-start relative z-10">
+                    <div>
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gold/20 text-gold border border-gold/30" id="workout-day-badge">
+                            Monday Focus
+                        </span>
+                        <h2 class="text-2xl font-black mt-2 tracking-tight" id="workout-title">Push Day: Chest/Delts</h2>
+                        <p class="text-xs text-white/40 mt-0.5 font-bold uppercase tracking-wide" id="workout-description">Focus on chest contraction & tricep extension</p>
+                    </div>
+                    
+                    <div class="text-right">
+                        <p class="text-[9px] text-white/30 font-black uppercase tracking-widest">Sets Progress</p>
+                        <div class="text-2xl font-mono font-bold text-success tracking-tight mt-1" id="workout-sets-progress">0 / 22</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EXERCISE ROUTINE DISPLAY GRID -->
+            <section class="space-y-4" id="workout-exercises-container">
+                <!-- Dynamically populated exercises list based on current day of the week -->
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- FIXED BOTTOM TABS NAV BAR -->
+    <div class="fixed bottom-0 left-0 right-0 border-t border-white/5 bg-darker/95 backdrop-blur-xl py-3 px-6 z-40">
+        <div class="max-w-md mx-auto flex justify-around items-center">
+            <button onclick="switchTab('diet')" id="tab-btn-diet" class="flex flex-col items-center gap-1 text-gold">
+                <i class="fa-solid fa-utensils text-base"></i>
+                <span class="text-[9px] font-black uppercase tracking-widest">Diet OS</span>
+            </button>
+            <button onclick="switchTab('workout')" id="tab-btn-workout" class="flex flex-col items-center gap-1 text-white/40 hover:text-white transition">
+                <i class="fa-solid fa-dumbbell text-base"></i>
+                <span class="text-[9px] font-black uppercase tracking-widest">Workout OS</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- FLOATING REST TIMER WIDGET (Sits above bottom nav, visible when active) -->
+    <div id="rest-timer-widget" class="fixed bottom-[65px] left-4 right-4 max-w-sm mx-auto glass rounded-2xl p-4 border border-gold/30 shadow-2xl z-40 hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center text-gold relative overflow-hidden">
+                    <i class="fa-solid fa-clock animate-pulse"></i>
+                </div>
+                <div>
+                    <h5 class="text-xs font-black uppercase text-gold">Rest Interval</h5>
+                    <p class="text-[10px] text-white/50" id="timer-exercise-name">Incline Dumbbell Press</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="text-right font-mono font-bold text-lg text-white" id="timer-countdown">90s</div>
+                <div class="flex gap-1.5">
+                    <button onclick="adjustTimer(-15)" class="w-7 h-7 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white flex items-center justify-center text-[10px] font-mono">-15s</button>
+                    <button onclick="adjustTimer(15)" class="w-7 h-7 rounded-lg bg-white/5 border border-white/5 text-white/60 hover:text-white flex items-center justify-center text-[10px] font-mono">+15s</button>
+                    <button onclick="skipTimer()" class="w-7 h-7 rounded-lg bg-danger/20 border border-danger/30 text-danger hover:bg-danger/30 flex items-center justify-center text-[10px] font-bold"><i class="fa-solid fa-forward"></i></button>
+                </div>
+            </div>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full bg-white/5 h-1 rounded-full mt-3 overflow-hidden">
+            <div id="timer-progress-bar" class="bg-gold h-full rounded-full transition-all duration-1000" style="width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- INTERACTIVE RECIPE / ACCURACY INFO MODAL DRAWER -->
+    <div id="recipe-modal" class="fixed inset-0 bg-darker/80 backdrop-blur-md z-50 flex items-end justify-center hidden opacity-0 transition-opacity duration-300" onclick="closeRecipeDrawer()">
+        <div class="glass w-full max-w-md rounded-t-[2.5rem] border-t border-gold/30 p-6 space-y-6 max-h-[85vh] overflow-y-auto transform translate-y-full transition-transform duration-300" onclick="event.stopPropagation()">
+            
+            <!-- Handle -->
+            <div class="w-12 h-1 bg-white/10 rounded-full mx-auto -mt-2 mb-4"></div>
+            
+            <!-- Recipe Header -->
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="text-[9px] font-black text-gold uppercase tracking-[0.2em]" id="recipe-meal-subtitle">Meal Cooking SOP</span>
+                    <h3 class="text-xl font-black text-white" id="recipe-meal-title">Pollo y Claras 🍳</h3>
+                </div>
+                <button onclick="closeRecipeDrawer()" class="w-8 h-8 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-white flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Recipe cooking instructions -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-1.5"><i class="fa-solid fa-kitchen-set"></i> Cooking Instructions</h4>
+                <div class="text-xs text-white/70 leading-relaxed space-y-2 bg-white/5 p-4 rounded-2xl border border-white/5 font-medium" id="recipe-instructions-content">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+
+            <!-- Accuracy reference database -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-[0.2em] text-white/40 flex items-center gap-1.5"><i class="fa-solid fa-calculator"></i> Macro Accuracy Reference</h4>
+                <div class="bg-darker/60 rounded-2xl p-4 border border-white/5 font-mono text-[10px] space-y-1.5 text-white/60" id="recipe-accuracy-content">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+
+            <!-- Fine-tuning Advice -->
+            <div class="text-[10px] text-white/30 italic leading-relaxed pt-2">
+                *Macros calculated using USDA FoodData Central whole ingredient standards. Cooking chicken shrinks raw weight by ~25% (9oz raw &approx; 6.7oz cooked). Weigh raw whenever possible for maximum abs-shredding precision.
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Chimes and sound alerts -->
+    <audio id="sound-log" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+    <audio id="sound-complete" src="https://assets.mixkit.co/active_storage/sfx/911/911-preview.mp3" preload="auto"></audio>
+    <audio id="sound-bubble" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3" preload="auto"></audio>
+
+    <script>
+        // System Config & Goal definitions
+        const GOAL_CALORIES = 1700;
+        const GOAL_PROTEIN = 185;
+        const GOAL_CARBS = 130;
+        const GOAL_FAT = 50;
+
+        // Default Ingredient Macros
+        const defaultPortions = {
+            1: { chicken: 9, eggwhite: 1.0, spinach: 2 },
+            2: { beef: 8, potato: 150, veg: 1.0 },
+            3: { yogurt: 1.5, berries: 1.0, banana: 1.0 }
+        };
+
+        // Date Context
+        let currentDate = new Date();
+        let shredState = {};
+        let activeTab = 'diet';
+
+        // Timer State
+        let timerInterval = null;
+        let timerSecondsRemaining = 0;
+        let timerTotalDuration = 90;
+
+        // Recipe & Accuracy Database Source Content
+        const recipeDatabase = {
+            1: {
+                title: "Pollo y Claras 🍳",
+                subtitle: "12:00 PM - Apertura (Meal 1)",
+                instructions: `
+                    1. <b>Chicken breast:</b> Season 9oz raw chicken breast with garlic powder, onion powder, paprika, black pepper, and sea salt. Grill in a pre-heated pan or grill grates on medium-high heat for 6-8 minutes per side. Avoid added oils; use a dry grill or a tiny wipe of paper towel with oil spray.<br><br>
+                    2. <b>Egg whites:</b> Heat a non-stick pan on medium, spray with zero-calorie cooking spray (1-second spray). Pour in 1 cup of egg whites. Cook slowly, scrambling gently with a spatula until soft and fluffy. Season with salt and pepper.<br><br>
+                    3. <b>Spinach:</b> Toss 2 cups of fresh baby spinach into the pan with the egg whites in the final 30 seconds to let them wilt, or serve the spinach raw as a clean bed beneath the grilled chicken.
+                `,
+                accuracy: `
+                    - <b>Chicken Breast (Raw, Skinless):</b> 31 cal | 5.8g Protein | 0.6g Fat (Per oz)<br>
+                      <i>*9oz raw chicken breast yields ~279 cal, 52.2g Protein, 5.4g Fat.</i><br><br>
+                    - <b>Egg Whites (Liquid):</b> 120 cal | 26g Protein | 0g Fat | 2g Carbs (Per cup)<br>
+                      <i>*1 cup yields 120 cal, 26g Protein, 2g Carbs.</i><br><br>
+                    - <b>Baby Spinach (Raw):</b> 7 cal | 1g Protein | 1g Carbs (Per cup)<br>
+                      <i>*2 cups yields 14 cal, 2g Protein, 2g Carbs.</i>
+                `
+            },
+            2: {
+                title: "Res y Papas 🥩🥔",
+                subtitle: "3:00 PM - Almuerzo (Meal 2)",
+                instructions: `
+                    1. <b>Air-fried potatoes:</b> Dice 150g of raw russet potatoes into small cubes. Soak in cold water for 10 minutes to remove excess starch (improves crispiness). Drain and pat dry completely with a clean towel. Toss with paprika, garlic powder, salt, pepper, and a 1-second cooking spray. Air fry at 400°F (200°C) for 15-20 minutes, shaking the basket halfway through until golden brown.<br><br>
+                    2. <b>Ground beef & veggies:</b> Heat a pan over medium heat. Sauté 1 cup of chopped onions and bell peppers. Add 8oz of 93/7 Lean Ground Beef. Break the beef apart with a spatula. Season with cumin, onion powder, chili powder, oregano, salt, and pepper. Cook until fully browned (8-10 mins). Serve beef and veggies alongside the crispy air-fried potatoes.
+                `,
+                accuracy: `
+                    - <b>93/7 Ground Beef (Raw):</b> 42 cal | 5.75g Protein | 2g Fat (Per oz)<br>
+                      <i>*8oz yields ~336 cal, 46g Protein, 16g Fat.</i><br><br>
+                    - <b>Russet Potato (Raw):</b> 0.86 cal | 0.02g Protein | 0.2g Carbs (Per gram)<br>
+                      <i>*150g yields ~129 cal, 3g Protein, 30g Carbs.</i><br><br>
+                    - <b>Bell Peppers & Onions Mix:</b> 30 cal | 1g Protein | 7g Carbs (Per cup)<br>
+                      <i>*1 cup yields ~30 cal, 1g Protein, 7g Carbs.</i>
+                `
+            },
+            3: {
+                title: "Smoothie Bowl 🍌🍓",
+                subtitle: "6:00 PM - Cierre / Postre (Meal 3)",
+                instructions: `
+                    1. <b>Blended base:</b> Add 1.5 cups of cold nonfat Greek yogurt, 1 cup of frozen mixed berries, and 1/2 of the medium banana into a high-speed blender. Add a tiny splash of cold water or stevia drops if needed for blending. Blend on high until completely smooth, thick, and ice-cream-like.<br><br>
+                    2. <b>Assembly:</b> Pour the thick purple yogurt base into a bowl. Slice the remaining 1/2 banana into thin rounds.<br><br>
+                    3. <b>Topping:</b> Arrange the banana slices and a few frozen or fresh berries neatly on top. Enjoy with a spoon immediately before the fast begins!
+                `,
+                accuracy: `
+                    - <b>Nonfat Greek Yogurt (0% Fat):</b> 126 cal | 22.6g Protein | 7.3g Carbs (Per cup)<br>
+                      <i>*1.5 cups yields ~189 cal, 34g Protein, 11g Carbs.</i><br><br>
+                    - <b>Frozen Mixed Berries:</b> 70 cal | 1g Protein | 0.5g Fat | 17g Carbs (Per cup)<br>
+                      <i>*1 cup yields 70 cal, 1g Protein, 0.5g Fat, 17g Carbs.</i><br><br>
+                    - <b>Medium Banana:</b> 105 cal | 1.3g Protein | 0.3g Fat | 27g Carbs (Per item)<br>
+                      <i>*1 medium banana yields 105 cal, 1.3g Protein, 0.3g Fat, 27g Carbs.</i>
+                `
+            }
+        };
+
+        // Workout Splits Database by Day of the Week
+        const workoutDatabase = {
+            1: { // Monday
+                dayName: "Monday",
+                title: "Push Day: Chest/Delts/Triceps 🏋️‍♂️",
+                description: "Primary focus on shoulder mobility and heavy pressing movements.",
+                exercises: [
+                    { name: "Incline Dumbbell Bench Press", sets: 4, reps: "8 - 12", cue: "Focus on chest contraction at top, control descent" },
+                    { name: "Standing Dumbbell Shoulder Press", sets: 3, reps: "8 - 12", cue: "Keep core tight, press overhead, do not arch back" },
+                    { name: "Chest Parallel Bar Dips", sets: 3, reps: "AMRAP (Max reps)", cue: "Lean forward slightly to target lower chest pectorals" },
+                    { name: "Cable Lateral Raises (Side Delts)", sets: 3, reps: "12 - 15", cue: "Pull outward, control eccentric phase slowly" },
+                    { name: "Tricep Overhead Cable Extensions", sets: 3, reps: "10 - 12", cue: "Keep elbows locked close to head, fully lock out" },
+                    { name: "Hanging Knee Raises (Abs)", sets: 3, reps: "15 - 20", cue: "Use abs to lift pelvis, do not swing legs" },
+                    { name: "Decline Bench Sit-Ups (Abs)", sets: 3, reps: "15", cue: "Control pace, flex abdominal muscles at peak" }
+                ]
+            },
+            2: { // Tuesday
+                dayName: "Tuesday",
+                title: "Pull Day: Back/Biceps + HIIT 🦍",
+                description: "Heavy compound rows and targeted pull movements + cardiovascular work.",
+                exercises: [
+                    { name: "Strict Pull-Ups (Wide Grip)", sets: 4, reps: "8 - 12", cue: "Pull shoulder blades down first, chest to bar" },
+                    { name: "Barbell Pendlay Rows", sets: 3, reps: "8 - 10", cue: "Pull bar from dead stop on floor, torso parallel" },
+                    { name: "Single Arm Dumbbell Rows", sets: 3, reps: "10 - 12", cue: "Pull elbow back towards hip, keep spine neutral" },
+                    { name: "Face Pulls (Rear Delts / Upper Back)", sets: 3, reps: "15", cue: "Pull rope towards eyes, flare elbows outwards" },
+                    { name: "Incline Dumbbell Bicep Curls", sets: 3, reps: "10 - 12", cue: "Full stretch at bottom, pin elbows behind hips" },
+                    { name: "Dumbbell Hammer Curls", sets: 3, reps: "12", cue: "Squeeze brachialis muscle, keep neutral wrist grip" },
+                    { name: "HIIT Sprints (Stairmaster/Treadmill)", sets: 1, reps: "15 mins", cue: "Sprints: 30s max effort, 30s walk recovery. Repeat" }
+                ]
+            },
+            3: { // Wednesday
+                dayName: "Wednesday",
+                title: "Leg Day: Quads/Hams/Calves 🦵",
+                description: "High volume lower body training. Maintain strict form to protect joints.",
+                exercises: [
+                    { name: "Barbell Squats or Hack Squats", sets: 4, reps: "8 - 10", cue: "Sit back down, break parallel, drive through heels" },
+                    { name: "Romanian Deadlifts (RDLs)", sets: 4, reps: "8 - 12", cue: "Hinge at hips, slide bar down thighs, feel hamstrings" },
+                    { name: "Leg Press Machine", sets: 3, reps: "10 - 12", cue: "Lower knees to chest, do not lock out knees at top" },
+                    { name: "Lying Leg Curls (Hamstring Focus)", sets: 3, reps: "12 - 15", cue: "Squeeze calves to glutes, control return path" },
+                    { name: "Standing Calf Raises", sets: 4, reps: "15 - 20", cue: "Hold 1s peak stretch at bottom, squeeze at top" },
+                    { name: "Ab Wheel Rollouts (Abs)", sets: 3, reps: "10 - 15", cue: "Tuck tailbone, use core to pull wheel back, no back strain" },
+                    { name: "Weighted Plank Hold", sets: 3, reps: "60 seconds", cue: "Tuck hips, squeeze glutes, keep flat table back" }
+                ]
+            },
+            4: { // Thursday
+                dayName: "Thursday",
+                title: "Active Recovery & Core split 🚶‍♂️",
+                description: "Low intensity steady state cardio designed to promote recovery.",
+                exercises: [
+                    { name: "Outdoor Ruck or Fast Walk (LISS)", sets: 1, reps: "45 mins", cue: "Maintain brisk pace, aim to reach 10,000 steps" },
+                    { name: "Hanging Straight Leg Raises (Abs)", sets: 3, reps: "12 - 15", cue: "Keep legs straight, lift to bar level slowly" },
+                    { name: "Weighted Russian Twists (Abs)", sets: 3, reps: "20 total", cue: "Follow dumbbells with eyes, rotate chest fully" }
+                ]
+            },
+            5: { // Friday
+                dayName: "Friday",
+                title: "Upper Body Hypertrophy & Arms 🦾",
+                description: "Delts, arms, and conditioning pump session.",
+                exercises: [
+                    { name: "Standing Barbell Military Press", sets: 4, reps: "8", cue: "Brace glutes, press straight up, lock shoulders" },
+                    { name: "Dumbbell Lateral Raises (Side Delts)", sets: 4, reps: "12 - 15", cue: "Raise arms out like pouring pitchers of water" },
+                    { name: "Chin-Ups (Underhand grip)", sets: 3, reps: "8 - 12", cue: "Full arm lock out, pull chest to chin" },
+                    { name: "Barbell Bicep Curls (EZ Bar)", sets: 3, reps: "10 - 12", cue: "Brace back against wall to prevent swinging" },
+                    { name: "Tricep Cable Rope Pushdowns", sets: 3, reps: "12 - 15", cue: "Flare hands apart at bottom extension" },
+                    { name: "Reverse Grip Cable Extensions", sets: 3, reps: "12", cue: "Lock elbows, target lateral head of tricep" },
+                    { name: "Cardio: Assault Bike Intervals", sets: 1, reps: "15 mins", cue: "20s max sprint, 40s active recovery rest" }
+                ]
+            },
+            6: { // Saturday
+                dayName: "Saturday",
+                title: "Active Rest Day 🌊",
+                description: "Promote blood flow, heal joint inflammation, focus on hydration.",
+                exercises: [
+                    { name: "Rest & Stretch Routine", sets: 1, reps: "15 mins", cue: "Full body foam rolling & dynamic hamstring stretching" },
+                    { name: "Daily Step Target (LISS)", sets: 1, reps: "10,000 steps", cue: "Brisk walking in fresh air to stimulate recovery" }
+                ]
+            },
+            0: { // Sunday
+                dayName: "Sunday",
+                title: "Rest Day & Meal Prep 🥑",
+                description: "Prepare food containers, plan tasks, recover for the week.",
+                exercises: [
+                    { name: "Zero Lifting - Recovery Focus", sets: 1, reps: "Complete", cue: "Aim for deep sleep, maximum hydration, prepare macros" },
+                    { name: "Daily Step Target (LISS)", sets: 1, reps: "10,000 steps", cue: "Rest day walking for circulation" }
+                ]
+            }
+        };
+
+        // Load data from LocalStorage
+        function loadState() {
+            const raw = localStorage.getItem('shred_state_v2');
+            if (raw) {
+                try {
+                    shredState = JSON.parse(raw);
+                } catch(e) {
+                    shredState = {};
+                }
+            } else {
+                shredState = {};
+            }
+        }
+
+        // Save data to LocalStorage
+        function saveState() {
+            localStorage.setItem('shred_state_v2', JSON.stringify(shredState));
+            updateUI();
+        }
+
+        // Get key for the currently selected date
+        function getDateKey(d = currentDate) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Initialize state structure for a day if not exists
+        function initDateState(dateKey) {
+            if (!shredState[dateKey]) {
+                shredState[dateKey] = {
+                    meals: {
+                        1: { logged: false, chicken: 9, eggwhite: 1.0, spinach: 2 },
+                        2: { logged: false, beef: 8, potato: 150, veg: 1.0 },
+                        3: { logged: false, yogurt: 1.5, berries: 1.0, banana: 1.0 }
+                    },
+                    water: 0,
+                    checklist: {
+                        fast: false,
+                        water: false,
+                        lift: false,
+                        cardio: false
+                    },
+                    extras: [],
+                    workout: {} // tracks checked sets per exercise, e.g. "0-0": true, "0-1": true
+                };
+            }
+            
+            // Clean up potentially corrupt entries
+            const day = shredState[dateKey];
+            if (!day.meals) day.meals = JSON.parse(JSON.stringify(shredState['2026-08-04']?.meals || defaultPortions));
+            if (day.water === undefined) day.water = 0;
+            if (!day.checklist) day.checklist = { fast: false, water: false, lift: false, cardio: false };
+            if (!day.extras) day.extras = [];
+            if (!day.workout) day.workout = {};
+
+            // Assure each meal has its sliders initialized if missing
+            for (let m = 1; m <= 3; m++) {
+                if (!day.meals[m]) {
+                    day.meals[m] = { logged: false };
+                }
+                const defaults = defaultPortions[m];
+                for (let key in defaults) {
+                    if (day.meals[m][key] === undefined) {
+                        day.meals[m][key] = defaults[key];
+                    }
+                }
+            }
+        }
+
+        // Set Slider Elements to match the date state
+        function syncSlidersToState() {
+            const key = getDateKey();
+            const day = shredState[key];
+            
+            // Meal 1
+            document.getElementById('chicken-slider').value = day.meals[1].chicken;
+            document.getElementById('eggwhite-slider').value = day.meals[1].eggwhite;
+            document.getElementById('spinach-slider').value = day.meals[1].spinach;
+            
+            // Meal 2
+            document.getElementById('beef-slider').value = day.meals[2].beef;
+            document.getElementById('potato-slider').value = day.meals[2].potato;
+            document.getElementById('veg-slider').value = day.meals[2].veg;
+            
+            // Meal 3
+            document.getElementById('yogurt-slider').value = day.meals[3].yogurt;
+            document.getElementById('berries-slider').value = day.meals[3].berries;
+            document.getElementById('banana-slider').value = day.meals[3].banana;
+
+            updateIngredientLabel(1);
+            updateIngredientLabel(2);
+            updateIngredientLabel(3);
+        }
+
+        // Change Date (Navigator)
+        function changeDate(daysOffset) {
+            currentDate.setDate(currentDate.getDate() + daysOffset);
+            const key = getDateKey();
+            initDateState(key);
+            syncSlidersToState();
+            
+            // Trigger UI updates
+            document.getElementById('current-date-str').innerText = key;
+            updateUI();
+            
+            // Play slide chime
+            playAudio('sound-bubble');
+        }
+
+        // Switch Tabs (Diet OS vs Workout OS)
+        function switchTab(tabId) {
+            activeTab = tabId;
+            const dietContent = document.getElementById('diet-tab-content');
+            const workoutContent = document.getElementById('workout-tab-content');
+            const dietBtn = document.getElementById('tab-btn-diet');
+            const workoutBtn = document.getElementById('tab-btn-workout');
+
+            if (tabId === 'diet') {
+                dietContent.classList.remove('hidden');
+                workoutContent.classList.add('hidden');
+                dietBtn.className = "flex flex-col items-center gap-1 text-gold";
+                workoutBtn.className = "flex flex-col items-center gap-1 text-white/40 hover:text-white transition";
+            } else {
+                dietContent.classList.add('hidden');
+                workoutContent.classList.remove('hidden');
+                dietBtn.className = "flex flex-col items-center gap-1 text-white/40 hover:text-white transition";
+                workoutBtn.className = "flex flex-col items-center gap-1 text-gold";
+                renderWorkoutTab();
+            }
+            playAudio('sound-bubble');
+        }
+
+        // Fasting Timer countdown calculation
+        function updateFastingTimer() {
+            const statusBadge = document.getElementById('fasting-badge');
+            const desc = document.getElementById('fasting-desc');
+            const countEl = document.getElementById('fasting-countdown');
+            const progressEl = document.getElementById('fasting-progress');
+
+            const now = new Date();
+            
+            const feedStart = new Date(now);
+            feedStart.setHours(12, 0, 0, 0);
+            
+            const feedEnd = new Date(now);
+            feedEnd.setHours(18, 0, 0, 0);
+
+            let diffMs = 0;
+            let windowState = ""; 
+            let pct = 0;
+
+            if (now >= feedStart && now < feedEnd) {
+                windowState = "feeding";
+                diffMs = feedEnd - now;
+                
+                const totalFeedingDuration = 6 * 60 * 60 * 1000;
+                const elapsed = now - feedStart;
+                pct = (elapsed / totalFeedingDuration) * 100;
+            } else {
+                windowState = "fasting";
+                
+                let targetStart = new Date(feedStart);
+                if (now >= feedEnd) {
+                    targetStart.setDate(targetStart.getDate() + 1);
+                }
+                diffMs = targetStart - now;
+                
+                const totalFastingDuration = 18 * 60 * 60 * 1000;
+                let fastingStart = new Date(feedEnd);
+                if (now < feedStart) {
+                    fastingStart.setDate(fastingStart.getDate() - 1);
+                }
+                const elapsed = now - fastingStart;
+                pct = (elapsed / totalFastingDuration) * 100;
+            }
+
+            const hours = String(Math.floor(diffMs / (60 * 60 * 1000))).padStart(2, '0');
+            const minutes = String(Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000))).padStart(2, '0');
+            const seconds = String(Math.floor((diffMs % (60 * 1000)) / 1000)).padStart(2, '0');
+
+            if (countEl) countEl.innerText = `${hours}:${minutes}:${seconds}`;
+
+            if (statusBadge && desc && progressEl) {
+                if (windowState === "feeding") {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-success/20 text-success border border-success/30";
+                    statusBadge.innerText = "Feeding Window Open";
+                    desc.innerText = "Fasting window begins at 6:00 PM";
+                    progressEl.style.width = `${pct}%`;
+                    progressEl.className = "bg-gold h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(201,166,107,0.5)]";
+                } else {
+                    statusBadge.className = "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-warning/20 text-warning border border-warning/30";
+                    statusBadge.innerText = "Fasting In Progress";
+                    desc.innerText = "Feeding window opens at 12:00 PM";
+                    progressEl.style.width = `${pct}%`;
+                    progressEl.className = "bg-warning h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(245,158,11,0.5)]";
+                }
+            }
+        }
+
+        // Recalculate specific meal macros based on slider positions
+        function getMealMacros(mealId, dayState) {
+            const mState = dayState.meals[mealId];
+            let c = 0, p = 0, f = 0, carbs = 0;
+
+            if (mealId === 1) {
+                c += mState.chicken * 31;
+                p += mState.chicken * 5.8;
+                f += mState.chicken * 0.6;
+                
+                c += mState.eggwhite * 120;
+                p += mState.eggwhite * 26;
+                carbs += mState.eggwhite * 2;
+
+                c += mState.spinach * 7;
+                p += mState.spinach * 1;
+                carbs += mState.spinach * 1;
+            } 
+            else if (mealId === 2) {
+                c += mState.beef * 42;
+                p += mState.beef * 5.75;
+                f += mState.beef * 2;
+
+                c += mState.potato * 0.86;
+                p += mState.potato * 0.02;
+                carbs += mState.potato * 0.2;
+
+                c += mState.veg * 30;
+                p += mState.veg * 1;
+                carbs += mState.veg * 7;
+            } 
+            else if (mealId === 3) {
+                c += mState.yogurt * 126;
+                p += mState.yogurt * 22.6;
+                carbs += mState.yogurt * 7.3;
+
+                c += mState.berries * 70;
+                p += mState.berries * 1;
+                f += mState.berries * 0.5;
+                carbs += mState.berries * 17;
+
+                c += mState.banana * 105;
+                p += mState.banana * 1.3;
+                f += mState.banana * 0.3;
+                carbs += mState.banana * 27;
+            }
+
+            return {
+                calories: Math.round(c),
+                protein: Math.round(p),
+                fat: Math.round(f * 10) / 10,
+                carbs: Math.round(carbs)
+            };
+        }
+
+        // Live calculation of meal labels on slider input
+        function updateIngredientLabel(mealId) {
+            if (mealId === 1) {
+                const chicken = document.getElementById('chicken-slider').value;
+                const eggwhite = document.getElementById('eggwhite-slider').value;
+                const spinach = document.getElementById('spinach-slider').value;
+                document.getElementById('chicken-val-label').innerText = `${chicken} oz`;
+                document.getElementById('eggwhite-val-label').innerText = `${eggwhite} cup${eggwhite == 1 ? '' : 's'}`;
+                document.getElementById('spinach-val-label').innerText = `${spinach} cup${spinach == 1 ? '' : 's'}`;
+            }
+            if (mealId === 2) {
+                const beef = document.getElementById('beef-slider').value;
+                const potato = document.getElementById('potato-slider').value;
+                const veg = document.getElementById('veg-slider').value;
+                document.getElementById('beef-val-label').innerText = `${beef} oz`;
+                document.getElementById('potato-val-label').innerText = `${potato} g`;
+                document.getElementById('veg-val-label').innerText = `${veg} cup${veg == 1 ? '' : 's'}`;
+            }
+            if (mealId === 3) {
+                const yogurt = document.getElementById('yogurt-slider').value;
+                const berries = document.getElementById('berries-slider').value;
+                const banana = document.getElementById('banana-slider').value;
+                document.getElementById('yogurt-val-label').innerText = `${yogurt} cup${yogurt == 1 ? '' : 's'}`;
+                document.getElementById('berries-val-label').innerText = `${berries} cup${berries == 1 ? '' : 's'}`;
+                document.getElementById('banana-val-label').innerText = `${banana} medium`;
+            }
+        }
+
+        // Read sliders & save back to state
+        function recalculateMealMacros(mealId) {
+            const key = getDateKey();
+            const day = shredState[key];
+            
+            if (mealId === 1) {
+                day.meals[1].chicken = parseFloat(document.getElementById('chicken-slider').value);
+                day.meals[1].eggwhite = parseFloat(document.getElementById('eggwhite-slider').value);
+                day.meals[1].spinach = parseInt(document.getElementById('spinach-slider').value);
+            }
+            if (mealId === 2) {
+                day.meals[2].beef = parseFloat(document.getElementById('beef-slider').value);
+                day.meals[2].potato = parseInt(document.getElementById('potato-slider').value);
+                day.meals[2].veg = parseFloat(document.getElementById('veg-slider').value);
+            }
+            if (mealId === 3) {
+                day.meals[3].yogurt = parseFloat(document.getElementById('yogurt-slider').value);
+                day.meals[3].berries = parseFloat(document.getElementById('berries-slider').value);
+                day.meals[3].banana = parseFloat(document.getElementById('banana-slider').value);
+            }
+
+            saveState();
+        }
+
+        function resetMealToDefault(mealId) {
+            const key = getDateKey();
+            const day = shredState[key];
+            const defaults = defaultPortions[mealId];
+
+            for (let k in defaults) {
+                day.meals[mealId][k] = defaults[k];
+            }
+            
+            syncSlidersToState();
+            saveState();
+        }
+
+        // Toggle meal logging state
+        function toggleMeal(mealId) {
+            const key = getDateKey();
+            const day = shredState[key];
+            day.meals[mealId].logged = !day.meals[mealId].logged;
+            
+            if (day.meals[mealId].logged) {
+                playAudio('sound-log');
+            } else {
+                playAudio('sound-bubble');
+            }
+
+            saveState();
+        }
+
+        // Open/Close Slider Accordions
+        function toggleAdjusterAccordion(mealId) {
+            const panel = document.getElementById(`meal-adjuster-${mealId}`);
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        // Open Recipe / Accuracy Drawer Modal
+        function openRecipeDrawer(mealId) {
+            const source = recipeDatabase[mealId];
+            if (!source) return;
+
+            document.getElementById('recipe-meal-title').innerText = source.title;
+            document.getElementById('recipe-meal-subtitle').innerText = source.subtitle;
+            document.getElementById('recipe-instructions-content').innerHTML = source.instructions;
+            document.getElementById('recipe-accuracy-content').innerHTML = source.accuracy;
+
+            const modal = document.getElementById('recipe-modal');
+            modal.classList.remove('hidden');
+            
+            // Force redraw, then slide up
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.firstElementChild.classList.remove('translate-y-full');
+            }, 10);
+            
+            playAudio('sound-bubble');
+        }
+
+        // Close Recipe Drawer Modal
+        function closeRecipeDrawer() {
+            const modal = document.getElementById('recipe-modal');
+            modal.classList.add('opacity-0');
+            modal.firstElementChild.classList.add('translate-y-full');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+            
+            playAudio('sound-bubble');
+        }
+
+        // Toggle Water Cups
+        function toggleWaterCup(cupNum) {
+            const key = getDateKey();
+            const day = shredState[key];
+            
+            if (day.water >= cupNum) {
+                day.water = cupNum - 1;
+            } else {
+                day.water = cupNum;
+            }
+
+            // Sync with compliance checklist if water reaches 8
+            if (day.water >= 8) {
+                day.checklist.water = true;
+                playAudio('sound-complete');
+            } else {
+                day.checklist.water = false;
+                playAudio('sound-bubble');
+            }
+
+            saveState();
+        }
+
+        // Toggle checklist item
+        function toggleChecklist(itemId) {
+            const key = getDateKey();
+            const day = shredState[key];
+            day.checklist[itemId] = document.getElementById(`check-${itemId}`).checked;
+            
+            if (day.checklist[itemId]) {
+                playAudio('sound-log');
+            } else {
+                playAudio('sound-bubble');
+            }
+
+            saveState();
+        }
+
+        // Quick add buttons
+        function quickAdd(name, calories, protein, carbs, fat) {
+            const key = getDateKey();
+            const day = shredState[key];
+            day.extras.push({ name, calories, protein, carbs, fat });
+            
+            playAudio('sound-log');
+            saveState();
+        }
+
+        // Log Custom Item
+        function logCustomItem() {
+            const key = getDateKey();
+            const day = shredState[key];
+            
+            const nameEl = document.getElementById('custom-name');
+            const calEl = document.getElementById('custom-calories');
+            const proEl = document.getElementById('custom-protein');
+            const carbEl = document.getElementById('custom-carbs');
+            const fatEl = document.getElementById('custom-fat');
+
+            const name = nameEl.value.trim() || 'Custom Item';
+            const calories = parseInt(calEl.value) || 0;
+            const protein = parseInt(proEl.value) || 0;
+            const carbs = parseInt(carbEl.value) || 0;
+            const fat = parseInt(fatEl.value) || 0;
+
+            day.extras.push({ name, calories, protein, carbs, fat });
+
+            // Reset inputs
+            nameEl.value = '';
+            calEl.value = '';
+            proEl.value = '';
+            carbEl.value = '';
+            fatEl.value = '';
+            
+            document.getElementById('custom-log-panel').classList.add('hidden');
+            
+            playAudio('sound-log');
+            saveState();
+        }
+
+        function clearCustomLogs() {
+            const key = getDateKey();
+            const day = shredState[key];
+            day.extras = [];
+            playAudio('sound-bubble');
+            saveState();
+        }
+
+        function removeExtraItem(index) {
+            const key = getDateKey();
+            const day = shredState[key];
+            day.extras.splice(index, 1);
+            playAudio('sound-bubble');
+            saveState();
+        }
+
+        function toggleCustomLogPanel() {
+            const panel = document.getElementById('custom-log-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // Helper to check target compliance
+        function isDayCompliant(dayKey) {
+            const day = shredState[dayKey];
+            if (!day) return false;
+
+            let totCal = 0;
+            let totPro = 0;
+
+            for (let m = 1; m <= 3; m++) {
+                if (day.meals[m]?.logged) {
+                    const macros = getMealMacros(m, day);
+                    totCal += macros.calories;
+                    totPro += macros.protein;
+                }
+            }
+
+            day.extras.forEach(ext => {
+                totCal += ext.calories;
+                totPro += ext.protein;
+            });
+
+            return totCal > 0 && totCal <= GOAL_CALORIES && totPro >= GOAL_PROTEIN;
+        }
+
+        // Calculate current streak
+        function calculateStreak() {
+            let streak = 0;
+            let checkDate = new Date();
+            
+            while (true) {
+                const key = getDateKey(checkDate);
+                if (shredState[key]) {
+                    if (isDayCompliant(key)) {
+                        streak++;
+                    } else {
+                        const todayKey = getDateKey(new Date());
+                        if (key === todayKey) {
+                            let totCal = 0;
+                            const day = shredState[key];
+                            for (let m = 1; m <= 3; m++) {
+                                if (day.meals[m]?.logged) totCal += getMealMacros(m, day).calories;
+                            }
+                            day.extras.forEach(ext => totCal += ext.calories);
+                            
+                            if (totCal <= GOAL_CALORIES) {
+                                checkDate.setDate(checkDate.getDate() - 1);
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+                } else {
+                    const todayKey = getDateKey(new Date());
+                    if (key === todayKey) {
+                        checkDate.setDate(checkDate.getDate() - 1);
+                        continue;
+                    }
+                    break;
+                }
+                checkDate.setDate(checkDate.getDate() - 1);
+            }
+            return streak;
+        }
+
+        // Render the 14-day history dot grid
+        function renderHistoryRow() {
+            const row = document.getElementById('compliance-history-row');
+            if (!row) return;
+            row.innerHTML = '';
+            
+            let dates = [];
+            for (let i = 13; i >= 0; i--) {
+                const temp = new Date();
+                temp.setDate(temp.getDate() - i);
+                dates.push(temp);
+            }
+
+            dates.forEach(d => {
+                const key = getDateKey(d);
+                const isToday = key === getDateKey(new Date());
+                const dayLog = shredState[key];
+                
+                let dotClass = "bg-white/5 border border-white/5 text-white/20";
+                let icon = '<i class="fa-solid fa-minus text-[8px]"></i>';
+                
+                if (dayLog) {
+                    const compliant = isDayCompliant(key);
+                    
+                    let totCal = 0;
+                    for (let m = 1; m <= 3; m++) {
+                        if (dayLog.meals[m]?.logged) totCal += getMealMacros(m, dayLog).calories;
+                    }
+                    dayLog.extras.forEach(ext => totCal += ext.calories);
+
+                    if (compliant) {
+                        dotClass = "bg-success/20 border border-success/30 text-success shadow-[0_0_8px_rgba(16,185,129,0.15)]";
+                        icon = '<i class="fa-solid fa-check text-[8px]"></i>';
+                    } else if (totCal > GOAL_CALORIES) {
+                        dotClass = "bg-danger/20 border border-danger/30 text-danger";
+                        icon = '<i class="fa-solid fa-xmark text-[8px]"></i>';
+                    } else if (totCal > 0) {
+                        dotClass = "bg-warning/20 border border-warning/30 text-warning";
+                        icon = '<i class="fa-solid fa-circle-notch text-[8px] animate-spin-slow"></i>';
+                    }
+                }
+
+                const dayName = d.toLocaleDateString('en-US', { weekday: 'narrow' });
+                const dayNum = d.getDate();
+
+                const container = document.createElement('div');
+                container.className = `flex flex-col items-center gap-1 cursor-pointer p-1 rounded-lg transition hover:bg-white/5 ${isToday ? 'border border-gold/30 bg-gold/5' : ''}`;
+                container.onclick = () => {
+                    currentDate = new Date(d);
+                    document.getElementById('current-date-str').innerText = key;
+                    syncSlidersToState();
+                    updateUI();
+                    if (activeTab === 'workout') {
+                        renderWorkoutTab();
+                    }
+                };
+
+                container.innerHTML = `
+                    <span class="text-[8px] font-black uppercase text-white/30 tracking-widest">${dayName}</span>
+                    <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${dotClass}">
+                        ${icon}
+                    </div>
+                    <span class="text-[9px] font-mono font-bold text-white/40">${dayNum}</span>
+                `;
+                row.appendChild(container);
+            });
+        }
+
+        // ================= WORKOUT PROGRAM RENDERING =================
+        function getWorkoutForSelectedDay() {
+            // Sunday = 0, Monday = 1, Tuesday = 2, Wednesday = 3, Thursday = 4, Friday = 5, Saturday = 6
+            const dayIndex = currentDate.getDay();
+            return workoutDatabase[dayIndex];
+        }
+
+        function renderWorkoutTab() {
+            const split = getWorkoutForSelectedDay();
+            const key = getDateKey();
+            const dayState = shredState[key];
+
+            document.getElementById('workout-day-badge').innerText = `${split.dayName} Split`;
+            document.getElementById('workout-title').innerText = split.title;
+            document.getElementById('workout-description').innerText = split.description;
+
+            const exercisesContainer = document.getElementById('workout-exercises-container');
+            exercisesContainer.innerHTML = '';
+
+            let totalSetsCount = 0;
+            let completedSetsCount = 0;
+
+            split.exercises.forEach((ex, exIdx) => {
+                totalSetsCount += ex.sets;
+
+                const card = document.createElement('div');
+                card.className = "glass rounded-[2rem] p-5 border border-white/5 space-y-4 relative";
+
+                // Generate set tick circles
+                let setsHTML = '';
+                for (let s = 0; s < ex.sets; s++) {
+                    const setKey = `${exIdx}-${s}`;
+                    const isChecked = dayState.workout[setKey] === true;
+                    if (isChecked) completedSetsCount++;
+
+                    const activeClass = isChecked 
+                        ? "bg-gold border-gold text-dark font-black shadow-lg shadow-gold/20" 
+                        : "bg-white/5 border-white/10 text-white/40 hover:border-gold/50";
+
+                    setsHTML += `
+                        <button onclick="toggleWorkoutSet(${exIdx}, ${s}, '${ex.name}')" 
+                                class="w-8 h-8 rounded-full border text-[11px] flex items-center justify-center transition-all ${activeClass}">
+                            ${isChecked ? '<i class="fa-solid fa-check text-[10px]"></i>' : s + 1}
+                        </button>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        <span class="text-[9px] font-black text-gold uppercase tracking-wider font-mono">${ex.reps} Reps | ${ex.sets} Sets</span>
+                        <h4 class="text-base font-bold text-white mt-0.5">${ex.name}</h4>
+                        <p class="text-[10px] text-white/40 font-medium italic mt-0.5"><i class="fa-solid fa-circle-info text-[8px] mr-1"></i>${ex.cue}</p>
+                    </div>
+                    <div class="flex items-center gap-3 mt-3 pt-3 border-t border-white/5">
+                        <span class="text-[9px] font-black text-white/30 uppercase tracking-widest mr-1">Tally Sets:</span>
+                        <div class="flex gap-2">
+                            ${setsHTML}
+                        </div>
+                    </div>
+                `;
+                exercisesContainer.appendChild(card);
+            });
+
+            // Update header completion tracker text
+            document.getElementById('workout-sets-progress').innerText = `${completedSetsCount} / ${totalSetsCount}`;
+
+            // Automatically check "Gym Workout" or "Cardio Hit" checklist fields on high set completions
+            const gymCheck = document.getElementById('check-lift');
+            const cardioCheck = document.getElementById('check-cardio');
+
+            // If checked sets count is high (>40%), auto check the Lift checklist
+            if (totalSetsCount > 0 && (completedSetsCount / totalSetsCount) >= 0.4) {
+                if (!dayState.checklist.lift) {
+                    dayState.checklist.lift = true;
+                    if (gymCheck) gymCheck.checked = true;
+                }
+            }
+
+            // If day is Tuesday/Friday and they checked the sprint/cardio items (last index of Tuesday/Friday)
+            const dayIndex = currentDate.getDay();
+            if ((dayIndex === 2 || dayIndex === 5) && dayState.workout[`6-0`] === true) {
+                if (!dayState.checklist.cardio) {
+                    dayState.checklist.cardio = true;
+                    if (cardioCheck) cardioCheck.checked = true;
+                }
+            }
+
+            // Sync database checklist state
+            localStorage.setItem('shred_state_v2', JSON.stringify(shredState));
+        }
+
+        // Toggle individual workout sets
+        function toggleWorkoutSet(exIdx, setIdx, exerciseName) {
+            const key = getDateKey();
+            const dayState = shredState[key];
+            const setKey = `${exIdx}-${setIdx}`;
+
+            dayState.workout[setKey] = !dayState.workout[setKey];
+
+            if (dayState.workout[setKey]) {
+                playAudio('sound-log');
+                // Trigger Rest Timer Countdown
+                startRestTimer(exerciseName);
+            } else {
+                playAudio('sound-bubble');
+            }
+
+            saveState();
+            renderWorkoutTab();
+        }
+
+        // ================= REST TIMER WIDGET LOGIC =================
+        function startRestTimer(exerciseName) {
+            // Clean up any existing timer
+            clearInterval(timerInterval);
+
+            timerSecondsRemaining = 90;
+            timerTotalDuration = 90;
+            
+            document.getElementById('timer-exercise-name').innerText = exerciseName;
+            document.getElementById('timer-countdown').innerText = `${timerSecondsRemaining}s`;
+            
+            const progressBar = document.getElementById('timer-progress-bar');
+            progressBar.style.width = '100%';
+            
+            const widget = document.getElementById('rest-timer-widget');
+            widget.classList.remove('hidden');
+
+            timerInterval = setInterval(() => {
+                timerSecondsRemaining--;
+                document.getElementById('timer-countdown').innerText = `${timerSecondsRemaining}s`;
+
+                // Update Progress bar width
+                const pct = (timerSecondsRemaining / timerTotalDuration) * 100;
+                progressBar.style.width = `${pct}%`;
+
+                if (timerSecondsRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    // Flash green visual beep
+                    progressBar.style.width = '100%';
+                    progressBar.className = "bg-success h-full rounded-full transition-all duration-100";
+                    document.getElementById('timer-countdown').innerText = "GO!";
+                    document.getElementById('timer-countdown').className = "text-right font-mono font-black text-lg text-success animate-bounce";
+                    playAudio('sound-complete');
+
+                    setTimeout(() => {
+                        widget.classList.add('hidden');
+                        document.getElementById('timer-countdown').className = "text-right font-mono font-bold text-lg text-white";
+                        progressBar.className = "bg-gold h-full rounded-full transition-all duration-1000";
+                    }, 5000);
+                }
+            }, 1000);
+        }
+
+        function adjustTimer(seconds) {
+            timerSecondsRemaining = Math.max(0, timerSecondsRemaining + seconds);
+            timerTotalDuration = Math.max(1, timerTotalDuration + seconds);
+            document.getElementById('timer-countdown').innerText = `${timerSecondsRemaining}s`;
+        }
+
+        function skipTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('rest-timer-widget').classList.add('hidden');
+            playAudio('sound-bubble');
+        }
+
+        let soundMuted = true;
+
+        function loadMuteState() {
+            const rawMute = localStorage.getItem('shred_sound_muted');
+            if (rawMute !== null) {
+                soundMuted = rawMute === 'true';
+            } else {
+                soundMuted = true; // default to muted
+            }
+            updateMuteButtonUI();
+        }
+
+        function toggleMute() {
+            soundMuted = !soundMuted;
+            localStorage.setItem('shred_sound_muted', soundMuted);
+            updateMuteButtonUI();
+        }
+
+        function updateMuteButtonUI() {
+            const btn = document.getElementById('sound-toggle-btn');
+            if (btn) {
+                if (soundMuted) {
+                    btn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                    btn.className = "w-8 h-8 rounded-full bg-white/5 border border-white/5 text-white/40 hover:text-gold flex items-center justify-center transition-all text-xs";
+                } else {
+                    btn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                    btn.className = "w-8 h-8 rounded-full bg-gold/10 border border-gold/30 text-gold flex items-center justify-center transition-all text-xs";
+                }
+            }
+        }
+
+        // Trigger safe sound output
+        function playAudio(elementId) {
+            if (soundMuted) return; // Do not play if muted
+            const sound = document.getElementById(elementId);
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => { /* Ignore autoplay block */ });
+            }
+        }
+
+        // Main UI updates coordinator
+        function updateUI() {
+            const key = getDateKey();
+            const day = shredState[key];
+
+            // 1. Update Meal Cards UI
+            let totCal = 0;
+            let totPro = 0;
+            let totCarbs = 0;
+            let totFat = 0;
+
+            for (let m = 1; m <= 3; m++) {
+                const mData = day.meals[m];
+                const macros = getMealMacros(m, day);
+                
+                // Update specific meal displays
+                const calDisp = document.getElementById(`meal-calories-display-${m}`);
+                const proDisp = document.getElementById(`meal-protein-display-${m}`);
+                if (calDisp) calDisp.innerText = `${macros.calories} kcal`;
+                if (proDisp) proDisp.innerText = `${macros.protein}g P`;
+
+                const card = document.getElementById(`meal-card-${m}`);
+                const check = document.getElementById(`meal-check-${m}`);
+
+                if (mData.logged) {
+                    if (card) card.className = "glass rounded-[2rem] p-5 border transition-all duration-300 relative gold-border-active bg-gold/5";
+                    if (check) check.className = "w-8 h-8 rounded-full border-2 border-gold bg-gold text-dark flex items-center justify-center text-xs font-black shadow-lg shadow-gold/20";
+                    
+                    totCal += macros.calories;
+                    totPro += macros.protein;
+                    totCarbs += macros.carbs;
+                    totFat += macros.fat;
+                } else {
+                    if (card) card.className = "glass rounded-[2rem] p-5 border border-white/5 transition-all duration-300 relative";
+                    if (check) check.className = "w-8 h-8 rounded-full border-2 border-white/10 flex items-center justify-center text-xs text-white/20 transition-all duration-300";
+                }
+            }
+
+            // 2. Add custom extras
+            const extrasContainer = document.getElementById('extra-items-container');
+            const extrasList = document.getElementById('extra-items-list');
+            if (day.extras && day.extras.length > 0) {
+                if (extrasList) extrasList.classList.remove('hidden');
+                if (extrasContainer) {
+                    extrasContainer.innerHTML = '';
+                    day.extras.forEach((ext, i) => {
+                        totCal += ext.calories;
+                        totPro += ext.protein;
+                        totCarbs += ext.carbs;
+                        totFat += ext.fat;
+
+                        const row = document.createElement('div');
+                        row.className = "flex justify-between items-center bg-white/5 border border-white/5 py-1.5 px-3 rounded-xl text-xs";
+                        row.innerHTML = `
+                            <div class="flex items-center gap-2">
+                                <button onclick="removeExtraItem(${i})" class="text-danger/40 hover:text-danger"><i class="fa-solid fa-circle-xmark"></i></button>
+                                <span class="font-bold text-white/80">${ext.name}</span>
+                            </div>
+                            <span class="font-mono text-white/40">${ext.calories} cal | <span class="text-success">${ext.protein}g P</span></span>
+                        `;
+                        extrasContainer.appendChild(row);
+                    });
+                }
+            } else {
+                if (extrasList) extrasList.classList.add('hidden');
+            }
+
+            // 3. Update macro targets & SVGs
+            const calValEl = document.getElementById('calorie-val');
+            const proValEl = document.getElementById('protein-val');
+            if (calValEl) calValEl.innerText = totCal;
+            if (proValEl) proValEl.innerText = totPro;
+
+            // SVGs Ring Offset update
+            const calorieRing = document.getElementById('calorie-ring');
+            if (calorieRing) {
+                const calPct = Math.min(totCal / GOAL_CALORIES, 1);
+                calorieRing.style.strokeDashoffset = 314.15 - (314.15 * calPct);
+            }
+
+            const proteinRing = document.getElementById('protein-ring');
+            if (proteinRing) {
+                const proPct = Math.min(totPro / GOAL_PROTEIN, 1);
+                proteinRing.style.strokeDashoffset = 314.15 - (314.15 * proPct);
+            }
+
+            // Set colors dynamically based on target adherence
+            const calorieStatus = document.getElementById('calorie-status');
+            if (calorieStatus && calorieRing) {
+                if (totCal > GOAL_CALORIES) {
+                    calorieRing.setAttribute('stroke', '#EF4444');
+                    calorieStatus.className = "text-[10px] font-bold text-danger mt-3 bg-danger/5 px-3 py-1 rounded-full uppercase tracking-wider";
+                    calorieStatus.innerText = `${totCal - GOAL_CALORIES} kcal over`;
+                } else {
+                    calorieRing.setAttribute('stroke', '#C9A66B');
+                    calorieStatus.className = "text-[10px] font-bold text-gold mt-3 bg-gold/5 px-3 py-1 rounded-full uppercase tracking-wider";
+                    calorieStatus.innerText = `${GOAL_CALORIES - totCal} kcal remaining`;
+                }
+            }
+
+            const proteinStatus = document.getElementById('protein-status');
+            if (proteinStatus && proteinRing) {
+                if (totPro >= GOAL_PROTEIN) {
+                    proteinRing.setAttribute('stroke', '#10B981');
+                    proteinStatus.className = "text-[10px] font-bold text-success mt-3 bg-success/5 px-3 py-1 rounded-full uppercase tracking-wider";
+                    proteinStatus.innerText = `protein goal hit!`;
+                } else {
+                    proteinRing.setAttribute('stroke', '#C9A66B');
+                    proteinStatus.className = "text-[10px] font-bold text-white/50 mt-3 bg-white/5 px-3 py-1 rounded-full uppercase tracking-wider";
+                    proteinStatus.innerText = `${GOAL_PROTEIN - totPro}g remaining`;
+                }
+            }
+
+            // 4. Carbs & Fats indicators
+            const carbTextEl = document.getElementById('carb-text');
+            const carbBarEl = document.getElementById('carb-bar');
+            if (carbTextEl) carbTextEl.innerText = `${totCarbs}g / ${GOAL_CARBS}g`;
+            if (carbBarEl) {
+                const carbPct = Math.min((totCarbs / GOAL_CARBS) * 100, 100);
+                carbBarEl.style.width = `${carbPct}%`;
+            }
+
+            const fatTextEl = document.getElementById('fat-text');
+            const fatBarEl = document.getElementById('fat-bar');
+            if (fatTextEl) fatTextEl.innerText = `${totFat}g / ${GOAL_FAT}g`;
+            if (fatBarEl) {
+                const fatPct = Math.min((totFat / GOAL_FAT) * 100, 100);
+                fatBarEl.style.width = `${fatPct}%`;
+            }
+
+            const summaryEl = document.getElementById('carb-fat-summary');
+            if (summaryEl) summaryEl.innerText = `C: ${totCarbs}g | F: ${totFat}g`;
+
+            // 5. Water UI
+            const waterLabel = document.getElementById('water-progress-label');
+            if (waterLabel) waterLabel.innerHTML = `${day.water} / 8 <span class="text-xs text-white/40 font-bold">cups</span>`;
+            for (let c = 1; c <= 8; c++) {
+                const cupBtn = document.getElementById(`cup-${c}`);
+                if (cupBtn) {
+                    if (day.water >= c) {
+                        cupBtn.className = "aspect-square rounded-xl bg-sky-500/20 border border-sky-400/40 text-xs text-sky-400 flex items-center justify-center transition-all scale-105 shadow-[0_0_10px_rgba(56,189,248,0.15)]";
+                    } else {
+                        cupBtn.className = "aspect-square rounded-xl bg-white/5 border border-white/5 text-xs text-white/10 flex items-center justify-center transition-all";
+                    }
+                }
+            }
+
+            // 6. Checklist Sync
+            const checkFastEl = document.getElementById('check-fast');
+            const checkWaterEl = document.getElementById('check-water');
+            const checkLiftEl = document.getElementById('check-lift');
+            const checkCardioEl = document.getElementById('check-cardio');
+            if (checkFastEl) checkFastEl.checked = day.checklist.fast;
+            if (checkWaterEl) checkWaterEl.checked = day.checklist.water;
+            if (checkLiftEl) checkLiftEl.checked = day.checklist.lift;
+            if (checkCardioEl) checkCardioEl.checked = day.checklist.cardio;
+
+            // 7. Streak & History Row
+            const streakCountEl = document.getElementById('streak-count');
+            if (streakCountEl) streakCountEl.innerText = calculateStreak();
+            renderHistoryRow();
+        }
+
+        // Export State Backup
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(shredState));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `shred_os_backup_${getDateKey()}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        // Import State Backup
+        function importDataPrompt() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.readAsText(file,'UTF-8');
+                reader.onload = readerEvent => {
+                    const content = readerEvent.target.result;
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (parsed && typeof parsed === 'object') {
+                            shredState = parsed;
+                            saveState();
+                            syncSlidersToState();
+                            updateUI();
+                            if (activeTab === 'workout') renderWorkoutTab();
+                            alert("Backup imported successfully!");
+                        }
+                    } catch(err) {
+                        alert("Invalid backup file format.");
+                    }
+                }
+            }
+            input.click();
+        }
+
+        // Reset all logs
+        function resetAllData() {
+            if (confirm("Are you sure you want to delete ALL logged history? This cannot be undone.")) {
+                shredState = {};
+                saveState();
+                initDateState(getDateKey());
+                syncSlidersToState();
+                updateUI();
+                if (activeTab === 'workout') renderWorkoutTab();
+            }
+        }
+
+        // Main initial bootstrap
+        window.addEventListener('DOMContentLoaded', () => {
+            loadMuteState();
+            loadState();
+            const key = getDateKey();
+            initDateState(key);
+            syncSlidersToState();
+            
+            const dateStrEl = document.getElementById('current-date-str');
+            if (dateStrEl) dateStrEl.innerText = key;
+            updateUI();
+            
+            // Start clock countdown
+            updateFastingTimer();
+            setInterval(updateFastingTimer, 1000);
+        });
+    </script>
+</body>
+</html>

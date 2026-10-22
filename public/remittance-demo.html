@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remittance Demo - Web2.5 Pipeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0b0908;
+            --card: rgba(26, 22, 20, 0.7);
+            --primary: #D4A574; /* Caramel Gold */
+            --primary-glow: rgba(212, 165, 116, 0.2);
+            --text: #f5f0eb;
+            --text-muted: #9c928a;
+            --border: rgba(212, 165, 116, 0.15);
+            --green: #10b981;
+            --green-glow: rgba(16, 185, 129, 0.2);
+            --blue: #3b82f6;
+            --phone-bg: #141211;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(212, 165, 116, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            max-width: 800px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 30%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .demo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+            position: relative;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        /* Phone Mockups */
+        .phone {
+            width: 320px;
+            height: 640px;
+            background: var(--phone-bg);
+            border: 8px solid #2a2522;
+            border-radius: 40px;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 165, 116, 0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .phone::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 25px;
+            background: #2a2522;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 10;
+        }
+
+        .phone-screen {
+            flex: 1;
+            padding: 24px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* App styles */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+
+        .app-logo {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #4a3e3d;
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .card-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .card-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #0b0908;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 15px var(--primary-glow);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 14px;
+            color: var(--text);
+            font-family: inherit;
+            outline: none;
+            font-size: 14px;
+        }
+
+        .input:focus {
+            border-color: var(--primary);
+        }
+
+        .input-addon {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Flow Indicator Line */
+        .flow-bridge {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .connector-line {
+            width: 120px;
+            height: 4px;
+            background: rgba(212, 165, 116, 0.2);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background: var(--primary);
+            border-radius: 50%;
+            position: absolute;
+            top: -4px;
+            left: -15px;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        @keyframes travel {
+            0% { left: -15px; background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+            100% { left: 130px; background: var(--green); box-shadow: 0 0 10px var(--green); }
+        }
+
+        .flow-status {
+            margin-top: 15px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-muted);
+            text-align: center;
+            max-width: 150px;
+        }
+
+        /* Dynamic WhatsApp Alert overlay */
+        .wa-notification {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            right: 10px;
+            background: #25d366;
+            color: #000;
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            z-index: 100;
+            transform: translateY(-100px);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .wa-notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .wa-logo {
+            background: #fff;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+
+        .wa-body {
+            font-size: 11px;
+            line-height: 1.3;
+        }
+
+        .wa-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        /* Receipt modal details */
+        .receipt {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text);
+            text-align: left;
+            border-top: 1px dashed var(--border);
+            border-bottom: 1px dashed var(--border);
+            padding: 12px 0;
+            margin: 12px 0;
+            line-height: 1.6;
+        }
+
+        .receipt-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Step Guide instructions */
+        .guide-box {
+            background: rgba(212, 165, 116, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .guide-step {
+            display: none;
+        }
+
+        .guide-step.active {
+            display: block;
+        }
+
+        .step-num {
+            display: inline-block;
+            background: var(--primary);
+            color: #000;
+            font-weight: 700;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            line-height: 24px;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .step-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* QR Code Scanner overlay */
+        .qr-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .qr-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .qr-frame {
+            width: 160px;
+            height: 160px;
+            border: 4px solid var(--primary);
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        .qr-frame img {
+            width: 140px;
+            height: 140px;
+        }
+
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: var(--primary);
+            top: 0;
+            left: 0;
+            box-shadow: 0 0 8px var(--primary);
+            animation: scan 2s infinite linear;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; }
+            50% { top: 100%; }
+            100% { top: 0%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Rico Pay: Gasless US-to-Honduras Remittance</h1>
+        <p>Follow the interactive steps below to see how $100 moves from a US debit card to physical cash in Quimistan, Honduras in seconds for $0 fees.</p>
+    </div>
+
+    <div class="demo-container">
+
+        <!-- PHONE 1: US SENDER (OSCAR IN MIAMI) -->
+        <div class="phone" id="phoneSender">
+            <div class="phone-screen">
+                <div class="app-header">
+                    <div class="app-logo"><span>⚡</span> RicoPay US</div>
+                    <div class="avatar">O</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Link Debit Card</div>
+                    <div style="font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                        <span>💳</span> Visa ending in •••• 8876
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 10px;">
+                    <label class="label">Send to (Honduras Phone)</label>
+                    <div class="input-group">
+                        <input type="text" class="input" value="+504 9982-4574" readonly>
+                        <span class="input-addon">📞</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="label">Amount to Send</label>
+                    <div class="input-group">
+                        <input type="text" class="input" value="100.00" readonly style="font-size: 18px; font-weight: 700; color: #fff;">
+                        <span class="input-addon">USD</span>
+                    </div>
+                </div>
+
+                <div class="card" style="background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.2);">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                        <span style="color: var(--text-muted);">Transfer Fee:</span>
+                        <span style="color: var(--green); font-weight: 600;">$0.00 Free</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span style="color: var(--text-muted);">Arc Network Gas:</span>
+                        <span style="color: var(--primary); font-family: monospace;">$0.001 USDC</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: auto;">
+                    <button class="btn btn-primary" id="sendBtn" onclick="startTransfer()">
+                        🚀 Confirm & Send $100
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- THE FLOW CONNECTOR -->
+        <div class="flow-bridge">
+            <div class="connector-line">
+                <div class="pulse-dot" id="dot"></div>
+            </div>
+            <div class="flow-status" id="bridgeStatus">READY TO TRANSMIT</div>
+        </div>
+
+        <!-- PHONE 2: HONDURAS RECEIVER (MOM IN QUIMISTAN) -->
+        <div class="phone" id="phoneReceiver">
+            <!-- WhatsApp Alert Overlay -->
+            <div class="wa-notification" id="waAlert">
+                <div class="wa-logo">💬</div>
+                <div class="wa-body">
+                    <div class="wa-title">QuimiEats Remesas</div>
+                    <div>¡Hola María! Recibiste $100.00 USD (L 2,460.00) de Oscar en USA. Listos para usar.</div>
+                </div>
+            </div>
+
+            <!-- QR Code Overlay -->
+            <div class="qr-overlay" id="qrOverlay">
+                <div class="qr-frame">
+                    <div class="scan-line"></div>
+                    <!-- Sample QR Code -->
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=RicoPayPayout-100USD-Maria" alt="QR Payout">
+                </div>
+                <div style="font-size: 13px; font-weight: 600; color: var(--primary); margin-top: 15px; text-align: center; padding: 0 20px;">
+                    Scan at Rich Aroma Register to Collect Cash
+                </div>
+                <button class="btn btn-secondary" style="margin-top: 15px; width: auto; padding: 8px 16px;" onclick="simulateBaristaScan()">
+                    [Simulate Barista Scan]
+                </button>
+            </div>
+
+            <div class="phone-screen">
+                <div class="app-header">
+                    <div class="app-logo"><span>☕</span> Rich Aroma Pay</div>
+                    <div class="avatar" style="border-color: var(--green);">M</div>
+                </div>
+
+                <div class="card" style="border-color: rgba(16, 185, 129, 0.3);">
+                    <div class="card-title">Disponible para Retiro</div>
+                    <div class="card-value" id="hnlBal" style="color: var(--text-muted);">L 0.00</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;" id="usdBal">
+                        Equivalent to $0.00 USD
+                    </div>
+                </div>
+
+                <!-- Transaction Log -->
+                <div class="card" style="flex: 1; margin-bottom: 16px; overflow-y: auto;">
+                    <div class="card-title" style="margin-bottom: 10px;">Actividad Reciente</div>
+                    <div id="receiverHistory" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div style="text-align: center; font-size: 12px; color: var(--text-muted); padding-top: 30px;">
+                            No transaction history.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-top: auto;">
+                    <button class="btn btn-secondary" id="cashoutBtn" disabled onclick="showQR()">
+                        💵 Cash Out at Rich Aroma
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- GUIDE INSTRUCTIONS -->
+    <div class="guide-box">
+        <div class="guide-step active" id="guide-1">
+            <span class="step-num">1</span>
+            <div class="step-text">
+                Oscar is in Miami and wants to send $100 to his mother, Maria, in Quimistan. 
+                Click <strong>"Confirm & Send $100"</strong> on the left phone to start the transaction.
+            </div>
+        </div>
+        <div class="guide-step" id="guide-2">
+            <span class="step-num">2</span>
+            <div class="step-text">
+                The money has been deposited directly into the on-chain pipeline. 
+                Watch the USDC stablecoin travel across the ocean from Miami to Quimistan.
+            </div>
+        </div>
+        <div class="guide-step" id="guide-3">
+            <span class="step-num">3</span>
+            <div class="step-text">
+                The transaction settled in 2 seconds! Maria receives an automated notification on her phone. 
+                Click the <strong>"Cash Out at Rich Aroma"</strong> button on the right phone to collect cash.
+            </div>
+        </div>
+        <div class="guide-step" id="guide-4">
+            <span class="step-num">4</span>
+            <div class="step-text">
+                Maria is now at the Rich Aroma Coffee Shop register. She shows the secure transaction QR code. 
+                Click <strong>"[Simulate Barista Scan]"</strong> to complete the cash handover.
+            </div>
+        </div>
+        <div class="guide-step" id="guide-5">
+            <span class="step-num">5</span>
+            <div class="step-text">
+                🎉 Success! The barista hands Maria L2,460 physical Lempiras. The coffee shop receives $100 USDC in its merchant wallet to pay for supplies or fund the automated bot, and Oscar saved $15 in wire fees!
+                <br><br>
+                <button class="btn btn-secondary" style="width: auto; display: inline-block;" onclick="resetDemo()">Restart Demo</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setGuideStep(num) {
+            document.querySelectorAll('.guide-step').forEach(step => step.classList.remove('active'));
+            document.getElementById(`guide-${num}`).classList.add('active');
+        }
+
+        function startTransfer() {
+            // Disable send button
+            document.getElementById('sendBtn').disabled = true;
+            document.getElementById('sendBtn').innerText = 'Processing...';
+
+            setGuideStep(2);
+            document.getElementById('bridgeStatus').innerText = 'TRANSMITTING USDC...';
+
+            const dot = document.getElementById('dot');
+            dot.style.animation = 'travel 2.5s forwards linear';
+
+            setTimeout(() => {
+                // Settle on the other side
+                dot.style.animation = 'none';
+                document.getElementById('bridgeStatus').innerText = 'SETTLED ON-CHAIN';
+                document.getElementById('sendBtn').innerText = 'Sent ✅';
+                
+                // Show WhatsApp Notification
+                const alertBox = document.getElementById('waAlert');
+                alertBox.classList.add('show');
+
+                // Trigger WhatsApp Notification tone/reveal
+                setTimeout(() => {
+                    alertBox.classList.remove('show');
+                    
+                    // Update Receiver Balances
+                    document.getElementById('hnlBal').innerText = 'L 2,460.00';
+                    document.getElementById('hnlBal').style.color = 'var(--green)';
+                    document.getElementById('usdBal').innerText = 'Equivalent to $100.00 USD';
+                    
+                    // Update Receiver History
+                    document.getElementById('receiverHistory').innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;">
+                            <div>
+                                <div style="font-weight:600; font-size: 13px; color: var(--green);">Recibido (Remesa)</div>
+                                <div style="font-size:10px; color: var(--text-muted);">From Oscar (USA) • 2s ago</div>
+                            </div>
+                            <div style="font-weight: 700; font-size: 14px; color: var(--green);">+ L 2,460.00</div>
+                        </div>
+                    `;
+
+                    // Enable Cashout
+                    document.getElementById('cashoutBtn').disabled = false;
+                    document.getElementById('cashoutBtn').classList.remove('btn-secondary');
+                    document.getElementById('cashoutBtn').classList.add('btn-primary');
+
+                    setGuideStep(3);
+                }, 4000);
+
+            }, 2500);
+        }
+
+        function showQR() {
+            document.getElementById('qrOverlay').classList.add('show');
+            setGuideStep(4);
+        }
+
+        function simulateBaristaScan() {
+            document.getElementById('qrOverlay').classList.remove('show');
+            
+            // Adjust balances
+            document.getElementById('hnlBal').innerText = 'L 0.00';
+            document.getElementById('hnlBal').style.color = 'var(--text-muted)';
+            document.getElementById('usdBal').innerText = 'Equivalent to $0.00 USD';
+            
+            // Update History to show payout complete
+            document.getElementById('receiverHistory').innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px;">
+                    <div>
+                        <div style="font-weight:600; font-size: 13px; color: var(--text-muted);">Retiro en Caja (Rich Aroma)</div>
+                        <div style="font-size:10px; color: var(--text-muted);">Processed by Barista • Just now</div>
+                    </div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--red);">- L 2,460.00</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px;">
+                    <div>
+                        <div style="font-weight:600; font-size: 13px; color: var(--green);">Recibido (Remesa)</div>
+                        <div style="font-size:10px; color: var(--text-muted);">From Oscar (USA)</div>
+                    </div>
+                    <div style="font-weight: 700; font-size: 14px; color: var(--green);">+ L 2,460.00</div>
+                </div>
+            `;
+
+            // Disable Cashout
+            document.getElementById('cashoutBtn').disabled = true;
+            document.getElementById('cashoutBtn').classList.add('btn-secondary');
+            document.getElementById('cashoutBtn').classList.remove('btn-primary');
+
+            setGuideStep(5);
+        }
+
+        function resetDemo() {
+            // Reset Sender
+            document.getElementById('sendBtn').disabled = false;
+            document.getElementById('sendBtn').innerText = '🚀 Confirm & Send $100';
+            
+            // Reset dot
+            const dot = document.getElementById('dot');
+            dot.style.animation = 'none';
+            dot.style.left = '-15px';
+            
+            // Reset status
+            document.getElementById('bridgeStatus').innerText = 'READY TO TRANSMIT';
+
+            // Reset Receiver
+            document.getElementById('hnlBal').innerText = 'L 0.00';
+            document.getElementById('hnlBal').style.color = 'var(--text-muted)';
+            document.getElementById('usdBal').innerText = 'Equivalent to $0.00 USD';
+            document.getElementById('receiverHistory').innerHTML = `
+                <div style="text-align: center; font-size: 12px; color: var(--text-muted); padding-top: 30px;">
+                    No transaction history.
+                </div>
+            `;
+            document.getElementById('cashoutBtn').disabled = true;
+            document.getElementById('cashoutBtn').classList.add('btn-secondary');
+            document.getElementById('cashoutBtn').classList.remove('btn-primary');
+
+            setGuideStep(1);
+        }
+    </script>
+</body>
+</html>

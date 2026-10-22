@@ -17,86 +17,37 @@
   "routes": [
     {
       "src": "/",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/quimieats.html"
     },
     {
       "src": "/index.html",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/quimieats.html"
     },
     {
       "src": "/admin",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/quimieats-admin.html"
     },
     {
       "src": "/admin",
       "dest": "/public/admin.html"
-    },
-    {
-      "src": "/simulator",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/simulator.html",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/simulator",
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/simulator.html",
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/dev-hub",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/dev-hub.html",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/simulator.html",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/hub",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/dev-hub.html"
-    },
-    {
-      "src": "/ecosystem",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
-      "dest": "/public/dev-hub.html"
-    },
-    {
-      "src": "/hub",
-      "dest": "/public/hub.html"
-    },
-    {
-      "src": "/ecosystem",
-      "dest": "/public/hub.html"
     },
     {
       "src": "/socios",
@@ -107,24 +58,12 @@
       "dest": "/public/partner-os.html"
     },
     {
-      "src": "/partner",
-      "dest": "/public/partner.html"
-    },
-    {
       "src": "/onboarding",
       "dest": "/public/onboarding.html"
     },
     {
       "src": "/driver-signup",
       "dest": "/public/driver-signup.html"
-    },
-    {
-      "src": "/test-pos",
-      "dest": "/public/test-pos-layout.html"
-    },
-    {
-      "src": "/test-tracking",
-      "dest": "/public/test-tracking.html"
     },
     {
       "src": "/os/?",
@@ -328,17 +267,32 @@
     },
     {
       "src": "/terminal",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/kitchen.html"
     },
     {
       "src": "/os",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/os.html"
     },
     {
       "src": "/driver-portal",
-      "has": [{ "type": "host", "value": "(.*)quimieats.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(.*)quimieats.com"
+        }
+      ],
       "dest": "/public/driver-portal.html"
     },
     {
@@ -351,7 +305,7 @@
     },
     {
       "src": "/pos",
-      "dest": "/public/drive-thru.html"
+      "dest": "/public/pos-v2.html"
     },
     {
       "src": "/kitchen",
@@ -388,14 +342,6 @@
     {
       "src": "/creators",
       "dest": "/src/creators/creators.html"
-    },
-    {
-      "src": "/admin-new",
-      "dest": "/public/admin-new.html"
-    },
-    {
-      "src": "/academy",
-      "dest": "/public/academy.html"
     },
     {
       "src": "/kaiser",
