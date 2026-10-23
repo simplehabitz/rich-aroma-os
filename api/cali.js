@@ -674,23 +674,59 @@ module.exports = async (req, res) => {
                 dbPayload.image_url = finalImageUrl;
             }
 
-            // Sync with Supabase if online
+            // Supabase is the source of truth; the local JSON file below is only a
+            // dev cache. The old code fired the Supabase write without ever checking
+            // its result, so a save could fail there (stand-in ids from the admin
+            // page's built-in catalog match no row — or are not even uuids) while
+            // the page still toasted success. Now the write is checked, and a PUT
+            // whose id has no row creates the product for real.
+            const isUuidId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '');
+            let savedRow = null;
             try {
-                if (req.method === 'POST') {
-                    await supabase.from('cali_products').insert(dbPayload);
+                if (req.method === 'POST' || !isUuidId) {
+                    if (req.method === 'PUT' && !name) {
+                        return res.status(404).json({ error: 'Item is not in the catalog yet - open Edit and Save it first.' });
+                    }
+                    if (!isUuidId && req.method === 'PUT') dbPayload.id = require('crypto').randomUUID();
+                    const { data, error } = await supabase.from('cali_products').insert(dbPayload).select();
+                    if (error) { console.error("[cali.js] Product insert failed:", error); return res.status(500).json({ error: error.message }); }
+                    savedRow = (data && data[0]) || dbPayload;
                 } else {
-                    await supabase.from('cali_products').update(dbPayload).eq('id', id);
+                    // Update only the fields this save actually sent — rebuilding the
+                    // payload from defaults would let a stock toggle rename the
+                    // product 'Artisanal Drink' at $0.
+                    const updatePayload = {};
+                    if (name !== undefined) updatePayload.name = dbPayload.name;
+                    if (req.body && req.body.price !== undefined) updatePayload.price = dbPayload.price;
+                    if (req.body && req.body.active !== undefined) updatePayload.active = dbPayload.active;
+                    if (bottles_per_pack !== undefined) updatePayload.bottles_per_pack = dbPayload.bottles_per_pack;
+                    if (options !== undefined) updatePayload.options = dbPayload.options;
+                    if (finalImageUrl) updatePayload.image_url = finalImageUrl;
+                    const { data, error } = await supabase.from('cali_products').update(updatePayload).eq('id', id).select();
+                    if (error) { console.error("[cali.js] Product update failed:", error); return res.status(500).json({ error: error.message }); }
+                    if (data && data.length > 0) {
+                        savedRow = data[0];
+                    } else if (name) {
+                        // Stand-in id left over from the old database: create it.
+                        const ins = await supabase.from('cali_products').insert(dbPayload).select();
+                        if (ins.error) { console.error("[cali.js] Product insert failed:", ins.error); return res.status(500).json({ error: ins.error.message }); }
+                        savedRow = (ins.data && ins.data[0]) || dbPayload;
+                    } else {
+                        return res.status(404).json({ error: 'Item is not in the catalog yet - open Edit and Save it first.' });
+                    }
                 }
             } catch (sbErr) {
-                console.warn("[cali.js] Supabase product sync skipped/failed:", sbErr.message);
+                console.error("[cali.js] Supabase product save failed:", sbErr);
+                return res.status(500).json({ error: 'Product save failed: ' + (sbErr.message || 'database error') });
             }
+            Object.assign(dbPayload, savedRow || {});
 
-            // Always update local file
+            // Update the local dev cache to match what was saved
             let prods = loadLocalProds();
             if (req.method === 'POST') {
                 prods.unshift(dbPayload);
             } else {
-                const idx = prods.findIndex(p => p.id === id);
+                const idx = prods.findIndex(p => p.id === id || p.id === dbPayload.id);
                 if (idx >= 0) {
                     prods[idx] = { ...prods[idx], ...dbPayload };
                 } else {

@@ -1216,7 +1216,13 @@
                 if (res.ok) {
                     const prods = await res.json();
                     if (prods && prods.length > 0) {
-                        dbProducts = prods;
+                        // Real rows first; keep the built-in stand-ins that have no
+                        // real row yet (matched by name) so the rest of the catalog
+                        // stays listed — and editable — until each item is saved
+                        // for real.
+                        const fallback = [...BOTTLE_CATALOG.map(b => ({ ...b, category: 'bottles', active: true })), ...HOT_CATALOG.map(h => ({ ...h, category: 'hot', active: true, is_hot: true }))];
+                        const realNames = new Set(prods.map(p => (p.name || '').trim().toLowerCase()));
+                        dbProducts = [...prods, ...fallback.filter(f => !realNames.has((f.name || '').trim().toLowerCase()))];
                     } else {
                         // Use default catalog items as base
                         dbProducts = [...BOTTLE_CATALOG.map(b => ({ ...b, category: 'bottles', active: true })), ...HOT_CATALOG.map(h => ({ ...h, category: 'hot', active: true, is_hot: true }))];
