@@ -150,6 +150,7 @@
                 <button onclick="switchTab('overview')" id="tab-overview" class="font-bold text-blue-600 border-b-2 border-blue-600 pb-2 px-2">Overview</button>
                 <button onclick="switchTab('employees')" id="tab-employees" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Employees</button>
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
+                <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
             </div>
             
             <!-- Store Status Toggle -->
@@ -265,6 +266,43 @@
                 <pre id="dash-debug" class="text-[10px] text-cyan-400 font-mono h-32 overflow-y-auto whitespace-pre-wrap"></pre>
             </div>
         </div>
+        <!-- TAB: PROMO CODES -->
+        <div id="section-promocodes" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Códigos Promo</h2>
+                <button onclick="loadPromoCodes()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest">Actualizar</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">Los códigos descuentan <strong>solo artículos marcados como "Hecho en casa"</strong> en el menú. El cliente presenta el código y la cajera lo aplica desde el botón Descuento en la caja (POS). El servidor verifica el código en cada orden y nunca descuenta más del % sobre los artículos hechos en casa.</p>
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-4">Crear código</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <input type="text" id="pc-code" placeholder="CÓDIGO (ej: BIENVENIDO)" class="border rounded-lg p-3 uppercase font-bold outline-none focus:border-green-500">
+                    <input type="number" id="pc-percent" min="1" max="100" placeholder="% Descuento" class="border rounded-lg p-3 outline-none focus:border-green-500">
+                    <input type="number" id="pc-max" min="1" placeholder="Usos máx (opcional)" class="border rounded-lg p-3 outline-none focus:border-green-500">
+                    <input type="date" id="pc-expires" class="border rounded-lg p-3 outline-none focus:border-green-500">
+                    <button onclick="savePromoCode()" class="bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700">Crear</button>
+                </div>
+                <p id="pc-form-msg" class="text-xs mt-3"></p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Código</th>
+                            <th class="p-4">Descuento</th>
+                            <th class="p-4">Usos</th>
+                            <th class="p-4">Expira</th>
+                            <th class="p-4">Estado</th>
+                            <th class="p-4 text-right">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="promocodes-table" class="divide-y divide-gray-100 text-sm">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- TAB: MENU -->
         <div id="section-menu" class="hidden">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -658,6 +696,12 @@
                     <input type="text" id="edit-item-desc" class="w-full border rounded-lg p-3 outline-none focus:border-green-500">
                 </div>
                 <div>
+                    <label class="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider cursor-pointer">
+                        <input type="checkbox" id="edit-item-house-made" class="w-5 h-5 text-green-600">
+                        🏠 Hecho en casa (aplica códigos promo)
+                    </label>
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Image URL</label>
                     <div class="flex gap-2">
                         <input type="text" id="edit-item-image" class="flex-1 border rounded-lg p-3 outline-none focus:border-green-500" placeholder="URL or leave blank">
@@ -706,6 +750,12 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Price (Lempiras)</label>
                     <input type="number" id="new-menu-price" class="w-full border rounded-lg p-3 outline-none focus:border-green-500" placeholder="0">
+                </div>
+                <div>
+                    <label class="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase cursor-pointer">
+                        <input type="checkbox" id="new-menu-house-made" class="w-5 h-5 text-green-600">
+                        🏠 Hecho en casa (aplica códigos promo)
+                    </label>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Description (Optional)</label>
@@ -1170,23 +1220,27 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
+                const sections = ['overview', 'employees', 'menu', 'promocodes'];
+                if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
                     if (el) el.classList.add('hidden');
 
                     const tab = document.getElementById(`tab-${id}`);
-
+                    if (tab) tab.className = "font-bold text-gray-500 hover:text-gray-800 pb-2 px-2";
                 });
 
                 const activeSection = document.getElementById(`section-${tabId}`);
                 if (activeSection) activeSection.classList.remove('hidden');
 
                 const activeTab = document.getElementById(`tab-${tabId}`);
+                if (activeTab) activeTab.className = "font-bold text-blue-600 border-b-2 border-blue-600 pb-2 px-2";
 
 
                 if(tabId === 'overview') loadData();
                 if(tabId === 'employees') loadEmployees();
                 if(tabId === 'menu') { loadMenu(); loadModifiersDatabase(); }
+                if(tabId === 'promocodes') loadPromoCodes();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
@@ -1306,6 +1360,83 @@
 
         // --- QUIMIEATS LOGIC ---
         let activeQuimiPartners = [];
+
+        // --- PROMO CODES (house-made items only) ---
+        async function loadPromoCodes() {
+            const tbody = document.getElementById('promocodes-table');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-gray-400 italic">Cargando...</td></tr>';
+            try {
+                const res = await fetch('/api/promos?action=codes_list', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+                if (!data.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-gray-400 italic">Sin códigos todavía. Crea el primero arriba.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = data.map(c => `
+                    <tr class="border-t">
+                        <td class="p-4 font-mono font-bold">${c.code}</td>
+                        <td class="p-4">${c.percent}%</td>
+                        <td class="p-4">${c.uses || 0}${c.max_uses ? ' / ' + c.max_uses : ''}</td>
+                        <td class="p-4">${c.expires_at ? new Date(c.expires_at).toLocaleDateString() : '—'}</td>
+                        <td class="p-4">${c.active ? '<span class="text-green-600 font-bold">Activo</span>' : '<span class="text-gray-400 font-bold">Inactivo</span>'}</td>
+                        <td class="p-4 text-right whitespace-nowrap">
+                            <button onclick="togglePromoCode(${c.id}, ${!c.active})" class="text-blue-600 hover:text-blue-800 text-xs font-bold mr-3">${c.active ? 'Desactivar' : 'Activar'}</button>
+                            <button onclick="deletePromoCode(${c.id})" class="text-red-500 hover:text-red-700 text-xs font-bold">Eliminar</button>
+                        </td>
+                    </tr>`).join('');
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-red-500">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function savePromoCode() {
+            const code = document.getElementById('pc-code').value.trim().toUpperCase();
+            const percent = parseInt(document.getElementById('pc-percent').value);
+            const max = document.getElementById('pc-max').value;
+            const exp = document.getElementById('pc-expires').value;
+            const msg = document.getElementById('pc-form-msg');
+            if (!code || isNaN(percent) || percent < 1 || percent > 100) {
+                msg.innerText = 'Código y un % entre 1 y 100 son requeridos.';
+                msg.className = 'text-xs mt-3 text-red-500';
+                return;
+            }
+            try {
+                const res = await fetch('/api/promos?action=code_save', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ code, percent, max_uses: max ? parseInt(max) : null, expires_at: exp ? new Date(exp + 'T23:59:59').toISOString() : null })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+                msg.innerText = '✅ Código guardado: ' + data.code + ' (' + data.percent + '% en artículos hechos en casa)';
+                msg.className = 'text-xs mt-3 text-green-600';
+                document.getElementById('pc-code').value = '';
+                document.getElementById('pc-percent').value = '';
+                document.getElementById('pc-max').value = '';
+                document.getElementById('pc-expires').value = '';
+                loadPromoCodes();
+            } catch (e) {
+                msg.innerText = 'Error: ' + e.message;
+                msg.className = 'text-xs mt-3 text-red-500';
+            }
+        }
+
+        async function togglePromoCode(id, active) {
+            try {
+                await fetch('/api/promos?action=code_save', { method: 'POST', headers: getHeaders(), body: JSON.stringify({ id, active }) });
+            } catch (e) { console.error(e); }
+            loadPromoCodes();
+        }
+
+        async function deletePromoCode(id) {
+            if (!confirm('¿Eliminar este código promo?')) return;
+            try {
+                await fetch(`/api/promos?action=code_delete&id=${id}`, { method: 'DELETE', headers: getHeaders() });
+            } catch (e) { console.error(e); }
+            loadPromoCodes();
+        }
 
         async function loadQuimiLeads() {
             logDebug("Loading QuimiEats data...");
@@ -2119,7 +2250,7 @@
         // Global handlers to fix escaping issues (like Niah's Licuadito)
         window.editItem = function(id) {
             const item = window.allMenuItems.find(i => i.id === id);
-            if (item) openEditItemModal(item.id, item.name, item.category, item.price, item.name_es || '', item.image_url || '');
+            if (item) openEditItemModal(item.id, item.name, item.category, item.price, item.name_es || '', item.image_url || '', item.is_house_made);
         };
         window.editRecipe = function(id) {
             const item = window.allMenuItems.find(i => i.id === id);
@@ -2240,13 +2371,14 @@
             }
         }
 
-        function openEditItemModal(id, name, category, price, desc, img) {
+        function openEditItemModal(id, name, category, price, desc, img, houseMade) {
             document.getElementById('edit-item-id').value = id;
             document.getElementById('edit-item-name').value = name;
             document.getElementById('edit-item-category').value = category;
             document.getElementById('edit-item-price').value = price;
             document.getElementById('edit-item-desc').value = desc;
             document.getElementById('edit-item-image').value = img;
+            document.getElementById('edit-item-house-made').checked = !!houseMade;
             document.getElementById('edit-menu-item-modal').classList.remove('hidden');
         }
 
@@ -2326,7 +2458,8 @@
                 category: document.getElementById('edit-item-category').value,
                 price: parseFloat(document.getElementById('edit-item-price').value),
                 description: document.getElementById('edit-item-desc').value,
-                image_url: document.getElementById('edit-item-image').value
+                image_url: document.getElementById('edit-item-image').value,
+                is_house_made: document.getElementById('edit-item-house-made').checked
             };
 
             btn.disabled = true; btn.innerText = 'Saving...';
@@ -2639,7 +2772,8 @@
                         price, 
                         description: desc, 
                         available: true,
-                        restaurant_id: restaurantId 
+                        restaurant_id: restaurantId,
+                        is_house_made: document.getElementById('new-menu-house-made').checked
                     })
                 });
                 if (res.ok) {

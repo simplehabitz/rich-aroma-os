@@ -5,6 +5,29 @@ const { deductInventoryForOrder } = require('./inventory-service');
 const { notifyOrder } = require('./email-service');
 
 /**
+ * Promo-code ceiling: a code may discount ONLY house-made items.
+ * Returns the maximum discount the server will honor for the code's percent.
+ * The POS rounds each item's net price to the nearest L.5, so the ceiling
+ * includes that rounding slack per eligible unit.
+ */
+function promoEligibleCap(items, percent) {
+    let subtotal = 0;
+    let units = 0;
+    (items || []).forEach(i => {
+        if (i && i.is_house_made === true) {
+            subtotal += (parseFloat(i.price) || 0) * (i.qty || 1);
+            units += (i.qty || 1);
+        }
+    });
+    const raw = subtotal * ((parseFloat(percent) || 0) / 100);
+    return {
+        cap: parseFloat((raw + (units * 2.5) + 0.01).toFixed(2)),
+        eligibleSubtotal: parseFloat(subtotal.toFixed(2)),
+        eligibleUnits: units
+    };
+}
+
+/**
  * Main Order Orchestrator for Rich Aroma OS & QuimiEats
  */
 async function createOrder(orderRequest, supabase = defaultSupabase) {
@@ -23,6 +46,11 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
     const guestPhone = orderRequest.guestPhone || orderRequest.guest_phone;
     const scheduledFor = orderRequest.scheduledFor || orderRequest.scheduled_for;
     const category = orderRequest.category;
+    let promoCode = (orderRequest.promoCode || orderRequest.promo_code || '').toString().trim().toUpperCase() || null;
+    if (!promoCode && notes) {
+        const metaMatch = String(notes).match(/\[DISC_META:(\{[^\]]*\})\]/);
+        if (metaMatch) { try { const meta = JSON.parse(metaMatch[1]); if (meta.c) promoCode = String(meta.c).trim().toUpperCase(); } catch (e) {} }
+    }
 
     const targetResId = restaurantId || 'rich-aroma';
     const cleanPhone = (customerPhone || guestPhone || '').replace(/\D/g, '');
@@ -148,6 +176,32 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             }
         }
 
+        // 2.5 Promo Code Verification (house-made items only; the register's discount is never trusted past the ceiling)
+        let promoRow = null;
+        let promoApplied = false;
+        let promoNote = '';
+        if (promoCode) {
+            const { data: row } = await supabase.from('promo_codes').select('*').eq('code', promoCode).maybeSingle();
+            const usable = row && row.active !== false && (!row.expires_at || new Date(row.expires_at).getTime() > Date.now()) && (row.max_uses == null || (row.uses || 0) < row.max_uses);
+            if (usable) {
+                promoRow = row;
+                const { cap } = promoEligibleCap(finalOrderData.items, row.percent);
+                if ((parseFloat(finalOrderData.discount) || 0) > cap) {
+                    const excess = parseFloat((finalOrderData.discount - cap).toFixed(2));
+                    finalOrderData.discount = cap;
+                    finalOrderData.total = parseFloat(((parseFloat(finalOrderData.total) || 0) + excess).toFixed(2));
+                }
+                promoApplied = (parseFloat(finalOrderData.discount) || 0) > 0;
+                if (promoApplied) promoNote = `[PROMO: ${row.code} -${row.percent}% CASA]`;
+            } else {
+                if ((parseFloat(finalOrderData.discount) || 0) > 0) {
+                    finalOrderData.total = parseFloat(((parseFloat(finalOrderData.total) || 0) + (parseFloat(finalOrderData.discount) || 0)).toFixed(2));
+                    finalOrderData.discount = 0;
+                }
+                promoNote = `[PROMO REJECTED: ${promoCode}]`;
+            }
+        }
+
         // 3. Rico Balance Logic
         let orderStatus = 'pending';
         let ricoAmountPaid = 0;
@@ -203,6 +257,8 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
                    (guestPhone ? `[TEL: ${guestPhone}] ` : '') + 
                    (notes || '')
         };
+
+        if (promoNote) dbOrder.notes = (dbOrder.notes || '') + ' ' + promoNote;
 
         if (fulfillment === 'delivery') {
             const deliveryPin = Math.floor(1000 + Math.random() * 9000).toString();
@@ -260,32 +316,62 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
         let data = null;
         let error = null;
-        const firstTry = await supabase.from('orders').insert(dbOrder).select().single();
-        data = firstTry.data;
-        error = firstTry.error;
+        try {
+            const firstTry = await supabase.from('orders').insert(dbOrder).select().single();
+            data = firstTry.data;
+            error = firstTry.error;
 
-        if (error) {
-            const errorMsg = error.message || '';
-            console.warn("[OrderService] First insert try error:", errorMsg);
-            const fallbackOrder = { ...dbOrder };
-            
-            if (errorMsg.includes('delivery_pin') || errorMsg.includes('delivery_status') || errorMsg.includes('driver_id')) {
-                delete fallbackOrder.delivery_pin;
-                delete fallbackOrder.delivery_status;
-                delete fallbackOrder.driver_id;
+            if (error) {
+                const errorMsg = error.message || '';
+                console.warn("[OrderService] First insert try error:", errorMsg);
+                const fallbackOrder = { ...dbOrder };
+                
+                if (errorMsg.includes('delivery_pin') || errorMsg.includes('delivery_status') || errorMsg.includes('driver_id')) {
+                    delete fallbackOrder.delivery_pin;
+                    delete fallbackOrder.delivery_status;
+                    delete fallbackOrder.driver_id;
+                }
+                if (errorMsg.includes('orders_restaurant_id_fkey')) {
+                    fallbackOrder.notes = (fallbackOrder.notes || '') + ` [ORIGINAL_RESTAURANT: ${targetResId}]`;
+                    fallbackOrder.restaurant_id = 'rich-aroma';
+                }
+                
+                const retry = await supabase.from('orders').insert(fallbackOrder).select().single();
+                data = retry.data;
+                error = retry.error;
             }
-            if (errorMsg.includes('orders_restaurant_id_fkey')) {
-                fallbackOrder.notes = (fallbackOrder.notes || '') + ` [ORIGINAL_RESTAURANT: ${targetResId}]`;
-                fallbackOrder.restaurant_id = 'rich-aroma';
-            }
-            
-            const retry = await supabase.from('orders').insert(fallbackOrder).select().single();
-            data = retry.data;
-            error = retry.error;
+        } catch (dbErr) {
+            console.warn("[OrderService] Supabase connection error, falling back to local storage:", dbErr.message);
+            error = dbErr;
         }
-        if (error) {
-            console.error("[OrderService] Order Creation Failed:", error);
-            throw error;
+
+        if (error || !data) {
+            console.log("[OrderService] Saving order locally to data/orders.json backup");
+            data = {
+                ...dbOrder,
+                created_at: new Date().toISOString()
+            };
+            try {
+                const fs = require('fs');
+                const path = require('path');
+                const ordersPath = path.join(__dirname, '..', '..', 'data', 'orders.json');
+                let fileData = { orders: [] };
+                if (fs.existsSync(ordersPath)) {
+                    fileData = JSON.parse(fs.readFileSync(ordersPath, 'utf8') || '{"orders":[]}');
+                }
+                if (!Array.isArray(fileData.orders)) fileData.orders = [];
+                fileData.orders.unshift(data);
+                fs.writeFileSync(ordersPath, JSON.stringify(fileData, null, 2));
+                console.log(`[OrderService] Order ${data.id} successfully backed up locally!`);
+            } catch (fsErr) {
+                console.error("[OrderService] Local JSON backup error:", fsErr.message);
+            }
+        }
+
+        // 4.4 Promo code use counting (only when a discount was actually granted)
+        if (promoRow && promoApplied) {
+            const { error: promoErr } = await supabase.from('promo_codes').update({ uses: (promoRow.uses || 0) + 1 }).eq('id', promoRow.id);
+            if (promoErr) console.error('[OrderService] Promo use increment failed:', promoErr.message);
         }
 
         // 4.5 Record automated QuimiEats commission and perform credit limit check
@@ -483,5 +569,6 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 }
 
 module.exports = {
-    createOrder
+    createOrder,
+    _promoEligibleCap: promoEligibleCap
 };

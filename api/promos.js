@@ -54,12 +54,66 @@ module.exports = async function handler(req, res) {
             return res.json({ success: true });
         }
 
+
+        // PROMO CODES: validate a customer code (public; percent is printed on flyers anyway)
+        if (action === 'validate' && req.method === 'GET') {
+            const code = String(req.query.code || '').trim().toUpperCase();
+            if (!code) return res.json({ valid: false, reason: "Escribe un código" });
+            const { data: row } = await supabase.from('promo_codes').select('*').eq('code', code).maybeSingle();
+            if (!row) return res.json({ valid: false, reason: "Código no encontrado" });
+            if (row.active === false) return res.json({ valid: false, reason: "Código inactivo" });
+            if (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) return res.json({ valid: false, reason: "Código expirado" });
+            if (row.max_uses != null && (row.uses || 0) >= row.max_uses) return res.json({ valid: false, reason: "Código agotado" });
+            return res.json({ valid: true, code: row.code, percent: row.percent });
+        }
+
         // ADMIN ACTIONS
         const authHeader = req.headers.authorization;
         const pin = authHeader?.replace(/^Bearer\s+/i, '').trim();
         const isAdmin = isAdminCredential(pin);
 
         if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+
+
+        // PROMO CODES: admin management (codes discount house-made items only; enforced in order-service)
+        if (action === 'codes_list' && req.method === 'GET') {
+            const { data, error } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false });
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json(data || []);
+        }
+
+        if (action === 'code_save' && req.method === 'POST') {
+            const body = req.body || {};
+            if (body.id) {
+                const updates = {};
+                if (body.code !== undefined) updates.code = String(body.code).trim().toUpperCase();
+                if (body.percent !== undefined) updates.percent = parseInt(body.percent);
+                if (body.max_uses !== undefined) updates.max_uses = body.max_uses === null || body.max_uses === '' ? null : parseInt(body.max_uses);
+                if (body.expires_at !== undefined) updates.expires_at = body.expires_at || null;
+                if (body.active !== undefined) updates.active = !!body.active;
+                const { data, error } = await supabase.from('promo_codes').update(updates).eq('id', body.id).select().single();
+                if (error) return res.status(500).json({ error: error.message });
+                return res.json(data);
+            }
+            const code = String(body.code || '').trim().toUpperCase();
+            const percent = parseInt(body.percent);
+            if (!code || isNaN(percent) || percent < 1 || percent > 100) return res.status(400).json({ error: "Code and a percent between 1 and 100 are required" });
+            const { data, error } = await supabase.from('promo_codes').insert({
+                code, percent,
+                max_uses: body.max_uses ? parseInt(body.max_uses) : null,
+                expires_at: body.expires_at || null,
+                active: body.active !== false,
+                uses: 0
+            }).select().single();
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json(data);
+        }
+
+        if (action === 'code_delete' && req.method === 'DELETE') {
+            const { error } = await supabase.from('promo_codes').delete().eq('id', id);
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true });
+        }
 
         if (action === 'list' && req.method === 'GET') {
             const { data, error } = await supabase.from('promos').select('*').order('created_at', { ascending: false });

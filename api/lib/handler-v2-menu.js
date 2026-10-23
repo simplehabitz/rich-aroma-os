@@ -115,6 +115,7 @@ module.exports = async (req, res) => {
                 expires_in_hours: item.expires_in_hours,
                 image_url: item.image_url, 
                 category: cat,
+                is_house_made: item.is_house_made || false,
                 default_daily_stock: item.default_daily_stock,
                 duration: item.duration
             });

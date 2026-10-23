@@ -2499,7 +2499,15 @@
                 itemNetPrices[idx] = Math.max(0, itemNetPrices[idx] - (discPerItem / (cart[idx].qty || 1)));
             });
         } else if (discountPct > 0) {
-            if (applyRule) {
+            if (manualDiscount && manualDiscount.scope === 'house_made') {
+                cart.forEach((item, idx) => {
+                    if (item.is_house_made === true) {
+                        const d = parseFloat(item.finalPrice || item.price || 0) * (discountPct / 100);
+                        totalDiscountAmt += (d * item.qty);
+                        itemNetPrices[idx] -= d;
+                    }
+                });
+            } else if (applyRule) {
                 if (selectedItemIds.length > 0) {
                     selectedItemIds.forEach(idx => {
                         const item = cart[idx];
@@ -2817,6 +2825,27 @@
         renderCart();
     }
 
+    window.applyPromoCode = async function() {
+        const input = document.getElementById('promo-code-input');
+        const msg = document.getElementById('promo-code-msg');
+        const code = (input.value || '').trim().toUpperCase();
+        const setMsg = (text, ok) => { msg.innerText = text; msg.className = 'text-center text-[10px] font-bold uppercase tracking-widest ' + (ok ? 'text-green-600' : 'text-red-500'); };
+        if (!code) return setMsg('Escribe un código', false);
+        if (cart.length === 0) return setMsg('Agrega artículos al carrito primero', false);
+        if (!cart.some(i => i.is_house_made === true)) return setMsg('Este código solo aplica a artículos hechos en casa — no hay ninguno en el carrito', false);
+        setMsg('Validando...', true);
+        try {
+            const res = await fetch('/api/promos?action=validate&code=' + encodeURIComponent(code));
+            const data = await res.json();
+            if (!data.valid) return setMsg(data.reason || 'Código no válido', false);
+            manualDiscount = { name: 'PROMO ' + data.code, pct: parseFloat(data.percent), scope: 'house_made', promoCode: data.code };
+            window.closeDiscountModal();
+            renderCart();
+        } catch (e) {
+            setMsg('Error de conexión', false);
+        }
+    }
+
     window.clearDiscount = function() {
         manualDiscount = null;
         window.closeDiscountModal();
@@ -3017,10 +3046,11 @@ function openTenderModal() {
             customerId: currentCustomerId,
             shiftId: currentShiftId,
             fulfillmentType: fulfillmentType,
+            promoCode: (manualDiscount && manualDiscount.promoCode) || null,
             status: newStatus,
             notes: (document.getElementById('guest-name-input').value.trim() ? `[CLIENTE: ${document.getElementById('guest-name-input').value.trim()}]` : '') + 
                    (discountName ? ` [DISCOUNT: ${discountName}]` : '') +
-                   (manualDiscount ? ` [DISC_META:${JSON.stringify({ n: manualDiscount.name, p: manualDiscount.pct, r: manualDiscount.applyRule, i: manualDiscount.selectedItemIds, a: discount })}]` : '')
+                   (manualDiscount ? ` [DISC_META:${JSON.stringify({ n: manualDiscount.name, p: manualDiscount.pct, r: manualDiscount.applyRule, i: manualDiscount.selectedItemIds, a: discount, s: manualDiscount.scope || null, c: manualDiscount.promoCode || null })}]` : '')
         };
         try {
             const url = currentOrderId ? `/api/orders/${currentOrderId}?v=${Date.now()}` : `/api/orders?v=${Date.now()}`;
@@ -3139,7 +3169,7 @@ function openTenderModal() {
                 const metaMatch = order.notes.match(/\[DISC_META:\s*({[\s\S]*?})\]/);
                 if (metaMatch) {
                     const d = JSON.parse(metaMatch[1]);
-                    manualDiscount = { name: d.n, pct: d.p, applyRule: d.r, selectedItemIds: d.i };
+                    manualDiscount = { name: d.n, pct: d.p, applyRule: d.r, selectedItemIds: d.i, scope: d.s || null, promoCode: d.c || null };
                 }
             } catch(e) { console.error("Discount Meta Restore Error", e); }
         } else if (order.discount > 0) {
@@ -3243,13 +3273,14 @@ function openTenderModal() {
             ricoAmount: (currentTenderMethod === 'rico_balance') ? ricoAmountToDeduct : 0,
             customerId: currentCustomerId,
             fulfillmentType: fulfillmentType,
+            promoCode: (manualDiscount && manualDiscount.promoCode) || null,
             status: newStatus,
             shiftId: currentShiftId,
             scheduledFor: scheduledFor,
             isPos: true,
             notes: (document.getElementById('guest-name-input').value.trim() ? `[CLIENTE: ${document.getElementById('guest-name-input').value.trim()}]` : '') + 
                    (discountName ? ` [DISCOUNT: ${discountName}]` : '') +
-                   (manualDiscount ? ` [DISC_META:${JSON.stringify({ n: manualDiscount.name, p: manualDiscount.pct, r: manualDiscount.applyRule, i: manualDiscount.selectedItemIds, a: discount })}]` : '')
+                   (manualDiscount ? ` [DISC_META:${JSON.stringify({ n: manualDiscount.name, p: manualDiscount.pct, r: manualDiscount.applyRule, i: manualDiscount.selectedItemIds, a: discount, s: manualDiscount.scope || null, c: manualDiscount.promoCode || null })}]` : '')
         };
 
         const confirmBtn = document.getElementById('confirm-tender-btn');
@@ -4440,6 +4471,15 @@ function openTenderModal() {
                         <input type="number" id="custom-discount-pct" placeholder="0" class="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 text-center font-black">
                         <button onclick="window.applyManualDiscount('Custom', document.getElementById('custom-discount-pct').value)" class="bg-blue-600 text-white px-6 rounded-xl font-black">OK</button>
                     </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-100 space-y-2">
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Código Promo (solo hecho en casa)</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="promo-code-input" placeholder="CÓDIGO" class="w-full bg-gray-50 border-2 border-gray-100 rounded-xl p-3 text-center font-black uppercase">
+                        <button onclick="window.applyPromoCode()" class="bg-green-600 text-white px-6 rounded-xl font-black">Aplicar</button>
+                    </div>
+                    <p id="promo-code-msg" class="text-center text-[10px] font-bold uppercase tracking-widest"></p>
                 </div>
             </div>
 

@@ -232,7 +232,7 @@ module.exports = async function handler(req, res) {
             }
             
             if (req.method === 'POST') {
-                const { name, description, price, category, image_url, is_bundle, restaurant_id, available } = req.body || {};
+                const { name, description, price, category, image_url, is_bundle, is_house_made, restaurant_id, available } = req.body || {};
                 const newItem = {
                     id: 'item_' + Date.now(),
                     name: name || 'New Item',
@@ -241,6 +241,7 @@ module.exports = async function handler(req, res) {
                     category: category || 'General',
                     image_url: image_url || '',
                     is_bundle: !!is_bundle,
+                    is_house_made: !!is_house_made,
                     restaurant_id: restaurant_id || 'rich-aroma',
                     available: available !== false
                 };
@@ -267,7 +268,7 @@ module.exports = async function handler(req, res) {
             if (req.method === 'PUT') {
                 const itemId = req.query.id || req.body.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
-                const { name, description, price, category, image_url, is_bundle, available } = req.body || {};
+                const { name, description, price, category, image_url, is_bundle, is_house_made, available } = req.body || {};
                 
                 const updates = {};
                 if (name) updates.name = name;
@@ -276,6 +277,7 @@ module.exports = async function handler(req, res) {
                 if (category) updates.category = category;
                 if (image_url !== undefined) updates.image_url = image_url;
                 if (is_bundle !== undefined) updates.is_bundle = !!is_bundle;
+                if (is_house_made !== undefined) updates.is_house_made = !!is_house_made;
                 if (available !== undefined) updates.available = !!available;
                 
                 try {
@@ -337,7 +339,7 @@ module.exports = async function handler(req, res) {
                 return res.json({ success: true });
             }
 
-            const { name, description, price, category, image_url, is_bundle, available } = req.body || {};
+            const { name, description, price, category, image_url, is_bundle, is_house_made, available } = req.body || {};
             const updates = {};
             if (name) updates.name = name;
             if (description !== undefined) updates.description = description;
@@ -345,6 +347,7 @@ module.exports = async function handler(req, res) {
             if (category) updates.category = category;
             if (image_url !== undefined) updates.image_url = image_url;
             if (is_bundle !== undefined) updates.is_bundle = !!is_bundle;
+                if (is_house_made !== undefined) updates.is_house_made = !!is_house_made;
             if (available !== undefined) updates.available = !!available;
             
             try { await supabase.from('menu_items').update(updates).eq('id', itemId); } catch(e) {}
