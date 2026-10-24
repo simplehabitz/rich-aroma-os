@@ -180,17 +180,39 @@
             renderKDS();
         }
 
+        // Station classification: the item's menu CATEGORY is the source of truth
+        // (orders carry it from menu_items). Keyword checks remain only as a
+        // fallback for legacy items without a category. An item that matches
+        // NEITHER station is shown on BOTH (itemMatchesMode) — nothing on the
+        // menu may ever be invisible to the kitchen. (Bug found 2026-10-24:
+        // the old keyword-only rules hid 21 of 32 menu items, incl. Americano.)
+        const DRINK_CATS = ['espresso_bar', 'tea_matcha', 'supremes_icees', 'bebidas', 'drinks'];
+        const FOOD_CATS = ['grill_toast_crepes', 'bakery', 'bowls_salads', 'food', 'comida', 'reposteria'];
+
         function isDrinkItem(i) {
+            const cat = (i.category || '').toLowerCase();
+            if (FOOD_CATS.includes(cat)) return false;
+            if (DRINK_CATS.includes(cat)) return true;
             const name = (i.name || '').toLowerCase();
             const id = (i.id || '').toLowerCase();
             if (name.includes('dubai')) return false;
-            return id.startsWith('hot_') || id.startsWith('cold_') || id.startsWith('frappe_') || name.includes('latte') || name.includes('brew') || name.includes('capp') || name.includes('frappe') || name.includes('smoothie') || name.includes('tea') || name.includes('combo');
+            return id.startsWith('hot_') || id.startsWith('cold_') || id.startsWith('frappe_') || name.includes('latte') || name.includes('brew') || name.includes('capp') || name.includes('frappe') || name.includes('smoothie') || name.includes('tea') || name.includes('combo') || name.includes('americano') || name.includes('espresso') || name.includes('mocha') || name.includes('icee') || name.includes('limonada') || name.includes('lemonade');
         }
 
         function isFoodItem(i) {
+            const cat = (i.category || '').toLowerCase();
+            if (DRINK_CATS.includes(cat)) return false;
+            if (FOOD_CATS.includes(cat)) return true;
             const name = (i.name || '').toLowerCase();
             const id = (i.id || '').toLowerCase();
-            return id.startsWith('food_') || name.includes('baleada') || name.includes('crepa') || name.includes('sandwich') || name.includes('toast') || name.includes('combo');
+            return id.startsWith('food_') || name.includes('baleada') || name.includes('crepa') || name.includes('sandwich') || name.includes('toast') || name.includes('combo') || name.includes('burrito') || name.includes('bowl') || name.includes('ensalada') || name.includes('salad') || name.includes('cheesecake') || name.includes('cookie') || name.includes('flan') || name.includes('muffin');
+        }
+
+        function itemMatchesMode(i) {
+            const d = isDrinkItem(i);
+            const f = isFoodItem(i);
+            if (!d && !f) return true; // unclassified: visible on both stations, never hidden
+            return currentMode === 'drinks' ? d : f;
         }
 
         function renderProductionSummary() {
@@ -217,8 +239,7 @@
             }).forEach(o => {
                 (o.items || []).forEach(i => {
                     if (i.status === 'ready') return;
-                    if (currentMode === 'drinks' && !isDrinkItem(i)) return;
-                    if (currentMode === 'food' && !isFoodItem(i)) return;
+                    if (!itemMatchesMode(i)) return;
                     summary[i.name] = (summary[i.name] || 0) + (i.qty || 1);
                 });
             });
@@ -273,8 +294,7 @@
 
             container.innerHTML = activeOrders.map(o => {
                 const items = (o.items || []).filter(i => {
-                    const matchesMode = currentMode === 'drinks' ? isDrinkItem(i) : isFoodItem(i);
-                    if (!matchesMode) return false;
+                    if (!itemMatchesMode(i)) return false;
                     // If it's an old item and not an addon, it's already done
                     if (i.is_old && !i.is_addon) return false;
                     return true;
@@ -318,8 +338,7 @@
 
                     <div class="space-y-2">
                         ${o.items.map((i, idx) => {
-                            const relevant = currentMode === 'drinks' ? isDrinkItem(i) : isFoodItem(i);
-                            if (!relevant) return '';
+                            if (!itemMatchesMode(i)) return '';
                             
                             // Optimization: Hide already prepared items in kitchen view to focus on new work
                             if (i.is_old && !i.is_addon) return '';
