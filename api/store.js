@@ -579,6 +579,34 @@ module.exports = async (req, res) => {
             }
         }
 
+        // --- 2b. KDS ITEM TOGGLE (per-item check-off) ---
+        // kitchen.html's cycleItemState has always called this action, but
+        // store.js never had a handler for it, so item taps never persisted
+        // and the re-render reset them. Staff-gated like every other write
+        // (SEC-FIX 1): the KDS sends its staff PIN as Bearer (staffHeaders).
+        if (action === 'toggle_item_ready') {
+            if (req.method === 'PATCH') {
+                if (!(await requireStaff())) return;
+                const { orderId, itemIdx, status } = req.body || {};
+                if (!orderId) return res.status(400).json({ error: "Order ID required" });
+                if (!Number.isInteger(itemIdx)) return res.status(400).json({ error: "Item index required" });
+                if (status !== null && status !== 'preparing' && status !== 'ready') {
+                    return res.status(400).json({ error: "Invalid item status" });
+                }
+
+                const { data: order, error: loadError } = await supabase.from('orders').select('id, items').eq('id', orderId).maybeSingle();
+                if (loadError) throw loadError;
+                if (!order) return res.status(404).json({ error: "Orden no encontrada" });
+                const items = Array.isArray(order.items) ? order.items : [];
+                if (itemIdx < 0 || itemIdx >= items.length) return res.status(400).json({ error: "Item index out of range" });
+
+                const newItems = items.map((it, i) => (i === itemIdx ? { ...it, status } : it));
+                const { data, error } = await supabase.from('orders').update({ items: newItems }).eq('id', orderId).select().single();
+                if (error) throw error;
+                return res.json({ success: true, order: data });
+            }
+        }
+
         // --- 3. CASH / SHIFT ACTIONS ---
         if (action === 'current-shift' || action === 'current_shift') {
             const { data: shift } = await supabase.from('cash_shifts').select('*').eq('status', 'open').eq('restaurant_id', 'rich-aroma').order('opened_at', { ascending: false }).limit(1).maybeSingle();
