@@ -292,6 +292,9 @@ module.exports = async (req, res) => {
                         (links || []).forEach(l => { (optionsByItem[l.item_id] = optionsByItem[l.item_id] || []).push(...(optsByGroup[l.group_id] || [])); });
                     }
                 }
+                // MOD-STANDARD: countable options (e.g. Splenda sobres) carry
+                // a qty in the client snapshot; price once per unit.
+                const modQty = (mod) => { const q = parseInt(mod && mod.qty); return Number.isInteger(q) && q > 0 ? Math.min(q, 8) : 1; };
                 const matchOption = (itemId, mod) => {
                     const pool = optionsByItem[itemId] || [];
                     if (!pool.length || mod === null || mod === undefined) return null;
@@ -330,7 +333,7 @@ module.exports = async (req, res) => {
                     const mods = Array.isArray(safeItem.mods) ? safeItem.mods : (Array.isArray(safeItem.modifiers) ? safeItem.modifiers : []);
                     mods.forEach(mod => {
                         const opt = matchOption(safeItem.id, mod);
-                        if (opt) unit += parseFloat(opt.price_adjustment) || 0;
+                        if (opt) unit += (parseFloat(opt.price_adjustment) || 0) * modQty(mod);
                     });
                     unit = round2(unit);
                     serverSubtotal += unit * qty;

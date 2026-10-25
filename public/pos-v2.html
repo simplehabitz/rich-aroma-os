@@ -186,6 +186,22 @@
         .hb-toggle.collapsed { left: 0; }
         .hb-toggle:hover { background: #1a1410; padding-left: 4px; }
     </style>
+    <style>
+        /* PHONE MODE — the power-outage fallback (requirement, Oct 24):
+           below 860px the three desktop panes stack into ONE scrolling
+           column: menu first, cart below. The live-feed sidebar hides —
+           the same orders surface on the KDS. Desktop is untouched. */
+        @media (max-width: 860px) {
+            body { flex-direction: column !important; height: auto !important; overflow-y: auto !important; }
+            #heartbeat-sidebar { display: none !important; }
+            #pos-main-pane { width: 100% !important; height: auto !important; }
+            #pos-cart-pane { width: 100% !important; height: auto !important; }
+            #menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #cart-items { max-height: 45vh; }
+            #tender-modal .grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #mod-dynamic-container .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-100 h-screen flex overflow-hidden">
 
@@ -603,7 +619,7 @@
 
     <div id="menu-container" class="flex flex-1 overflow-hidden">
         <!-- LEFT: MENU -->
-        <div class="flex-1 flex flex-col border-r border-gray-300 h-screen overflow-hidden">
+        <div id="pos-main-pane" class="flex-1 flex flex-col border-r border-gray-300 h-screen overflow-hidden">
         
         <!-- Header -->
         <div class="bg-white p-3 md:p-4 flex justify-between items-center shadow-sm z-50 relative shrink-0">
@@ -738,7 +754,7 @@
     </div>
 
     <!-- RIGHT: CART & WHATSAPP BOT SIM -->
-    <div class="w-1/4 bg-white flex flex-col shadow-xl z-10 h-screen overflow-hidden">
+    <div id="pos-cart-pane" class="w-1/4 bg-white flex flex-col shadow-xl z-10 h-screen overflow-hidden">
         
         <!-- Customer Info -->
         <div class="p-4 border-b border-gray-200 bg-gray-50 shrink-0">
@@ -1131,6 +1147,7 @@
     let isSoloMode = false;
     let currentQuantity = 1;
     let currentMods = {};
+    let currentModQty = {}; // MOD-STANDARD: per-option qty for countable options (e.g. Splenda sobres)
     let currentItem = null;
 
     let liveOrders = [];
@@ -2189,7 +2206,7 @@
         } else {
             // Recalculate price
             const basePrice = parseFloat(cart[index].price);
-            const modsPrice = (cart[index].mods || []).reduce((sum, m) => sum + (parseFloat(m.price_adjustment) || 0), 0);
+            const modsPrice = (cart[index].mods || []).reduce((sum, m) => sum + (parseFloat(m.price_adjustment) || 0) * (m.qty || 1), 0);
             cart[index].finalPrice = (basePrice + modsPrice) * cart[index].qty;
         }
         renderCart();
@@ -2301,6 +2318,7 @@
         currentItem = menu.find(i => i.id === id);
         currentQuantity = 1;
         currentMods = {};
+        currentModQty = {};
         
         // Pre-select defaults
         const relevantGroupIds = itemModGroups
@@ -2357,6 +2375,11 @@
                                 class="p-4 border-2 rounded-2xl text-xs font-black transition-all flex flex-col items-start gap-1 shadow-sm ${isSel ? 'border-blue-600 bg-blue-600 text-white shadow-blue-600/20' : 'border-white bg-white text-gray-600 hover:border-blue-200'}">
                                 <span class="leading-tight">${escHtml(opt.name)}</span>
                                 ${opt.price_adjustment > 0 ? `<span class="${isSel ? 'text-white/70' : 'text-green-600'} text-[9px] font-mono">+L.${opt.price_adjustment}</span>` : ''}
+                                ${opt.allow_qty && isSel ? `<span class="flex items-center gap-2 mt-1" onclick="event.stopPropagation()">
+                                    <span onclick="modQty(event, '${opt.id}', -1, '${id}')" class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm font-black">−</span>
+                                    <span class="text-[11px] font-black">×${currentModQty[opt.id] || opt.default_qty || 1}</span>
+                                    <span onclick="modQty(event, '${opt.id}', 1, '${id}')" class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm font-black">+</span>
+                                </span>` : ''}
                             </button>
                             `;
                         }).join('')}
@@ -2372,12 +2395,27 @@
             // Only allow deselect if not required or if multiple are allowed
             if (!modGroups.find(g => g.id === groupId).required || selected.length > 1) {
                 selected = selected.filter(id => id !== optId);
+                delete currentModQty[optId];
             }
         } else {
-            if (max === 1) selected = [optId];
+            if (max === 1) {
+                selected.forEach(prev => { if (prev !== optId) delete currentModQty[prev]; });
+                selected = [optId];
+            }
             else if (selected.length < max) selected.push(optId);
+            const opt = modOptions.find(o => o.id === optId);
+            if (opt && opt.allow_qty && currentModQty[optId] == null) currentModQty[optId] = opt.default_qty || 1;
         }
         currentMods[groupId] = selected;
+        renderModifiers(itemId);
+        updateModPrice();
+    }
+
+    function modQty(e, optId, delta, itemId) {
+        e.stopPropagation();
+        const opt = modOptions.find(o => o.id === optId);
+        const cur = currentModQty[optId] || (opt && opt.default_qty) || 1;
+        currentModQty[optId] = Math.min(4, Math.max(1, cur + delta));
         renderModifiers(itemId);
         updateModPrice();
     }
@@ -2405,7 +2443,7 @@
             
             selected.forEach(oid => {
                 const opt = modOptions.find(o => o.id === oid);
-                if (opt) total += parseFloat(opt.price_adjustment || 0);
+                if (opt) total += (parseFloat(opt.price_adjustment || 0)) * (opt.allow_qty ? (currentModQty[oid] || opt.default_qty || 1) : 1);
             });
         });
 
@@ -2421,15 +2459,26 @@
     function confirmItem() {
         const mods = [];
         let priceWithMods = parseFloat(currentItem.price) || 0;
-        for (const gid in currentMods) {
+        // MOD-STANDARD: snapshot each chosen modifier completely (id,
+        // group, name, per-unit price, qty for countable options) in
+        // group display order — the KDS and the server price from THIS,
+        // never from a bare name again.
+        const orderedGids = itemModGroups
+            .filter(img => img.item_id === currentItem.id)
+            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+            .map(img => img.group_id)
+            .filter(gid => currentMods[gid]);
+        orderedGids.forEach(gid => {
+            const group = modGroups.find(g => g.id === gid);
             currentMods[gid].forEach(oid => {
                 const opt = modOptions.find(o => o.id === oid);
                 if (opt) {
-                    mods.push({ name: opt.name });
-                    priceWithMods += (parseFloat(opt.price_adjustment) || 0);
+                    const qty = opt.allow_qty ? (currentModQty[oid] || opt.default_qty || 1) : null;
+                    mods.push({ id: opt.id, group_id: gid, group: group ? group.name : '', name: opt.name, price_adjustment: parseFloat(opt.price_adjustment) || 0, ...(qty ? { qty } : {}) });
+                    priceWithMods += (parseFloat(opt.price_adjustment) || 0) * (qty || 1);
                 }
             });
-        }
+        });
         const note = document.getElementById('mod-note')?.value || "";
         const item = {
             ...currentItem,

@@ -33,6 +33,16 @@
         .timer-urgent { color: #EF4444; font-weight: 900; animation: blink 1s infinite; }
         @keyframes blink { 50% { opacity: 0.3; } }
     </style>
+    <style>
+        /* PHONE MODE — the power-outage fallback (requirement, Oct 24):
+           the board is already a single scrolling column; below 640px
+           the header controls wrap onto a second clean row instead of
+           overflowing, and the station toggle slims down. */
+        @media (max-width: 640px) {
+            #main-content > header { flex-wrap: wrap; row-gap: 0.5rem; }
+            #btn-drinks, #btn-food { padding-left: 0.8rem !important; padding-right: 0.8rem !important; }
+        }
+    </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
@@ -284,11 +294,33 @@
         // completed the WHOLE order from either station's screen.
         function itemInDrinks(i) { const d = isDrinkItem(i), f = isFoodItem(i); return d || !f; }
         function itemInFood(i) { const d = isDrinkItem(i), f = isFoodItem(i); return f || !d; }
+        // COMBO SPLIT: a combo product is ONE line that classifies to BOTH
+        // stations — its drink lives in its Bebida/Leche/etc. modifiers,
+        // its food is the base item. Each station owns a PART of the line,
+        // tracked on the line itself (i.stations), and the line is only
+        // 'ready' when both parts check in. Before this, the line's single
+        // status let the first station to finish complete both parts.
+        const DRINK_MOD_GROUPS = ['Bebida', 'Leche', 'Dulzor', 'Temperatura', 'Sabor'];
+        function isSplitCombo(i) { return isDrinkItem(i) && isFoodItem(i); }
+        function modSide(m) {
+            if (!m || !m.group) return 'both'; // legacy name-only mods: never hide information from a station
+            return DRINK_MOD_GROUPS.includes(m.group) ? 'drinks' : 'food';
+        }
+        function partStatus(i, mode) {
+            if (!isSplitCombo(i)) return i.status || null;
+            return (i.stations || {})[mode] || null;
+        }
+        function comboLineStatus(i) {
+            const d = (i.stations || {}).drinks, f = (i.stations || {}).food;
+            if (d === 'ready' && f === 'ready') return 'ready';
+            if (d || f) return 'preparing';
+            return null;
+        }
         function halfState(o, mode) {
             const items = (o.items || []).filter(i => mode === 'drinks' ? itemInDrinks(i) : itemInFood(i));
             if (!items.length) return 'none';
-            if (items.every(i => i.status === 'ready')) return 'ready';
-            if (items.some(i => i.status === 'ready' || i.status === 'preparing')) return 'working';
+            if (items.every(i => partStatus(i, mode) === 'ready')) return 'ready';
+            if (items.some(i => partStatus(i, mode) === 'ready' || partStatus(i, mode) === 'preparing')) return 'working';
             return 'pending';
         }
         function orderHalves(o) { return { drinks: halfState(o, 'drinks'), food: halfState(o, 'food') }; }
@@ -308,7 +340,12 @@
             const mine = currentMode;
             const items = (o.items || []).map(i => {
                 const inMine = mine === 'drinks' ? itemInDrinks(i) : itemInFood(i);
-                return inMine && i.status !== 'ready' ? { ...i, status: 'ready' } : i;
+                if (!inMine) return i;
+                if (isSplitCombo(i)) {
+                    const merged = { ...i, stations: { ...(i.stations || {}), [mine]: 'ready' } };
+                    return { ...merged, status: comboLineStatus(merged) };
+                }
+                return i.status !== 'ready' ? { ...i, status: 'ready' } : i;
             });
             const h = orderHalves({ ...o, items });
             const other = mine === 'drinks' ? h.food : h.drinks;
@@ -319,6 +356,38 @@
                 fetchOrders();
             } catch (e) { alert("Error"); }
         };
+
+        // MOD-STANDARD: modifiers print grouped by their group label, in
+        // the order they were chosen (conversation order), each option
+        // named as the kitchen reads it. Removals ("Sin …") print loud —
+        // a quiet removal is a remake. Old name-only mods still render.
+        function modsHtml(item, mode) {
+            let mods = (item && item.mods) || [];
+            // Split combo: each station sees only its own part's modifiers
+            // (plus any legacy ungrouped ones — never hide information).
+            if (mode && isSplitCombo(item)) mods = mods.filter(m => { const s = modSide(m); return s === mode || s === 'both'; });
+            if (!mods.length) return '';
+            const lines = [];
+            let cur = null;
+            mods.forEach(m => {
+                const g = (m && m.group) || '';
+                if (!cur || cur.g !== g) { cur = { g, parts: [] }; lines.push(cur); }
+                const name = (m && m.name) || '';
+                const label = name + (m && m.qty ? ' ×' + m.qty : '');
+                cur.parts.push({ label, sin: /^sin\b/i.test(name) });
+            });
+            return lines.map(L => `<p class="text-[10px] font-bold uppercase mt-0.5 text-white/40">${L.g ? `<span class="text-white/30">${escHtml(L.g)}:</span> ` : ''}${L.parts.map(p => `<span class="${p.sin ? 'text-red-400 font-black' : ''}">${escHtml(p.label)}</span>`).join(', ')}</p>`).join('');
+        }
+
+        // Per-line station pills for split combos: each screen sees its own
+        // part's state AND the other station's, on the line itself (the
+        // order-level halves strip only aggregates the whole ticket).
+        function comboPartsHtml(i) {
+            if (!isSplitCombo(i)) return '';
+            const word = (m) => { const s = (i.stations || {})[m]; return s === 'ready' ? 'Lista ✓' : (s === 'preparing' ? 'Preparando' : 'Pendiente'); };
+            const cls = (m) => { const s = (i.stations || {})[m]; return s === 'ready' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (s === 'preparing' ? 'text-gold border-gold/30 bg-gold/10' : 'text-white/30 border-white/10'); };
+            return `<div class="flex gap-1.5 flex-wrap mt-1"><span class="px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${cls('drinks')}"><i class="fas fa-coffee"></i> Bebida: ${word('drinks')}</span><span class="px-2 py-1 rounded-full border text-[8px] font-black uppercase tracking-widest ${cls('food')}"><i class="fas fa-utensils"></i> Comida: ${word('food')}</span></div>`;
+        }
 
         function renderKDS() {
             const container = document.getElementById('kds-container');
@@ -425,15 +494,18 @@
                             // Optimization: Hide already prepared items in kitchen view to focus on new work
                             if (i.is_old && !i.is_addon) return '';
 
-                            const isReady = i.status === 'ready';
-                            const isPreparing = i.status === 'preparing';
+                            const split = isSplitCombo(i);
+                            const effStatus = split ? ((i.stations || {})[currentMode] || null) : i.status;
+                            const isReady = effStatus === 'ready';
+                            const isPreparing = effStatus === 'preparing';
                             const stateClass = isReady ? 'state-ready' : (isPreparing ? 'state-preparing' : 'state-pending');
 
                             return `
-                            <div onclick="cycleItemState('${o.id}', ${idx}, '${(i.status || '').replace(/['\\]/g, '')}')" class="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 active:scale-95 transition-all cursor-pointer ${stateClass}">
+                            <div onclick="cycleItemState('${o.id}', ${idx}, '${(effStatus || '').replace(/['\\]/g, '')}')" class="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 active:scale-95 transition-all cursor-pointer ${stateClass}">
                                 <div class="flex-1">
                                     <p class="font-black text-sm uppercase ${isReady ? 'item-ready-text' : 'text-white/90'}">${i.qty}x ${escHtml(i.name)}</p>
-                                    ${i.mods?.length ? `<p class="text-[9px] font-bold text-white/30 uppercase mt-0.5">${i.mods.map(m=>escHtml(m.name)).join(', ')}</p>` : ''}
+                                    ${modsHtml(i, currentMode)}
+                                    ${comboPartsHtml(i)}
                                     ${i.note ? `<p class="text-[10px] font-black text-blue-400 uppercase mt-1 italic"><i class="fas fa-comment-dots mr-1"></i> ${escHtml(i.note)}</p>` : ''}
                                 </div>
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 ${isReady ? 'bg-success border-success text-dark' : (isPreparing ? 'border-gold text-gold' : 'border-white/10 text-white/10')}">
@@ -520,6 +592,28 @@
             let nextStatus = 'preparing';
             if (currentStatus === 'preparing') nextStatus = 'ready';
             if (currentStatus === 'ready') nextStatus = null;
+            const o = orders.find(x => String(x.id) === String(orderId));
+            const tapped = o && (o.items || [])[itemIdx];
+            if (tapped && isSplitCombo(tapped)) {
+                // Split combo: the tap cycles only MY station's part, and
+                // the line status follows both parts. Written via
+                // order_update — toggle_item_ready only knows the single
+                // line status. Like all item taps, this never changes the
+                // ORDER status; only LISTO does.
+                const items = (o.items || []).map((it, ix) => {
+                    if (ix !== itemIdx) return it;
+                    const stations = { ...(it.stations || {}) };
+                    if (nextStatus) stations[currentMode] = nextStatus; else delete stations[currentMode];
+                    const merged = { ...it, stations };
+                    return { ...merged, status: comboLineStatus(merged) };
+                });
+                try {
+                    const res = await fetch('/api/orders/' + orderId, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ items }) });
+                    if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
+                } catch (e) { alert("Error"); return; }
+                fetchOrders();
+                return;
+            }
             await fetch('/api/store?action=toggle_item_ready', { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ orderId, itemIdx, status: nextStatus }) });
             fetchOrders();
         }
@@ -580,7 +674,7 @@
         window.recallOrder = async function(id) {
             const o = orders.find(x => String(x.id) === String(id));
             if (!o) return;
-            const items = (o.items || []).map(i => ({ ...i, status: null }));
+            const items = (o.items || []).map(i => ({ ...i, status: null, stations: null }));
             try {
                 const res = await fetch('/api/orders/' + id, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ status: 'paid', items }) });
                 if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
