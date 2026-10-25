@@ -66,9 +66,12 @@
                     <button onclick="setMode('drinks')" id="btn-drinks" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all bg-gold text-dark">Barista</button>
                     <button onclick="setMode('food')" id="btn-food" class="px-5 py-2 rounded-full text-[10px] font-black uppercase transition-all text-white/40">Cocina</button>
                 </div>
+                <button onclick="toggleRecientes()" class="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase text-white/60 active:scale-95 transition-all">Recientes <span id="recientes-count" class="text-emerald-400"></span></button>
                 <button onclick="logout()" class="text-white/20 text-lg p-2 ml-1"><i class="fas fa-sign-out-alt"></i></button>
             </div>
         </header>
+
+        <section id="recientes-panel" class="hidden bg-black/40 border-b border-emerald-500/20 px-4 py-3 space-y-2 shrink-0 max-h-64 overflow-y-auto"></section>
 
         <main class="flex-1 p-4 space-y-6 pb-32 overflow-y-auto" id="kds-container"></main>
     </div>
@@ -188,6 +191,7 @@
                 orders = newOrders;
                 renderKDS();
                 renderProductionSummary();
+                renderRecientes();
                 document.getElementById('sync-status').innerText = 'Synced ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
             } catch (e) { console.error(e); }
         }
@@ -455,6 +459,70 @@
             await fetch('/api/store?action=toggle_item_ready', { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ orderId, itemIdx, status: nextStatus }) });
             fetchOrders();
         }
+
+        // --- RECENTLY FULFILLED / RECALL (the Toast/Square "Recently
+        // Fulfilled" pattern): tickets bumped to 'ready' or 'completed' in
+        // the last 60 minutes stay reachable in a hidden panel so an
+        // accidental bump can be undone. Recall sends ONE order_update
+        // PATCH — status back to 'paid' AND every item's state cleared.
+        // Clearing the states is what makes the ticket count again in the
+        // Total Pendiente (all-day) strip, which skips 'ready' items.
+        let recientesOpen = false;
+        function kdsParseDate(dateStr) {
+            if (!dateStr) return new Date();
+            let fixedStr = String(dateStr).replace(' ', 'T');
+            if (!fixedStr.includes('Z') && !fixedStr.includes('+')) fixedStr += 'Z';
+            return new Date(fixedStr);
+        }
+        function recentlyFulfilledList() {
+            const now = new Date();
+            return orders.filter(o => {
+                if (!['ready', 'completed'].includes(o.status)) return false;
+                const t = kdsParseDate(o.completed_at || o.created_at);
+                if (now - t > 60 * 60000) return false;
+                const items = o.items || [];
+                if (!items.length) return true;
+                return items.some(i => currentMode === 'drinks' ? isDrinkItem(i) : isFoodItem(i));
+            }).sort((a, b) => kdsParseDate(b.completed_at || b.created_at) - kdsParseDate(a.completed_at || a.created_at)).slice(0, 8);
+        }
+        function toggleRecientes() {
+            recientesOpen = !recientesOpen;
+            document.getElementById('recientes-panel').classList.toggle('hidden', !recientesOpen);
+            if (recientesOpen) renderRecientes();
+        }
+        function renderRecientes() {
+            const list = recentlyFulfilledList();
+            const badge = document.getElementById('recientes-count');
+            if (badge) badge.innerText = list.length ? '(' + list.length + ')' : '';
+            if (!recientesOpen) return;
+            const panel = document.getElementById('recientes-panel');
+            if (!list.length) {
+                panel.innerHTML = '<p class="text-[10px] font-black uppercase tracking-widest text-white/30">Sin completadas en la última hora</p>';
+                return;
+            }
+            panel.innerHTML = '<p class="text-[10px] font-black uppercase tracking-widest text-emerald-400/70">Completadas recientes — Reactivar devuelve la orden a la pantalla</p>' + list.map(o => {
+                const name = o.customers?.name || o.notes?.match(/Mobile:\s*([^(]+)/)?.[1] || 'Invitado';
+                const when = kdsParseDate(o.completed_at || o.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const brief = (o.items || []).slice(0, 3).map(i => (i.qty || 1) + 'x ' + i.name).join(' · ');
+                return `<div class="flex items-center gap-3 bg-white/5 border-l-4 border-emerald-500 rounded-xl px-4 py-3">
+                    <div class="flex-1 min-w-0">
+                        <p class="font-black text-sm text-white/90">#${escHtml(o.order_number || '')} · ${escHtml(name)} <span class="text-white/30 font-bold text-[10px] uppercase">${o.status === 'ready' ? 'Listo' : 'Completada'} ${when}</span></p>
+                        <p class="text-[11px] text-white/40 truncate">${escHtml(brief)}</p>
+                    </div>
+                    <button onclick="recallOrder('${o.id}')" class="shrink-0 px-4 py-2 rounded-full bg-emerald-500 text-dark text-[10px] font-black uppercase active:scale-95 transition-all">Reactivar</button>
+                </div>`;
+            }).join('');
+        }
+        window.recallOrder = async function(id) {
+            const o = orders.find(x => String(x.id) === String(id));
+            if (!o) return;
+            const items = (o.items || []).map(i => ({ ...i, status: null }));
+            try {
+                const res = await fetch('/api/orders/' + id, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ status: 'paid', items }) });
+                if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
+                fetchOrders();
+            } catch (e) { alert("Error al reactivar"); }
+        };
 
         async function updateOrderStatus(id, status) {
             const res = await fetch('/api/orders/' + id, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ status }) });
