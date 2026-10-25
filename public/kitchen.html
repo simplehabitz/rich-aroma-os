@@ -273,6 +273,53 @@
             `).join('<span class="opacity-10">/</span>');
         }
 
+        // --- TWO-STATION HALVES (kitchen communication) ---
+        // Every ticket is two halves: Bebidas (Barista) and Comida (Cocina).
+        // Half states derive from ITEM states + the station classifiers —
+        // never from the stored order status — so both screens always show
+        // the truth, including which half is holding the ticket up.
+        // Completing MY half writes the model's per-station status
+        // (drinks_ready / food_ready); the order becomes 'ready' only when
+        // BOTH halves that exist are ready. Before this, the LISTO button
+        // completed the WHOLE order from either station's screen.
+        function itemInDrinks(i) { const d = isDrinkItem(i), f = isFoodItem(i); return d || !f; }
+        function itemInFood(i) { const d = isDrinkItem(i), f = isFoodItem(i); return f || !d; }
+        function halfState(o, mode) {
+            const items = (o.items || []).filter(i => mode === 'drinks' ? itemInDrinks(i) : itemInFood(i));
+            if (!items.length) return 'none';
+            if (items.every(i => i.status === 'ready')) return 'ready';
+            if (items.some(i => i.status === 'ready' || i.status === 'preparing')) return 'working';
+            return 'pending';
+        }
+        function orderHalves(o) { return { drinks: halfState(o, 'drinks'), food: halfState(o, 'food') }; }
+        function halvesStrip(o) {
+            const h = orderHalves(o);
+            if (h.drinks === 'none' || h.food === 'none') return '';
+            const pill = (icon, label, st) => {
+                const word = st === 'ready' ? 'Lista ✓' : (st === 'working' ? 'Preparando' : 'Pendiente');
+                const cls = st === 'ready' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' : (st === 'working' ? 'text-gold border-gold/30 bg-gold/10' : 'text-white/30 border-white/10');
+                return `<span class="px-3 py-1.5 rounded-full border text-[9px] font-black uppercase tracking-widest ${cls}"><i class="fas ${icon}"></i> ${label}: ${word}</span>`;
+            };
+            return `<div class="flex gap-2 flex-wrap">${pill('fa-coffee', 'Bebidas', h.drinks)}${pill('fa-utensils', 'Comida', h.food)}</div>`;
+        }
+        window.completeMyHalf = async function(id) {
+            const o = orders.find(x => String(x.id) === String(id));
+            if (!o) return;
+            const mine = currentMode;
+            const items = (o.items || []).map(i => {
+                const inMine = mine === 'drinks' ? itemInDrinks(i) : itemInFood(i);
+                return inMine && i.status !== 'ready' ? { ...i, status: 'ready' } : i;
+            });
+            const h = orderHalves({ ...o, items });
+            const other = mine === 'drinks' ? h.food : h.drinks;
+            const status = (other === 'ready' || other === 'none') ? 'ready' : (mine === 'drinks' ? 'drinks_ready' : 'food_ready');
+            try {
+                const res = await fetch('/api/orders/' + id, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ status, items }) });
+                if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
+                fetchOrders();
+            } catch (e) { alert("Error"); }
+        };
+
         function renderKDS() {
             const container = document.getElementById('kds-container');
             
@@ -304,6 +351,11 @@
                 }
                 return true;
             }).sort((a, b) => {
+                // Tickets whose MY half is done (waiting on the other
+                // station) sink below tickets that still need my work.
+                const waitA = orderHalves(a)[currentMode] === 'ready' ? 1 : 0;
+                const waitB = orderHalves(b)[currentMode] === 'ready' ? 1 : 0;
+                if (waitA !== waitB) return waitA - waitB;
                 // Sort by scheduled time first, then created_at
                 const timeA = oA => parseDate(oA.scheduled_for || oA.created_at);
                 return timeA(a) - timeA(b);
@@ -323,6 +375,12 @@
                 });
                 if (items.length === 0) return '';
 
+                const halves = orderHalves(o);
+                const myHalf = currentMode === 'drinks' ? halves.drinks : halves.food;
+                const otherHalf = currentMode === 'drinks' ? halves.food : halves.drinks;
+                const isMixed = halves.drinks !== 'none' && halves.food !== 'none';
+                const waitingOther = myHalf === 'ready' && otherHalf !== 'ready' && otherHalf !== 'none';
+
                 const orderTime = parseDate(o.created_at);
                 const schedTime = o.scheduled_for ? parseDate(o.scheduled_for) : null;
                 const now = new Date();
@@ -340,7 +398,7 @@
                 const groupCode = groupMatch ? groupMatch[1] : null;
 
                 return `
-                <div class="bg-charcoal border ${schedTime ? 'border-blue-500/40' : 'border-white/5'} rounded-[2.5rem] p-6 space-y-5 shadow-2xl order-card ${o.status === 'ready' ? 'opacity-50 grayscale' : ''}">
+                <div class="bg-charcoal border ${schedTime ? 'border-blue-500/40' : 'border-white/5'} rounded-[2.5rem] p-6 space-y-5 shadow-2xl order-card ${o.status === 'ready' ? 'opacity-50 grayscale' : (waitingOther ? 'opacity-60' : '')}">
                     <div class="flex justify-between items-start">
                         <div class="flex items-center gap-3">
                             <span class="${groupCode ? 'bg-orange-500' : 'bg-gold'} text-dark w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-gold/20">#${o.order_number || '---'}</span>
@@ -357,6 +415,8 @@
                             <p class="text-[8px] font-bold text-white/20 uppercase mt-0.5">${escHtml(o.status)}</p>
                         </div>
                     </div>
+
+                    ${halvesStrip(o)}
 
                     <div class="space-y-2">
                         ${o.items.map((i, idx) => {
@@ -394,7 +454,11 @@
                         ${o.status === 'pending_verification' ? `
                             <button onclick="openTransferVerify('${o.id}')" class="w-full py-4 bg-amber-500 text-dark font-black rounded-2xl text-xs uppercase tracking-widest shadow-lg animate-pulse">VERIFICAR PAGO</button>
                         ` : ''}
-                        <button onclick="updateOrderStatus('${o.id}', 'ready')" class="flex-1 py-4 bg-success text-dark font-black rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">LISTO PARA ENTREGA</button>
+                        ${waitingOther ? `
+                            <div class="flex-1 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-black text-xs uppercase tracking-widest text-center">✓ ${currentMode === 'drinks' ? 'Bebidas' : 'Comida'} lista — esperando ${currentMode === 'drinks' ? 'comida' : 'bebidas'}</div>
+                        ` : `
+                            <button onclick="completeMyHalf('${o.id}')" class="flex-1 py-4 bg-success text-dark font-black rounded-2xl text-xs uppercase tracking-widest shadow-lg active:scale-95 transition-all">${isMixed ? (currentMode === 'drinks' ? 'LISTO: BEBIDAS' : 'LISTO: COMIDA') : 'LISTO PARA ENTREGA'}</button>
+                        `}
                     </div>
                 </div>`;
             }).join('');
