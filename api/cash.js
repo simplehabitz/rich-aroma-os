@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { supabase: globalSupabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
+const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -56,8 +57,12 @@ export default async function handler(req, res) {
         const { pin } = req.body;
         if (!pin) return res.status(400).json({ error: 'PIN required' });
 
+        // SEC-FIX 4 (F12): throttle PIN guessing.
+        if (pinThrottleCheck(req, pin)) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
+
         // Special Case: Oscar Master PIN
         if (isMasterPin(pin)) {
+            pinThrottleSuccess(req, pin);
             return res.json({ 
                 employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin', restaurant_id: 'rich-aroma' } 
             });
@@ -73,6 +78,7 @@ export default async function handler(req, res) {
             .maybeSingle();
 
         if (emp) {
+            pinThrottleSuccess(req, pin);
             return res.json({ employee: { ...emp, restaurant_id: 'rich-aroma' } });
         }
 
@@ -88,6 +94,7 @@ export default async function handler(req, res) {
         });
 
         if (matchingPartner) {
+            pinThrottleSuccess(req, pin);
             return res.json({
                 employee: {
                     id: `partner_${matchingPartner.id}`,
@@ -98,6 +105,7 @@ export default async function handler(req, res) {
             });
         }
 
+        pinThrottleFail(req, pin);
         return res.status(401).json({ error: 'PIN Inválido' });
     }
 

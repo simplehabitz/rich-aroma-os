@@ -1,6 +1,7 @@
 // api/admin.js
 const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
+const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 
 module.exports = async function handler(req, res) {
     try {
@@ -49,10 +50,14 @@ module.exports = async function handler(req, res) {
         // --- AUTH: STAFF LOGIN ---
         if (action === 'staff_login' && req.method === 'POST') {
             const { pin } = req.body;
-            if (isMasterPin(pin)) return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } });
+            // SEC-FIX 4 (F12): throttle PIN guessing; never echo the PIN back.
+            if (pinThrottleCheck(req, pin)) return res.status(429).json({ error: "Demasiados intentos. Espera unos minutos." });
+            if (isMasterPin(pin)) { pinThrottleSuccess(req, pin); return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } }); }
             const { data, error } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).single();
-            if (error || !data) return res.status(401).json({ error: "Invalid PIN" });
-            return res.json({ success: true, employee: data });
+            if (error || !data) { pinThrottleFail(req, pin); return res.status(401).json({ error: "Invalid PIN" }); }
+            pinThrottleSuccess(req, pin);
+            const { pin: _staffPin, ...safeEmployee } = data;
+            return res.json({ success: true, employee: safeEmployee });
         }
 
         // --- Consolidated handler (2026-10-21): shop menu read API,
@@ -101,6 +106,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_group_create' || action === 'modifier_group_create') {
             if (req.method === 'POST') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const { name, required, max_selections } = req.body || {};
                 const { data, error } = await supabase.from('modifier_groups').insert({
                     name,
@@ -115,6 +121,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_option_create' || action === 'modifier_option_create') {
             if (req.method === 'POST') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const { group_id, name, price_adjustment, is_default } = req.body || {};
                 const { data, error } = await supabase.from('modifier_options').insert({
                     group_id,
@@ -129,6 +136,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_group_delete' || action === 'modifier_group_delete') {
             if (req.method === 'DELETE') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const groupId = id || req.query.id;
                 if (!groupId) return res.status(400).json({ error: "Missing group ID" });
                 
@@ -142,6 +150,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_option_delete' || action === 'modifier_option_delete') {
             if (req.method === 'DELETE') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const optionId = id || req.query.id;
                 if (!optionId) return res.status(400).json({ error: "Missing option ID" });
                 const { error } = await supabase.from('modifier_options').delete().eq('id', optionId);
@@ -161,6 +170,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'menu_modifiers_update' || action === 'menu_item_modifiers_update') {
             if (req.method === 'POST') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const itemId = id || req.query.id;
                 const { group_ids } = req.body || {};
                 
@@ -231,7 +241,14 @@ module.exports = async function handler(req, res) {
                 return res.json({ items: flattened, modGroups: [], modOptions: [] });
             }
             
+            // SEC-FIX 4 (F7): menu/modifier WRITES require admin — the gate
+            // existed in this file but only covered later actions, leaving
+            // the whole menu write surface open. Every write in this block
+            // hits BOTH Supabase and the local data/menu.json shadow copy;
+            // each gate below sits above both writes. (Reads above stay
+            // public: they mirror the public menu.)
             if (req.method === 'POST') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const { name, description, price, category, image_url, is_bundle, is_house_made, restaurant_id, available } = req.body || {};
                 const newItem = {
                     id: 'item_' + Date.now(),
@@ -266,6 +283,7 @@ module.exports = async function handler(req, res) {
             }
             
             if (req.method === 'PUT') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const itemId = req.query.id || req.body.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
                 const { name, description, price, category, image_url, is_bundle, is_house_made, available } = req.body || {};
@@ -301,6 +319,7 @@ module.exports = async function handler(req, res) {
             }
             
             if (req.method === 'DELETE') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const itemId = req.query.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
                 try {
@@ -320,6 +339,10 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'menu_update') {
+            // SEC-FIX 4 (F7): one gate at the top covers both branches below
+            // (DELETE and update) and both stores (Supabase + the local
+            // data/menu.json fs.writeFileSync writes).
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
             const fs = require('fs');
             const path = require('path');
             const menuJsonPath = path.join(__dirname, '..', 'data', 'menu.json');

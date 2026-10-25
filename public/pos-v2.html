@@ -927,7 +927,7 @@
             try {
                 const res = await fetch('/api/orders-v2', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
                     body: JSON.stringify(item.data)
                 });
                 

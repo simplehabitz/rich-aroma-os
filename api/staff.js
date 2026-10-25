@@ -1,6 +1,7 @@
 // api/staff.js
 const { supabase } = require('./lib/supabase');
 const { isMasterPin } = require('./lib/auth');
+const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 
 const HONDURAS_TZ = 'America/Tegucigalpa';
 function getHondurasDate() {
@@ -30,9 +31,14 @@ module.exports = async function handler(req, res) {
         if (action === 'profile' && req.method === 'GET') {
             const { pin } = req.query;
             if (!pin) return res.status(400).json({ error: "PIN is required" });
+            // SEC-FIX 4 (F12): this endpoint is a PIN oracle — throttle it,
+            // and never return the PIN itself in the profile.
+            if (pinThrottleCheck(req, pin)) return res.status(429).json({ error: "Demasiados intentos. Espera unos minutos." });
             const { data, error } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).single();
-            if (error || !data) return res.status(401).json({ error: "Invalid PIN" });
-            return res.json(data);
+            if (error || !data) { pinThrottleFail(req, pin); return res.status(401).json({ error: "Invalid PIN" }); }
+            pinThrottleSuccess(req, pin);
+            const { pin: _profilePin, ...safeProfile } = data;
+            return res.json(safeProfile);
         }
 
         // --- 2. Timeclock ---

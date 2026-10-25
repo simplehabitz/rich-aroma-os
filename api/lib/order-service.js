@@ -3,6 +3,77 @@ const { awardPoints, syncMembershipState, getHondurasDate } = require('./loyalty
 const { applyVipBenefits, applyBootcampBenefits, calculateSurgeDiscounts } = require('./pricing');
 const { deductInventoryForOrder } = require('./inventory-service');
 const { notifyOrder } = require('./email-service');
+const { isMasterPin, isAdminToken } = require('./auth');
+
+// ---------------------------------------------------------------------------
+// SEC-FIX 2 (audit F4 + F3): server-side pricing + wallet-PIN verification.
+//
+// Prices are NEVER taken from the client again. The unit price of every item
+// is recomputed here from menu_items, exactly the way handler-v2-menu
+// displays it (batch-expiry discount first, then the rich-aroma transform
+// round(price * 1.15 / 5) * 5), plus the price_adjustment of each modifier
+// option matched from modifier_options (clients send mods as {name} only,
+// so options are matched by id when present, else by name, within the
+// groups linked to the item via item_modifier_groups).
+//
+// A Rico Cash debit additionally requires proof: the customer's own PIN in
+// the request body (customerPin) OR a verified staff/master Bearer
+// credential (the POS checkout sends its staff PIN as Bearer).
+// ---------------------------------------------------------------------------
+
+function round2(n) {
+    return parseFloat((parseFloat(n) || 0).toFixed(2));
+}
+
+/** Selling price of a menu_items row, mirroring handler-v2-menu exactly. */
+function displayPriceFor(menuRow, settings, restaurantId) {
+    let p = parseFloat(menuRow.price) || 0;
+    let finalPrice = p;
+    const productInventory = (settings && settings.product_inventory) || {};
+    const batches = (settings && settings.batches) || [];
+    const cfg = productInventory[menuRow.id] || { is_unlimited: true };
+    if (cfg.is_unlimited === false) {
+        const now = new Date();
+        const valid = batches.filter(b => b.menu_item_id === menuRow.id && new Date(b.expires_at) > now && (parseFloat(b.quantity) || 0) > 0);
+        if (valid.length > 0) {
+            const sorted = [...valid].sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at));
+            const expiresInHours = (new Date(sorted[0].expires_at) - now) / (1000 * 60 * 60);
+            if (expiresInHours <= 12) finalPrice = p * 0.50;
+            else if (expiresInHours <= 24) finalPrice = p * 0.80;
+        }
+    }
+    if (restaurantId === 'rich-aroma') {
+        finalPrice = Math.round((finalPrice * 1.15) / 5) * 5;
+    }
+    return finalPrice;
+}
+
+/**
+ * Verify a Bearer credential the same way store.js verify-pin does:
+ * env master PIN / admin token, an active employee's PIN, or the
+ * restaurant settings PIN. Returns true only for a verified staff caller.
+ */
+async function verifyStaffBearer(bearer, supabase, restaurantId) {
+    const token = String(bearer || '').replace(/^Bearer\s+/i, '').trim();
+    if (!token) return false;
+    if (isMasterPin(token) || isAdminToken(token)) return true;
+    try {
+        const { data: emp } = await supabase.from('employees').select('id').eq('pin', token).eq('active', true).maybeSingle();
+        if (emp) return true;
+    } catch (e) { /* fall through to settings PIN */ }
+    try {
+        const { data: resList } = await supabase.from('restaurants').select('id').contains('settings', { pin: token });
+        if (resList && resList.length > 0) return true;
+    } catch (e) { /* not a staff credential */ }
+    return false;
+}
+
+function ricoPinRequiredError() {
+    const err = new Error('RICO_PIN_REQUIRED: Se requiere el PIN del cliente o autorización del personal para pagar con Rico Cash');
+    err.status = 401;
+    err.code = 'RICO_PIN_REQUIRED';
+    return err;
+}
 
 /**
  * Promo-code ceiling: a code may discount ONLY house-made items.
@@ -30,11 +101,12 @@ function promoEligibleCap(items, percent) {
 /**
  * Main Order Orchestrator for Rich Aroma OS & QuimiEats
  */
-async function createOrder(orderRequest, supabase = defaultSupabase) {
+async function createOrder(orderRequest, supabase = defaultSupabase, authContext = {}) {
     const items = orderRequest.items;
     const paymentMethod = orderRequest.paymentMethod || orderRequest.payment_method;
     const secondaryPaymentMethod = orderRequest.secondaryPaymentMethod || orderRequest.secondary_payment_method;
     const ricoAmount = orderRequest.ricoAmount || orderRequest.rico_amount;
+    const customerPin = orderRequest.customerPin ?? orderRequest.customer_pin ?? null;
     const customerId = orderRequest.customerId || orderRequest.customer_id;
     const customerPhone = orderRequest.customerPhone || orderRequest.customer_phone;
     const customerName = orderRequest.customerName || orderRequest.customer_name;
@@ -100,19 +172,94 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             }
         }
 
-        // 2. Pricing & Meta Logic
-        const itemIds = (items || []).map(i => i.id);
-        const { data: menuItems } = await supabase.from('menu_items').select('id, category, is_house_made, is_vip_free_eligible').in('id', itemIds);
-        
+        // 2. Pricing & Meta Logic — SEC-FIX 2 (audit F4): SERVER PRICES ONLY.
+        // Client-supplied item prices, subtotal and total are ignored. Unit
+        // prices are recomputed from menu_items (displayPriceFor mirrors
+        // handler-v2-menu) + matched modifier option price_adjustments.
+        // Items whose id is NOT on the menu (e.g. the WhatsApp bot's wa-*
+        // ids) keep their client price so bot orders keep working, but they
+        // can never be charged to Rico Cash (see section 3).
+        let _staffAuthPromise = null;
+        const staffAuthorized = () => {
+            if (!_staffAuthPromise) _staffAuthPromise = verifyStaffBearer(authContext && authContext.bearer, supabase, targetResId);
+            return _staffAuthPromise;
+        };
+
+        const itemIds = [...new Set((items || []).map(i => i.id).filter(Boolean))];
+        const [menuRes, resSettingsRes] = await Promise.all([
+            supabase.from('menu_items').select('id, name, price, category, is_house_made, is_vip_free_eligible').in('id', itemIds),
+            supabase.from('restaurants').select('settings').eq('id', targetResId).maybeSingle()
+        ]);
+        const menuItems = menuRes.data || [];
+        const menuById = {};
+        menuItems.forEach(m => { if (!(m.id in menuById)) menuById[m.id] = m; });
+        const restaurantSettings = (resSettingsRes && resSettingsRes.data && resSettingsRes.data.settings) || {};
+
+        // Modifier options for the groups linked to the ordered items
+        const optionsByItem = {};
+        if (itemIds.length > 0) {
+            const { data: links } = await supabase.from('item_modifier_groups').select('item_id, group_id').in('item_id', itemIds);
+            const groupIds = [...new Set((links || []).map(l => l.group_id).filter(Boolean))];
+            if (groupIds.length > 0) {
+                const { data: opts } = await supabase.from('modifier_options').select('id, group_id, name, price_adjustment').in('group_id', groupIds);
+                const optsByGroup = {};
+                (opts || []).forEach(o => { (optsByGroup[o.group_id] = optsByGroup[o.group_id] || []).push(o); });
+                (links || []).forEach(l => { (optionsByItem[l.item_id] = optionsByItem[l.item_id] || []).push(...(optsByGroup[l.group_id] || [])); });
+            }
+        }
+        const matchOption = (itemId, mod) => {
+            const pool = optionsByItem[itemId] || [];
+            if (!pool.length || mod === null || mod === undefined) return null;
+            const modId = (typeof mod === 'object') ? (mod.id || mod.option_id || mod.optionId) : null;
+            if (modId) {
+                const byId = pool.find(o => o.id === modId);
+                if (byId) return byId;
+            }
+            const modName = String(typeof mod === 'object' ? (mod.name || '') : mod).trim().toLowerCase();
+            if (!modName) return null;
+            return pool.find(o => String(o.name || '').trim().toLowerCase() === modName) || null;
+        };
+
+        let serverSubtotal = 0;
+        let hasUnpricedItem = false;
         const itemsWithMeta = (items || []).map(item => {
-            const meta = (menuItems || []).find(m => m.id === item.id);
+            const meta = menuById[item.id];
+            const qty = parseInt(item.qty) || 1;
+            if (!meta) {
+                hasUnpricedItem = true;
+                const fallbackPrice = parseFloat(item.price) || 0;
+                serverSubtotal += fallbackPrice * qty;
+                return {
+                    ...item,
+                    qty,
+                    price: fallbackPrice,
+                    finalPrice: round2(fallbackPrice * qty),
+                    category: item.category || 'General',
+                    is_house_made: item.is_house_made || false,
+                    is_vip_free_eligible: false,
+                    server_priced: false
+                };
+            }
+            let unit = displayPriceFor(meta, restaurantSettings, targetResId);
+            const mods = Array.isArray(item.mods) ? item.mods : (Array.isArray(item.modifiers) ? item.modifiers : []);
+            mods.forEach(mod => {
+                const opt = matchOption(item.id, mod);
+                if (opt) unit += parseFloat(opt.price_adjustment) || 0;
+            });
+            unit = round2(unit);
+            serverSubtotal += unit * qty;
             return {
                 ...item,
+                qty,
+                price: unit,
+                finalPrice: round2(unit * qty),
                 category: meta?.category || 'General',
                 is_house_made: meta?.is_house_made || false,
-                is_vip_free_eligible: meta?.is_vip_free_eligible || false
+                is_vip_free_eligible: meta?.is_vip_free_eligible || false,
+                server_priced: true
             };
         });
+        serverSubtotal = round2(serverSubtotal);
 
         // Surge Engine (Rich Aroma Only for now)
         let surgeDiscount = 0;
@@ -124,14 +271,29 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             surgeDiscount = calculateSurgeDiscounts(itemsWithMeta, activeSurges || []);
         }
 
-        // VIP Engine
+        // VIP Engine — totals come from the SERVER numbers computed above;
+        // orderRequest.subtotal / orderRequest.total are never trusted.
         let finalOrderData = {
             items: itemsWithMeta,
-            subtotal: orderRequest.subtotal || itemsWithMeta.reduce((sum, i) => sum + (parseFloat(i.price) * (i.qty || 1)), 0),
-            total: orderRequest.total || (itemsWithMeta.reduce((sum, i) => sum + (parseFloat(i.price) * (i.qty || 1)), 0) - surgeDiscount),
-            discount: orderRequest.discount || surgeDiscount,
+            subtotal: serverSubtotal,
+            total: round2(serverSubtotal - surgeDiscount),
+            discount: surgeDiscount,
             tier: 'Basic'
         };
+
+        // Manual discount claim (POS courtesy discount, or the POS's
+        // promo pre-computation). Honored only when a promo code is present
+        // (section 2.5 clamps it to the house-made ceiling) or when the
+        // request carries a verified staff/master credential. Otherwise the
+        // claim is ignored — an anonymous client cannot discount itself.
+        const claimedDiscount = parseFloat(orderRequest.discount) || 0;
+        if (claimedDiscount > (parseFloat(finalOrderData.discount) || 0) && (promoCode || await staffAuthorized())) {
+            finalOrderData.discount = claimedDiscount;
+            // No floor here on purpose: the promo block below restores
+            // total/discount consistency by adding back any excess over the
+            // ceiling. The total is floored at 0 after section 2.5.
+            finalOrderData.total = round2(serverSubtotal - claimedDiscount);
+        }
 
         let freeDrinkClaimed = false;
         if (customer && !orderRequest.discount) { // Only auto-apply VIP if NO manual discount from POS
@@ -155,11 +317,10 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
                 const vipCalc = applyVipBenefits(itemsWithMeta, customer);
                 finalOrderData.items = vipCalc.items;
-                // If POS sent a total, keep it, otherwise use VIP calc
-                if (!orderRequest.total) {
-                    finalOrderData.total = vipCalc.total - surgeDiscount;
-                    finalOrderData.discount += vipCalc.items.reduce((sum, i) => sum + (i.appliedDiscount || 0), 0);
-                }
+                // SEC-FIX 2: the VIP total is always the server's computation
+                // (client totals are ignored); vipCalc runs on server prices.
+                finalOrderData.total = vipCalc.total - surgeDiscount;
+                finalOrderData.discount += vipCalc.items.reduce((sum, i) => sum + (i.appliedDiscount || 0), 0);
                 finalOrderData.tier = vipCalc.tier;
                 
                 if (vipCalc.freeDrinkClaimed) {
@@ -168,10 +329,9 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             } else if (tags.includes('Bootcamp')) {
                 const bootCalc = applyBootcampBenefits(itemsWithMeta, customer);
                 finalOrderData.items = bootCalc.items;
-                if (!orderRequest.total) {
-                    finalOrderData.total = bootCalc.total - surgeDiscount;
-                    finalOrderData.discount += bootCalc.items.reduce((sum, i) => sum + (i.appliedDiscount || 0), 0);
-                }
+                // SEC-FIX 2: server computation always wins (see VIP above).
+                finalOrderData.total = bootCalc.total - surgeDiscount;
+                finalOrderData.discount += bootCalc.items.reduce((sum, i) => sum + (i.appliedDiscount || 0), 0);
                 finalOrderData.tier = 'Bootcamp';
             }
         }
@@ -202,7 +362,35 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
             }
         }
 
-        // 3. Rico Balance Logic
+        // SEC-FIX 2: with totals computed server-side, a discount can never
+        // push an order below zero.
+        finalOrderData.total = Math.max(0, round2(finalOrderData.total));
+
+        // 3. Rico Balance Logic — SEC-FIX 2 (audit F3): a wallet debit
+        // requires proof. Either the debited customer's own PIN arrives in
+        // the body (customerPin — storefront flow) or the request carries a
+        // verified staff/master Bearer credential (POS flow — the cashier
+        // collects the customer's PIN at the till). Neither → 401 and the
+        // order is NOT created with a Rico tender. Items that could not be
+        // server-priced can never be charged to a wallet.
+        const ricoInvolved = paymentMethod === 'rico_balance' || paymentMethod === 'rico_cash' ||
+            secondaryPaymentMethod === 'rico_balance' || secondaryPaymentMethod === 'rico_cash' ||
+            (parseFloat(ricoAmount) || 0) > 0;
+        if (ricoInvolved) {
+            const pinOk = !!(customer && customerPin !== null && customerPin !== undefined && String(customerPin).trim() !== '' &&
+                customer.pin !== null && customer.pin !== undefined && String(customer.pin).trim() !== '' &&
+                String(customerPin).trim() === String(customer.pin).trim());
+            if (!pinOk && !(await staffAuthorized())) {
+                throw ricoPinRequiredError();
+            }
+            if (hasUnpricedItem) {
+                const unpricedErr = new Error('RICO_UNPRICED_ITEM: No se puede cobrar con Rico Cash un artículo que no está en el menú');
+                unpricedErr.status = 400;
+                unpricedErr.code = 'RICO_UNPRICED_ITEM';
+                throw unpricedErr;
+            }
+        }
+
         let orderStatus = 'pending';
         let ricoAmountPaid = 0;
         if (paymentMethod === 'rico_balance' && customer) {
@@ -570,5 +758,7 @@ async function createOrder(orderRequest, supabase = defaultSupabase) {
 
 module.exports = {
     createOrder,
-    _promoEligibleCap: promoEligibleCap
+    _promoEligibleCap: promoEligibleCap,
+    _displayPriceFor: displayPriceFor,
+    _verifyStaffBearer: verifyStaffBearer
 };

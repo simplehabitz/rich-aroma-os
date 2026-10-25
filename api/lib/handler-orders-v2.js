@@ -10,13 +10,22 @@ module.exports = async (req, res) => {
 
     if (req.method === 'POST') {
         try {
-            const order = await createOrder(req.body);
+            // SEC-FIX 2: forward the caller's Bearer credential so
+            // order-service can authorize Rico Cash debits (staff POS flow)
+            // and staff manual discounts. Absent/invalid Bearer is fine for
+            // cash/transfer/bot orders — it only gates wallet debits.
+            const authHeader = (req.headers && (req.headers.authorization || req.headers.Authorization)) || '';
+            const bearer = String(authHeader).replace(/^Bearer\s+/i, '').trim() || null;
+            const order = await createOrder(req.body, undefined, { bearer });
             return res.status(201).json(order);
         } catch (e) {
             console.error("[V2 API] Error creating order:", e.message);
-            return res.status(e.message === 'Saldo insuficiente en Rico Cash' ? 400 : 500).json({ 
-                error: e.message 
-            });
+            const status = e.status === 401 ? 401
+                : (e.status === 400 || e.message === 'Saldo insuficiente en Rico Cash') ? 400
+                : 500;
+            const body = { error: e.message };
+            if (e.code) body.code = e.code;
+            return res.status(status).json(body);
         }
     }
 

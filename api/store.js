@@ -1,7 +1,48 @@
 const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
+const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
+
+// ---------------------------------------------------------------------------
+// SEC-FIX 2b (audit F4, second half): server-side pricing helpers for the
+// orders POST below — the /api/orders path (vercel.json rewrites POST
+// /api/orders to this handler). The logic is identical to SEC-FIX 2's
+// order-service pricing, so both checkout paths charge exactly what the
+// menu displays: unit prices are recomputed from menu_items
+// (displayPriceFor mirrors handler-v2-menu: batch-expiry discount first,
+// then the rich-aroma transform round(price * 1.15 / 5) * 5) plus each
+// modifier option's price_adjustment from modifier_options, matched by id
+// when present, else by name, within the groups linked to the item via
+// item_modifier_groups.
+// ---------------------------------------------------------------------------
+
+function round2(n) {
+    return parseFloat((parseFloat(n) || 0).toFixed(2));
+}
+
+/** Selling price of a menu_items row, mirroring handler-v2-menu exactly. */
+function displayPriceFor(menuRow, settings, restaurantId) {
+    let p = parseFloat(menuRow.price) || 0;
+    let finalPrice = p;
+    const productInventory = (settings && settings.product_inventory) || {};
+    const batches = (settings && settings.batches) || [];
+    const cfg = productInventory[menuRow.id] || { is_unlimited: true };
+    if (cfg.is_unlimited === false) {
+        const now = new Date();
+        const valid = batches.filter(b => b.menu_item_id === menuRow.id && new Date(b.expires_at) > now && (parseFloat(b.quantity) || 0) > 0);
+        if (valid.length > 0) {
+            const sorted = [...valid].sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at));
+            const expiresInHours = (new Date(sorted[0].expires_at) - now) / (1000 * 60 * 60);
+            if (expiresInHours <= 12) finalPrice = p * 0.50;
+            else if (expiresInHours <= 24) finalPrice = p * 0.80;
+        }
+    }
+    if (restaurantId === 'rich-aroma') {
+        finalPrice = Math.round((finalPrice * 1.15) / 5) * 5;
+    }
+    return finalPrice;
+}
 
 module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -216,6 +257,103 @@ module.exports = async (req, res) => {
                 let ricoAmountPaid = 0;
                 let allowanceUsedThisOrder = 0;
 
+                // --- 0. SEC-FIX 2b: SERVER-SIDE PRICING (audit F4) ---
+                // Client-supplied item prices, subtotal and total are NOT
+                // trusted on this path either (same rule as SEC-FIX 2 on
+                // /api/orders-v2): every item is repriced from menu_items
+                // and the totals below are the server's. An item whose id
+                // is not on the menu (e.g. a QuimiEats booking line, which
+                // carries no id at all) keeps its client price, is flagged
+                // server_priced:false, and can never be charged to Rico
+                // Cash (see section 1). A claimed discount is a staff
+                // courtesy on this path: it is honored only with a verified
+                // staff credential (SEC-FIX 1's staffActor) and never
+                // exceeds the server subtotal — promo codes are validated
+                // and clamped on the orders-v2 path, not here.
+                const rawItems = Array.isArray(items) ? items : [];
+                const itemIds = [...new Set(rawItems.map(i => i && i.id).filter(Boolean))];
+                const [menuRes, pricingSettingsRes] = await Promise.all([
+                    supabase.from('menu_items').select('id, name, price, category, is_house_made, is_vip_free_eligible').in('id', itemIds),
+                    supabase.from('restaurants').select('settings').eq('id', finalResId).maybeSingle()
+                ]);
+                const menuById = {};
+                (menuRes.data || []).forEach(m => { if (!(m.id in menuById)) menuById[m.id] = m; });
+                const pricingSettings = (pricingSettingsRes && pricingSettingsRes.data && pricingSettingsRes.data.settings) || {};
+
+                // Modifier options for the groups linked to the ordered items
+                const optionsByItem = {};
+                if (itemIds.length > 0) {
+                    const { data: links } = await supabase.from('item_modifier_groups').select('item_id, group_id').in('item_id', itemIds);
+                    const groupIds = [...new Set((links || []).map(l => l.group_id).filter(Boolean))];
+                    if (groupIds.length > 0) {
+                        const { data: opts } = await supabase.from('modifier_options').select('id, group_id, name, price_adjustment').in('group_id', groupIds);
+                        const optsByGroup = {};
+                        (opts || []).forEach(o => { (optsByGroup[o.group_id] = optsByGroup[o.group_id] || []).push(o); });
+                        (links || []).forEach(l => { (optionsByItem[l.item_id] = optionsByItem[l.item_id] || []).push(...(optsByGroup[l.group_id] || [])); });
+                    }
+                }
+                const matchOption = (itemId, mod) => {
+                    const pool = optionsByItem[itemId] || [];
+                    if (!pool.length || mod === null || mod === undefined) return null;
+                    const modId = (typeof mod === 'object') ? (mod.id || mod.option_id || mod.optionId) : null;
+                    if (modId) {
+                        const byId = pool.find(o => o.id === modId);
+                        if (byId) return byId;
+                    }
+                    const modName = String(typeof mod === 'object' ? (mod.name || '') : mod).trim().toLowerCase();
+                    if (!modName) return null;
+                    return pool.find(o => String(o.name || '').trim().toLowerCase() === modName) || null;
+                };
+
+                let serverSubtotal = 0;
+                let hasUnpricedItem = false;
+                const pricedItems = rawItems.map(item => {
+                    const safeItem = (item && typeof item === 'object') ? item : {};
+                    const meta = menuById[safeItem.id];
+                    const qty = parseInt(safeItem.qty) || 1;
+                    if (!meta) {
+                        hasUnpricedItem = true;
+                        const fallbackPrice = parseFloat(safeItem.price) || 0;
+                        serverSubtotal += fallbackPrice * qty;
+                        return {
+                            ...safeItem,
+                            qty,
+                            price: fallbackPrice,
+                            finalPrice: round2(fallbackPrice * qty),
+                            category: safeItem.category || 'General',
+                            is_house_made: safeItem.is_house_made || false,
+                            is_vip_free_eligible: false,
+                            server_priced: false
+                        };
+                    }
+                    let unit = displayPriceFor(meta, pricingSettings, finalResId);
+                    const mods = Array.isArray(safeItem.mods) ? safeItem.mods : (Array.isArray(safeItem.modifiers) ? safeItem.modifiers : []);
+                    mods.forEach(mod => {
+                        const opt = matchOption(safeItem.id, mod);
+                        if (opt) unit += parseFloat(opt.price_adjustment) || 0;
+                    });
+                    unit = round2(unit);
+                    serverSubtotal += unit * qty;
+                    return {
+                        ...safeItem,
+                        qty,
+                        price: unit,
+                        finalPrice: round2(unit * qty),
+                        category: meta?.category || 'General',
+                        is_house_made: meta?.is_house_made || false,
+                        is_vip_free_eligible: meta?.is_vip_free_eligible || false,
+                        server_priced: true
+                    };
+                });
+                serverSubtotal = round2(serverSubtotal);
+
+                const claimedDiscount = parseFloat(discount) || 0;
+                let serverDiscount = 0;
+                if (claimedDiscount > 0 && (await staffActor())) {
+                    serverDiscount = Math.min(claimedDiscount, serverSubtotal);
+                }
+                const serverTotal = Math.max(0, round2(serverSubtotal - serverDiscount));
+
                 // --- 1. EMPLOYEE ALLOWANCE LOGIC ---
                 if (customerId && paymentMethod === 'rico_balance') {
                     // SEC-FIX 1: a wallet debit needs the account holder's PIN
@@ -223,6 +361,12 @@ module.exports = async (req, res) => {
                     // bare customerId.
                     if (!(await staffActor()) && !(await customerPinMatches(customerId, req.body?.customerPin))) {
                         return res.status(401).json({ error: "Se requiere el PIN del cliente para pagar con Rico Cash" });
+                    }
+                    // SEC-FIX 2b: an item the server could not price can
+                    // never be charged to a wallet — not even from the
+                    // employee allowance (same rule as SEC-FIX 2).
+                    if (hasUnpricedItem) {
+                        return res.status(400).json({ error: 'RICO_UNPRICED_ITEM: No se puede cobrar con Rico Cash un artículo que no está en el menú', code: 'RICO_UNPRICED_ITEM' });
                     }
                     const { data: cust } = await supabase.from('customers').select('*').eq('id', customerId).single();
                     if (cust) {
@@ -233,7 +377,7 @@ module.exports = async (req, res) => {
                         
                         if (limit > 0) {
                             const remainingAllowance = Math.max(0, limit - currentUsed);
-                            allowanceUsedThisOrder = Math.min(total, remainingAllowance);
+                            allowanceUsedThisOrder = Math.min(serverTotal, remainingAllowance);
                             
                             // Update the allowance tracker
                             await supabase.from('customers').update({
@@ -241,11 +385,11 @@ module.exports = async (req, res) => {
                                 last_allowance_date: today
                             }).eq('id', customerId);
 
-                            console.log(`[Allowance] Order Total: L.${total}. Using L.${allowanceUsedThisOrder} from daily allowance.`);
+                            console.log(`[Allowance] Order Total: L.${serverTotal}. Using L.${allowanceUsedThisOrder} from daily allowance.`);
                         }
 
                         // --- 2. REMAINING BALANCE FROM REAL RICO CASH ---
-                        const remainingToPay = total - allowanceUsedThisOrder;
+                        const remainingToPay = serverTotal - allowanceUsedThisOrder;
                         if (remainingToPay > 0) {
                             const realBalance = parseFloat(cust.rico_balance) || 0;
                             if (realBalance < remainingToPay) throw new Error("Saldo insuficiente en Rico Cash");
@@ -263,10 +407,10 @@ module.exports = async (req, res) => {
                 const { data, error } = await supabase.from('orders').insert({
                     id: 'ord_' + Date.now(),
                     order_number: Math.floor(Date.now() / 1000) - 1769000000,
-                    items, 
-                    total: parseFloat(total), 
-                    subtotal: parseFloat(subtotal || total), 
-                    discount: parseFloat(discount || 0), 
+                    items: pricedItems,
+                    total: serverTotal,
+                    subtotal: serverSubtotal,
+                    discount: serverDiscount,
                     payment_method: paymentMethod, 
                     customer_id: customerId, 
                     shift_id: shiftId,
@@ -336,43 +480,95 @@ module.exports = async (req, res) => {
 
                 if (customerId && finalResId === 'rich-aroma') {
                     try {
-                        await awardPoints(customerId, total, paymentMethod, supabase);
+                        await awardPoints(customerId, serverTotal, paymentMethod, supabase);
                         
                         // Check if this is the customer's first completed order
                         const { data: priorOrders } = await supabase.from('orders').select('id').eq('customer_id', customerId);
                         if (priorOrders && priorOrders.length <= 1) {
-                            
+
+                            // --- SEC-FIX 2c: MINTING GATE (audit F11) ---
+                            // Both rewards below CREATE Rico Cash out of
+                            // client-supplied data: welcomePromo comes
+                            // straight from the request body, and
+                            // referral_code is whatever was stored on the
+                            // profile at signup. Customer creation is
+                            // public and spending needs only the PIN the
+                            // creator picked, so ungated this mints
+                            // L.50 / L.30 for every fresh account, forever.
+                            // Minting now requires a verified staff
+                            // credential (SEC-FIX 1's staffActor - e.g. a
+                            // cashier ringing a genuine in-store welcome
+                            // offer). The order itself is NEVER blocked:
+                            // a skipped mint is tagged on the order in
+                            // the [PROMO REJECTED: ...] style that
+                            // order-service uses, so the skip stays
+                            // visible in the record.
+                            // GRANT-RECORD ANCHOR: no server-side grant
+                            // record exists today (the gacha wheel
+                            // outcome lives only in the client's
+                            // localStorage, and promo_codes are shared
+                            // discount codes, not per-customer grants).
+                            // When one exists - e.g. the loyalty build's
+                            // campaign engine writing a grant row for
+                            // this customer - OR its check into
+                            // mintAllowed() below. Never substitute
+                            // another client-supplied flag.
+                            let promoMintAllowed = null;
+                            const promoMintSkipped = [];
+                            const mintAllowed = async () => {
+                                if (promoMintAllowed === null) promoMintAllowed = !!(await staffActor());
+                                return promoMintAllowed;
+                            };
+
                             // 1. Process Welcome Wheel Cashback (L. 50 or L. 25)
                             if (req.body.welcomePromo === 'CASHBACK_50' || req.body.welcomePromo === 'CASHBACK_25') {
-                                const cashbackAmount = req.body.welcomePromo === 'CASHBACK_50' ? 50.00 : 25.00;
-                                const { data: cust } = await supabase.from('customers').select('rico_balance').eq('id', customerId).single();
-                                if (cust) {
-                                    const newBal = (parseFloat(cust.rico_balance) || 0) + cashbackAmount;
-                                    await supabase.from('customers').update({ rico_balance: newBal }).eq('id', customerId);
-                                    console.log(`[Promo] Welcomed customer ${customerId} with L.${cashbackAmount} cashback.`);
+                                if (await mintAllowed()) {
+                                    const cashbackAmount = req.body.welcomePromo === 'CASHBACK_50' ? 50.00 : 25.00;
+                                    const { data: cust } = await supabase.from('customers').select('rico_balance').eq('id', customerId).single();
+                                    if (cust) {
+                                        const newBal = (parseFloat(cust.rico_balance) || 0) + cashbackAmount;
+                                        await supabase.from('customers').update({ rico_balance: newBal }).eq('id', customerId);
+                                        console.log(`[Promo] Welcomed customer ${customerId} with L.${cashbackAmount} cashback.`);
+                                    }
+                                } else {
+                                    promoMintSkipped.push(req.body.welcomePromo);
                                 }
                             }
-                            
+
                             // 2. Process Referral Rewards (Double-sided L. 30 reward)
                             const { data: custProfile } = await supabase.from('customers').select('referral_code').eq('id', customerId).single();
                             if (custProfile && custProfile.referral_code) {
-                                const refPhone = custProfile.referral_code.trim();
-                                
-                                // Reward Referrer
-                                const { data: referrer } = await supabase.from('customers').select('id, rico_balance').eq('phone', refPhone).maybeSingle();
-                                if (referrer) {
-                                    const refBal = (parseFloat(referrer.rico_balance) || 0) + 30.00;
-                                    await supabase.from('customers').update({ rico_balance: refBal }).eq('id', referrer.id);
-                                    console.log(`[Referral] Credited L.30 reward to referrer: ${referrer.id}`);
+                                if (await mintAllowed()) {
+                                    const refPhone = custProfile.referral_code.trim();
+
+                                    // Reward Referrer
+                                    const { data: referrer } = await supabase.from('customers').select('id, rico_balance').eq('phone', refPhone).maybeSingle();
+                                    if (referrer) {
+                                        const refBal = (parseFloat(referrer.rico_balance) || 0) + 30.00;
+                                        await supabase.from('customers').update({ rico_balance: refBal }).eq('id', referrer.id);
+                                        console.log(`[Referral] Credited L.30 reward to referrer: ${referrer.id}`);
+                                    }
+
+                                    // Reward Referee (new customer)
+                                    const { data: newCust } = await supabase.from('customers').select('rico_balance').eq('id', customerId).single();
+                                    if (newCust) {
+                                        const newCustBal = (parseFloat(newCust.rico_balance) || 0) + 30.00;
+                                        await supabase.from('customers').update({ rico_balance: newCustBal }).eq('id', customerId);
+                                        console.log(`[Referral] Credited L.30 reward to Referee: ${customerId}`);
+                                    }
+                                } else {
+                                    promoMintSkipped.push('REFERRAL');
                                 }
-                                
-                                // Reward Referee (new customer)
-                                const { data: newCust } = await supabase.from('customers').select('rico_balance').eq('id', customerId).single();
-                                if (newCust) {
-                                    const newCustBal = (parseFloat(newCust.rico_balance) || 0) + 30.00;
-                                    await supabase.from('customers').update({ rico_balance: newCustBal }).eq('id', customerId);
-                                    console.log(`[Referral] Credited L.30 reward to Referee: ${customerId}`);
-                                }
+                            }
+
+                            // A skipped mint stays visible on the order
+                            // record (and in this response) - the sale
+                            // above already went through untouched.
+                            if (promoMintSkipped.length > 0) {
+                                const taggedNotes = (data.notes || '') + ` [PROMO REJECTED: ${promoMintSkipped.join(' + ')}]`;
+                                data.notes = taggedNotes;
+                                await supabase.from('orders').update({ notes: taggedNotes }).eq('id', data.id);
+                                console.log(`[Promo] Skipped unverified mint (${promoMintSkipped.join(', ')}) on order ${data.id}: no staff credential, no server grant.`);
                             }
                         }
                     } catch(e) {
@@ -543,15 +739,18 @@ module.exports = async (req, res) => {
 
         if (action === 'verify-pin') {
             const { pin } = req.body || {};
-            if (isMasterPin(pin)) return res.json({ success: true, employee: { id: 'master', name: 'Admin', role: 'admin', restaurant_id: 'rich-aroma' } });
-            
+            // SEC-FIX 4 (F12): throttle PIN guessing; never echo the PIN back.
+            if (pinThrottleCheck(req, pin)) return res.status(429).json({ error: "Demasiados intentos. Espera unos minutos." });
+            if (isMasterPin(pin)) { pinThrottleSuccess(req, pin); return res.json({ success: true, employee: { id: 'master', name: 'Admin', role: 'admin', restaurant_id: 'rich-aroma' } }); }
+
             const { data: emp } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).maybeSingle();
-            if (emp) return res.json({ success: true, employee: emp });
+            if (emp) { pinThrottleSuccess(req, pin); const { pin: _empPin, ...safeEmp } = emp; return res.json({ success: true, employee: safeEmp }); }
 
             // Fallback: Check if matching master PIN exists in restaurants settings JSONB
             const { data: resList, error: resErr } = await supabase.from('restaurants').select('*').contains('settings', { pin: pin });
             if (resList && resList.length > 0) {
                 const resData = resList[0];
+                pinThrottleSuccess(req, pin);
                 return res.json({
                     success: true,
                     employee: {
@@ -563,6 +762,7 @@ module.exports = async (req, res) => {
                 });
             }
 
+            pinThrottleFail(req, pin);
             return res.status(401).json({ error: "PIN Inválido" });
         }
 

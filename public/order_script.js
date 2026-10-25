@@ -869,6 +869,12 @@
                 notes: orderNotes
             };
             if(currentCustomer) payload.customerId = currentCustomer.id;
+            // SEC-FIX 2: a Rico Cash debit must be authorized server-side —
+            // send the customer's own PIN (saved at login) with rico orders.
+            if (currentSelectedPayment === 'rico_balance') {
+                const savedPin = localStorage.getItem('ra_customer_pin');
+                if (savedPin) payload.customerPin = savedPin;
+            }
 
             try {
                 const res = await fetch('/api/orders-v2', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
