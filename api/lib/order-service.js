@@ -529,31 +529,27 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
                 error = retry.error;
             }
         } catch (dbErr) {
-            console.warn("[OrderService] Supabase connection error, falling back to local storage:", dbErr.message);
+            console.warn("[OrderService] Supabase connection error:", dbErr.message);
             error = dbErr;
         }
 
         if (error || !data) {
-            console.log("[OrderService] Saving order locally to data/orders.json backup");
-            data = {
-                ...dbOrder,
-                created_at: new Date().toISOString()
-            };
-            try {
-                const fs = require('fs');
-                const path = require('path');
-                const ordersPath = path.join(__dirname, '..', '..', 'data', 'orders.json');
-                let fileData = { orders: [] };
-                if (fs.existsSync(ordersPath)) {
-                    fileData = JSON.parse(fs.readFileSync(ordersPath, 'utf8') || '{"orders":[]}');
-                }
-                if (!Array.isArray(fileData.orders)) fileData.orders = [];
-                fileData.orders.unshift(data);
-                fs.writeFileSync(ordersPath, JSON.stringify(fileData, null, 2));
-                console.log(`[OrderService] Order ${data.id} successfully backed up locally!`);
-            } catch (fsErr) {
-                console.error("[OrderService] Local JSON backup error:", fsErr.message);
-            }
+            // SEC-FIX 6 (audit F14): a persistence failure must surface as
+            // an error — NEVER fabricate a success. This block previously
+            // wrote the order to data/orders.json and returned an in-memory
+            // copy as if it had been saved: the POS showed the sale as
+            // completed while the order existed nowhere in the database
+            // (the Oct 24 phantom orders), and promo counting, loyalty
+            // points, stamps, inventory deduction and the notification
+            // email still ran on the phantom. Now the failure throws, so
+            // handler-orders-v2 answers 5xx and the POS can retry through
+            // its offline queue instead of believing a lost sale.
+            console.error("[OrderService] Order Creation Failed:", error);
+            if (error) throw error;
+            const noDataErr = new Error('ORDER_PERSIST_FAILED: la orden no devolvió datos al guardarse');
+            noDataErr.status = 500;
+            noDataErr.code = 'ORDER_PERSIST_FAILED';
+            throw noDataErr;
         }
 
         // 4.4 Promo code use counting (only when a discount was actually granted)
