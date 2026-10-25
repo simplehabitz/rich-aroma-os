@@ -1714,7 +1714,9 @@
                 const res = await fetch(`/api/store?action=customer_update&id=${currentCustomer.id}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: newPin })
+                    // SEC-FIX 1: changing the PIN now requires proving the
+                    // CURRENT one (server verifies it against the account).
+                    body: JSON.stringify({ pin: newPin, currentPin: localStorage.getItem('ra_customer_pin') || '' })
                 });
 
                 if(res.ok) {

@@ -23,6 +23,28 @@
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <script>
+        // SEC-FIX 1: store API writes are staff-gated server-side. Attach
+        // the session PIN (captured at login) as a Bearer credential on
+        // every /api call this page makes.
+        window.__raPartnerPin = '';
+        (function() {
+            const origFetch = window.fetch.bind(window);
+            window.fetch = function(input, init) {
+                try {
+                    const url = typeof input === 'string' ? input : (input && input.url) || '';
+                    const pin = window.__raPartnerPin || localStorage.getItem('ra_staff_pin') || '';
+                    if (pin && url.includes('/api/')) {
+                        init = init || {};
+                        const headers = new Headers(init.headers || {});
+                        if (!headers.has('Authorization')) headers.set('Authorization', 'Bearer ' + pin);
+                        init.headers = headers;
+                    }
+                } catch (e) {}
+                return origFetch(input, init);
+            };
+        })();
+    </script>
 </head>
 <body class="h-screen flex flex-col">
 
@@ -933,6 +955,8 @@
                 const data = await res.json();
                 
                 if (res.ok && data.success) {
+                    window.__raPartnerPin = pin;
+                    try { localStorage.setItem('ra_staff_pin', pin); } catch(e) {}
                     session = { restaurantId: resId, user: data.partner };
                     document.getElementById('login-overlay').classList.add('hidden');
                     document.getElementById('app-container').classList.remove('hidden');

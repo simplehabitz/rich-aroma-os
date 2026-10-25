@@ -78,6 +78,10 @@
 
     <script>
         let orders = [];
+        function escHtml(v) {
+            if (v === null || v === undefined) return '';
+            return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
         let lastOrderCount = 0;
         let currentMode = 'drinks';
         let currentEmployee = null;
@@ -132,6 +136,18 @@
             }
         }
 
+        // SEC-FIX 1: order writes (status changes, transfer approvals) are
+        // staff-gated server-side — the KDS must send the PIN it logged in
+        // with as a Bearer credential. Kept in sessionStorage (tab-scoped),
+        // falling back to the shared ra_staff_pin the launcher/POS stores.
+        let sessionPin = '';
+        try { sessionPin = sessionStorage.getItem('ra_kds_pin') || localStorage.getItem('ra_staff_pin') || ''; } catch(e) {}
+        function staffHeaders() { return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sessionPin }; }
+        function relogin() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('main-content').classList.add('locked');
+        }
+
         async function handleLogin() {
             const pin = document.getElementById('login-pin').value;
             if (pin.length !== 4) return;
@@ -139,6 +155,8 @@
                 const res = await fetch('/api/cash/verify-pin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error);
+                sessionPin = pin;
+                try { sessionStorage.setItem('ra_kds_pin', pin); } catch(e) {}
                 currentEmployee = data.employee;
                 document.getElementById('login-modal').classList.add('hidden');
                 document.getElementById('main-content').classList.remove('locked');
@@ -246,7 +264,7 @@
             document.getElementById('prod-summary').innerHTML = Object.entries(summary).map(([name, qty]) => `
                 <div class="flex items-center gap-1">
                     <span class="bg-dark/20 px-1.5 py-0.5 rounded">${qty}</span>
-                    <span class="uppercase">${name}</span>
+                    <span class="uppercase">${escHtml(name)}</span>
                 </div>
             `).join('<span class="opacity-10">/</span>');
         }
@@ -323,16 +341,16 @@
                         <div class="flex items-center gap-3">
                             <span class="${groupCode ? 'bg-orange-500' : 'bg-gold'} text-dark w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-gold/20">#${o.order_number || '---'}</span>
                             <div>
-                                <h2 class="font-black text-base uppercase leading-none">${o.customers?.name || o.notes?.match(/Mobile:\s*([^\(]+)/)?.[1] || 'Invitado'}</h2>
+                                <h2 class="font-black text-base uppercase leading-none">${escHtml(o.customers?.name || o.notes?.match(/Mobile:\s*([^\(]+)/)?.[1] || 'Invitado')}</h2>
                                 <div class="flex gap-2 mt-1">
-                                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-widest">${o.fulfillment_type || 'Aquí'}</p>
-                                    ${groupCode ? `<span class="text-[9px] font-black text-orange-500 uppercase tracking-widest">[GRUPO: ${groupCode}]</span>` : ''}
+                                    <p class="text-[9px] font-bold text-white/30 uppercase tracking-widest">${escHtml(o.fulfillment_type || 'Aquí')}</p>
+                                    ${groupCode ? `<span class="text-[9px] font-black text-orange-500 uppercase tracking-widest">[GRUPO: ${escHtml(groupCode)}]</span>` : ''}
                                 </div>
                             </div>
                         </div>
                         <div class="text-right">
                             ${timeDisplay}
-                            <p class="text-[8px] font-bold text-white/20 uppercase mt-0.5">${o.status}</p>
+                            <p class="text-[8px] font-bold text-white/20 uppercase mt-0.5">${escHtml(o.status)}</p>
                         </div>
                     </div>
 
@@ -348,11 +366,11 @@
                             const stateClass = isReady ? 'state-ready' : (isPreparing ? 'state-preparing' : 'state-pending');
 
                             return `
-                            <div onclick="cycleItemState('${o.id}', ${idx}, '${i.status || ''}')" class="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 active:scale-95 transition-all cursor-pointer ${stateClass}">
+                            <div onclick="cycleItemState('${o.id}', ${idx}, '${(i.status || '').replace(/['\\]/g, '')}')" class="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between gap-4 active:scale-95 transition-all cursor-pointer ${stateClass}">
                                 <div class="flex-1">
-                                    <p class="font-black text-sm uppercase ${isReady ? 'item-ready-text' : 'text-white/90'}">${i.qty}x ${i.name}</p>
-                                    ${i.mods?.length ? `<p class="text-[9px] font-bold text-white/30 uppercase mt-0.5">${i.mods.map(m=>m.name).join(', ')}</p>` : ''}
-                                    ${i.note ? `<p class="text-[10px] font-black text-blue-400 uppercase mt-1 italic"><i class="fas fa-comment-dots mr-1"></i> ${i.note}</p>` : ''}
+                                    <p class="font-black text-sm uppercase ${isReady ? 'item-ready-text' : 'text-white/90'}">${i.qty}x ${escHtml(i.name)}</p>
+                                    ${i.mods?.length ? `<p class="text-[9px] font-bold text-white/30 uppercase mt-0.5">${i.mods.map(m=>escHtml(m.name)).join(', ')}</p>` : ''}
+                                    ${i.note ? `<p class="text-[10px] font-black text-blue-400 uppercase mt-1 italic"><i class="fas fa-comment-dots mr-1"></i> ${escHtml(i.note)}</p>` : ''}
                                 </div>
                                 <div class="w-8 h-8 rounded-full flex items-center justify-center border-2 ${isReady ? 'bg-success border-success text-dark' : (isPreparing ? 'border-gold text-gold' : 'border-white/10 text-white/10')}">
                                     <i class="fas ${isReady ? 'fa-check' : (isPreparing ? 'fa-fire-alt' : 'fa-clock')}"></i>
@@ -364,7 +382,7 @@
                     ${o.notes && o.notes.includes('[DIRECCIÓN:') ? `
                         <div class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
                             <p class="text-[8px] font-black uppercase tracking-widest mb-1 opacity-60">Dirección de Entrega</p>
-                            <p class="text-xs font-bold leading-snug">${o.notes.match(/\[DIRECCIÓN:\s*([^\]]+)\]/)?.[1] || 'Ver POS'}</p>
+                            <p class="text-xs font-bold leading-snug">${escHtml(o.notes.match(/\[DIRECCIÓN:\s*([^\]]+)\]/)?.[1] || 'Ver POS')}</p>
                         </div>
                     ` : ''}
 
@@ -397,7 +415,7 @@
                             <button onclick="closeVerify()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40"><i class="fas fa-times"></i></button>
                         </div>
                         <div class="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center bg-black/40">
-                            <img src="${receiptUrl}" class="max-w-full rounded-2xl shadow-2xl">
+                            <img src="${escHtml(receiptUrl)}" class="max-w-full rounded-2xl shadow-2xl">
                         </div>
                         <div class="p-8 border-t border-white/5 grid grid-cols-2 gap-4">
                             <button onclick="processTransfer('${id}', 'rejected')" class="py-5 bg-red-500/10 text-red-500 font-black rounded-2xl text-[10px] uppercase tracking-widest">Rechazar</button>
@@ -414,11 +432,12 @@
         window.processTransfer = async function(id, status) {
             if(!confirm(`¿Deseas ${status === 'paid' ? 'APROBAR' : 'RECHAZAR'} este pago?`)) return;
             try {
-                await fetch(`/api/orders/${id}`, {
+                const res = await fetch(`/api/orders/${id}`, {
                     method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: staffHeaders(),
                     body: JSON.stringify({ status })
                 });
+                if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
                 closeVerify();
                 fetchOrders();
             } catch(e) { alert("Error"); }
@@ -433,12 +452,13 @@
             let nextStatus = 'preparing';
             if (currentStatus === 'preparing') nextStatus = 'ready';
             if (currentStatus === 'ready') nextStatus = null;
-            await fetch('/api/store?action=toggle_item_ready', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId, itemIdx, status: nextStatus }) });
+            await fetch('/api/store?action=toggle_item_ready', { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ orderId, itemIdx, status: nextStatus }) });
             fetchOrders();
         }
 
         async function updateOrderStatus(id, status) {
-            await fetch('/api/orders/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+            const res = await fetch('/api/orders/' + id, { method: 'PATCH', headers: staffHeaders(), body: JSON.stringify({ status }) });
+            if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return; }
             fetchOrders();
         }
 

@@ -1,5 +1,5 @@
 const { supabase } = require('./lib/supabase');
-const { isMasterPin } = require('./lib/auth');
+const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
@@ -50,10 +50,53 @@ module.exports = async (req, res) => {
         else if (lowerId.includes('meson')) finalResId = 'el-meson';
     }
 
+    // --- SEC-FIX 1 (2026-10-24): staff credential gate ---
+    // The clients already hold a credential: POS/KDS/members send the staff
+    // PIN as "Authorization: Bearer <PIN>", partner pages send the
+    // restaurant's settings PIN the same way. Accept exactly what
+    // verify-pin accepts: the env master PIN, an active employee's PIN,
+    // or the settings PIN of the restaurant being acted on.
+    function bearerCred() {
+        const h = req.headers.authorization || req.headers.Authorization || '';
+        return String(h).replace(/^Bearer\s+/i, '').trim();
+    }
+    async function staffActor() {
+        const cred = bearerCred();
+        if (!cred) return null;
+        if (isMasterPin(cred)) return { id: 'master', name: 'Admin', role: 'admin' };
+        const { data: emp } = await supabase.from('employees').select('id, name, role').eq('pin', cred).eq('active', true).maybeSingle();
+        if (emp) return emp;
+        const targets = [finalResId, req.body?.restaurantId, req.body?.restaurant_id].filter(Boolean);
+        for (const t of [...new Set(targets)]) {
+            const { data: rest } = await supabase.from('restaurants').select('settings').eq('id', t).maybeSingle();
+            if (rest && rest.settings && rest.settings.pin && String(rest.settings.pin) === cred) return { id: 'master', name: 'Admin', role: 'admin' };
+        }
+        return null;
+    }
+    async function requireStaff() {
+        const actor = await staffActor();
+        if (!actor) { res.status(401).json({ error: 'Se requiere credencial de personal' }); return null; }
+        return actor;
+    }
+    async function customerPinMatches(customerId, pin) {
+        if (!customerId || !pin) return false;
+        const { data: c } = await supabase.from('customers').select('pin').eq('id', customerId).maybeSingle();
+        return !!c && !!c.pin && String(c.pin) === String(pin);
+    }
+    // Customer rows must never leave the API with credential fields on them.
+    function sanitizeCustomer(row) {
+        if (!row || typeof row !== 'object') return row;
+        const copy = { ...row };
+        delete copy.pin;
+        delete copy.password;
+        return copy;
+    }
+
     try {
         // --- 1. STORE STATUS ---
         if (action === 'store_status' || action === 'status') {
             if (req.method === 'PATCH') {
+                if (!(await requireStaff())) return;
                 const newStatus = req.body?.isOpen ? 'active' : 'closed';
                 const { data, error } = await supabase.from('restaurants').update({ status: newStatus }).eq('id', finalResId).select().single();
                 if (error) throw error;
@@ -130,6 +173,7 @@ module.exports = async (req, res) => {
         // --- 2. ORDERS (GET & UPDATE) ---
         if (action === 'orders' || action === 'order_update') {
             if (req.method === 'PATCH' || (req.method === 'POST' && id)) {
+                if (!(await requireStaff())) return;
                 const targetId = id || req.body?.orderId;
                 const { status, notes, subtotal, discount, total, paymentMethod, secondaryPaymentMethod, customerId, shiftId, items } = req.body || {};
                 if (!targetId) return res.status(400).json({ error: "Order ID required" });
@@ -174,6 +218,12 @@ module.exports = async (req, res) => {
 
                 // --- 1. EMPLOYEE ALLOWANCE LOGIC ---
                 if (customerId && paymentMethod === 'rico_balance') {
+                    // SEC-FIX 1: a wallet debit needs the account holder's PIN
+                    // (self-service) or a staff credential (till) — never a
+                    // bare customerId.
+                    if (!(await staffActor()) && !(await customerPinMatches(customerId, req.body?.customerPin))) {
+                        return res.status(401).json({ error: "Se requiere el PIN del cliente para pagar con Rico Cash" });
+                    }
                     const { data: cust } = await supabase.from('customers').select('*').eq('id', customerId).single();
                     if (cust) {
                         const today = new Date().toISOString().split('T')[0];
@@ -392,6 +442,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'close-shift') {
+            if (!(await requireStaff())) return;
             const { shiftId, closingAmount, declaredCard, declaredTransfer, notes } = req.body || {};
             if (!shiftId) return res.status(400).json({ error: "Shift ID required" });
 
@@ -475,6 +526,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'open-shift') {
+            if (!(await requireStaff())) return;
             const { openingAmount, employeeId } = req.body || {};
             
             // Safety check: Is there already an open shift?
@@ -546,7 +598,7 @@ module.exports = async (req, res) => {
             if (customer.pin !== pin) return res.status(401).json({ error: "PIN Incorrecto" });
 
             const synced = await syncMembershipState(customer, supabase);
-            return res.json({ success: true, user: synced });
+            return res.json({ success: true, user: sanitizeCustomer(synced) });
         }
 
         if (action === 'customer_link_phone') {
@@ -599,6 +651,13 @@ module.exports = async (req, res) => {
                 .eq('id', walletAddress)
                 .maybeSingle();
 
+            // SEC-FIX 1: if the account already HAS a PIN, it can only be
+            // replaced by staff — otherwise anyone could re-link a wallet
+            // to their own phone+PIN and keep its balance (takeover chain).
+            if (existingCustomer && existingCustomer.pin && String(existingCustomer.pin) !== String(pin)) {
+                if (!(await staffActor())) return res.status(401).json({ error: "Se requiere la credencial de personal para cambiar el PIN de una cuenta existente" });
+            }
+
             // Check if already verified
             const isVerified = existingCustomer?.tags?.includes('verified') || false;
             const verifyCode = 'QE-' + String(Math.floor(1000 + Math.random() * 9000));
@@ -624,10 +683,11 @@ module.exports = async (req, res) => {
                 .single();
 
             if (error) throw error;
-            return res.json({ success: true, customer, needsVerification: !isVerified, verifyCode });
+            return res.json({ success: true, customer: sanitizeCustomer(customer), needsVerification: !isVerified, verifyCode });
         }
 
         if (action === 'load_balance' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
             const id = req.query.id || req.body.id;
             const { amount } = req.body;
             if (!id || !amount) return res.status(400).json({ error: "Missing ID or amount" });
@@ -642,7 +702,7 @@ module.exports = async (req, res) => {
             const { data, error } = await supabase.from('customers').update({ rico_balance: newBalance }).eq('id', id).select().single();
             
             if (error) return res.status(500).json({ error: error.message });
-            return res.json({ success: true, newBalance, customer: data });
+            return res.json({ success: true, newBalance, customer: sanitizeCustomer(data) });
         }
 
         if (action === 'purchase_membership' && req.method === 'POST') {
@@ -651,6 +711,11 @@ module.exports = async (req, res) => {
 
             const { data: customer, error: fetchErr } = await supabase.from('customers').select('*').eq('id', customerId).single();
             if (fetchErr || !customer) return res.status(404).json({ error: "Customer not found" });
+
+            // SEC-FIX 1: spending a customer's balance needs their PIN or staff.
+            if (!(await staffActor()) && !(await customerPinMatches(customerId, req.body?.pin || bearerCred()))) {
+                return res.status(401).json({ error: "Se requiere el PIN del cliente para esta compra" });
+            }
 
             const VIP_PRICE = 250;
             if ((customer.rico_balance || 0) < VIP_PRICE) {
@@ -667,7 +732,7 @@ module.exports = async (req, res) => {
                 .select().single();
 
             if (updateErr) throw updateErr;
-            return res.json({ success: true, customer: updated });
+            return res.json({ success: true, customer: sanitizeCustomer(updated) });
         }
 
         if (action === 'customer_transfer') {
@@ -685,6 +750,13 @@ module.exports = async (req, res) => {
             const { data: sender, error: senderErr } = await supabase.from('customers').select('*').eq('id', senderId).single();
             if (senderErr || !sender) {
                 return res.status(404).json({ error: "Remitente no encontrado" });
+            }
+
+            // SEC-FIX 1: moving money out of a wallet needs the sender's own
+            // PIN (self-service) or a staff credential — never the id alone.
+            const senderPinOk = req.body?.pin && sender.pin && String(sender.pin) === String(req.body.pin);
+            if (!senderPinOk && !(await staffActor())) {
+                return res.status(401).json({ error: "PIN del remitente requerido o inválido" });
             }
 
             const senderBal = parseFloat(sender.rico_balance) || 0;
@@ -784,7 +856,7 @@ module.exports = async (req, res) => {
 
             // For now, take the best match (first one)
             const synced = await syncMembershipState(results[0], supabase);
-            return res.json(synced);
+            return res.json(sanitizeCustomer(synced));
         }
 
         if (action === 'customer_profile') {
@@ -808,18 +880,20 @@ module.exports = async (req, res) => {
             if (!data) return res.status(404).json({ error: "Customer not found" });
 
             const synced = await syncMembershipState(data, supabase);
-            return res.json(synced);
+            return res.json(sanitizeCustomer(synced));
         }
 
         if (action === 'customer_list') {
+            if (!(await requireStaff())) return;
             const { data, error } = await supabase.from('customers')
                 .select('*')
                 .order('created_at', { ascending: false });
             if (error) throw error;
-            return res.json(data);
+            return res.json((data || []).map(sanitizeCustomer));
         }
 
         if (action === 'customer_delete') {
+            if (!(await requireStaff())) return;
             const targetId = id || req.query.id;
             if (!targetId) return res.status(400).json({ error: "ID required" });
 
@@ -855,15 +929,22 @@ module.exports = async (req, res) => {
             let phoneToStore = cleanPhone;
             if (cleanPhone.length === 8) phoneToStore = `504${cleanPhone}`;
             
-            const newTags = tags || [];
-            if (customer_type === 'employee' || customer_type === 'Employee') {
-                if (!newTags.includes('Employee')) newTags.push('Employee');
-            } else if (customer_type === 'senior') {
-                if (!newTags.includes('Tercera Edad')) newTags.push('Tercera Edad');
-            } else if (customer_type === 'senior_plus') {
-                if (!newTags.includes('Cuarta Edad')) newTags.push('Cuarta Edad');
-            } else if (customer_type === 'hero') {
-                if (!newTags.includes('Hero')) newTags.push('Hero');
+            // SEC-FIX 1: benefit tags can only be granted by staff. A public
+            // signup gets no tags and no customer_type privileges — the tags
+            // unlock free-drink benefits in the order service, so letting a
+            // caller self-assign them at registration is a mint.
+            const creator = await staffActor();
+            const newTags = creator ? (tags || []) : [];
+            if (creator) {
+                if (customer_type === 'employee' || customer_type === 'Employee') {
+                    if (!newTags.includes('Employee')) newTags.push('Employee');
+                } else if (customer_type === 'senior') {
+                    if (!newTags.includes('Tercera Edad')) newTags.push('Tercera Edad');
+                } else if (customer_type === 'senior_plus') {
+                    if (!newTags.includes('Cuarta Edad')) newTags.push('Cuarta Edad');
+                } else if (customer_type === 'hero') {
+                    if (!newTags.includes('Hero')) newTags.push('Hero');
+                }
             }
 
             // Check if there is an existing pending profile
@@ -883,7 +964,7 @@ module.exports = async (req, res) => {
                     }).eq('id', existing.id).select().single();
                     
                     if (updErr) throw updErr;
-                    return res.json(updated);
+                    return res.json(sanitizeCustomer(updated));
                 } else {
                     return res.status(400).json({ error: "Este número de teléfono ya está registrado." });
                 }
@@ -902,21 +983,45 @@ module.exports = async (req, res) => {
             }).select().single();
 
             if (error) throw error;
-            return res.json(data);
+            return res.json(sanitizeCustomer(data));
         }
 
         if (action === 'customer_update') {
             const targetId = id || req.query.id;
             if (!targetId) return res.status(400).json({ error: "ID required" });
 
+            // SEC-FIX 1: this used to run .update(req.body) with no auth at
+            // all — anyone could rewrite any customer's balance or PIN.
+            // Now: staff may edit profile fields + pin/tags/is_vip (the
+            // members page's PIN-reset and tier tools live here); the
+            // account holder may edit their own profile + PIN only by
+            // proving the CURRENT PIN (body.currentPin or Bearer). Money
+            // and benefit counters (rico_balance, points, allowance,
+            // visits, vip_expiry) are NEVER editable here — they have
+            // dedicated, gated paths (load_balance, purchase_membership).
+            const actor = await staffActor();
+            const body = req.body || {};
+            if (!actor) {
+                const proof = body.currentPin || bearerCred();
+                if (!(await customerPinMatches(targetId, proof))) {
+                    return res.status(401).json({ error: "Se requiere el PIN actual del cliente o credencial de personal" });
+                }
+            }
+            const allowed = ['name', 'email', 'birthday'];
+            allowed.push('pin');
+            if (actor) allowed.push('tags', 'is_vip');
+            const updates = {};
+            for (const k of allowed) if (body[k] !== undefined) updates[k] = body[k];
+            if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nada para actualizar" });
+
             const { data, error } = await supabase.from('customers')
-                .update(req.body)
+                .update(updates)
                 .eq('id', targetId)
                 .select()
                 .single();
 
             if (error) throw error;
-            return res.json(data);
+            return res.json(sanitizeCustomer(data));
         }
 
         // --- RESTAURANT-SPECIFIC STAMP LOYALTY CARDS ---
@@ -986,6 +1091,16 @@ module.exports = async (req, res) => {
                 return res.status(400).json({ error: "No tienes recompensas acumuladas pendientes para canjear en este negocio." });
             }
 
+            // SEC-FIX 1: redeeming a reward spends value — require the card
+            // owner's PIN (self-service) or a staff credential.
+            {
+                const { data: cardCust } = await supabase.from('customers').select('id, pin').eq('phone', card.customer_phone).maybeSingle();
+                const pinOk = cardCust && (await customerPinMatches(cardCust.id, req.body?.pin || bearerCred()));
+                if (!pinOk && !(await staffActor())) {
+                    return res.status(401).json({ error: "Se requiere el PIN del cliente o credencial de personal" });
+                }
+            }
+
             const { data: updated, error: updErr } = await supabase.from('restaurant_loyalty_cards')
                 .update({
                     rewards_earned: card.rewards_earned - 1,
@@ -1006,6 +1121,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_loyalty' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
             const { restaurantId, loyaltyEnabled, loyaltyStampGoal, loyaltyRewardText, whatsappOrdersPhone } = req.body || {};
             if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
 
@@ -1035,6 +1151,7 @@ module.exports = async (req, res) => {
 
         // --- COMMISSION TOPUPS (RECEIPT UPLOADS) ---
         if (action === 'submit_commission_topup' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
             const { restaurantId, amount, receiptUrl, bankName, referenceNumber, notes } = req.body || {};
             const targetId = restaurantId || finalResId;
             if (!targetId) return res.status(400).json({ error: "restaurantId is required" });
@@ -1058,12 +1175,10 @@ module.exports = async (req, res) => {
 
             if (error) {
                 console.error("Error submitting commission topup:", error);
-                // Graceful fallback if table is not yet migrated
-                return res.json({
-                    success: true,
-                    message: "Comprobante recibido. Será revisado y acreditado por administración.",
-                    topup: { ...payload, id: 'temp-' + Date.now(), created_at: new Date().toISOString() }
-                });
+                // SEC-FIX 1: never fake success — the old code returned a
+                // fabricated 'temp-' topup on DB error, so a partner could
+                // believe a payment was registered when nothing was saved.
+                return res.status(500).json({ error: "No se pudo registrar el comprobante. Inténtalo de nuevo." });
             }
 
             return res.json({
@@ -1074,6 +1189,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'get_partner_topups') {
+            if (!(await requireStaff())) return;
             const targetId = req.query.restaurantId || finalResId;
             const { data, error } = await supabase.from('commission_topups')
                 .select('*')
@@ -1128,6 +1244,7 @@ module.exports = async (req, res) => {
 
         // --- PARTNER SELLS RICO CASH (OFFSETS PLATFORM FEES) ---
         if (action === 'partner_topup' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
             const { restaurant_id, phone, amount } = req.body || {};
             const targetId = restaurant_id || finalResId;
             const topupAmount = parseFloat(amount);
@@ -1324,6 +1441,9 @@ module.exports = async (req, res) => {
 
         // --- 6. PARTNER DASHBOARD ---
         if (action === 'partner_register') {
+            // SEC-FIX 1: onboarding a new restaurant mints a master PIN and
+            // seeds platform credit — administrator-only, never public.
+            if (!isAdminCredential(req.headers.authorization)) return res.status(401).json({ error: "Se requiere credencial de administrador" });
             const { name, owner, phone, category } = req.body || {};
             if (!name || !phone) return res.status(400).json({ error: "Nombre y teléfono son obligatorios" });
 
@@ -1389,6 +1509,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_plan') {
+            if (!(await requireStaff())) return;
             const { restaurant_id, plan, in_person_onboarding } = req.body || {};
             if (!restaurant_id || !plan) return res.status(400).json({ error: "Missing parameters" });
 
@@ -1418,6 +1539,10 @@ module.exports = async (req, res) => {
             if (!targetResId) return res.status(400).json({ error: "Missing id parameter" });
             const { data, error } = await supabase.from('restaurants').select('id, name, logo_url, settings, category').eq('id', targetResId).maybeSingle();
             if (error || !data) return res.status(404).json({ error: "Restaurant not found" });
+            // SEC-FIX 1 (F6): this public endpoint handed out the full
+            // settings object — including the partner PIN that verify-pin
+            // accepts as an admin credential. The PIN never leaves the API.
+            if (data.settings) { const { pin, ...publicSettings } = data.settings; data.settings = publicSettings; }
             return res.json(data);
         }
 
@@ -1437,10 +1562,13 @@ module.exports = async (req, res) => {
                 return res.status(401).json({ error: "PIN incorrecto" });
             }
 
-            return res.json({ success: true, partner: { id: resData.id, name: resData.name, phone: resData.contact_phone, settings: resData.settings || {} } });
+            // SEC-FIX 1 (F6): never echo the PIN back in the login response.
+            const { pin: _omitPin, ...safeSettings } = resData.settings || {};
+            return res.json({ success: true, partner: { id: resData.id, name: resData.name, phone: resData.contact_phone, settings: safeSettings } });
         }
 
         if (action === 'partner_update_settings') {
+            if (!(await requireStaff())) return;
             const { restaurantId, acceptedPayments, bankDetails, gachaCampaign, operatingHours, bookingLeadTime, bookingBuffer } = req.body || {};
             if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
 
@@ -1490,10 +1618,12 @@ module.exports = async (req, res) => {
                 .single();
 
             if (error) throw error;
-            return res.json({ success: true, settings: data.settings });
+            const { pin: _omitPin2, ...safeUpdatedSettings } = data.settings || {};
+            return res.json({ success: true, settings: safeUpdatedSettings });
         }
 
         if (action === 'partner_orders') {
+            if (!(await requireStaff())) return;
             const resId = req.query.restaurantId;
             if (!resId) return res.status(400).json({ error: "restaurantId is required" });
 
@@ -1508,6 +1638,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_order') {
+            if (!(await requireStaff())) return;
             const { orderId, status } = req.body || {};
             if (!orderId || !status) return res.status(400).json({ error: "Missing parameters" });
 
@@ -1522,6 +1653,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_update_item') {
+            if (!(await requireStaff())) return;
             const { itemId, price, available, is_unlimited, default_daily_stock, stock_quantity, is_gacha_promo } = req.body || {};
             if (!itemId) return res.status(400).json({ error: "itemId is required" });
 
@@ -1587,6 +1719,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_ai_describe') {
+            if (!(await requireStaff())) return;
             const { imageBase64 } = req.body || {};
             if (!imageBase64) return res.status(400).json({ error: "imageBase64 is required" });
             const result = await describeMenuItemPhoto(imageBase64);
@@ -1594,6 +1727,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_create_item' || action === 'partner_save_item') {
+            if (!(await requireStaff())) return;
             try {
                 const { restaurant_id, name, price, category, is_unlimited, default_daily_stock, imageBase64, is_gacha_promo } = req.body || {};
                 if (!restaurant_id || !name || !price) return res.status(400).json({ error: "Faltan campos obligatorios (nombre, precio o restaurante)" });
@@ -1674,6 +1808,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_delete_item') {
+            if (!(await requireStaff())) return;
             const { itemId } = req.body || {};
             if (!itemId) return res.status(400).json({ error: "itemId is required" });
 
@@ -1699,6 +1834,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_add_batch') {
+            if (!(await requireStaff())) return;
             const { itemId, batchName, quantity, hoursToExpire } = req.body || {};
             if (!itemId || !batchName || quantity === undefined || !hoursToExpire) {
                 return res.status(400).json({ error: "Missing required batch parameters" });
@@ -1741,6 +1877,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'partner_generate_ugc_codes') {
+            if (!(await requireStaff())) return;
             const { restaurantId, rewardType, rewardValue, count, maxClaims } = req.body || {};
             if (!restaurantId || !rewardType || !rewardValue || !count) {
                 return res.status(400).json({ error: "Missing required parameters" });
@@ -1901,6 +2038,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'assign_driver' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
             const { orderId, driverId } = req.body || {};
             if (!orderId || !driverId) return res.status(400).json({ error: "orderId and driverId are required" });
 
@@ -1946,18 +2084,22 @@ module.exports = async (req, res) => {
             const driverId = 'drv_' + Date.now() + Math.floor(Math.random()*1000);
             const tempPin = Math.floor(Math.random() * 9000 + 1000).toString();
 
+            // SEC-FIX 1: a self-registered driver must NOT be active on
+            // creation — verify-pin accepts any active employee's PIN, so
+            // an instantly-active signup was a self-service staff
+            // credential. Staff activate the driver in /admin to approve.
             const { data, error } = await supabase.from('employees').insert({
                 id: driverId,
                 name: name,
                 role: 'driver',
                 pin: tempPin,
-                active: true,
+                active: false,
                 color: 'cyan',
                 hourly_rate: 0
             }).select().single();
 
             if (error) throw error;
-            return res.json({ success: true, pin: tempPin, driverId: data.id });
+            return res.json({ success: true, pin: tempPin, driverId: data.id, pendingApproval: true });
         }
 
         if (action === 'driver_orders' && req.method === 'GET') {
