@@ -33,11 +33,27 @@ KDS_DRY_RUN = os.environ.get("KDS_DRY_RUN") == "1"
 
 
 def build_ticket(order: dict) -> dict:
-    """Map the front-desk order dict to the OS /api/orders-v2 payload."""
+    """Map the front-desk order dict to the OS /api/orders-v2 payload.
+
+    Shop orders (shop_engine) arrive storefront-shaped already:
+    each item carries the real menu item id and its POS modifier
+    snapshot (mods). Those pass through untouched so the OS prices
+    and routes them exactly like a /order sale — the item id is
+    what the OS looks the menu row (and its category/station) up
+    by. Legacy Cali-era dicts (type drink/bundle) keep the old
+    synthetic mapping for any queued records.
+    """
     items = []
     for it in order.get("items", []):
-        qty = it.get("quantity", 1)
-        price = float(it.get("unit_price") or 0)
+        qty = it.get("qty", it.get("quantity", 1))
+        price = float(it.get("unit_price") or it.get("price") or 0)
+        if it.get("id"):
+            ticket_item = {"id": it["id"], "name": it.get("name", ""),
+                           "price": price, "qty": qty}
+            if it.get("mods") is not None:
+                ticket_item["mods"] = it["mods"]
+            items.append(ticket_item)
+            continue
         if it.get("type") == "bundle":
             milk = it.get("milk", "whole")
             item_id = f"wa-bundle-3-{milk}"
@@ -52,19 +68,29 @@ def build_ticket(order: dict) -> dict:
         items.append({"id": item_id, "name": name, "price": price, "qty": qty})
 
     break_room = order.get("break_room") or ""
-    notes = f"WhatsApp order {order.get('order_id')} — {order.get('delivery_location')}"
-    if break_room:
-        notes += f", break room: {break_room}"
+    if order.get("delivery_location"):
+        notes = (f"WhatsApp order {order.get('order_id')} — "
+                 f"{order.get('delivery_location')}")
+        if break_room:
+            notes += f", break room: {break_room}"
+    else:
+        notes = (f"WhatsApp order {order.get('order_id')} — "
+                 "para recoger en tienda")
 
     total = float(order.get("total") or 0)
     return {
         "items": items,
         "customerPhone": order.get("customer_phone"),
-        "customerName": "WhatsApp customer",
+        "guestPhone": order.get("customer_phone"),
+        "customerName": order.get("customer_name") or "WhatsApp customer",
         "notes": notes,
-        "fulfillment": order.get("fulfillment", "delivery"),
+        "fulfillment": order.get("fulfillment", "pickup"),
         "restaurantId": KDS_RESTAURANT_ID,
-        "paymentMethod": "pending",
+        # Honest tender, in the OS's own vocabulary: 'cash' is born
+        # 'pending' (pay at pickup); 'transfer' is born
+        # 'awaiting_transfer_approval' (staff verification queue).
+        # A bot order is NEVER born paid.
+        "paymentMethod": order.get("payment_method") or "cash",
         "subtotal": total,
         "total": total,
         "source": order.get("channel", "whatsapp"),

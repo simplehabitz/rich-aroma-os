@@ -1,14 +1,18 @@
 """
 Intro engine for Rich Aroma Honduras (Quimistán) — tenant rich-aroma-honduras ONLY.
 
-Scope (owner decision, 2026-10-25): this is NOT café-menu ordering. A
-customer texts the shop number before the reopening and gets a short
-get-to-know-you session:
+Scope (owner decision, 2026-10-25; ordering added by the
+bot-finalize build, 2026-10-26): a customer texts the shop number
+and gets a short get-to-know-you session:
   1. greeting + offer (botella gratis con la primera compra),
   2. nombre (required) and cumpleaños día/mes (optional, skippable),
   3. confirm/correct, then the account is created in the OS and the
      L.100 welcome gift is recorded as a PENDING grant,
   4. the preventa (bottle preorder) offer, intent captured for the owner.
+Once registered (the LOUNGE), the customer can also see the real OS
+menu and order from it end to end — that half lives in
+shop_engine.py and engages only when a menu catalog is available;
+with no catalog, every reply below is exactly what it was before.
 
 The OS (Supabase customers, phone-keyed) is the system of record; this
 module talks to it only through os_client.py (shared-secret,
@@ -42,8 +46,10 @@ from an already-registered customer goes through
 whatsapp_attribute. Speculative (bare-word) attempts the OS doesn't
 recognize stay SILENT — the customer was never promised anything.
 
-Cali (order_engine.py) is untouched; webhook.py routes only the
-rich-aroma-honduras slug here.
+Cali is GONE (bot-finalize, 2026-10-26): the old Cali order
+engine was removed — webhook.py routes only the
+rich-aroma-honduras slug here, and order_engine.py survives as a
+helpers/compatibility shell with no menu and no prices.
 """
 
 import re
@@ -52,10 +58,12 @@ from typing import Optional
 
 try:
     import os_client
+    import shop_engine
     from orders import save_order
     from order_engine import detect_language, NUMBER_WORDS as _ENGINE_NUMWORDS
 except ImportError:  # running as part of the server package
     from server import os_client
+    from server import shop_engine
     from server.orders import save_order
     from server.order_engine import detect_language, NUMBER_WORDS as _ENGINE_NUMWORDS
 
@@ -127,6 +135,10 @@ class IntroConversation:
     # when the OS binds the word ("" when it didn't).
     pending_word: str = ""
     attribution_note: str = ""
+    # Shop ordering cart (shop_engine.py): None while the customer
+    # isn't mid-order. Lives here so the intro state can stay LOUNGE
+    # for the whole order (missions pull-delivery keeps working).
+    shop_cart: Optional[dict] = field(default=None)
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
@@ -1012,6 +1024,10 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                         + _preventa_recorded_text(packs, bottles,
                                                   boxes, lang))
             if _has_cue(t, MENU_CUES):
+                _shop_menu = shop_engine.menu_reply(lang)
+                if _shop_menu:
+                    return (_returning_greeting(convo) + "\n"
+                            + _shop_menu + _attr_suffix)
                 return (_returning_greeting(convo) + "\n"
                         + _menu_park_text(lang) + _preventa_offer(lang)
                         + _attr_suffix)
@@ -1194,11 +1210,13 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             return ("¡Sin problema! Nos vemos el *7 de noviembre* 🎉 "
                     "Escribinos cuando quieras si cambiás de idea.")
         if _has_cue(t, MENU_CUES):
-            return (_menu_park_text(lang)
+            _menu_body = shop_engine.menu_reply(lang) \
+                or _menu_park_text(lang)
+            return (_menu_body
                     + "\n¿Apartamos un paquete de 5? Decime la "
                       "cantidad o 'no por ahora'."
                     if lang != "en" else
-                    _menu_park_text(lang)
+                    _menu_body
                     + "\nShall we reserve a 5-pack? Tell me how many "
                       "or 'not now'.")
         if _has_cue(t, PRICE_CUES):
@@ -1224,6 +1242,13 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
     if convo.state == "LOUNGE":
         if _has_cue(t, MISSION_CUES):
             return _mission_status_reply(convo, incoming_text)
+        # Shop ordering (bot-finalize): the real OS menu + café
+        # orders. Returns None when no catalog is available or the
+        # message isn't shop business, and every legacy branch
+        # below runs exactly as before.
+        _shop_reply = shop_engine.try_handle(convo, text)
+        if _shop_reply is not None:
+            return _shop_reply
         if _has_cue(t, MENU_CUES):
             return _menu_park_text(lang) + _preventa_offer(lang)
         if _has_cue(t, PRICE_CUES):

@@ -36,8 +36,11 @@ GRAPH_VERSION = "v21.0"
 # (per-message detection still lets any customer use either language).
 ROUTES = {
     "1354660681066143": {"slug": "rich-aroma-honduras", "default_lang": "es"},  # Rich Aroma coffee shop, Quimistán — +504 9905-4412 (line belongs to the shop; decided 2026-10-20)
-    # Cali bottled coffee gets its own US number later — its test on this line was never finished.
+    # Cali bottled coffee gets its own US number and its own deployment
+    # someday — nothing Cali is reachable from this bot (bot-finalize,
+    # 2026-10-26: the Cali order engine was removed, not just unrouted).
 }
+SHOP_PHONE_NUMBER_ID = "1354660681066143"
 
 
 def send_whatsapp_text(phone_number_id: str, to: str, text: str):
@@ -83,16 +86,22 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
 
 def handle_intro_message(from_number: str, text: str, phone_number_id: str):
     """
-    Honduras intro flow (rich-aroma-honduras ONLY): get-to-know-you
-    signup -> account created in the OS + pending L.100 welcome gift ->
-    preventa offer. Café-menu ordering is a later build; see
-    server/intro_engine.py. Other tenants never reach this function.
+    Honduras flow (rich-aroma-honduras — the only tenant this bot
+    serves): get-to-know-you signup -> account created in the OS +
+    pending L.100 welcome gift -> preventa offer -> lounge, where
+    the shop engine (server/shop_engine.py) serves the real OS menu
+    and takes café orders. See server/intro_engine.py.
     """
     try:
         from intro_engine import get_intro_conversation, reply_for_intro
+        import menu_client
     except ImportError:
         from server.intro_engine import get_intro_conversation, reply_for_intro
+        from server import menu_client
 
+    # Best-effort menu refresh (TTL-gated, last-good cache on
+    # failure) so the shop engine prices from the live OS catalog.
+    menu_client.maybe_refresh()
     convo = get_intro_conversation(from_number)
     reply = reply_for_intro(convo, text)
     return send_whatsapp_text(phone_number_id, from_number, reply)
@@ -100,38 +109,12 @@ def handle_intro_message(from_number: str, text: str, phone_number_id: str):
 
 def handle_order_message(from_number: str, text: str, phone_number_id: str):
     """
-    AI order logic for Rich Aroma via order_engine state machine.
-    Steps: greet -> collect items -> confirm -> create order -> notify staff.
-
-    Tenant routing: the Honduras slug runs the INTRO flow instead
-    (handle_intro_message). Every other slug keeps this exact path.
+    Incoming customer message entry point. This bot serves exactly
+    one number — the Quimistán shop's — so every route lands in the
+    Honduras flow. (The Cali order engine that used to sit behind
+    the other branch was removed in the bot-finalize build.)
     """
-    route = ROUTES.get(phone_number_id,
-                       {"slug": "rich-aroma-honduras", "default_lang": "es"})
-    if route["slug"] == "rich-aroma-honduras":
-        return handle_intro_message(from_number, text, phone_number_id)
-
-    try:
-        from order_engine import get_conversation, reply_for, reset_conversation, build_order
-        from orders import save_order
-    except ImportError:
-        # Fallback if run as module
-        from server.order_engine import get_conversation, reply_for, reset_conversation, build_order
-        from server.orders import save_order
-
-    convo = get_conversation(
-        from_number,
-        route["slug"],
-        route["default_lang"],
-    )
-    reply = reply_for(convo, text)
-    # Order just confirmed: persist, then fan out to staff/KDS before reset.
-    if convo.state == "DONE":
-        order = build_order(convo)
-        save_order(convo.business_slug, order)
-        push_to_kds(order)  # no-op until Rich Aroma OS integration is configured
-        reset_conversation(convo)
-    return send_whatsapp_text(phone_number_id, from_number, reply)
+    return handle_intro_message(from_number, text, phone_number_id)
 
 
 def push_to_kds(order: dict):
@@ -185,6 +168,34 @@ def incoming():
         # Log but ack to avoid Meta retries storm; inspect logs
         print(f"webhook error: {e}", flush=True)
     return Response("EVENT_RECEIVED", mimetype="text/plain")
+
+
+@app.post("/order-notify")
+def order_notify():
+    """
+    OS -> bot order-status notifications (ready / cancelled).
+
+    Called by the store.js hook when a WhatsApp-originated order
+    transitions; authenticated with the shared
+    WHATSAPP_SIGNUP_SECRET (Bearer, constant-time, fail-closed —
+    see server/notify.py). The bot formats and sends the customer's
+    WhatsApp message via its normal Meta send path, once per
+    (order, status).
+    """
+    try:
+        import notify
+    except ImportError:
+        from server import notify
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    code, body = notify.process(
+        payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
 
 
 @app.get("/health")
