@@ -176,6 +176,11 @@ module.exports = async (req, res) => {
     // customer_attribution is insert-once — its customer_id PRIMARY
     // KEY is the rule — and this helper NEVER updates it; a later
     // word is answered, not written.
+    // One word never binds at all: the creator's OWN. When the
+    // code's creator_customer_id IS the customer being attributed,
+    // the attempt is a non-bind (reason 'self_word') — a creator
+    // must never harvest their own purchases (CREADORES-PROGRAM.md;
+    // the block was owner-approved 2026-10-26).
     // Normalization is one function used in BOTH directions (staff
     // creating a code, customers sending a word): trim, single token,
     // UPPERCASE, diacritics stripped (NFD + combining-mark removal
@@ -211,6 +216,21 @@ module.exports = async (req, res) => {
             .select('*').eq('code', word).maybeSingle();
         if (!codeRow) return { attributed: false, reason: 'unknown_word' };
         if (!codeRow.is_active) return { attributed: false, reason: 'inactive_code', creator_name: codeRow.creator_name };
+        // SELF-BLOCK: the word is real and active, but it belongs to
+        // THIS customer — binding it would attribute the creator's
+        // own account (and, later, their own purchases) to
+        // themselves. Answer as a plain non-bind and write nothing:
+        // signup surfaces it as attribution null ("silently null"),
+        // whatsapp_attribute as ok:false — the bot renders the
+        // 'self_word' reason through its unknown-word fall-through
+        // (silence for a speculative attempt, the unrecognized-word
+        // line for a deliberate one) and never a ligada line. A
+        // house word (creator_customer_id NULL) skips this check
+        // and binds normally, as does any OTHER customer using this
+        // creator's word, and this creator using someone else's.
+        if (codeRow.creator_customer_id && codeRow.creator_customer_id === customerId) {
+            return { attributed: false, reason: 'self_word', creator_name: codeRow.creator_name };
+        }
         const { error } = await supabase.from('customer_attribution').insert({
             customer_id: customerId,
             creator_code: word,
