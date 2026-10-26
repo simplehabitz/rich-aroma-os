@@ -277,6 +277,60 @@ module.exports = async (req, res) => {
         }
     }
 
+    // --- WhatsApp order-status notifications (bot-finalize) ---
+    // A WhatsApp-originated order that turns 'ready' or 'cancelled'
+    // owes its customer a message ("tu pedido está listo" / the
+    // cancellation). The OS only SIGNALS: it POSTs order + status +
+    // phone to the bot's /order-notify endpoint, authenticated with
+    // the shared WHATSAPP_SIGNUP_SECRET; the bot formats, dedupes
+    // (one send per order+status) and delivers via WhatsApp.
+    // Failure-silent by the same doctrine as unlockMissionsForOrder:
+    // a dead bot endpoint NEVER blocks a status change. Config:
+    // BOT_NOTIFY_URL (the bot's /order-notify URL) — unset means the
+    // hook is inert, so this half is safe to land before the bot's.
+    function isWhatsAppOrder(order) {
+        if (!order) return false;
+        if (order.source === 'whatsapp' || order.channel === 'whatsapp') return true;
+        return /whatsapp/i.test(order.notes || '');
+    }
+
+    async function notifyBotOrderStatus(order) {
+        try {
+            if (!order || !isWhatsAppOrder(order)) return false;
+            if (order.status !== 'ready' && order.status !== 'cancelled') return false;
+            const url = (process.env.BOT_NOTIFY_URL || '').trim();
+            const secret = (process.env.WHATSAPP_SIGNUP_SECRET || '').trim();
+            if (!url || !secret) return false;
+            let phone = '';
+            if (order.customer_id) {
+                const { data: cust } = await supabase.from('customers')
+                    .select('phone').eq('id', order.customer_id).maybeSingle();
+                phone = (cust && cust.phone) || '';
+            }
+            if (!phone) {
+                const m = /\[TEL:\s*([^\]]+)\]/.exec(order.notes || '');
+                if (m) phone = m[1].trim();
+            }
+            if (!phone) return false;
+            const reason = String(order.cancel_reason || order.cancellation_reason || '').trim();
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret },
+                body: JSON.stringify({
+                    order_id: order.id,
+                    order_number: order.order_number,
+                    status: order.status,
+                    phone,
+                    ...(reason ? { reason } : {}),
+                }),
+            });
+            return !!(resp && resp.ok);
+        } catch (e) {
+            console.error('[Notify] bot notify failed (order unaffected):', e && e.message);
+            return false;
+        }
+    }
+
     try {
         // --- 1. STORE STATUS ---
         if (action === 'store_status' || action === 'status') {
@@ -382,6 +436,10 @@ module.exports = async (req, res) => {
                 // helper is failure-silent — the order response below
                 // is unaffected either way.
                 if (data && data.status === 'paid') await unlockMissionsForOrder(data);
+                // NOTIFICACIONES (bot-finalize): a WhatsApp-originated
+                // order that just turned ready/cancelled tells its
+                // customer through the bot (failure-silent helper).
+                if (data && (data.status === 'ready' || data.status === 'cancelled')) await notifyBotOrderStatus(data);
                 return res.json({ success: true, order: data });
             }
             if (req.method === 'GET') {
