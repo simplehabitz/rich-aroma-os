@@ -5,6 +5,9 @@ Used by the Honduras intro flow (intro_engine.py) to:
   - look up a customer by phone            (action=whatsapp_lookup)
   - create their account                  (action=whatsapp_signup)
   - record a preventa (preorder) intent   (action=whatsapp_preventa)
+  - record the campaign Flight (5-pack)   (action=whatsapp_preventa,
+    with a 15-min hold + daily cap           flight=true)
+  - read the shop's transfer details      (action=whatsapp_bank_details)
   - read a customer's Capitan missions    (action=whatsapp_mission_check)
   - submit a UGC post link for a mission  (action=whatsapp_mission_submit)
   - bind a creator's signup word to an    (action=whatsapp_attribute,
@@ -144,6 +147,29 @@ def record_preventa(phone: str, packs: int = 0, bottles: int = 0,
         "phone": phone, "packs": int(packs or 0),
         "bottles": int(bottles or 0), "boxes": int(boxes or 0),
     })
+
+
+def record_flight(phone: str) -> dict:
+    """Record EL FLIGHT DEL CAPITÁN (flight-lane build, 2026-10-26):
+    a preventa 5-pack (packs=1) flagged flight. The OS stamps a
+    15-minute hold, enforces the 100-bottle daily cap and answers in
+    the data payload: status ('intent' | 'waitlist'),
+    remaining_bottles, hold_expires_at, waitlist_position. The bot
+    renders that verdict — it never computes the count itself.
+    Same call-once discipline as record_preventa."""
+    return _post("whatsapp_preventa", {
+        "phone": phone, "packs": 1, "bottles": 0, "boxes": 0,
+        "flight": True,
+    })
+
+
+def bank_details() -> dict:
+    """Read-only: the shop's REAL transfer details (restaurant
+    rich-aroma's settings.bank_details) for the fast lane's payment
+    message. The OS also flags the shipped placeholder strings in
+    data["placeholder"]; the bot applies its own structural check
+    before printing anything (intro_engine._bank_details_usable)."""
+    return _post("whatsapp_bank_details", {})
 
 
 def mission_check(phone: str) -> dict:

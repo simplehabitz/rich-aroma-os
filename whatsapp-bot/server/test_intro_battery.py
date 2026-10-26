@@ -57,6 +57,17 @@ class FakeOS:
                               # exists so no_grant can assert that
         self.preorders = []   # recorded whatsapp_preventa payloads
         self.calls = []       # [(action, payload)]
+        # Flight lane (2026-10-26): mirrors the OS hold/cap ledger —
+        # a 100-bottle daily cap; flight_used pre-seeds today's count,
+        # flight_waitlisted counts today's waitlist rows. Bank details
+        # default to REAL-looking values; a case flips bank_placeholder
+        # to mirror the OS's shipped-placeholder state.
+        self.flight_used = 0
+        self.flight_waitlisted = 0
+        self.bank = {"name": "Banco Ficohsa",
+                     "account": "200012345678",
+                     "owner": "Rich Aroma S de RL"}
+        self.bank_placeholder = False
 
     def seed(self, phone, name, gift=None):
         # `gift` is accepted for legacy case compat and IGNORED:
@@ -94,7 +105,30 @@ class FakeOS:
                      + payload.get("boxes", 0) * 1400)
             row = {**payload, "quoted_total": total}
             self.preorders.append(row)
+            if payload.get("flight"):
+                # The OS flight contract: hold + cap decided server-
+                # side; the response carries the verdict fields only.
+                want = (payload.get("packs", 0) * 5
+                        + payload.get("bottles", 0)
+                        + payload.get("boxes", 0) * 20)
+                remaining = 100 - self.flight_used
+                base = {"ok": True, "customer_id": "cust_fake",
+                        "preorder_id": f"wpre_fake_{len(self.preorders)}"}
+                if want <= remaining:
+                    self.flight_used += want
+                    return 200, {**base, "status": "intent",
+                                 "remaining_bottles": remaining - want,
+                                 "hold_expires_at":
+                                     "2026-10-26T12:15:00.000Z"}
+                self.flight_waitlisted += 1
+                return 200, {**base, "status": "waitlist",
+                             "remaining_bottles": remaining,
+                             "hold_expires_at": None,
+                             "waitlist_position": self.flight_waitlisted}
             return 200, {"ok": True, "preorder": row}
+        if action == "whatsapp_bank_details":
+            return 200, {"ok": True, "bank_details": dict(self.bank),
+                         "placeholder": self.bank_placeholder}
         return 400, {"error": "unknown action"}
 
 
@@ -220,6 +254,84 @@ CASES = [
     ("S1", "safety", SIGNUP, "¿necesitan mi PIN de Rico Cash?",
      {"state": "PREVENTA", "reply_contains": "nunca",
       "no_pin_anywhere": True}),
+
+    # ---- FLIGHT LANE (campaign fast lane, 2026-10-26) ----
+    # FL1: the campaign key on a FIRST message — the deal leads
+    # (flavors, L.350 vs L.500, Nov 4 close) with NO account-admin
+    # before it; the name alone signs her up (no CONFIRM screen),
+    # records the flight, and only THEN asks the birthday.
+    ("FL1", "flight", ["Quiero mi Flight 🧳"], "Ana María",
+     {"any_reply_contains": ["EL FLIGHT DEL CAPITÁN", "Caramel",
+                             "French Vanilla", "Mocha",
+                             "Dulce de Leche", "Dirty Chai",
+                             "L.350", "L.500", "4 de noviembre"],
+      "reply_contains": ["✅ ¡Apartado, Ana!",
+                         "quedan 95 botellas para el sábado 7",
+                         "cumpleaños"],
+      "reply_not_contains": "¿Está bien?",
+      "state": "ASK_BIRTHDAY", "signup_count": 1,
+      "signup_name": "Ana María",
+      "os_actions": ["whatsapp_lookup", "whatsapp_signup",
+                     "whatsapp_preventa"],
+      "flight_recorded": (1, 0, 0), "no_grant": True,
+      "no_pin_anywhere": True}),
+    # FL2: birthday skipped -> the payment message is the lane's
+    # LAST word, with the REAL bank details and the 15-minute hold.
+    ("FL2", "flight", ["Quiero mi Flight 🧳", "Ana María"], "saltar",
+     {"reply_contains": ["Banco Ficohsa", "200012345678",
+                         "15 minutos", "comprobante"],
+      "state": "LOUNGE"}),
+    # FL3: placeholder bank details -> the fallback line; the
+    # placeholder strings NEVER reach the customer.
+    ("FL3", "flight", ["Quiero mi Flight 🧳", "Ana María"], "saltar",
+     {"bank_placeholder": True,
+      "reply_contains": "te pasamos los datos de la cuenta por acá "
+                        "mismo en un momento",
+      "no_reply_contains": ["BANK NAME", "ACCOUNT NUMBER",
+                            "ACCOUNT HOLDER NAME"],
+      "state": "LOUNGE"}),
+    # FL4: a RETURNING customer typing "flight" is never hijacked
+    # into signup — no whatsapp_signup call at all; the flight is
+    # recorded inside the normal flow with the payment close.
+    ("FL4", "flight", [], "quiero mi flight",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "reply_contains": ["¡Apartado, Carlos!", "15 minutos"],
+      "os_actions": ["whatsapp_lookup", "whatsapp_preventa",
+                     "whatsapp_bank_details"],
+      "signup_count": 0, "flight_recorded": (1, 0, 0),
+      "state": "LOUNGE"}),
+    # FL5: cap reached (97/100 already counted — a 5-bottle flight
+    # doesn't fit) -> waitlist verdict with its position.
+    ("FL5", "flight", ["Quiero mi Flight 🧳"], "Ana María",
+     {"flight_used": 97,
+      "reply_contains": ["se acabaron las botellas de hoy",
+                         "número 1 en la lista de espera",
+                         "si se libera un cupo, es tuyo"],
+      "state": "ASK_BIRTHDAY", "flight_recorded": (1, 0, 0)}),
+    # FL6: ...and a waitlisted customer is never asked to pay.
+    ("FL6", "flight", ["Quiero mi Flight 🧳", "Ana María"], "saltar",
+     {"flight_used": 97,
+      "reply_contains": "no transferás nada",
+      "reply_not_contains": "Banco Ficohsa", "state": "LOUNGE"}),
+    # FL7: the standard PREVENTA state also sells "el flight" by
+    # name for a just-signed-up customer (no second signup).
+    ("FL7", "flight", SIGNUP, "quiero el flight",
+     {"reply_contains": ["¡Apartado, María!", "15 minutos"],
+      "state": "LOUNGE", "signup_count": 1,
+      "flight_recorded": (1, 0, 0)}),
+    # FL8: a birthday given in the lane lands on the account (the
+    # second signup call fills it) and the payment close follows.
+    ("FL8", "flight", ["Quiero mi Flight 🧳", "Ana María"],
+     "15 de marzo",
+     {"reply_contains": ["15 minutos", "comprobante"],
+      "state": "LOUNGE", "signup_count": 2,
+      "signup_birthday": "15/03"}),
+    # FL9: the normal lane is untouched — no campaign key, no lane:
+    # the standard ceremony asks the birthday BEFORE any signup.
+    ("FL9", "flight", ["hola"], "María José",
+     {"reply_contains": "cumpleaños", "state": "ASK_BIRTHDAY",
+      "os_actions": ["whatsapp_lookup"], "signup_count": 0,
+      "no_reply_contains": ["EL FLIGHT DEL CAPITÁN"]}),
 ]
 
 _n = [0]
@@ -233,6 +345,12 @@ def run_case(case):
     if "seed_customer" in expect:
         seed = expect["seed_customer"]
         fake.seed(phone, seed["name"], seed.get("gift"))
+    if "flight_used" in expect:
+        fake.flight_used = expect["flight_used"]
+    if expect.get("bank_placeholder"):
+        fake.bank_placeholder = True
+        fake.bank = {"name": "BANK NAME", "account": "ACCOUNT NUMBER",
+                     "owner": "ACCOUNT HOLDER NAME"}
     os_client.set_transport(fake)
     saved = []
     intro_engine.save_order = lambda slug, rec: saved.append(rec)
@@ -294,6 +412,31 @@ def run_case(case):
         if got != expect["preventa"]:
             ok = False
             why.append(f"preventa {got} != {expect['preventa']}")
+    # ---- flight lane keys (2026-10-26) ----
+    joined = "\n".join(replies)
+    for needle in expect.get("any_reply_contains", []):
+        if needle not in joined:
+            ok = False
+            why.append(f"no reply contains {needle!r}")
+    for needle in expect.get("no_reply_contains", []):
+        if needle in joined:
+            ok = False
+            why.append(f"a reply contains forbidden {needle!r}")
+    if "flight_recorded" in expect:
+        flights = [p for a, p in fake.calls
+                   if a == "whatsapp_preventa" and p.get("flight")]
+        got = None
+        if flights:
+            p = flights[-1]
+            got = (p.get("packs", 0), p.get("bottles", 0),
+                   p.get("boxes", 0))
+        if got != expect["flight_recorded"]:
+            ok = False
+            why.append(f"flight_recorded {got} != {expect['flight_recorded']}")
+    if "signup_count" in expect:
+        if len(signups) != expect["signup_count"]:
+            ok = False
+            why.append(f"signup_count {len(signups)} != {expect['signup_count']}")
     if expect.get("no_grant"):
         if fake.grants:
             ok = False

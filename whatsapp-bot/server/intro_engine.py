@@ -58,9 +58,27 @@ Cali is GONE (bot-finalize, 2026-10-26): the old Cali order
 engine was removed — webhook.py routes only the
 rich-aroma-honduras slug here, and order_engine.py survives as a
 helpers/compatibility shell with no menu and no prices.
+
+FLIGHT LANE (campaign fast lane, 2026-10-26): the Instagram
+campaign links to wa.me with the prefilled text "Quiero mi
+Flight 🧳". A FIRST-contact message carrying the campaign key
+("flight") from a brand-new customer skips the signup ceremony:
+the greeting leads with the deal (EL FLIGHT DEL CAPITÁN — 5
+fixed gourmet bottles, preventa L.350, closes November 4), the
+name alone creates the account (no CONFIRM screen), the flight
+is recorded immediately through the OS preventa path (packs_5=1,
+flight flag — the OS stamps a 15-minute hold and enforces the
+100-bottle daily cap), the birthday ask rides AFTER the ✅, and
+the payment message (real transfer details, hold copy) is the
+last word of the lane. At cap the OS records a WAITLIST intent
+and the copy says so, with the position. A registered customer
+typing "flight" is never hijacked into signup — they record the
+flight inside the normal flow. Everyone else's conversation is
+byte-identical to before.
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -152,6 +170,16 @@ class IntroConversation:
     # presented by shop_engine.menu_reply, in order — a bare number
     # reply ("respondé con el número") opens that section.
     menu_sections: list = field(default_factory=list)
+    # Flight lane (campaign fast lane): this signup arrived via the
+    # campaign key and skips the CONFIRM ceremony — the name alone
+    # creates the account and records the flight. flight_result is
+    # the OS verdict for that record (the whatsapp_preventa data
+    # payload: status / remaining_bottles / hold_expires_at /
+    # waitlist_position), or None when the OS couldn't answer and
+    # the record degraded to the standard path (copy then quotes
+    # no count and no status it doesn't know).
+    flight_lane: bool = False
+    flight_result: Optional[dict] = field(default=None)
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
@@ -541,6 +569,210 @@ def _record_preventa(convo: "IntroConversation", packs, bottles, boxes):
         })
         print(f"[intro] preventa OS call failed for "
               f"{convo.customer_phone}: {res.get('error')}", flush=True)
+
+
+# ══════════════════════════════════════════════════════════════════
+# FLIGHT LANE — the campaign fast lane (2026-10-26)
+# ══════════════════════════════════════════════════════════════════
+# EL FLIGHT DEL CAPITÁN: 5 fixed gourmet bottles (one of each),
+# preventa L.350 vs L.500 at the counter, closes Nov 4, pickup at
+# the Nov 7 reopening. A flight IS an existing preventa 5-pack:
+# packs_5=1 through whatsapp_preventa, flagged flight — the OS
+# stamps the 15-minute hold and enforces the 100-bottle daily cap
+# and returns the verdict (status / remaining / position); this
+# module only renders it. Never promise a proactive push: at cap
+# the customer lands on the waitlist and pulls by writing back.
+
+FLIGHT_FLAVORS = ("Caramel", "French Vanilla", "Mocha",
+                  "Dulce de Leche", "Dirty Chai")
+
+# The transfer details as still shipped in restaurant settings
+# (verified live 2026-10-26). Details matching these — or with any
+# field empty — are NEVER printed: the payment message falls back
+# to the honest line below and the send is logged loudly. The OS
+# also flags placeholder=True; either guard alone can stop a print.
+_BANK_PLACEHOLDERS = {"bank name", "account number",
+                      "account holder name"}
+
+
+def _norm_key(text: str) -> str:
+    """Case/diacritic-insensitive normalization for key matching."""
+    t = unicodedata.normalize("NFD", text or "")
+    return "".join(ch for ch in t if not unicodedata.combining(ch)).lower()
+
+
+def _is_flight_key(text: str) -> bool:
+    """The campaign key: the wa.me prefilled text is "Quiero mi
+    Flight 🧳" — any message carrying 'flight' qualifies. Only
+    brand-new conversations route it into the fast lane (see the
+    NEW branch); registered customers are never hijacked."""
+    return "flight" in _norm_key(text)
+
+
+def _flight_greeting(lang: str) -> str:
+    """The lane's first message: the deal comes FIRST — flavors,
+    price, deadline — and the only ask is the name."""
+    flavors = " · ".join(FLIGHT_FLAVORS)
+    if lang == "en":
+        return (f"🧳 *EL FLIGHT DEL CAPITÁN* — five gourmet bottles, "
+                f"one of each: {flavors}.\n"
+                f"Preorder: *L.350* (in store they'll be L.500). "
+                f"Preorders close *November 4* — pick yours up at the "
+                f"reopening, Saturday November 7 🚀\n\n"
+                f"Para apartar el tuyo solo ocupo tu nombre — "
+                f"¿cómo te llamás?")
+    return (f"🧳 *EL FLIGHT DEL CAPITÁN* — cinco botellas gourmet, "
+            f"una de cada sabor: {flavors}.\n"
+            f"Preventa: *L.350* (en tienda serán L.500). La preventa "
+            f"cierra el *4 de noviembre* — recogés el tuyo en la "
+            f"reapertura, el sábado 7 🚀\n\n"
+            f"Para apartar el tuyo solo ocupo tu nombre — "
+            f"¿cómo te llamás?")
+
+
+def _flight_status_text(result: Optional[dict], name: str,
+                        lang: str) -> str:
+    """The verdict line rendered from the OS record response: the
+    ✅ + the live remaining count, or the honest waitlist with its
+    position. A degraded record (result None) claims neither."""
+    first = (name or "").split()[0] if name else ""
+    if result is None:
+        return (f"✅ ¡Apartado, {first}! Tu Flight quedó anotado 🧳")
+    if result.get("status") == "waitlist":
+        pos = result.get("waitlist_position")
+        pos_line = (f"Sos el número {pos} en la lista de espera — "
+                    if pos else "Quedaste en la lista de espera — ")
+        return (f"😮‍💨 {first}, se acabaron las botellas de hoy — "
+                f"la cocina hace 100 al día, ni una más. "
+                + pos_line
+                + "si se libera un cupo, es tuyo: escribinos y te lo "
+                  "confirmamos 🙌")
+    remaining = result.get("remaining_bottles")
+    count_line = (f" Y quedan {remaining} botellas para el sábado 7 👀"
+                  if remaining is not None else "")
+    return (f"✅ ¡Apartado, {first}! Tu Flight del Capitán quedó "
+            f"guardado 🧳" + count_line)
+
+
+def _bank_details_usable(details: Optional[dict]) -> bool:
+    """Both conditions must hold before a single character of the
+    transfer details is printed: the OS didn't flag them as
+    placeholder, AND all three fields are present and none equals a
+    known placeholder string."""
+    if not details or details.get("placeholder"):
+        return False
+    for field_name in ("name", "account", "owner"):
+        value = str(details.get(field_name) or "").strip()
+        if not value or _norm_key(value) in _BANK_PLACEHOLDERS:
+            return False
+    return True
+
+
+def _flight_payment_text(result: Optional[dict], name: str,
+                         lang: str) -> str:
+    """The lane's LAST message: transfer instructions + the hold
+    copy. A waitlist verdict swaps in the no-payment line — nobody
+    pays for a cupo that doesn't exist yet."""
+    first = (name or "").split()[0] if name else ""
+    if result is not None and result.get("status") == "waitlist":
+        return (f"Por ahora no transferás nada, {first} 🙏 Si se "
+                f"libera un cupo, escribinos y te lo confirmamos "
+                f"por acá mismo — y ahí sí cerramos con la "
+                f"transferencia 💛")
+    details = None
+    try:
+        resp = os_client.bank_details()
+        if resp.get("ok"):
+            raw = resp.get("data") or {}
+            details = dict(raw.get("bank_details") or {})
+            # The OS flags placeholder at the response root; fold it
+            # into the details dict _bank_details_usable reads.
+            details["placeholder"] = bool(raw.get("placeholder"))
+    except Exception as exc:  # never let the read break the lane
+        print(f"[flight] bank_details call failed: {exc}")
+    if not _bank_details_usable(details):
+        print("[flight] ⚠️ BANK DETAILS NOT PRINTABLE (placeholder "
+              "or incomplete) — payment message used the fallback "
+              "line. Fill restaurants.settings.bank_details in "
+              "partner-os NOW.")
+        return (f"💳 Para cerrar tu apartado: transferí *L.350* — "
+                f"te pasamos los datos de la cuenta por acá mismo "
+                f"en un momento 🙏\n"
+                f"Tu cupo queda guardado por *15 minutos* 🕐 — "
+                f"cuando transferás, mandame el comprobante por "
+                f"acá 📸 y te confirmamos en minutos ✅")
+    return (f"💳 Para cerrar tu apartado, transferí *L.350* a:\n"
+            f"🏦 {details['name']}\n"
+            f"Cuenta: {details['account']}\n"
+            f"A nombre de: {details['owner']}\n\n"
+            f"Tu cupo queda guardado por *15 minutos* 🕐 — "
+            f"transferí y mandame el comprobante por acá 📸; te "
+            f"confirmamos en minutos ✅")
+
+
+def _record_flight(convo: "IntroConversation") -> Optional[dict]:
+    """Record the flight through the OS (packs_5=1, flight flag)
+    and return the verdict payload. Mirrors _record_preventa's
+    failure contract: on OS failure the local record is kept and a
+    standard (unflagged) preventa is attempted second — a degraded
+    flight is still an apartada, never a lost customer."""
+    if os_client is not None:
+        try:
+            resp = os_client.record_flight(convo.customer_phone)
+            if resp.get("ok"):
+                data = resp.get("data") or {}
+                print(f"[flight] OS recorded phone={convo.customer_phone} "
+                      f"status={data.get('status')} "
+                      f"remaining={data.get('remaining_bottles')} "
+                      f"hold={data.get('hold_expires_at')}")
+                return data
+            print(f"[flight] OS flight record failed "
+                  f"phone={convo.customer_phone}: {resp.get('error')}")
+        except Exception as exc:
+            print(f"[flight] OS flight record error: {exc}")
+    _record_local("flight_intent", convo,
+                  {"packs": 1, "flight": True})
+    _record_preventa(convo, 1, 0, 0)
+    print(f"[flight] degraded to a standard preventa record "
+          f"phone={convo.customer_phone}")
+    return None
+
+
+def _flight_join(convo: "IntroConversation") -> str:
+    """The fast lane's name turn: the account is created NOW (no
+    CONFIRM screen, no birthday yet — the name as typed IS the
+    account name) and the flight is recorded in the same breath.
+    The reply is the ✅ verdict followed by the birthday ask —
+    Paso-6 data rides after the deal, never before it."""
+    lang = convo.lang
+    ok = _do_signup(convo)
+    if not ok:
+        # Account creation is degraded (OS down) — the local retry
+        # machinery already holds the signup. Never fake the ✅:
+        # say the apartado is noted and the team confirms by hand.
+        convo.state = "LOUNGE"
+        return ("¡Gracias! 🙌 Tu Flight quedó anotado — estamos "
+                "confirmando tu cuenta y te escribimos por acá "
+                "mismo en un ratito para cerrar tu apartado 🧳💛")
+    convo.flight_result = _record_flight(convo)
+    convo.state = "ASK_BIRTHDAY"
+    return _flight_full_reply(convo)
+
+
+def _flight_full_reply(convo: "IntroConversation") -> str:
+    """✅ verdict + the birthday ask (idempotent — safe to re-enter
+    after a name re-ask or a name confirmation)."""
+    status = _flight_status_text(convo.flight_result, convo.name,
+                                 convo.lang)
+    return status + "\n\n" + _birthday_ask(convo.name, convo.lang)
+
+
+def _flight_close(convo: "IntroConversation") -> str:
+    """Birthday answered or skipped: the payment message is the
+    lane's last word, then the conversation rests in the LOUNGE."""
+    convo.state = "LOUNGE"
+    return _flight_payment_text(convo.flight_result, convo.name,
+                                convo.lang)
 
 
 def _is_yes(t: str) -> bool:
@@ -1011,6 +1243,18 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                 return (_returning_greeting(convo) + "\n"
                         + _submit_mission_link(convo, _url))
             # Registered: answer a direct intent right away if present.
+            # FLIGHT LANE (returning): she already has an account —
+            # NEVER re-signup, never the ceremony. "flight" records
+            # the flight inside the normal flow (same hold + cap)
+            # and the payment close follows in the same reply.
+            if _is_flight_key(text):
+                convo.flight_result = _record_flight(convo)
+                return (_returning_greeting(convo) + "\n"
+                        + _flight_status_text(convo.flight_result,
+                                              convo.name, lang)
+                        + "\n\n"
+                        + _flight_payment_text(convo.flight_result,
+                                               convo.name, lang))
             packs, bottles, boxes = parse_preventa_explicit(text)
             if packs or bottles or boxes:
                 _record_preventa(convo, packs, bottles, boxes)
@@ -1033,6 +1277,17 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             return _returning_greeting(convo) + _preventa_offer(lang) \
                 + _attr_suffix
 
+        # FLIGHT LANE: the campaign key on a first message — this
+        # customer tapped the Instagram link and the OS doesn't
+        # know her yet (registered customers were routed above and
+        # are never hijacked into signup). The deal leads; the name
+        # is the only ask; the conversation stays in ASK_NAME with
+        # flight_lane set, and the name turn runs the whole join
+        # (signup + flight record) in one breath.
+        if _is_flight_key(text):
+            convo.flight_lane = True
+            convo.state = "ASK_NAME"
+            return _flight_greeting(lang)
         # New customer.
         convo.state = "ASK_NAME"
         # Creadores: stash any word this first message carries — it
@@ -1093,6 +1348,10 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
         if _looks_like_name(candidate):
             convo.name = candidate
             convo.strikes = 0
+            if convo.flight_lane:
+                # No CONFIRM screen in the fast lane: the name as
+                # typed creates the account and records the flight.
+                return _flight_join(convo)
             convo.state = "ASK_BIRTHDAY"
             return _birthday_ask(convo.name, lang)
         convo.strikes += 1
@@ -1105,6 +1364,27 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                 "¿Cómo te llamás? (ej: María José)")
 
     if convo.state == "ASK_BIRTHDAY":
+        # FLIGHT LANE: the birthday is post-deal data here (the
+        # account already exists, the flight is already recorded).
+        # Whatever the answer, the payment message is the lane's
+        # last word — never lead her into the standard ceremony.
+        if convo.flight_lane:
+            convo.flight_lane = False
+            if _is_skip(t):
+                convo.birthday_dm = ""
+                return _flight_close(convo)
+            parsed = _parse_birthday(text)
+            if parsed:
+                convo.birthday_dm = parsed
+                _do_signup(convo)  # fills the birthday on the account
+                return _flight_close(convo)
+            convo.strikes += 1
+            if convo.strikes >= 2:
+                convo.birthday_dm = ""
+                return _flight_close(convo)
+            return ("Perdón, no te entendí 🙈 Escribilo así: "
+                    "15 de marzo — o escribí *saltar* y seguimos "
+                    "con tu apartado 🧳")
         if _is_skip(t):
             convo.birthday_dm = ""
             convo.strikes = 0
@@ -1180,6 +1460,17 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
 
     # ---------------- preventa ----------------
     if convo.state == "PREVENTA":
+        # FLIGHT LANE (returning): the standard preventa state also
+        # sells "el flight" by name — the same flagged record
+        # (packs_5=1, hold + cap) and the payment close.
+        if _is_flight_key(text):
+            convo.flight_result = _record_flight(convo)
+            convo.state = "LOUNGE"
+            return (_flight_status_text(convo.flight_result,
+                                        convo.name, lang)
+                    + "\n\n"
+                    + _flight_payment_text(convo.flight_result,
+                                           convo.name, lang))
         packs, bottles, boxes = parse_preventa(text)
         if packs or bottles or boxes:
             _record_preventa(convo, packs, bottles, boxes)
@@ -1223,6 +1514,18 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
 
     # ---------------- lounge (registered) ----------------
     if convo.state == "LOUNGE":
+        # FLIGHT LANE (returning, again): a registered customer
+        # asking for the flight records it inside the normal flow —
+        # same hold + cap, payment close in the same reply. Before
+        # missions and before the shop engine: "flight" is a
+        # campaign word, never a menu item.
+        if _is_flight_key(text):
+            convo.flight_result = _record_flight(convo)
+            return (_flight_status_text(convo.flight_result,
+                                        convo.name, lang)
+                    + "\n\n"
+                    + _flight_payment_text(convo.flight_result,
+                                           convo.name, lang))
         if _has_cue(t, MISSION_CUES):
             return _mission_status_reply(convo, incoming_text)
         # Shop ordering (bot-finalize): the real OS menu + café
