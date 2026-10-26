@@ -152,6 +152,7 @@
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
                 <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
                 <button onclick="switchTab('clientes')" id="tab-clientes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Clientes</button>
+                <button onclick="switchTab('misiones')" id="tab-misiones" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Misiones</button>
             </div>
             
             <!-- Store Status Toggle -->
@@ -326,6 +327,107 @@
                         </tr>
                     </thead>
                     <tbody id="clientesTable" class="divide-y divide-gray-100 text-sm">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: MISIONES -->
+        <div id="section-misiones" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Misiones del Capitán</h2>
+                <button onclick="loadMisiones()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest">Actualizar</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">Retos de fotos para clientes: cuando una orden <strong>pagada</strong> incluye el artículo disparador, el cliente recibe la misión por WhatsApp, sube su foto, etiqueta a la tienda y manda el link de vuelta. Vos revisás cada envío acá; al aprobar, el premio queda <strong>Pendiente</strong> en su Rico Cash y se acredita con el sistema de lealtad (nunca desde esta vista). El dinero de regalo <strong>nunca</strong> desbloquea misiones: solo cuentan pagos reales (efectivo, tarjeta, transferencia o el Rico Cash propio del cliente).</p>
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-4">Crear misión</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">ID (sin espacios)</label>
+                        <input type="text" id="ms-slug" placeholder="botella-viajera" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Nombre</label>
+                        <input type="text" id="ms-name" placeholder="Botella Viajera" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Artículo disparador</label>
+                        <select id="ms-item" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="">Cargando menú…</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Premio (L.)</label>
+                        <input type="number" id="ms-reward" min="0" value="50" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Cupo total (opcional)</label>
+                        <input type="number" id="ms-cap" min="1" placeholder="Sin límite" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Veces por cliente</label>
+                        <input type="number" id="ms-max" min="1" value="1" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Desde</label>
+                        <input type="date" id="ms-from" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Hasta (opcional)</label>
+                        <input type="date" id="ms-to" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Plazo (horas)</label>
+                        <input type="number" id="ms-hours" min="1" value="48" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Instagram de la tienda</label>
+                        <input type="text" id="ms-handle" value="@richaromacoffee" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">El usuario de Instagram queda guardado por misión. Hoy es un marcador (<strong>@richaromacoffee</strong>) hasta confirmar el usuario real de la tienda.</p>
+                <div class="mt-3">
+                    <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Mensaje de la misión (lo recibe el cliente por WhatsApp)</label>
+                    <textarea id="ms-brief" rows="3" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">📸 MISIÓN: Subí una foto de tu {item}, etiquetanos {handle} y mandame el link acá. Premio: L.{reward} de regalo en tu Rico Cash 🎁 Tenés {hours} horas.</textarea>
+                    <p class="text-xs text-gray-400 mt-1">Dejá {item}, {reward}, {hours} y {handle} tal cual: el sistema los reemplaza por el artículo, el premio, el plazo y el Instagram de la misión.</p>
+                </div>
+                <button onclick="crearMision()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 mt-4">Crear misión</button>
+                <p id="ms-form-msg" class="text-xs mt-3"></p>
+            </div>
+            <p id="ms-totals" class="text-sm text-gray-600 mb-4"></p>
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Misión</th>
+                            <th class="p-4">Disparador</th>
+                            <th class="p-4">Premio</th>
+                            <th class="p-4">Progreso</th>
+                            <th class="p-4">Comprometido</th>
+                            <th class="p-4">Costo est.</th>
+                            <th class="p-4">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="misionesTable" class="divide-y divide-gray-100 text-sm">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+            <h3 class="font-bold mb-4">Envíos por revisar</h3>
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Cliente</th>
+                            <th class="p-4">Teléfono</th>
+                            <th class="p-4">Misión</th>
+                            <th class="p-4">Publicación</th>
+                            <th class="p-4">Recibida</th>
+                            <th class="p-4">Decisión</th>
+                        </tr>
+                    </thead>
+                    <tbody id="misionesQueue" class="divide-y divide-gray-100 text-sm">
                         <!-- Injected via JS -->
                     </tbody>
                 </table>
@@ -1249,7 +1351,7 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
-                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes'];
+                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones'];
                 if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
@@ -1271,6 +1373,7 @@
                 if(tabId === 'menu') { loadMenu(); loadModifiersDatabase(); }
                 if(tabId === 'promocodes') loadPromoCodes();
                 if(tabId === 'clientes') loadClientes();
+                if(tabId === 'misiones') loadMisiones();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
@@ -1357,6 +1460,182 @@
                 alert('Error: ' + e.message);
             }
             loadClientes();
+        }
+
+        // --- MISIONES LOGIC ---
+        // Misiones del Capitán: staff crean misiones, ven el pasivo
+        // que comprometen (valor cara y su costo real estimado al
+        // ~30% del costo de casa) y deciden los envíos de los
+        // clientes. Aprobar deja el premio PENDIENTE en reward_grants
+        // para que lo acredite el sistema de lealtad — esta vista
+        // nunca toca el saldo del cliente.
+        async function poblarSelectMisiones() {
+            const sel = document.getElementById('ms-item');
+            if (!sel) return;
+            const elegido = sel.value;
+            let items = window.allMenuItems || null;
+            if (!items) {
+                try {
+                    const rid = (document.getElementById('menu-restaurant-selector') || {}).value || 'rich-aroma';
+                    const res = await fetch(`/api/admin/menu?restaurantId=${rid}`, { headers: getHeaders() });
+                    const data = await res.json();
+                    items = data.items || [];
+                } catch (e) { items = []; }
+            }
+            sel.innerHTML = '<option value="">Elegí el artículo…</option>' + items.map(i =>
+                `<option value="${escapeHtml(i.id)}">${escapeHtml(i.name || i.id)}</option>`).join('');
+            if (elegido) sel.value = elegido;
+        }
+
+        async function loadMisiones() {
+            poblarSelectMisiones();
+            const tbody = document.getElementById('misionesTable');
+            const queueBody = document.getElementById('misionesQueue');
+            if (!tbody || !queueBody) return;
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-gray-400 italic">Cargando...</td></tr>';
+            queueBody.innerHTML = '<tr><td colspan="6" class="p-4 text-gray-400 italic">Cargando...</td></tr>';
+            try {
+                const res = await fetch('/api/store?action=admin_missions_list', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+                renderMisionesTable(data.missions || [], data.totals || {});
+                renderMisionesQueue(data.pending_submissions || []);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-red-500">Error: ${e.message}</td></tr>`;
+                queueBody.innerHTML = `<tr><td colspan="6" class="p-4 text-red-500">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderMisionesTable(missions, totals) {
+            const tbody = document.getElementById('misionesTable');
+            const tot = document.getElementById('ms-totals');
+            if (tot) tot.innerHTML = `Premios aprobados hasta hoy: <strong>${formatoLempiras(totals.committed_face || 0)}</strong> comprometidos · costo real estimado <strong>${formatoLempiras(totals.committed_est_cost || 0)}</strong> (al 30%, el costo de lo hecho en casa).`;
+            if (!missions.length) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-12 text-center text-gray-400 italic">Aún no hay misiones. Creá la primera arriba.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = missions.map(m => {
+                const c = m.counts || {};
+                const progreso = `${c.unlocked || 0} abiertas · ${c.submitted_pending || 0} por revisar · ${c.approved || 0} aprobadas` +
+                    (c.cap_total != null ? ` · cupo ${c.cap_total}` : '');
+                const estado = m.is_active
+                    ? '<span class="text-green-600 font-bold">Activa</span>'
+                    : '<span class="text-gray-400 font-bold">Pausada</span>';
+                const boton = `<button onclick="toggleMision('${escapeHtml(m.id)}', ${m.is_active ? 'false' : 'true'})" class="text-blue-600 hover:text-blue-800 text-xs font-bold block mt-1">${m.is_active ? 'Pausar' : 'Activar'}</button>`;
+                return `<tr>
+                    <td class="p-4"><div class="font-bold text-gray-800">${escapeHtml(m.name || m.id)}</div><div class="text-[10px] text-gray-400 font-mono">${escapeHtml(m.id)}</div></td>
+                    <td class="p-4 text-gray-600">${escapeHtml(m.trigger_item_name || m.trigger_item_id || '—')}</td>
+                    <td class="p-4 font-bold text-gray-700">${formatoLempiras(m.reward_amount)}</td>
+                    <td class="p-4 text-gray-600">${progreso}</td>
+                    <td class="p-4 font-bold text-gray-700">${formatoLempiras(m.committed_face || 0)}</td>
+                    <td class="p-4 text-gray-600">${formatoLempiras(m.committed_est_cost || 0)}</td>
+                    <td class="p-4">${estado}${boton}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderMisionesQueue(queue) {
+            const tbody = document.getElementById('misionesQueue');
+            if (!queue.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-12 text-center text-gray-400 italic">No hay envíos esperando revisión.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = queue.map(s => `
+                <tr>
+                    <td class="p-4 font-bold text-gray-800">${escapeHtml(s.customer_name || '—')}</td>
+                    <td class="p-4 text-gray-600">${escapeHtml(s.customer_phone || '—')}</td>
+                    <td class="p-4 text-gray-600">${escapeHtml(s.mission_name || '—')}</td>
+                    <td class="p-4"><a href="${escapeHtml(s.post_url || '#')}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-bold">Ver post</a></td>
+                    <td class="p-4 text-gray-500">${s.created_at ? new Date(s.created_at).toLocaleString() : '—'}</td>
+                    <td class="p-4">
+                        <button onclick="decidirMision('${escapeHtml(s.id)}', 'approved')" class="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-green-700">Aprobar</button>
+                        <div class="flex gap-1 mt-2">
+                            <select id="ms-reason-${escapeHtml(s.id)}" class="border rounded-lg p-1 text-xs bg-white">
+                                <option value="">Motivo…</option>
+                                <option value="no se ve el producto">No se ve el producto</option>
+                                <option value="sin etiqueta">Sin etiqueta</option>
+                                <option value="el link no abre">El link no abre</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                            <button onclick="decidirMision('${escapeHtml(s.id)}', 'rejected')" class="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-xs font-bold hover:bg-red-200">Rechazar</button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+
+        async function crearMision() {
+            const msg = document.getElementById('ms-form-msg');
+            const body = {
+                slug: document.getElementById('ms-slug').value.trim(),
+                name: document.getElementById('ms-name').value.trim(),
+                trigger_item_id: document.getElementById('ms-item').value,
+                reward_amount: parseFloat(document.getElementById('ms-reward').value) || 50,
+                cap_total: document.getElementById('ms-cap').value ? parseInt(document.getElementById('ms-cap').value) : null,
+                max_completions_per_customer: parseInt(document.getElementById('ms-max').value) || 1,
+                active_from: document.getElementById('ms-from').value || null,
+                active_to: document.getElementById('ms-to').value || null,
+                deadline_hours: parseInt(document.getElementById('ms-hours').value) || 48,
+                ig_handle: document.getElementById('ms-handle').value.trim() || '@richaromacoffee',
+                brief_template: document.getElementById('ms-brief').value
+            };
+            if (!body.slug || !body.trigger_item_id) {
+                msg.innerText = 'El ID y el artículo disparador son requeridos.';
+                msg.className = 'text-xs mt-3 text-red-500';
+                return;
+            }
+            try {
+                const res = await fetch('/api/store?action=admin_mission_create', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+                msg.innerText = '✅ Misión creada: ' + data.mission.name + ' (' + data.mission.id + ')';
+                msg.className = 'text-xs mt-3 text-green-600';
+                document.getElementById('ms-slug').value = '';
+                document.getElementById('ms-name').value = '';
+                loadMisiones();
+            } catch (e) {
+                msg.innerText = 'Error: ' + e.message;
+                msg.className = 'text-xs mt-3 text-red-500';
+            }
+        }
+
+        async function toggleMision(missionId, isActive) {
+            try {
+                const res = await fetch('/api/store?action=admin_mission_toggle', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ id: missionId, is_active: isActive })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+            loadMisiones();
+        }
+
+        async function decidirMision(submissionId, decision) {
+            const body = { submission_id: submissionId, decision };
+            if (decision === 'rejected') {
+                const sel = document.getElementById('ms-reason-' + submissionId);
+                body.reject_reason = sel ? sel.value : '';
+                if (!body.reject_reason) { alert('Elegí el motivo del rechazo.'); return; }
+            }
+            try {
+                const res = await fetch('/api/store?action=admin_mission_decide', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+            loadMisiones();
         }
 
         // --- PROMO LOGIC ---

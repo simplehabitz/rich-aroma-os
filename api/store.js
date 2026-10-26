@@ -165,6 +165,118 @@ module.exports = async (req, res) => {
         return (data && data[0]) || null;
     }
 
+    // --- MISIONES DEL CAPITÁN: purchase-unlocked UGC challenges ---
+    // A PAID order containing a mission's trigger item unlocks that
+    // mission for the customer (one OPEN assignment per customer,
+    // replays governed by the mission's max_completions_per_customer,
+    // mission cap respected, mission must be active and inside its
+    // date window, and the trigger item must have been paid with REAL
+    // money — see missionBonusAppliedToItem). The bot reads the
+    // unlocks through whatsapp_mission_check
+    // and delivers them; the reward is decided later by staff in
+    // /admin (admin_mission_decide) and lands as a PENDING row in
+    // reward_grants for the loyalty build to mint — it never touches
+    // rico_balance here. This helper NEVER throws: a mission bug must
+    // not break an order, ever. It returns how many missions unlocked.
+    // OWNER RULE: gift money never unlocks a mission. A mission
+    // unlocks only when its trigger item was paid with REAL money —
+    // cash, card, transfer, or the customer's own topped-up Rico
+    // balance (their money). If any BONUS/gift balance (rico_bonus)
+    // was applied to the trigger item, this returns > 0 and the order
+    // does NOT unlock that mission — which also means a gift earned
+    // from mission A can never fund mission B's trigger.
+    // The split is read from the order: a per-item field first
+    // (items[].rico_bonus_used, if the loyalty build records it),
+    // else the order-level orders.rico_bonus_used. NEITHER FIELD
+    // EXISTS YET — the two-bucket spend lands with the loyalty
+    // build, which MUST populate rico_bonus_used on every order
+    // where bonus balance was spent. Absent field = 0 = eligible:
+    // safe today because bonus money cannot be spent at all yet.
+    // With only the order-level figure, ANY bonus on the order
+    // disqualifies the trigger item (conservative on purpose: the
+    // two-bucket design draws bonus against house-made items first,
+    // and mission triggers are house-made).
+    function missionBonusAppliedToItem(order, itemId) {
+        if (!order) return 0;
+        const items = Array.isArray(order.items) ? order.items : [];
+        const line = items.find(i => i && (i.id || i.item_id) === itemId);
+        if (line && line.rico_bonus_used !== undefined && line.rico_bonus_used !== null) {
+            return parseFloat(line.rico_bonus_used) || 0;
+        }
+        if (order.rico_bonus_used !== undefined && order.rico_bonus_used !== null) {
+            return parseFloat(order.rico_bonus_used) || 0;
+        }
+        return 0;
+    }
+
+    async function unlockMissionsForOrder(order) {
+        try {
+            if (!order || order.status !== 'paid' || !order.customer_id) return 0;
+            const itemIds = [...new Set((Array.isArray(order.items) ? order.items : [])
+                .map(i => i && (i.id || i.item_id)).filter(Boolean))];
+            if (!itemIds.length) return 0;
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: missions, error: mErr } = await supabase.from('missions')
+                .select('*').eq('is_active', true).in('trigger_item_id', itemIds);
+            if (mErr) { console.error('[Missions] mission lookup failed:', mErr.message); return 0; }
+            let unlocked = 0;
+            for (const m of (missions || [])) {
+                try {
+                    if (m.active_from && today < String(m.active_from).slice(0, 10)) continue;
+                    if (m.active_to && today > String(m.active_to).slice(0, 10)) continue;
+                    // Gift money never unlocks (owner rule, above).
+                    if (missionBonusAppliedToItem(order, m.trigger_item_id) > 0) continue;
+                    // One OPEN assignment per customer (the partial
+                    // unique index is the structural backstop), and
+                    // replays stop at max_completions_per_customer
+                    // counted from 'approved' assignments.
+                    const { data: mineAll } = await supabase.from('mission_assignments')
+                        .select('id, status, expires_at').eq('mission_id', m.id).eq('customer_id', order.customer_id);
+                    const mine = mineAll || [];
+                    const nowMs = Date.now();
+                    let hasOpen = false;
+                    let approvedCount = 0;
+                    for (const a of mine) {
+                        if (a.status === 'approved') { approvedCount++; continue; }
+                        if (a.status === 'submitted') { hasOpen = true; continue; }
+                        if (a.status === 'unlocked') {
+                            if (a.expires_at && new Date(a.expires_at).getTime() <= nowMs) {
+                                // Stale unlock: close it out so a
+                                // fresh one can open in its place.
+                                await supabase.from('mission_assignments')
+                                    .update({ status: 'expired' }).eq('id', a.id).eq('status', 'unlocked');
+                            } else { hasOpen = true; }
+                        }
+                    }
+                    if (hasOpen) continue;
+                    const maxCompletions = Math.max(1, parseInt(m.max_completions_per_customer) || 1);
+                    if (approvedCount >= maxCompletions) continue;
+                    if (m.cap_total) {
+                        const { data: all } = await supabase.from('mission_assignments')
+                            .select('id').eq('mission_id', m.id);
+                        if ((all || []).length >= m.cap_total) continue;
+                    }
+                    const now = new Date();
+                    const expires = new Date(now.getTime() + (parseInt(m.deadline_hours) || 48) * 3600 * 1000);
+                    const { error } = await supabase.from('mission_assignments').insert({
+                        id: 'masn_' + Date.now() + Math.floor(Math.random() * 100000),
+                        mission_id: m.id,
+                        customer_id: order.customer_id,
+                        order_id: order.id,
+                        status: 'unlocked',
+                        unlocked_at: now.toISOString(),
+                        expires_at: expires.toISOString()
+                    });
+                    if (!error) unlocked++;
+                } catch (e) { /* one bad mission must not stop the others */ }
+            }
+            return unlocked;
+        } catch (e) {
+            console.error('[Missions] unlock failed (order unaffected):', e && e.message);
+            return 0;
+        }
+    }
+
     try {
         // --- 1. STORE STATUS ---
         if (action === 'store_status' || action === 'status') {
@@ -265,6 +377,11 @@ module.exports = async (req, res) => {
 
                 const { data, error } = await supabase.from('orders').update(updates).eq('id', targetId).select().single();
                 if (error) throw error;
+                // MISIONES: an order that just became PAID here (counter
+                // sale, transfer approval) unlocks its missions. The
+                // helper is failure-silent — the order response below
+                // is unaffected either way.
+                if (data && data.status === 'paid') await unlockMissionsForOrder(data);
                 return res.json({ success: true, order: data });
             }
             if (req.method === 'GET') {
@@ -456,6 +573,10 @@ module.exports = async (req, res) => {
                     scheduled_for: req.body?.scheduled_for || null
                 }).select().single();
                 if (error) throw error;
+
+                // MISIONES: an order created already-PAID on this path
+                // unlocks its missions (failure-silent helper).
+                if (data && data.status === 'paid') await unlockMissionsForOrder(data);
 
                 // --- 2.5 FIFO BATCH INVENTORY DEDUCTION (JSONB fallback) ---
                 if (items && Array.isArray(items)) {
@@ -1375,6 +1496,157 @@ module.exports = async (req, res) => {
             return res.json({ ok: true, preorder: data });
         }
 
+        // --- MISIONES DEL CAPITÁN (bot side) ---
+        // Same gate as the intro actions: botSecretOk()
+        // (WHATSAPP_SIGNUP_SECRET). The bot delivers missions the OS
+        // unlocked at purchase time and collects the customer's post
+        // link back. Delivery state lives in the bot's conversation —
+        // the OS only answers "what does this customer have?" and
+        // records submissions. Approval is staff-only (below), never
+        // the bot's call and never automatic.
+        if (action === 'whatsapp_mission_check' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.json({ ok: true, found: false, unlocked: [], submitted: [], completions: {} });
+            const nowIso = new Date().toISOString();
+            const { data: rows } = await supabase.from('mission_assignments')
+                .select('*').eq('customer_id', cust.id).in('status', ['unlocked', 'submitted'])
+                .order('unlocked_at', { ascending: true });
+            const list = rows || [];
+            const missionIds = [...new Set(list.map(a => a.mission_id))];
+            const missionsById = {};
+            if (missionIds.length) {
+                const { data: ms } = await supabase.from('missions').select('*').in('id', missionIds);
+                (ms || []).forEach(m => { missionsById[m.id] = m; });
+            }
+            const itemIds = [...new Set(Object.values(missionsById).map(m => m.trigger_item_id).filter(Boolean))];
+            const itemNameById = {};
+            if (itemIds.length) {
+                const { data: its } = await supabase.from('menu_items').select('id, name').in('id', itemIds);
+                (its || []).forEach(i => { itemNameById[i.id] = i.name; });
+            }
+            const submittedIds = list.filter(a => a.status === 'submitted').map(a => a.id);
+            const subByAssignment = {};
+            if (submittedIds.length) {
+                const { data: subs } = await supabase.from('mission_submissions').select('*').in('assignment_id', submittedIds);
+                (subs || []).forEach(s => { subByAssignment[s.assignment_id] = s; });
+            }
+            // Approved completions per mission — the bot uses this
+            // for status answers ("¿y mi misión?") and to know when a
+            // customer has finished a replayable mission.
+            const { data: appr } = await supabase.from('mission_assignments')
+                .select('mission_id').eq('customer_id', cust.id).eq('status', 'approved');
+            const completions = {};
+            (appr || []).forEach(a => { completions[a.mission_id] = (completions[a.mission_id] || 0) + 1; });
+            const fillBrief = (m) => String(m.brief_template || '')
+                .split('{item}').join(itemNameById[m.trigger_item_id] || '')
+                .split('{reward}').join(String(parseFloat(m.reward_amount) || 0))
+                .split('{hours}').join(String(parseInt(m.deadline_hours) || 48))
+                .split('{handle}').join(m.ig_handle || '@richaromacoffee');
+            const unlocked = [];
+            const submitted = [];
+            for (const a of list) {
+                const m = missionsById[a.mission_id];
+                if (!m) continue;
+                if (a.status === 'unlocked') {
+                    if (a.expires_at && a.expires_at <= nowIso) continue;
+                    unlocked.push({
+                        assignment_id: a.id,
+                        mission_id: m.id,
+                        name: m.name,
+                        brief: fillBrief(m),
+                        reward_amount: parseFloat(m.reward_amount) || 0,
+                        expires_at: a.expires_at,
+                        completions: completions[m.id] || 0
+                    });
+                } else {
+                    const s = subByAssignment[a.id];
+                    submitted.push({
+                        assignment_id: a.id,
+                        mission_id: m.id,
+                        name: m.name,
+                        reward_amount: parseFloat(m.reward_amount) || 0,
+                        submission_status: s ? s.status : 'pending',
+                        post_url: s ? s.post_url : null,
+                        submitted_at: s ? s.created_at : null,
+                        completions: completions[m.id] || 0
+                    });
+                }
+            }
+            return res.json({ ok: true, found: true, customer: sanitizeCustomer(cust), unlocked, submitted, completions });
+        }
+
+        if (action === 'whatsapp_mission_submit' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const postUrl = String(req.body?.post_url || req.body?.postUrl || '').trim();
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.json({ ok: false, reason: 'no_active_mission' });
+            const { data: rows } = await supabase.from('mission_assignments')
+                .select('*').eq('customer_id', cust.id).eq('status', 'unlocked')
+                .order('unlocked_at', { ascending: true });
+            const mine = rows || [];
+            if (!mine.length) return res.json({ ok: false, reason: 'no_active_mission' });
+            const nowIso = new Date().toISOString();
+            const live = mine.filter(a => !a.expires_at || a.expires_at > nowIso);
+            if (!live.length) return res.json({ ok: false, reason: 'expired' });
+            // A post link, not a profile/home link: host must be one
+            // of the three networks and the path must look like a post.
+            let parsed = null;
+            try { parsed = new URL(postUrl); } catch (e) { parsed = null; }
+            const host = parsed ? parsed.hostname.replace(/^www\./, '').toLowerCase() : '';
+            const pth = parsed ? parsed.pathname.toLowerCase() : '';
+            let linkOk = false;
+            if (parsed && host === 'instagram.com') linkOk = /^\/(p|reel|reels|tv)\/[a-z0-9_-]+/.test(pth);
+            else if (parsed && host === 'tiktok.com') linkOk = /\/@[a-z0-9_.-]+\/(video|photo)\/\d+/.test(pth);
+            else if (parsed && (host === 'facebook.com' || host === 'm.facebook.com')) {
+                linkOk = /^\/(share|watch|photo\.php|reel)\b/.test(pth) || /\/(posts|videos)\//.test(pth)
+                    || !!(parsed.searchParams.get('v') || parsed.searchParams.get('fbid'));
+            }
+            if (!linkOk) return res.json({ ok: false, reason: 'bad_link' });
+            // One reward per post, ever (the table's UNIQUE index is
+            // the hard backstop; this check gives the friendly reason).
+            const { data: dup } = await supabase.from('mission_submissions')
+                .select('id').eq('post_url', postUrl).limit(1);
+            if (dup && dup.length) return res.json({ ok: false, reason: 'duplicate_link' });
+            const assignment = live[0];
+            const { data: sub, error: sErr } = await supabase.from('mission_submissions').insert({
+                id: 'msub_' + Date.now() + Math.floor(Math.random() * 100000),
+                assignment_id: assignment.id,
+                customer_id: cust.id,
+                post_url: postUrl,
+                status: 'pending'
+            }).select().single();
+            if (sErr) {
+                if (sErr.code === '23505' || /duplicate|unique/i.test(sErr.message || '')) {
+                    return res.json({ ok: false, reason: 'duplicate_link' });
+                }
+                throw sErr;
+            }
+            await supabase.from('mission_assignments')
+                .update({ status: 'submitted' }).eq('id', assignment.id).eq('status', 'unlocked');
+            return res.json({ ok: true, assignment_id: assignment.id, submission_id: sub.id });
+        }
+
+        // Manual/idempotent unlock for one order — for orders that are
+        // born PAID outside this file (the /api/orders-v2 engine in
+        // order-service creates Rico-paid orders directly) until that
+        // file grows its own call. Either credential works: staff
+        // (admin/POS) or the bot secret. Never throws into the caller.
+        if (action === 'missions_unlock_for_order' && req.method === 'POST') {
+            if (!botSecretOk() && !(await staffActor())) return res.status(401).json({ error: 'No autorizado' });
+            const orderId = req.body?.order_id || req.body?.orderId || id || req.query.id;
+            if (!orderId) return res.status(400).json({ error: 'order_id requerido' });
+            const { data: order } = await supabase.from('orders').select('*').eq('id', orderId).maybeSingle();
+            if (!order) return res.status(404).json({ error: 'Orden no encontrada' });
+            if (order.status !== 'paid') return res.json({ ok: true, unlocked: 0, reason: 'order_not_paid' });
+            const unlocked = await unlockMissionsForOrder(order);
+            return res.json({ ok: true, unlocked });
+        }
+
         // --- ADMIN: CLIENTES (cuentas nuevas, regalos y preventas) ---
         // Staff-only data for the /admin "Clientes" view: the newest
         // ~100 customers with their welcome-gift records (reward_grants)
@@ -1475,6 +1747,200 @@ module.exports = async (req, res) => {
                 .select().single();
             if (uErr) throw uErr;
             return res.json({ ok: true, preorder: updated });
+        }
+
+        // --- ADMIN: MISIONES DEL CAPITÁN ---
+        // Staff-only (requireStaff, SEC-FIX 1) — the bot secret does
+        // NOT unlock any of this. Staff define missions, watch the
+        // liability they commit (face value and its ~30% real cost at
+        // house COGS), and decide submissions. Approving a submission
+        // writes a PENDING row into reward_grants (grant_type
+        // 'mission', source 'mission:<slug>') for the loyalty build to
+        // mint — exactly the welcome-gift pattern; rico_balance is
+        // never touched here. Deciding is idempotent.
+        if (action === 'admin_missions_list') {
+            if (!(await requireStaff())) return;
+            const { data: ms, error } = await supabase.from('missions')
+                .select('*').order('created_at', { ascending: false });
+            if (error) throw error;
+            const missions = ms || [];
+            const { data: assigns } = await supabase.from('mission_assignments')
+                .select('id, mission_id, customer_id, status');
+            const counts = {};
+            (assigns || []).forEach(a => {
+                const c = counts[a.mission_id] = counts[a.mission_id] || { unlocked: 0, submitted_pending: 0, approved: 0, rejected: 0, expired: 0 };
+                if (a.status === 'unlocked') c.unlocked++;
+                else if (a.status === 'submitted') c.submitted_pending++;
+                else if (a.status === 'approved') c.approved++;
+                else if (a.status === 'rejected') c.rejected++;
+                else if (a.status === 'expired') c.expired++;
+            });
+            const itemIds = [...new Set(missions.map(m => m.trigger_item_id).filter(Boolean))];
+            const itemNameById = {};
+            if (itemIds.length) {
+                const { data: its } = await supabase.from('menu_items').select('id, name').in('id', itemIds);
+                (its || []).forEach(i => { itemNameById[i.id] = i.name; });
+            }
+            const outMissions = missions.map(m => {
+                const c = counts[m.id] || { unlocked: 0, submitted_pending: 0, approved: 0, rejected: 0, expired: 0 };
+                const face = c.approved * (parseFloat(m.reward_amount) || 0);
+                return {
+                    ...m,
+                    trigger_item_name: itemNameById[m.trigger_item_id] || null,
+                    counts: { ...c, cap_total: m.cap_total != null ? m.cap_total : null },
+                    committed_face: Math.round(face * 100) / 100,
+                    committed_est_cost: Math.round(face * 0.30 * 100) / 100
+                };
+            });
+            const { data: pendSubs } = await supabase.from('mission_submissions')
+                .select('*').eq('status', 'pending').order('created_at', { ascending: true });
+            const queue = pendSubs || [];
+            const custIds = [...new Set(queue.map(s => s.customer_id))];
+            const custById = {};
+            if (custIds.length) {
+                const { data: cs } = await supabase.from('customers').select('id, name, phone').in('id', custIds);
+                (cs || []).forEach(c => { custById[c.id] = c; });
+            }
+            const asgIds = [...new Set(queue.map(s => s.assignment_id))];
+            const missionNameByAsg = {};
+            if (asgIds.length) {
+                const { data: asgs } = await supabase.from('mission_assignments').select('id, mission_id').in('id', asgIds);
+                const mById = {};
+                missions.forEach(m => { mById[m.id] = m.name; });
+                (asgs || []).forEach(a => { missionNameByAsg[a.id] = mById[a.mission_id] || a.mission_id; });
+            }
+            const outQueue = queue.map(s => ({
+                id: s.id,
+                assignment_id: s.assignment_id,
+                customer_id: s.customer_id,
+                customer_name: custById[s.customer_id] ? custById[s.customer_id].name : null,
+                customer_phone: custById[s.customer_id] ? custById[s.customer_id].phone : null,
+                mission_name: missionNameByAsg[s.assignment_id] || null,
+                post_url: s.post_url,
+                created_at: s.created_at
+            }));
+            const totalFace = outMissions.reduce((t, m) => t + m.committed_face, 0);
+            return res.json({
+                missions: outMissions,
+                pending_submissions: outQueue,
+                totals: {
+                    committed_face: Math.round(totalFace * 100) / 100,
+                    committed_est_cost: Math.round(totalFace * 0.30 * 100) / 100
+                }
+            });
+        }
+
+        if (action === 'admin_mission_create' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
+            const b = req.body || {};
+            const slug = String(b.slug || b.id || '').trim().toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+            if (!slug) return res.status(400).json({ error: 'slug requerido (ej: botella-viajera)' });
+            const trigger = String(b.trigger_item_id || '').trim();
+            if (!trigger) return res.status(400).json({ error: 'trigger_item_id requerido' });
+            const { data: item } = await supabase.from('menu_items')
+                .select('id, name').eq('id', trigger).maybeSingle();
+            if (!item) return res.status(400).json({ error: 'Ese artículo no existe en el menú' });
+            const { data: dup } = await supabase.from('missions')
+                .select('id').eq('id', slug).maybeSingle();
+            if (dup) return res.status(409).json({ error: 'Ya existe una misión con ese id' });
+            const today = new Date().toISOString().slice(0, 10);
+            const row = {
+                id: slug,
+                name: String(b.name || '').trim().slice(0, 120) || slug,
+                trigger_item_id: trigger,
+                reward_amount: Math.max(0, parseFloat(b.reward_amount) || 50),
+                cap_total: (b.cap_total === '' || b.cap_total === null || b.cap_total === undefined)
+                    ? null : Math.max(0, parseInt(b.cap_total) || 0),
+                max_completions_per_customer: Math.max(1, parseInt(b.max_completions_per_customer) || 1),
+                brief_template: String(b.brief_template || '').trim() ||
+                    '📸 MISIÓN: Subí una foto de tu {item}, etiquetanos {handle} y mandame el link acá. Premio: L.{reward} de regalo en tu Rico Cash 🎁 Tenés {hours} horas.',
+                ig_handle: String(b.ig_handle || '@richaromacoffee').trim() || '@richaromacoffee',
+                active_from: b.active_from || today,
+                active_to: b.active_to || null,
+                deadline_hours: Math.max(1, parseInt(b.deadline_hours) || 48),
+                is_active: b.is_active !== false
+            };
+            const { data, error } = await supabase.from('missions').insert(row).select().single();
+            if (error) throw error;
+            return res.json({ ok: true, mission: { ...data, trigger_item_name: item.name } });
+        }
+
+        if (action === 'admin_mission_toggle' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
+            const mid = req.body?.id || req.body?.mission_id || id || req.query.id;
+            if (!mid) return res.status(400).json({ error: 'id requerido' });
+            const { data: m } = await supabase.from('missions').select('*').eq('id', mid).maybeSingle();
+            if (!m) return res.status(404).json({ error: 'Misión no encontrada' });
+            const next = req.body?.is_active !== undefined ? !!req.body.is_active : !m.is_active;
+            const { data: updated, error } = await supabase.from('missions')
+                .update({ is_active: next }).eq('id', mid).select().single();
+            if (error) throw error;
+            return res.json({ ok: true, mission: updated });
+        }
+
+        if (action === 'admin_mission_decide' && req.method === 'POST') {
+            const actor = await requireStaff();
+            if (!actor) return;
+            const subId = req.body?.submission_id || req.body?.submissionId;
+            const decision = req.body?.decision;
+            if (!subId) return res.status(400).json({ error: 'submission_id requerido' });
+            if (decision !== 'approved' && decision !== 'rejected') {
+                return res.status(400).json({ error: "decision debe ser 'approved' o 'rejected'" });
+            }
+            const { data: sub } = await supabase.from('mission_submissions')
+                .select('*').eq('id', subId).maybeSingle();
+            if (!sub) return res.status(404).json({ error: 'Envío no encontrado' });
+            if (sub.status !== 'pending') {
+                return res.json({ ok: true, already_decided: true, submission: sub });
+            }
+            const { data: asg } = await supabase.from('mission_assignments')
+                .select('*').eq('id', sub.assignment_id).maybeSingle();
+            const { data: mission } = asg ? await supabase.from('missions')
+                .select('*').eq('id', asg.mission_id).maybeSingle() : { data: null };
+            const nowIso = new Date().toISOString();
+            const decidedBy = actor.name || actor.id || 'staff';
+            if (decision === 'approved') {
+                const { data: cust } = await supabase.from('customers')
+                    .select('id, phone').eq('id', sub.customer_id).maybeSingle();
+                const amount = mission ? (parseFloat(mission.reward_amount) || 0) : 0;
+                // The grant lands as a PENDING reward_grants row, the
+                // same shape as the welcome gift. The live schema's
+                // UNIQUE (customer_id, grant_type) allows only ONE
+                // 'mission' grant per customer — so if this customer
+                // already earned one from another mission, the retry
+                // below records this mission's grant under its own
+                // type ('mission:<slug>') instead of losing it.
+                const grantRow = (grantType) => ({
+                    id: 'grant_' + Date.now() + Math.floor(Math.random() * 100000),
+                    customer_id: sub.customer_id,
+                    phone: (cust && cust.phone) || '',
+                    grant_type: grantType,
+                    amount,
+                    status: 'pending',
+                    source: 'mission:' + (mission ? mission.id : 'unknown')
+                });
+                let ins = await supabase.from('reward_grants').insert(grantRow('mission'));
+                let grantType = 'mission';
+                if (ins.error && (ins.error.code === '23505' || /duplicate|unique/i.test(ins.error.message || ''))) {
+                    grantType = 'mission:' + (mission ? mission.id : 'unknown');
+                    ins = await supabase.from('reward_grants').insert(grantRow(grantType));
+                }
+                if (ins.error) throw ins.error;
+                await supabase.from('mission_submissions')
+                    .update({ status: 'approved', decided_at: nowIso, decided_by: decidedBy })
+                    .eq('id', sub.id).eq('status', 'pending');
+                if (asg) await supabase.from('mission_assignments')
+                    .update({ status: 'approved' }).eq('id', asg.id);
+                return res.json({ ok: true, decision: 'approved', submission_id: sub.id, grant_type: grantType, amount });
+            }
+            const reason = String(req.body?.reject_reason || req.body?.rejectReason || '').slice(0, 200) || null;
+            await supabase.from('mission_submissions')
+                .update({ status: 'rejected', reject_reason: reason, decided_at: nowIso, decided_by: decidedBy })
+                .eq('id', sub.id).eq('status', 'pending');
+            if (asg) await supabase.from('mission_assignments')
+                .update({ status: 'rejected' }).eq('id', asg.id);
+            return res.json({ ok: true, decision: 'rejected', submission_id: sub.id });
         }
 
         if (action === 'customer_update') {

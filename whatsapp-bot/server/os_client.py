@@ -6,6 +6,10 @@ Used by the Honduras intro flow (intro_engine.py) to:
   - create their account + record the     (action=whatsapp_signup)
     PENDING L.100 welcome gift
   - record a preventa (preorder) intent   (action=whatsapp_preventa)
+  - read a customer's Capitan missions    (action=whatsapp_mission_check)
+  - submit a UGC post link for a mission  (action=whatsapp_mission_submit)
+  - bind a creator's signup word to an    (action=whatsapp_attribute,
+    existing account                         or ref_word on signup)
 
 Auth follows the kds_push.py pattern: a bearer token over HTTPS. Here the
 token is a shared secret the owner sets as WHATSAPP_SIGNUP_SECRET in BOTH
@@ -108,15 +112,26 @@ def lookup_customer(phone: str) -> dict:
     return _post("whatsapp_lookup", {"phone": phone})
 
 
-def signup_customer(phone: str, name: str, birthday_dm: str = "") -> dict:
+def signup_customer(phone: str, name: str, birthday_dm: str = "",
+                    ref_word: str = "") -> dict:
     """Get-or-create the account + the pending L.100 welcome gift.
 
     Idempotent on the OS side (phone is UNIQUE; one welcome grant per
     customer, enforced by a DB unique index). Safe to retry.
+
+    ref_word (Creadores): a creator's signup word the customer arrived
+    with. The OS attempts first-touch attribution after the
+    get-or-create and reports the outcome in data["attribution"]
+    ({attributed: True, creator_name} on a bind, an already_attributed
+    result, or None when the word was unknown/retired — a failed
+    attribution never fails the signup). Only sent when non-empty, so
+    wordless signups stay byte-identical to before.
     """
     payload = {"phone": phone, "name": name}
     if birthday_dm:
         payload["birthday"] = birthday_dm
+    if ref_word:
+        payload["ref_word"] = ref_word
     return _post("whatsapp_signup", payload)
 
 
@@ -128,3 +143,33 @@ def record_preventa(phone: str, packs: int = 0, bottles: int = 0,
         "phone": phone, "packs": int(packs or 0),
         "bottles": int(bottles or 0), "boxes": int(boxes or 0),
     })
+
+
+def mission_check(phone: str) -> dict:
+    """Read-only: this customer's mission assignments — unlocked and
+    unexpired ones, plus submitted ones carrying their submission
+    status (pending/approved) for '¿y mi misión?' answers."""
+    return _post("whatsapp_mission_check", {"phone": phone})
+
+
+def mission_submit(phone: str, post_url: str) -> dict:
+    """Submit a UGC post link against the customer's active mission.
+
+    The OS is the validator: it answers in the data payload either
+    {"ok": True} or {"ok": False, "reason": ...} with reason one of
+    no_active_mission | bad_link | duplicate_link | expired. The bot
+    only renders the verdict in the house voice — it never approves
+    or mints anything itself."""
+    return _post("whatsapp_mission_submit",
+                 {"phone": phone, "post_url": post_url})
+
+
+def attribute_word(phone: str, word: str) -> dict:
+    """Bind a creator's signup word to an EXISTING account (Creadores).
+
+    The OS owns the rules (normalization, first-touch permanence) and
+    answers in the data payload: {"ok": True, "attributed": True,
+    "creator_name": ...} on a bind, or {"ok": False, "reason": ...}
+    with reason one of already_attributed | unknown_word |
+    inactive_code | no_customer. The bot only renders the verdict."""
+    return _post("whatsapp_attribute", {"phone": phone, "word": word})

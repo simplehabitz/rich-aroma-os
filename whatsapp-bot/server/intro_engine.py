@@ -20,6 +20,28 @@ preventa campaign grant are the same L.100 (same grant row).
 Payment for a preventa is by transfer, confirmed by a human. This bot
 NEVER asks for a PIN or any payment credential in chat.
 
+Missions (Misiones del Capitán): a paid purchase in the OS can unlock
+a UGC mission for the customer. This bot only RECEIVES: on lounge
+contact it announces an unlocked assignment once (pull model — the
+bot never cold-sends; every message rides a customer-opened window),
+accepts the customer's post link (Instagram/Facebook/TikTok) via
+whatsapp_mission_submit, and answers status questions via
+whatsapp_mission_check. Approval and the gift mint live in the OS /
+loyalty build — mission copy here never promises a spendable balance
+and never mentions reviews or ratings.
+
+Attribution (Creadores): every creator has a signup word. A customer
+who arrives carrying one — "palabra X", "vengo de X", or the bare
+word as a first message — gets bound to that creator in the OS
+(first-touch, permanent; the OS owns normalization and the rules).
+Detection is deliberately conservative: it runs at first contact,
+while confirming a signup, and in the lounge — NEVER in the
+name/birthday steps, where an answer is data, not a word. A word
+captured before signup rides the signup call as ref_word; a word
+from an already-registered customer goes through
+whatsapp_attribute. Speculative (bare-word) attempts the OS doesn't
+recognize stay SILENT — the customer was never promised anything.
+
 Cali (order_engine.py) is untouched; webhook.py routes only the
 rich-aroma-honduras slug here.
 """
@@ -94,6 +116,17 @@ class IntroConversation:
     gift_status: str = ""          # 'pending' | 'minted' | '' (none)
     strikes: int = 0
     pending_signup: Optional[dict] = field(default=None)  # OS retry queue
+    # Mission assignment_ids already announced in THIS conversation
+    # (in-memory, like the rest of the convo state — a redeploy resets
+    # it and an assignment may be announced once more; see build note).
+    missions_delivered: set = field(default_factory=set)
+    mission_cache: Optional[dict] = field(default=None)  # per-turn check cache
+    # Creator signup word (Creadores) captured pre-signup, carried
+    # into whatsapp_signup as ref_word; attribution_note is the
+    # one-line confirmation appended to the signup-completion reply
+    # when the OS binds the word ("" when it didn't).
+    pending_word: str = ""
+    attribution_note: str = ""
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
@@ -435,14 +468,21 @@ def _handoff(convo: "IntroConversation", stage: str) -> str:
 def _do_signup(convo: "IntroConversation") -> bool:
     """Create/fetch the OS account + pending gift. True when the OS
     confirms; on failure the signup is queued locally for retry."""
+    convo.attribution_note = ""
     res = os_client.signup_customer(convo.customer_phone, convo.name,
-                                    convo.birthday_dm)
+                                    convo.birthday_dm,
+                                    ref_word=convo.pending_word)
     if res.get("ok") and res.get("data"):
         data = res["data"]
         gift = data.get("gift") or {}
         convo.gift_status = gift.get("status") or "pending"
         convo.registered = True
         convo.pending_signup = None
+        att = data.get("attribution") or {}
+        if att.get("attributed"):
+            convo.attribution_note = _ligada_line(
+                convo, att.get("creator_name") or convo.pending_word)
+        convo.pending_word = ""
         return True
     convo.pending_signup = {"name": convo.name,
                             "birthday": convo.birthday_dm}
@@ -460,11 +500,17 @@ def _retry_pending_signup(convo: "IntroConversation"):
         return
     res = os_client.signup_customer(convo.customer_phone,
                                     convo.pending_signup["name"],
-                                    convo.pending_signup.get("birthday", ""))
+                                    convo.pending_signup.get("birthday", ""),
+                                    ref_word=convo.pending_word)
     if res.get("ok"):
         gift = (res.get("data") or {}).get("gift") or {}
         convo.gift_status = gift.get("status") or convo.gift_status
         convo.pending_signup = None
+        # The word rode this retry too; once the signup lands it has
+        # been attempted — win or lose, it doesn't ride again. (The
+        # OS row is what matters; the ligada line is a nicety that
+        # only fires on the interactive path.)
+        convo.pending_word = ""
 
 
 def _record_preventa(convo: "IntroConversation", packs, bottles, boxes):
@@ -495,10 +541,423 @@ def _has_cue(t: str, cues) -> bool:
     return any(c in t for c in cues)
 
 
+# ---------------------------------------------------------------- missions
+
+MISSION_CUES = ("misión", "mision", "misiones", "mission")
+SOCIAL_HOSTS = ("instagram.com", "facebook.com", "tiktok.com")
+_URL_TOKEN_RE = re.compile(r"(?:https?://)?[a-z0-9.-]+\.[a-z]{2,}(?:/[^\s]*)?",
+                           re.IGNORECASE)
+
+
+def _extract_social_url(text: str) -> str:
+    """First Instagram/Facebook/TikTok URL in the message, or ''.
+    Host match is exact-or-subdomain, so lookalike hosts don't count
+    (and neither do vm./www. short forms of other sites)."""
+    for m in _URL_TOKEN_RE.finditer(text or ""):
+        raw = m.group(0).strip(".,)\"'”>")
+        host = raw.split("://", 1)[-1].split("/", 1)[0].lower()
+        if any(host == h or host.endswith("." + h) for h in SOCIAL_HOSTS):
+            return raw if raw.lower().startswith("http") else "https://" + raw
+    return ""
+
+
+def _mission_check(convo: "IntroConversation"):
+    """whatsapp_mission_check, cached for the current message turn.
+    Returns the data dict, or None when the OS can't answer (treated
+    as 'no missions' — a mission hiccup must never break the chat)."""
+    if convo.mission_cache is not None:
+        return convo.mission_cache or None
+    res = os_client.mission_check(convo.customer_phone)
+    data = res.get("data") if res.get("ok") else None
+    convo.mission_cache = data if isinstance(data, dict) else {}
+    return convo.mission_cache or None
+
+
+def _sub_status(assignment: dict) -> str:
+    """Submission status of an assignment, read tolerantly (the OS may
+    nest it or flatten it): 'pending' | 'approved' | 'rejected' | ''."""
+    s = assignment.get("submission_status")
+    if isinstance(s, dict):
+        s = s.get("status")
+    if not s and isinstance(assignment.get("submission"), dict):
+        s = assignment["submission"].get("status")
+    return str(s or "").strip().lower()
+
+
+def _a_status(assignment: dict) -> str:
+    return str(assignment.get("status") or "").strip().lower()
+
+
+def _mission_brief(assignment: dict) -> str:
+    brief = str(assignment.get("brief") or "").strip()
+    if brief:
+        return brief
+    name = assignment.get("name") or "Misión del Capitán"
+    amt = assignment.get("reward_amount")
+    tail = f" Premio: L.{amt} de regalo en tu Rico Cash." if amt else ""
+    return (f"{name}: publicá una foto o video con tu compra, "
+            f"etiquetanos y mandame el link por acá.{tail}")
+
+
+def _undelivered_missions(convo: "IntroConversation"):
+    """Unlocked, unsubmitted assignments this conversation has not
+    announced yet."""
+    data = _mission_check(convo)
+    if not data:
+        return []
+    out = []
+    for a in data.get("assignments") or []:
+        if not isinstance(a, dict):
+            continue
+        if _sub_status(a):
+            continue  # already submitted — status answers cover it
+        if _a_status(a) not in ("", "unlocked", "active"):
+            continue
+        if a.get("assignment_id") in convo.missions_delivered:
+            continue
+        out.append(a)
+    return out
+
+
+def _mission_delivery_text(convo: "IntroConversation", a: dict) -> str:
+    first = convo.name.split(" ")[0] if convo.name else ""
+    brief = _mission_brief(a)
+    if convo.lang == "en":
+        return f"\n🎁 You have a MISSION from the Captain, {first}! {brief}"
+    return f"\n🎁 ¡Tenés una MISIÓN del Capitán, {first}! {brief}"
+
+
+def _append_mission_delivery(convo: "IntroConversation", start_state: str,
+                             incoming_text: str, reply: str) -> str:
+    """Pull-model mission announcement. Fires only when the customer
+    was already in the LOUNGE as this message arrived — a follow-up
+    message in the sitting, or any later day (the conversation
+    persists) — so the turn that first lands a customer in the lounge
+    keeps the greeting flow's exact shape. Their actual question is
+    answered first; the mission rides after, once per assignment."""
+    if start_state != "LOUNGE" or convo.state != "LOUNGE":
+        return reply
+    if not convo.registered:
+        return reply
+    if _extract_social_url(incoming_text):
+        return reply  # the link intake already answered this turn
+    if _has_cue(incoming_text.lower(), MISSION_CUES):
+        return reply  # the status answer already covered missions
+    pending = _undelivered_missions(convo)
+    if not pending:
+        return reply
+    first = pending[0]
+    convo.missions_delivered.add(first.get("assignment_id"))
+    return reply + _mission_delivery_text(convo, first)
+
+
+def _submit_mission_link(convo: "IntroConversation", url: str) -> str:
+    """Register a post link with the OS and render its verdict. The OS
+    validates (active mission, link, duplicate, expiry) and owns the
+    approval queue — the bot never approves or mints anything."""
+    lang = convo.lang
+    res = os_client.mission_submit(convo.customer_phone, url)
+    data = res.get("data") if res.get("ok") else None
+    if not isinstance(data, dict) or "ok" not in data:
+        _record_local("mission_submit_pending", convo,
+                      {"post_url": url, "os_error": res.get("error")})
+        if lang == "en":
+            return ("I couldn't register that link just now 🙏 "
+                    "Send it again in a little while.")
+        return ("No pude registrar ese link ahorita 🙏 "
+                "Mandalo de nuevo en un ratito.")
+    if data.get("ok"):
+        if lang == "en":
+            return ("Received! 📸 The Captain reviews your post today "
+                    "and I'll let you know here. If it's approved, "
+                    "your gift lands right in your Rico Cash 🎁")
+        return ("¡Recibido! 📸 El Capitán revisa tu publicación hoy "
+                "y te aviso por acá. Si se aprueba, tu regalo cae "
+                "directo en tu Rico Cash 🎁")
+    reason = str(data.get("reason") or "")
+    if reason == "duplicate_link":
+        if lang == "en":
+            return ("That link is already registered in a mission 🙏 "
+                    "Got another post?")
+        return ("Ese link ya está registrado en una misión 🙏 "
+                "¿Tenés otra publicación?")
+    if reason == "no_active_mission":
+        if lang == "en":
+            return ("You don't have an active mission right now 🎯 "
+                    "Missions unlock when you buy — order something "
+                    "tasty and yours will drop 😉")
+        return ("Por ahora no tenés una misión activa 🎯 Las "
+                "misiones se desbloquean al comprar — pedí algo "
+                "rico y te cae la tuya 😉")
+    if reason == "expired":
+        if lang == "en":
+            return ("That mission already expired 🕐 More are "
+                    "coming — your next purchase can unlock a new one.")
+        return ("Esa misión ya venció 🕐 Pero vienen más — con tu "
+                "próxima compra te puede caer una nueva.")
+    # bad_link (or anything unexpected): plain and kind.
+    if lang == "en":
+        return ("I couldn't validate that link as a post 🙏 Check "
+                "it's your post's link on Instagram, Facebook or "
+                "TikTok and send it again.")
+    return ("Ese link no lo pude validar como publicación 🙏 "
+            "Revisá que sea el link de tu post en Instagram, "
+            "Facebook o TikTok y mandalo de nuevo.")
+
+
+WHY_CUES = ("por qué", "porque", "por que", "no tengo", "no me llegó",
+            "no me llego", "no recibí", "no recibi", "no me cayó",
+            "no me cayo", "why")
+
+
+def _completions_count(data: dict):
+    """Approved-completion count for the status medal line, read
+    tolerantly: a top-level `completions` on the check payload, else
+    per-assignment `completions` (deduped per mission). None when the
+    OS doesn't send it — the line is then omitted, never guessed."""
+    top = data.get("completions")
+    if isinstance(top, int):
+        return top
+    per = {}
+    for a in data.get("assignments") or []:
+        if isinstance(a, dict) and isinstance(a.get("completions"), int):
+            key = a.get("mission_id") or a.get("assignment_id") or id(a)
+            per[key] = max(per.get(key, 0), a["completions"])
+    return sum(per.values()) if per else None
+
+
+def _mission_status_reply(convo: "IntroConversation",
+                          incoming_text: str = "") -> str:
+    """'¿Y mi misión?' — answered from whatsapp_mission_check only.
+    An approved mission's gift is 'anotado' (noted), never promised
+    as spendable: the loyalty mint is what activates it. The
+    gift-balance explainer is added ONLY when the customer actually
+    asked why they have no mission — never unprompted."""
+    lang = convo.lang
+    data = _mission_check(convo)
+    if data is None:
+        if lang == "en":
+            return ("I couldn't check your missions just now 🙏 "
+                    "Try again in a bit.")
+        return ("No pude revisar tus misiones ahorita 🙏 "
+                "Intentá de nuevo en un ratito.")
+    assignments = [a for a in (data.get("assignments") or [])
+                   if isinstance(a, dict)]
+    approved = [a for a in assignments
+                if _sub_status(a) == "approved"
+                or _a_status(a) == "approved"]
+    pending = [a for a in assignments
+               if _sub_status(a) == "pending"
+               or _a_status(a) == "submitted"]
+    unlocked = [a for a in assignments
+                if not _sub_status(a)
+                and _a_status(a) in ("", "unlocked", "active")]
+    rejected = [a for a in assignments if _sub_status(a) == "rejected"]
+    if approved:
+        amt = approved[0].get("reward_amount")
+        if lang == "en":
+            amt_txt = f" L.{amt}" if amt else ""
+            reply = (f"Mission approved! 🎉 Your{amt_txt} gift is "
+                     "noted in your Rico Cash 🎁")
+        else:
+            amt_txt = f" de L.{amt}" if amt else ""
+            reply = (f"¡Misión aprobada! 🎉 Tu regalo{amt_txt} está "
+                     "anotado en tu Rico Cash 🎁")
+    elif pending:
+        if lang == "en":
+            reply = ("Your mission is under review 🕐 The Captain is "
+                     "taking a look — I'll tell you here as soon as "
+                     "it's approved.")
+        else:
+            reply = ("Tu misión está en revisión 🕐 El Capitán la está "
+                     "revisando; te aviso por acá apenas se apruebe.")
+    elif unlocked:
+        a = unlocked[0]
+        convo.missions_delivered.add(a.get("assignment_id"))
+        brief = _mission_brief(a)
+        if lang == "en":
+            reply = (f"You have an active mission 🎯 {brief}\n"
+                     "Post it, tag us and send me the link here to "
+                     "claim your gift.")
+        else:
+            reply = (f"Tenés una misión activa 🎯 {brief}\n"
+                     "Publicala, etiquetanos y mandame el link por acá "
+                     "para reclamar tu regalo.")
+    elif rejected:
+        if lang == "en":
+            reply = ("Your last mission wasn't approved this time 🙏 "
+                     "But your next purchase can unlock a new one.")
+        else:
+            reply = ("Tu última misión no se aprobó esta vez 🙏 Pero "
+                     "con tu próxima compra te puede caer otra.")
+    else:
+        if lang == "en":
+            reply = ("You don't have missions yet 🎯 Missions unlock "
+                     "when you buy: order something tasty and the "
+                     "Captain sends you a mission with a gift. Watch "
+                     "for your next purchase!")
+        else:
+            reply = ("Todavía no tenés misiones 🎯 Las misiones se "
+                     "desbloquean al comprar: pedís algo rico y el "
+                     "Capitán te manda una misión con regalo. "
+                     "¡Pendiente a tu próxima compra!")
+        if _has_cue((incoming_text or "").lower(), WHY_CUES):
+            if lang == "en":
+                reply += ("\nHeads up: missions unlock with purchases "
+                          "paid with your own money — what you pay "
+                          "with gift balance doesn't unlock more "
+                          "missions 😉")
+            else:
+                reply += ("\nOjo: las misiones se desbloquean con "
+                          "compras pagadas con tu dinero — lo pagado "
+                          "con regalo no desbloquea más misiones 😉")
+    done = _completions_count(data)
+    if done:
+        if lang == "en":
+            reply += f"\nMissions completed: {done} 🏅"
+        else:
+            reply += f"\nMisiones cumplidas: {done} 🏅"
+    return reply
+
+
+# ---------------------------------------------------------------- attribution
+
+_WORD_CHARS = "A-Za-zÁÉÍÓÚÜÑáéíóúüñ"
+_WORD_EXPLICIT_RES = (
+    re.compile(r"palabra\s+(?:de\s+)?([" + _WORD_CHARS + r"]{3,20})",
+               re.IGNORECASE),
+    re.compile(r"c[oó]digo\s+(?:de\s+)?([" + _WORD_CHARS + r"]{3,20})",
+               re.IGNORECASE),
+    re.compile(r"(?:vengo\s+de\s+parte\s+de|de\s+parte\s+de|vengo\s+de)"
+               r"\s+([" + _WORD_CHARS + r"]{3,20})", re.IGNORECASE),
+)
+# Bare words that are conversation, not creator words. A speculative
+# (single-token) message matching one of these is NEVER an attempt.
+WORD_STOPLIST = {
+    "hola", "hello", "hi", "buenas", "menu", "menú", "ayuda", "help",
+    "gracias", "thanks", "si", "sí", "yes", "no", "ok", "okay",
+    "bueno", "preventa", "mision", "misión", "misiones", "mission",
+    "regalo", "gift", "botella", "botellas", "paquete", "paquetes",
+    "caja", "cajas", "precio", "precios", "cuanto", "cuánto", "vale",
+    "carta", "quiero", "want", "saltar", "skip", "luego", "despues",
+    "después", "cumple", "cumpleaños", "birthday", "nombre", "name",
+    "adios", "adiós", "bye", "chao", "equipo", "team",
+}
+
+
+def _detect_word(text: str):
+    """A creator-word attempt in this message, or None.
+
+    Deliberate: an explicit frame ("palabra X", "código X", "vengo
+    de X", "de parte de X") — the customer MEANS it. Speculative: a
+    single-token wordlike message (3–20 letters) outside the
+    stoplist — it MIGHT be a word; pre-signup it is only stashed,
+    never announced. Conservative by design: detection is invoked
+    only at first contact, at the confirm step, in
+    RETURNING_NO_GIFT and in the lounge — never while the customer
+    is answering the name or birthday questions, where a token is
+    data. (A deliberate frame inside a LONG message is left for
+    another turn: short messages only, at first contact.)
+    """
+    t = (text or "").strip()
+    if not t:
+        return None
+    for rx in _WORD_EXPLICIT_RES:
+        m = rx.search(t)
+        if m and m.group(1).lower() not in WORD_STOPLIST:
+            return {"word": m.group(1), "deliberate": True}
+    single = t.strip(" .!¡¿?")
+    if single and " " not in single and \
+            re.fullmatch("[" + _WORD_CHARS + "]{3,20}", single):
+        low = single.lower()
+        if low not in WORD_STOPLIST and low not in _KEYBOARD_MASH:
+            return {"word": single, "deliberate": False}
+    return None
+
+
+def _ligada_line(convo: "IntroConversation", creator_name: str) -> str:
+    name = creator_name or ""
+    if convo.lang == "en":
+        return (f"🎉 And your account was linked to {name}'s word — "
+                "thanks for arriving with an invitation!")
+    return (f"🎉 Y tu cuenta quedó ligada a la palabra de {name} — "
+            "¡gracias por llegar con invitación!")
+
+
+def _note_suffix(convo: "IntroConversation") -> str:
+    """The bound-word line as an appendable suffix ('' when the
+    signup carried no word, or the word didn't bind)."""
+    return ("\n" + convo.attribution_note) if convo.attribution_note else ""
+
+
+def _attribute_line(convo: "IntroConversation", det: dict) -> str:
+    """Bind a word for an ALREADY-registered customer via
+    whatsapp_attribute and render the verdict as one line. Returns
+    '' when silence is right: a speculative word the OS doesn't know
+    (the customer was never promised anything), a no_customer answer
+    (the word is stashed instead, in case a signup follows), or an
+    OS hiccup (the word can simply be resent)."""
+    lang = convo.lang
+    res = os_client.attribute_word(convo.customer_phone, det["word"])
+    data = res.get("data") if isinstance(res, dict) else None
+    if not isinstance(data, dict):
+        return ""
+    if data.get("ok") or data.get("attributed"):
+        return _ligada_line(convo,
+                             data.get("creator_name") or det["word"])
+    reason = str(data.get("reason") or "")
+    if reason == "already_attributed":
+        name = data.get("creator_name") or ""
+        if lang == "en":
+            return (f"You already have a word linked to your account: "
+                    f"{name}'s 🙏 (the first word is the one that "
+                    "counts)")
+        return (f"Ya tenés una palabra ligada a tu cuenta: la de "
+                f"{name} 🙏 (la primera palabra es la que cuenta)")
+    if reason == "no_customer":
+        if not convo.pending_word:
+            convo.pending_word = det["word"]
+        return ""
+    # unknown_word | inactive_code — a retired word renders as
+    # unrecognized; only a DELIBERATE attempt earns the explanation,
+    # a speculative one stays silent.
+    if det.get("deliberate"):
+        if lang == "en":
+            return ("I don't recognize that word 🙏 Check the "
+                    "spelling, or ask your creator to confirm it.")
+        return ("No reconozco esa palabra 🙏 Revisá cómo se "
+                "escribe, o pedile a tu creador que te la confirme.")
+    return ""
+
+
+def _word_invite_line(convo: "IntroConversation", det: dict) -> str:
+    """The pre-signup invite for a DELIBERATE word: intent, not
+    confirmation — validity is only known when the OS answers at
+    signup time."""
+    if convo.lang == "en":
+        return (f"\nLove it! Finish your signup and the word of "
+                f"{det['word']} gets linked to your account 🙌")
+    return (f"\n¡Buena esa! Terminá tu registro y la palabra de "
+            f"{det['word']} queda ligada a tu cuenta 🙌")
+
+
 # ---------------------------------------------------------------- engine
 
 def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
-    """One message in, one reply out. Tenant: rich-aroma-honduras."""
+    """One message in, one reply out. Tenant: rich-aroma-honduras.
+
+    Thin wrapper over _reply_core: once the core flow has answered, a
+    registered customer who was ALREADY in the lounge when this
+    message arrived gets any undelivered mission appended (pull
+    model — see the missions note in the module docstring)."""
+    start_state = convo.state
+    convo.mission_cache = None
+    reply = _reply_core(convo, incoming_text)
+    return _append_mission_delivery(convo, start_state, incoming_text,
+                                    reply)
+
+
+def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
     text = (incoming_text or "").strip()
     t = text.lower()
     if not convo.lang:
@@ -518,6 +977,12 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
             convo.gift_status = gift.get("status") or ""
             convo.registered = True
             convo.state = "LOUNGE"
+            # Creadores: a word in a short first message from a
+            # registered customer binds right away; the verdict line
+            # rides whichever greeting this branch returns.
+            _det = _detect_word(text) if len(text.split()) <= 6 else None
+            _attr_line = _attribute_line(convo, _det) if _det else ""
+            _attr_suffix = ("\n" + _attr_line) if _attr_line else ""
             if not convo.gift_status:
                 convo.state = "RETURNING_NO_GIFT"
                 if lang == "en":
@@ -525,12 +990,20 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                             "I see your account, but your welcome gift "
                             "isn't noted yet. Want me to add it? "
                             "It's *L.100 of Rico Cash* (a free bottle) "
-                            "for your first purchase. Reply 'yes'.")
+                            "for your first purchase. Reply 'yes'."
+                            + _attr_suffix)
                 return (f"¡Hola de nuevo, {convo.name.split(' ')[0]}! ☕ "
                         "Veo tu cuenta, pero tu regalo de bienvenida "
                         "todavía no está anotado. ¿Te lo anoto? Son "
                         "*L.100 de regalo en tu Rico Cash* (una botella "
-                        "gratis) para tu primera compra. Respondé 'sí'.")
+                        "gratis) para tu primera compra. Respondé 'sí'."
+                        + _attr_suffix)
+            # Registered: a post link as the very first message is a
+            # mission submission — register it right away.
+            _url = _extract_social_url(text)
+            if _url:
+                return (_returning_greeting(convo) + "\n"
+                        + _submit_mission_link(convo, _url))
             # Registered: answer a direct intent right away if present.
             packs, bottles, boxes = parse_preventa_explicit(text)
             if packs or bottles or boxes:
@@ -540,24 +1013,37 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                                                   boxes, lang))
             if _has_cue(t, MENU_CUES):
                 return (_returning_greeting(convo) + "\n"
-                        + _menu_park_text(lang) + _preventa_offer(lang))
+                        + _menu_park_text(lang) + _preventa_offer(lang)
+                        + _attr_suffix)
             if _has_cue(t, PRICE_CUES):
                 return _returning_greeting(convo) + "\n" + _prices_text(lang) \
-                    + _preventa_offer(lang)
-            return _returning_greeting(convo) + _preventa_offer(lang)
+                    + _preventa_offer(lang) + _attr_suffix
+            return _returning_greeting(convo) + _preventa_offer(lang) \
+                + _attr_suffix
 
         # New customer.
         convo.state = "ASK_NAME"
+        # Creadores: stash any word this first message carries — it
+        # rides the signup when it fires. Silent by itself; only a
+        # deliberate word in a short message earns the invite line.
+        _det = _detect_word(text)
+        if _det and not convo.pending_word:
+            convo.pending_word = _det["word"]
+        _invite = ""
+        if _det and _det["deliberate"] and len(text.split()) <= 8:
+            _invite = _word_invite_line(convo, _det)
         introduced = _extract_introduced_name(text)
         if introduced:
             convo.name = introduced
             convo.state = "ASK_BIRTHDAY"
             return _birthday_ask(convo.name, lang)
         if _has_cue(t, MENU_CUES):
-            return (_menu_park_text(lang) + "\n\n" + _greeting_text(lang))
+            return (_menu_park_text(lang) + "\n\n" + _greeting_text(lang)
+                    + _invite)
         if _has_cue(t, PRICE_CUES):
-            return (_prices_text(lang) + "\n\n" + _greeting_text(lang))
-        return _greeting_text(lang)
+            return (_prices_text(lang) + "\n\n" + _greeting_text(lang)
+                    + _invite)
+        return _greeting_text(lang) + _invite
 
     # ---------------- credential safety ----------------
     # The bot NEVER asks for a PIN, password or card data. If the
@@ -628,11 +1114,18 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                 "(ej: 15/03), o 'saltar' si preferís no decirla.")
 
     if convo.state == "CONFIRM":
+        # Creadores: a word sent WITH the confirmation ("sí, palabra
+        # X") is stashed before the yes is handled, so it rides this
+        # very signup. Stash only — the flow's replies don't change.
+        _det = _detect_word(text)
+        if _det and not convo.pending_word:
+            convo.pending_word = _det["word"]
         if _is_yes(t):
             _do_signup(convo)
             convo.strikes = 0
             convo.state = "PREVENTA"
-            return _gift_saved_text(convo) + _preventa_offer(lang)
+            return _gift_saved_text(convo) + _note_suffix(convo) \
+                + _preventa_offer(lang)
         if t.strip(" .!¡¿?") in ("no", "n", "nop", "nope"):
             if lang == "en":
                 return ("No problem — what should I fix: your name "
@@ -660,16 +1153,31 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                 "o la fecha correcta.")
 
     if convo.state == "RETURNING_NO_GIFT":
+        _det = _detect_word(text)
+        if _det:
+            _line = _attribute_line(convo, _det)
+            if _line:
+                return _line
         if _is_yes(t):
             _do_signup(convo)
             convo.state = "PREVENTA"
-            return _gift_saved_text(convo) + _preventa_offer(lang)
+            return _gift_saved_text(convo) + _note_suffix(convo) \
+                + _preventa_offer(lang)
         convo.state = "LOUNGE"
         if lang == "en":
             return ("No problem! Your account stays as is. "
                     + _preventa_offer(lang).lstrip())
         return ("¡Sin problema! Tu cuenta queda como está. "
                 + _preventa_offer(lang).lstrip())
+
+    # ---------------- missions: link intake ----------------
+    # A social post link from a registered customer in the lounge (or
+    # mid-preventa chat) is a mission submission attempt. The signup
+    # states above are never hijacked by it.
+    if convo.state in ("LOUNGE", "PREVENTA") and convo.registered:
+        _url = _extract_social_url(text)
+        if _url:
+            return _submit_mission_link(convo, _url)
 
     # ---------------- preventa ----------------
     if convo.state == "PREVENTA":
@@ -714,6 +1222,8 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
 
     # ---------------- lounge (registered) ----------------
     if convo.state == "LOUNGE":
+        if _has_cue(t, MISSION_CUES):
+            return _mission_status_reply(convo, incoming_text)
         if _has_cue(t, MENU_CUES):
             return _menu_park_text(lang) + _preventa_offer(lang)
         if _has_cue(t, PRICE_CUES):
@@ -743,6 +1253,15 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                         "preventa, or check your gift? Just tell me.")
             return (f"¡Hola, {first}! ☕ ¿Apartamos botellas en "
                     "preventa o revisamos tu regalo? Contame.")
+        # Creadores: a word attempt in the lounge binds (or is
+        # answered) here — after every conversational cue above has
+        # had its chance, so a bare "botella"/"menú" is never
+        # mistaken for a word.
+        _det = _detect_word(text)
+        if _det:
+            _line = _attribute_line(convo, _det)
+            if _line:
+                return _line
         if lang == "en":
             return ("I can help you reserve bottles in preventa, "
                     "check your L.100 gift, or answer price questions. "
@@ -760,4 +1279,4 @@ def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
                 f"También podés escribirnos por Instagram: {INSTAGRAM}")
 
     convo.state = "NEW"
-    return reply_for_intro(convo, incoming_text)
+    return _reply_core(convo, incoming_text)
