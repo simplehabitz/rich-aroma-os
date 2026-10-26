@@ -151,6 +151,7 @@
                 <button onclick="switchTab('employees')" id="tab-employees" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Employees</button>
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
                 <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
+                <button onclick="switchTab('clientes')" id="tab-clientes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Clientes</button>
             </div>
             
             <!-- Store Status Toggle -->
@@ -297,6 +298,34 @@
                         </tr>
                     </thead>
                     <tbody id="promocodes-table" class="divide-y divide-gray-100 text-sm">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB: CLIENTES -->
+        <div id="section-clientes" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Clientes</h2>
+                <button onclick="loadClientes()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest">Actualizar</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">Cuentas de clientes creadas en caja y por <strong>WhatsApp</strong>. El regalo de bienvenida queda <strong>Pendiente</strong> al registrarse y pasa a <strong>Entregado</strong> cuando se acredita a su Rico Cash. Cuando verifiques el pago de una preventa hecha por transferencia, márcala como pagada aquí.</p>
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Nombre</th>
+                            <th class="p-4">Teléfono</th>
+                            <th class="p-4">Origen</th>
+                            <th class="p-4">Cumpleaños</th>
+                            <th class="p-4">Regalo</th>
+                            <th class="p-4">Preventa</th>
+                            <th class="p-4">Rico Cash</th>
+                            <th class="p-4">Desde</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientesTable" class="divide-y divide-gray-100 text-sm">
                         <!-- Injected via JS -->
                     </tbody>
                 </table>
@@ -1220,7 +1249,7 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
-                const sections = ['overview', 'employees', 'menu', 'promocodes'];
+                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes'];
                 if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
@@ -1241,9 +1270,93 @@
                 if(tabId === 'employees') loadEmployees();
                 if(tabId === 'menu') { loadMenu(); loadModifiersDatabase(); }
                 if(tabId === 'promocodes') loadPromoCodes();
+                if(tabId === 'clientes') loadClientes();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
+        }
+
+        // --- CLIENTES LOGIC ---
+        // Cuentas nuevas (caja y WhatsApp), regalo de bienvenida y
+        // preventas. Solo lectura + confirmar el pago de una preventa;
+        // el regalo se acredita a Rico Cash desde el sistema de
+        // lealtad, nunca desde esta vista.
+        function formatoLempiras(n) {
+            const v = parseFloat(n) || 0;
+            return 'L.' + (Number.isInteger(v) ? v : v.toFixed(2));
+        }
+
+        async function loadClientes() {
+            const tbody = document.getElementById('clientesTable');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="8" class="p-4 text-gray-400 italic">Cargando...</td></tr>';
+            try {
+                const res = await fetch('/api/store?action=admin_signups', { headers: getHeaders() });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+                renderClientesTable(data.customers || []);
+            } catch (e) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-red-500">Error: ${e.message}</td></tr>`;
+            }
+        }
+
+        function renderClientesTable(customers) {
+            const tbody = document.getElementById('clientesTable');
+            if (!tbody) return;
+            if (!customers.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="p-12 text-center text-gray-400 italic">Aún no hay clientes registrados.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = customers.map(c => `
+                <tr>
+                    <td class="p-4 font-bold text-gray-800">${escapeHtml(c.name || '—')}</td>
+                    <td class="p-4 text-gray-600">${escapeHtml(c.phone || '—')}</td>
+                    <td class="p-4">${c.origin === 'whatsapp' ? '<span class="text-green-600 font-bold">WhatsApp</span>' : '—'}</td>
+                    <td class="p-4">${escapeHtml(c.birthday_dm || '—')}</td>
+                    <td class="p-4">${clienteRegaloHtml(c.grants)}</td>
+                    <td class="p-4">${clientePreventaHtml(c.preorders)}</td>
+                    <td class="p-4 font-bold text-gray-700">${formatoLempiras(c.rico_balance)}</td>
+                    <td class="p-4 text-gray-500">${c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                </tr>`).join('');
+        }
+
+        function clienteRegaloHtml(grants) {
+            if (!grants || !grants.length) return '—';
+            return grants.map(g => {
+                const estado = g.status === 'pending' ? 'Pendiente' : (g.status === 'minted' ? 'Entregado' : escapeHtml(g.status));
+                return `<div>${formatoLempiras(g.amount)} <span class="text-gray-400">· ${estado}</span></div>`;
+            }).join('');
+        }
+
+        function clientePreventaHtml(preorders) {
+            if (!preorders || !preorders.length) return '—';
+            return preorders.map(p => {
+                const partes = [];
+                if (p.packs_5) partes.push(`${p.packs_5}× pack de 5`);
+                if (p.bottles) partes.push(`${p.bottles}× botella${p.bottles > 1 ? 's' : ''}`);
+                if (p.boxes_20) partes.push(`${p.boxes_20}× caja de 20`);
+                const resumen = partes.length ? partes.join(' · ') : 'Preventa';
+                const estado = p.status === 'intent' ? 'Pendiente' : (p.status === 'paid_confirmed' ? 'Pagada' : 'Cancelada');
+                const boton = p.status === 'intent'
+                    ? `<button onclick="confirmarPreventa('${p.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold block mt-1">Marcar pagado</button>`
+                    : '';
+                return `<div class="mb-1">${resumen} — ${formatoLempiras(p.total)} <span class="text-gray-400">(${estado})</span>${boton}</div>`;
+            }).join('');
+        }
+
+        async function confirmarPreventa(preorderId) {
+            try {
+                const res = await fetch('/api/store?action=admin_preventa_confirm', {
+                    method: 'POST',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ preorder_id: preorderId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error');
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+            loadClientes();
         }
 
         // --- PROMO LOGIC ---

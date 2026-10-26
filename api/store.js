@@ -1375,6 +1375,108 @@ module.exports = async (req, res) => {
             return res.json({ ok: true, preorder: data });
         }
 
+        // --- ADMIN: CLIENTES (cuentas nuevas, regalos y preventas) ---
+        // Staff-only data for the /admin "Clientes" view: the newest
+        // ~100 customers with their welcome-gift records (reward_grants)
+        // and WhatsApp preventa intents (whatsapp_preorders) joined in.
+        // Display + one write (preventa confirm) only — minting a
+        // pending grant into Rico Cash belongs to the loyalty build,
+        // never to this view. Gated by requireStaff() (SEC-FIX 1) like
+        // customer_list, NEVER by the bot secret: WHATSAPP_SIGNUP_SECRET
+        // is server-to-server only and must not unlock admin reads.
+        if (action === 'admin_signups') {
+            if (!(await requireStaff())) return;
+            const { data: custs, error } = await supabase.from('customers')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
+            if (error) throw error;
+            const list = custs || [];
+            const ids = list.map(c => c.id);
+            let grants = [];
+            let preorders = [];
+            if (ids.length > 0) {
+                const g = await supabase.from('reward_grants')
+                    .select('*').in('customer_id', ids)
+                    .order('created_at', { ascending: false });
+                if (g.error) throw g.error;
+                grants = g.data || [];
+                const p = await supabase.from('whatsapp_preorders')
+                    .select('*').in('customer_id', ids)
+                    .order('created_at', { ascending: false });
+                if (p.error) throw p.error;
+                preorders = p.data || [];
+            }
+            const groupByCustomer = (rows) => {
+                const m = {};
+                for (const r of rows) (m[r.customer_id] = m[r.customer_id] || []).push(r);
+                return m;
+            };
+            const grantsBy = groupByCustomer(grants);
+            const preordersBy = groupByCustomer(preorders);
+            return res.json({
+                customers: list.map(c => {
+                    const gs = grantsBy[c.id] || [];
+                    const ps = preordersBy[c.id] || [];
+                    return {
+                        ...sanitizeCustomer(c),
+                        // customers has no source column to read; a
+                        // customer arrived via WhatsApp exactly when
+                        // the intro bot left them a grant or a
+                        // preventa (both carry source='whatsapp_intro'
+                        // on their own rows).
+                        origin: (gs.length > 0 || ps.length > 0) ? 'whatsapp' : null,
+                        grants: gs.map(g => ({
+                            id: g.id,
+                            grant_type: g.grant_type,
+                            amount: parseFloat(g.amount) || 0,
+                            status: g.status,
+                            source: g.source,
+                            created_at: g.created_at,
+                            expires_at: g.expires_at
+                        })),
+                        preorders: ps.map(p => ({
+                            id: p.id,
+                            packs_5: p.packs_5 || 0,
+                            bottles: p.bottles || 0,
+                            boxes_20: p.boxes_20 || 0,
+                            total: parseFloat(p.quoted_total) || 0,
+                            status: p.status,
+                            created_at: p.created_at
+                        }))
+                    };
+                })
+            });
+        }
+
+        // Staff confirms a preventa was paid — the transfer was
+        // verified by a human; payment never happens in chat. Only an
+        // open intent can flip ('intent' -> 'paid_confirmed'), and the
+        // UPDATE repeats the status guard so a double-tap or a race
+        // can't re-confirm or resurrect a cancelled preorder.
+        // Re-confirming an already-paid preorder is a no-op success.
+        if (action === 'admin_preventa_confirm' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
+            const preorderId = req.body?.preorder_id || req.body?.preorderId || id || req.query.id;
+            if (!preorderId) return res.status(400).json({ error: 'preorder_id requerido' });
+            const { data: pre, error: fErr } = await supabase.from('whatsapp_preorders')
+                .select('*').eq('id', preorderId).maybeSingle();
+            if (fErr) throw fErr;
+            if (!pre) return res.status(404).json({ error: 'Preventa no encontrada' });
+            if (pre.status === 'paid_confirmed') {
+                return res.json({ ok: true, already_confirmed: true, preorder: pre });
+            }
+            if (pre.status !== 'intent') {
+                return res.status(400).json({ error: `La preventa no está pendiente (estado: ${pre.status})` });
+            }
+            const { data: updated, error: uErr } = await supabase.from('whatsapp_preorders')
+                .update({ status: 'paid_confirmed' })
+                .eq('id', preorderId).eq('status', 'intent')
+                .select().single();
+            if (uErr) throw uErr;
+            return res.json({ ok: true, preorder: updated });
+        }
+
         if (action === 'customer_update') {
             const targetId = id || req.query.id;
             if (!targetId) return res.status(400).json({ error: "ID required" });
