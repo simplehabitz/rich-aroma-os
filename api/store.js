@@ -134,9 +134,10 @@ module.exports = async (req, res) => {
         return copy;
     }
     // --- WhatsApp intro bot gate (server-to-server) ---
-    // The Honduras intro bot (whatsapp-front-desk) creates accounts and
-    // records pending welcome gifts through the whatsapp_* actions
-    // below. It authenticates with a shared secret the owner sets as
+    // The Honduras intro bot (whatsapp-front-desk) creates accounts
+    // through the whatsapp_* actions below. (It used to also record
+    // pending welcome gifts — retired 2026-10-26, see the gate at
+    // whatsapp_signup.) It authenticates with a shared secret the owner sets as
     // WHATSAPP_SIGNUP_SECRET in BOTH Vercel (here) and Render (the bot).
     // Not a staff PIN and NOT public: fail closed when the env var is
     // unset, and compare in constant time.
@@ -1432,17 +1433,16 @@ module.exports = async (req, res) => {
         // Gated by botSecretOk() (WHATSAPP_SIGNUP_SECRET). The bot's
         // get-to-know-you flow uses exactly three actions:
         //   whatsapp_lookup   — is this phone already a customer?
-        //   whatsapp_signup   — get-or-create the account AND its
-        //                       pending L.100 welcome gift (idempotent)
+        //   whatsapp_signup   — get-or-create the account (idempotent)
         //   whatsapp_preventa — append a bottle-preorder intent record
-        // The welcome gift is a PENDING row in reward_grants for the
-        // loyalty build to mint as a bonus lot — it NEVER touches
-        // rico_balance (that bucket is the customer's own money and
-        // never expires; bonus lots are house money with an expiry).
-        // One welcome gift per customer, ever: grant_type
-        // 'welcome_bottle' has a UNIQUE (customer_id, grant_type)
-        // index, so the WhatsApp signup gift and the preventa campaign
-        // grant are the same L.100, never two.
+        // The L.100 welcome gift signup used to record here was
+        // RETIRED by owner decision (bot-menu-fix, 2026-10-26):
+        // whatsapp_signup mints NO grant now (see the gate at the
+        // signup handler). Pre-existing pending 'welcome_bottle'
+        // rows were left untouched — lookup still reports one
+        // read-only when it exists. Mission rewards remain pending
+        // rows in reward_grants via the missions actions, a
+        // separate writer, unaffected by the retirement.
         if (action === 'whatsapp_lookup' && req.method === 'POST') {
             if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
             const phoneToStore = normalizePhone(req.body?.phone);
@@ -1495,31 +1495,27 @@ module.exports = async (req, res) => {
                 }
             }
 
+            // WELCOME GIFT RETIRED (owner decision, bot-menu-fix
+            // 2026-10-26): whatsapp_signup no longer mints the
+            // pending L.100 'welcome_bottle' grant — the insert that
+            // used to live here is gated OFF. The SELECT stays,
+            // read-only: a grant created BEFORE the cutoff is still
+            // reported in the response below, and existing pending
+            // rows are deliberately NOT touched (their fate is a
+            // separate owner decision — nothing is voided here).
+            // Mission grants (grant_type 'mission%') are a different
+            // writer entirely and are unaffected.
             let { data: grant } = await supabase.from('reward_grants')
                 .select('*')
                 .eq('customer_id', cust.id).eq('grant_type', 'welcome_bottle')
                 .maybeSingle();
-            let grantCreated = false;
-            if (!grant) {
-                const { data: g, error: gErr } = await supabase.from('reward_grants').insert({
-                    id: 'grant_' + Date.now() + Math.floor(Math.random() * 1000),
-                    customer_id: cust.id,
-                    phone: phoneToStore,
-                    grant_type: 'welcome_bottle',
-                    amount: 100,
-                    status: 'pending',
-                    source: 'whatsapp_intro'
-                }).select().single();
-                if (gErr) throw gErr;
-                grant = g;
-                grantCreated = true;
-            }
+            const grantCreated = false;
             return res.json({
                 ok: true,
                 created,
                 grantCreated,
                 customer: sanitizeCustomer(cust),
-                gift: { status: grant.status, amount: parseFloat(grant.amount) || 0 }
+                gift: grant ? { status: grant.status, amount: parseFloat(grant.amount) || 0 } : null
             });
         }
 
