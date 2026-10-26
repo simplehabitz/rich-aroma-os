@@ -3,8 +3,17 @@ Conversation battery for the Honduras INTRO flow (intro_engine.py).
 
 Scripted Spanish (and one English) conversations run against the rule
 engine with the OS client mocked by an in-memory fake that mirrors the
-real whatsapp_* actions' semantics: phone-keyed get-or-create, ONE
-pending welcome grant per customer, server-computed preventa totals.
+real whatsapp_* actions' semantics: phone-keyed get-or-create and
+server-computed preventa totals.
+
+BOT-MENU-FIX (2026-10-26): the L.100 welcome gift was RETIRED by owner
+decision. The fake mirrors the patched OS: whatsapp_signup creates the
+account and NO grant, ever; lookup reports a gift only for a
+pre-existing row (none is ever seeded here). The gift cases were
+deliberately rewritten — signup completes with account copy and no
+gift promise, a returning customer with no gift goes straight to the
+lounge (the RETURNING_NO_GIFT state is gone), and asking about "mi
+regalo" earns the honest retired line. See bot-menu-fix-note.md.
 
 Case: (id, category, setup_messages, message, expect)
 expect keys:
@@ -17,10 +26,13 @@ expect keys:
   signup_name        name in the whatsapp_signup payload
   signup_birthday    birthday in the payload (absent when skipped -> None)
   preventa           (packs, bottles, boxes) of the last preventa call
+  no_grant           True -> after the whole case the fake OS holds no
+                     grant for anyone, and no signup payload asked for one
   no_pin_anywhere    True -> no reply in the case may ask for a PIN /
                      contraseña, and no OS payload may carry one
-  seed_customer      {"name": ..., "gift": "pending"|None} pre-registered
-                     in the fake OS for this case's phone
+  seed_customer      {"name": ...} pre-registered in the fake OS for
+                     this case's phone (a legacy "gift" key is accepted
+                     and ignored — post-retirement it changes nothing)
 
 Run:  python3 server/test_intro_battery.py
 """
@@ -40,14 +52,16 @@ class FakeOS:
 
     def __init__(self):
         self.customers = {}   # phone -> {"name":..., "birthday_dm":...}
-        self.grants = {}      # phone -> {"status":..., "amount":...}
+        self.grants = {}      # phone -> grant row — post-retirement
+                              # NOTHING ever writes here; the dict
+                              # exists so no_grant can assert that
         self.preorders = []   # recorded whatsapp_preventa payloads
         self.calls = []       # [(action, payload)]
 
-    def seed(self, phone, name, gift):
+    def seed(self, phone, name, gift=None):
+        # `gift` is accepted for legacy case compat and IGNORED:
+        # post-retirement a seeded customer is just a customer.
         self.customers[phone] = {"name": name, "birthday_dm": ""}
-        if gift:
-            self.grants[phone] = {"status": gift, "amount": 100}
 
     def __call__(self, action, payload):
         self.calls.append((action, dict(payload)))
@@ -65,14 +79,13 @@ class FakeOS:
                 self.customers[phone] = {
                     "name": payload.get("name", ""),
                     "birthday_dm": payload.get("birthday", "")}
-            grant_created = phone not in self.grants
-            if grant_created:
-                self.grants[phone] = {"status": "pending", "amount": 100}
+            # Patched-OS semantics: the account is created, NO
+            # welcome grant is minted, grantCreated stays False.
             return 200, {"ok": True, "created": created,
-                         "grantCreated": grant_created,
+                         "grantCreated": False,
                          "customer": {"name": self.customers[phone]["name"],
                                       "phone": phone},
-                         "gift": self.grants[phone]}
+                         "gift": None}
         if action == "whatsapp_preventa":
             if phone not in self.customers:
                 return 404, {"error": "Cliente no registrado"}
@@ -89,11 +102,15 @@ SIGNUP = ["hola", "María José", "saltar", "sí"]  # lands in PREVENTA
 
 CASES = [
     # ---- happy path ----
+    # H1 rewritten (bot-menu-fix): signup completion used to announce
+    # "L.100 de regalo ... anotado"; now it confirms the ACCOUNT,
+    # promises no gift, and mints no grant.
     ("H1", "happy", ["hola", "María José", "15/03"], "sí",
-     {"reply_contains": "L.100 de regalo", "state": "PREVENTA",
+     {"reply_contains": "cuenta quedó creada",
+      "reply_not_contains": "regalo", "state": "PREVENTA",
       "os_actions": ["whatsapp_lookup", "whatsapp_signup"],
       "signup_name": "María José", "signup_birthday": "15/03",
-      "no_pin_anywhere": True}),
+      "no_grant": True, "no_pin_anywhere": True}),
     ("H2", "happy", SIGNUP, "1 paquete",
      {"reply_contains": "L.350", "state": "LOUNGE", "preventa": (1, 0, 0)}),
     ("H3", "happy", SIGNUP, "quiero una caja",
@@ -115,20 +132,32 @@ CASES = [
      {"reply_contains": "5 de diciembre", "state": "CONFIRM"}),
 
     # ---- returning users ----
+    # R1 rewritten (bot-menu-fix): the returning greeting used to
+    # append the gift-status line ("...está anotado..."); now it is
+    # the plain greeting, no gift copy at all.
     ("R1", "returning", [], "hola",
      {"seed_customer": {"name": "Carlos Mendoza", "gift": "pending"},
-      "reply_contains": ["Carlos", "anotado"], "state": "LOUNGE",
-      "os_actions": ["whatsapp_lookup"]}),
+      "reply_contains": "Carlos", "reply_not_contains": "regalo",
+      "state": "LOUNGE", "os_actions": ["whatsapp_lookup"]}),
     ("R2", "returning", [], "quiero 2 paquetes",
      {"seed_customer": {"name": "Carlos Mendoza", "gift": "pending"},
       "reply_contains": "L.700", "preventa": (2, 0, 0)}),
+    # R3 rewritten (bot-menu-fix): a returning customer with no gift
+    # used to land in RETURNING_NO_GIFT with a "¿Te lo anoto?" offer;
+    # the state is gone — she goes straight to the lounge.
     ("R3", "returning", [], "hola",
      {"seed_customer": {"name": "Lucía Paz", "gift": None},
-      "reply_contains": "¿Te lo anoto?", "state": "RETURNING_NO_GIFT"}),
+      "reply_contains": "Lucía", "reply_not_contains": "¿Te lo anoto?",
+      "state": "LOUNGE"}),
+    # R4 rewritten (bot-menu-fix): the follow-up "sí" used to confirm
+    # the gift offer and fire a second signup; now there is nothing
+    # to confirm — no signup call, just the lounge help line.
     ("R4", "returning", ["hola"], "sí",
      {"seed_customer": {"name": "Lucía Paz", "gift": None},
-      "reply_contains": "quedó anotado", "state": "PREVENTA",
-      "os_actions_include": ["whatsapp_signup"]}),
+      "reply_contains": "apartar botellas",
+      "reply_not_contains": "regalo", "state": "LOUNGE",
+      "os_actions": ["whatsapp_lookup", "whatsapp_mission_check"],
+      "no_grant": True}),
 
     # ---- menu & prices (parked, kindly) ----
     ("M1", "menu", [], "¿me pasás el menú?",
@@ -143,9 +172,27 @@ CASES = [
      {"reply_contains": "L.800", "preventa": (2, 1, 0)}),
 
     # ---- english ----
+    # E1 rewritten (bot-menu-fix): the English completion used to
+    # announce "L.100 of Rico Cash ... your gift is noted"; now it
+    # confirms the account. (The forbidden string is the gift
+    # promise, NOT "L.100" — the preventa tail legitimately quotes
+    # the bottle's L.100 PRICE, which stays.)
     ("E1", "english", ["hello", "John Smith", "skip"], "yes",
-     {"reply_contains": "L.100 of Rico Cash", "state": "PREVENTA",
-      "signup_name": "John Smith", "signup_birthday": None}),
+     {"reply_contains": "account is created",
+      "reply_not_contains": "gift is noted", "state": "PREVENTA",
+      "signup_name": "John Smith", "signup_birthday": None,
+      "no_grant": True}),
+
+    # ---- the retired welcome gift (bot-menu-fix) ----
+    ("G1", "gift", ["hola"], "¿y mi regalo?",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "reply_contains": ["ya no está activo", "10%"],
+      "state": "LOUNGE",
+      "os_actions": ["whatsapp_lookup", "whatsapp_mission_check"],
+      "no_grant": True}),
+    ("G2", "gift", [], "hola",
+     {"reply_contains": "¿Cómo te llamás?",
+      "reply_not_contains": "gratis", "state": "ASK_NAME"}),
     ("E2", "english", [], "hello",
      {"reply_contains": "November 7", "state": "ASK_NAME"}),
 
@@ -180,11 +227,16 @@ def run_case(case):
     intro_engine.save_order = lambda slug, rec: saved.append(rec)
     intro_engine._intro_conversations.clear()
 
+    def _as_text(r):
+        # A menu turn answers with a WaReply; assertions read its
+        # plain-text rendering (what a fallback client would see).
+        return r if isinstance(r, str) else r.fallback_text()
+
     convo = intro_engine.get_intro_conversation(phone)
     replies = []
     for m in setup:
-        replies.append(intro_engine.reply_for_intro(convo, m))
-    reply = intro_engine.reply_for_intro(convo, msg)
+        replies.append(_as_text(intro_engine.reply_for_intro(convo, m)))
+    reply = _as_text(intro_engine.reply_for_intro(convo, msg))
     replies.append(reply)
 
     ok = True
@@ -231,6 +283,16 @@ def run_case(case):
         if got != expect["preventa"]:
             ok = False
             why.append(f"preventa {got} != {expect['preventa']}")
+    if expect.get("no_grant"):
+        if fake.grants:
+            ok = False
+            why.append(f"a grant exists after the case: {fake.grants}")
+        for a, p in fake.calls:
+            if a == "whatsapp_signup" and any(
+                    "gift" in k.lower() or "grant" in k.lower()
+                    for k in p):
+                ok = False
+                why.append("a signup payload asked for a gift/grant")
     if expect.get("no_pin_anywhere"):
         # The bot may MENTION the PIN only to say it never asks for one
         # (the anti-phishing reassurance). What is forbidden is a

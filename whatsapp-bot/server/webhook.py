@@ -17,6 +17,11 @@ import urllib.request
 
 from flask import Flask, request, Response
 
+try:
+    from wa_reply import WaReply
+except ImportError:  # running as part of the server package
+    from server.wa_reply import WaReply
+
 # For Vault-backed API calls (see custom_connector_setup skill)
 sys.path.insert(0, "/opt/muse/skills/custom-connector-setup/bin")
 try:
@@ -43,8 +48,8 @@ ROUTES = {
 SHOP_PHONE_NUMBER_ID = "1354660681066143"
 
 
-def send_whatsapp_text(phone_number_id: str, to: str, text: str):
-    """Send a WhatsApp text message via Graph API.
+def _deliver_message(phone_number_id: str, payload: dict):
+    """POST one message payload to the Graph API.
 
     Token resolution order:
       1. Secure Vault surrogate (custom.whatsapp-business) when available —
@@ -53,12 +58,6 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
          owner sets it in the host's dashboard (never committed to the repo).
     """
     url = f"https://{GRAPH_HOST}/{GRAPH_VERSION}/{phone_number_id}/messages"
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to,
-        "type": "text",
-        "text": {"body": text},
-    }
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url, data=data, headers={"Content-Type": "application/json"}, method="POST"
@@ -84,13 +83,73 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
         return read_json_response(resp)
 
 
+def send_whatsapp_text(phone_number_id: str, to: str, text: str):
+    """Send a WhatsApp text message via Graph API."""
+    return _deliver_message(phone_number_id, {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "text",
+        "text": {"body": text},
+    })
+
+
+def send_whatsapp_interactive(phone_number_id: str, to: str, reply):
+    """Send a WaReply (wa_reply.py) as a WhatsApp interactive
+    message: an interactive LIST for menu browsing, or a CTA-URL
+    button to the photo storefront. Raises on API failure —
+    deliver_reply() falls back to the reply's text rendering."""
+    if reply.kind == "list":
+        interactive = {
+            "type": "list",
+            "body": {"text": reply.body},
+            "action": {"button": reply.button_text,
+                       "sections": reply.sections},
+        }
+    elif reply.kind == "cta_url":
+        interactive = {
+            "type": "cta_url",
+            "body": {"text": reply.body},
+            "action": {"name": "cta_url",
+                       "parameters": {
+                           "display_text": reply.cta["display_text"],
+                           "url": reply.cta["url"]}},
+        }
+    else:
+        raise ValueError(f"unsupported WaReply kind: {reply.kind}")
+    return _deliver_message(phone_number_id, {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "interactive",
+        "interactive": interactive,
+    })
+
+
+def deliver_reply(phone_number_id: str, to: str, reply):
+    """Deliver one engine reply. A WaReply goes out as its
+    interactive message; ANY failure (API error, a client that
+    can't render it) falls back to the reply's plain-text
+    rendering — a short numbered section list plus the web link,
+    never a catalog dump (bot-menu-fix, 2026-10-26). Plain strings
+    send as text, exactly as before."""
+    if isinstance(reply, WaReply):
+        try:
+            return send_whatsapp_interactive(phone_number_id, to, reply)
+        except Exception as e:
+            print(f"[webhook] interactive send failed, text "
+                  f"fallback: {e}", flush=True)
+            return send_whatsapp_text(phone_number_id, to,
+                                      reply.fallback_text())
+    return send_whatsapp_text(phone_number_id, to, reply)
+
+
 def handle_intro_message(from_number: str, text: str, phone_number_id: str):
     """
     Honduras flow (rich-aroma-honduras — the only tenant this bot
-    serves): get-to-know-you signup -> account created in the OS +
-    pending L.100 welcome gift -> preventa offer -> lounge, where
-    the shop engine (server/shop_engine.py) serves the real OS menu
-    and takes café orders. See server/intro_engine.py.
+    serves): get-to-know-you signup -> account created in the OS ->
+    preventa offer -> lounge, where the shop engine
+    (server/shop_engine.py) serves the real OS menu (as an
+    interactive section list, never a text dump) and takes café
+    orders. See server/intro_engine.py.
     """
     try:
         from intro_engine import get_intro_conversation, reply_for_intro
@@ -104,7 +163,7 @@ def handle_intro_message(from_number: str, text: str, phone_number_id: str):
     menu_client.maybe_refresh()
     convo = get_intro_conversation(from_number)
     reply = reply_for_intro(convo, text)
-    return send_whatsapp_text(phone_number_id, from_number, reply)
+    return deliver_reply(phone_number_id, from_number, reply)
 
 
 def handle_order_message(from_number: str, text: str, phone_number_id: str):
@@ -158,10 +217,21 @@ def incoming():
                 metadata = value.get("metadata", {})
                 phone_number_id = metadata.get("phone_number_id")
                 for msg in value.get("messages", []):
-                    if msg.get("type") != "text":
+                    msg_type = msg.get("type")
+                    if msg_type == "text":
+                        text_body = msg.get("text", {}).get("body", "")
+                    elif msg_type == "interactive":
+                        # A tap on an interactive list/button row
+                        # arrives as its reply id (menu sections:
+                        # "sec:<id>") — the engines read it exactly
+                        # like typed text.
+                        inter = msg.get("interactive", {})
+                        rep = (inter.get("list_reply")
+                               or inter.get("button_reply") or {})
+                        text_body = rep.get("id", "")
+                    else:
                         continue
                     from_number = msg.get("from")
-                    text_body = msg.get("text", {}).get("body", "")
                     if from_number and phone_number_id and text_body:
                         handle_order_message(from_number, text_body, phone_number_id)
     except Exception as e:

@@ -10,8 +10,12 @@ standard prescribes. Conversations run through the real
 reply_for_intro with the OS mocked, so every case also proves the
 intro/missions/attribution seams stay intact with a catalog live.
 
-Covered: menu ask serves the real menu; item lookup across
-categories; size-by-name with iced items distinct from hot; a size
+Covered: menu ask serves an interactive section LIST, never a
+text dump (bot-menu-fix: curated sections, section taps, numbered
+fallback picks, a per-message item-line cap over a full browse,
+and a disjoint/full curation-coverage assertion over the 86
+items); item lookup across categories; size-by-name with iced
+items distinct from hot; a size
 clarification round-trip; Dulzor (default, Poco dulce, Con
 Splenda with packet count, Sin azúcar); leche especial delta;
 extras; a fixed combo (no builder); a bottle ordered as a regular
@@ -182,13 +186,15 @@ class FakeOS:
 
     def __init__(self):
         self.customers = {}
-        self.grants = {}
+        self.grants = {}   # never written — see seed()
         self.calls = []
 
-    def seed(self, phone, name="Carlos Mendoza", gift="pending"):
+    def seed(self, phone, name="Carlos Mendoza", gift=None):
+        # `gift` accepted for legacy compat and IGNORED: the
+        # welcome gift was retired (bot-menu-fix, 2026-10-26) — a
+        # seeded customer is just a customer, and signup below
+        # mirrors the patched OS (account created, NO grant).
         self.customers[phone] = {"name": name, "birthday_dm": ""}
-        if gift:
-            self.grants[phone] = {"status": gift, "amount": 100}
 
     def __call__(self, action, payload):
         self.calls.append((action, dict(payload)))
@@ -203,12 +209,10 @@ class FakeOS:
         if action == "whatsapp_signup":
             self.customers.setdefault(
                 phone, {"name": payload.get("name", ""), "birthday_dm": ""})
-            self.grants.setdefault(phone, {"status": "pending",
-                                           "amount": 100})
-            return 200, {"ok": True,
+            return 200, {"ok": True, "grantCreated": False,
                          "customer": {"name": self.customers[phone]["name"],
                                       "phone": phone},
-                         "gift": self.grants[phone]}
+                         "gift": None}
         if action == "whatsapp_preventa":
             return 200, {"ok": True, "preorder": dict(payload)}
         if action == "whatsapp_mission_check":
@@ -260,7 +264,10 @@ class Rig:
         else:
             menu_client.clear()
         self.convo = intro_engine.get_intro_conversation(self.phone)
-        self.replies = []
+        self.replies = []       # plain-text renderings (fallback text
+                               # for a WaReply) — what assertions read
+        self.raw_replies = []  # the replies exactly as returned
+        self.last_raw = None
 
     def _capture_push(self, order):
         self.pushed.append(order)
@@ -268,8 +275,12 @@ class Rig:
 
     def say(self, text):
         reply = intro_engine.reply_for_intro(self.convo, text)
-        self.replies.append(reply)
-        return reply
+        self.raw_replies.append(reply)
+        self.last_raw = reply
+        text_reply = reply if isinstance(reply, str) \
+            else reply.fallback_text()
+        self.replies.append(text_reply)
+        return text_reply
 
     def to_lounge(self):
         return self.say("hola")
@@ -287,13 +298,110 @@ def mod_of(order, line_idx, group):
 
 # ---------------------------------------------------------------- scenarios
 
+def _item_lines(text):
+    return [ln for ln in text.split("\n") if ln.startswith("• ")]
+
+
+EXPECTED_SECTIONS = ["bebidas-calientes", "bebidas-frias",
+                     "frappes-granitas", "chai-te", "botellas-bolis",
+                     "comida", "panaderia-postres", "combos"]
+
+
 def s_menu():
+    """Fix 1 (bot-menu-fix): a menu ask is an interactive section
+    LIST — never a text dump. Browsing is taps/numbers over curated
+    sections; ordering by name works throughout."""
+    from wa_reply import WaReply
     rig = Rig()
     rig.to_lounge()
     r = rig.say("¿me pasás el menú?")
-    check("MENU1", "Latte Caramel 12oz" in r and "L.70" in r
-          and "Baleada Sencilla" in r and "Menú" in r, r[:200])
-    check("MENU2", "$" not in r and "USD" not in r, "USD leak in menu")
+    raw = rig.last_raw
+    check("MENU1", isinstance(raw, WaReply) and raw.kind == "list",
+          f"menu ask returned {type(raw).__name__}")
+    if isinstance(raw, WaReply):
+        check("MENU2", raw.body.count("\n") <= 2
+              and "richaromacoffee.com/order" in raw.body,
+              f"body not short / no storefront link: {raw.body[:160]}")
+        check("MENU3", raw.button_text == "Ver el menú",
+              str(raw.button_text))
+        rows = raw.sections[0]["rows"] if raw.sections else []
+        check("MENU4", [row["id"] for row in rows]
+              == [f"sec:{s}" for s in EXPECTED_SECTIONS],
+              str([row["id"] for row in rows]))
+        titles = [row["title"] for row in rows]
+        check("MENU5", "Bebidas calientes" in titles
+              and "Combos" in titles, str(titles))
+    # The text fallback: numbered sections + web link, ZERO items.
+    check("MENU6", "1. Bebidas calientes" in r and "8. Combos" in r
+          and "richaromacoffee.com/order" in r, r[:200])
+    check("MENU7", not _item_lines(r), "fallback listed items")
+    check("MENU8", "$" not in r and "USD" not in r, "USD leak in menu")
+    check("MENU9", rig.convo.shop_cart is None, "browsing opened a cart")
+    check("MENU10", rig.convo.menu_sections == EXPECTED_SECTIONS,
+          str(rig.convo.menu_sections))
+
+    # Section tap: ONLY that section, compact lines, web line.
+    r = rig.say("sec:bebidas-calientes")
+    lines = _item_lines(r)
+    check("SEC1", "Latte Caramel 12oz" in r and "L.70" in r, r[:200])
+    check("SEC2", "Baleada Sencilla" not in r
+          and "Botella de Caramelo" not in r, "other sections leaked")
+    check("SEC3", len(lines) == 26 and len(lines) <= 30,
+          f"calientes lines={len(lines)}")
+    check("SEC4", "richaromacoffee.com/order" in r, "no web line")
+    r = rig.say("sec:combos")
+    check("SEC5", "Capitana Combo ③" in r and "Latte" not in r,
+          r[:200])
+    check("SEC6", len(_item_lines(r)) == 5, "combos line count")
+
+    # Numbered fallback picks open the same sections.
+    rig.say("menú")
+    r = rig.say("8")
+    check("NUM1", "Capitana Combo ③" in r, r[:160])
+    r = rig.say("1")
+    check("NUM2", "Latte Caramel 12oz" in r, r[:160])
+
+    # Full scripted browse: NO single message anywhere carries the
+    # whole catalog (per-message item-line cap), and the union of
+    # the eight sections is the whole 86-item catalog.
+    seen = set()
+    for sid in EXPECTED_SECTIONS:
+        r = rig.say(f"sec:{sid}")
+        seen |= {ln[2:].rsplit(" — ", 1)[0] for ln in _item_lines(r)}
+    worst = max((len(_item_lines(x)) for x in rig.replies), default=0)
+    check("CAP1", worst <= 30, f"a message carried {worst} item lines")
+    # The catalog's display names (name_es wins — Spanish-first).
+    all_names = {i["name"]
+                 for i in menu_client.get_catalog().items.values()}
+    check("CAP2", seen == all_names,
+          f"browse union {len(seen)} != catalog {len(all_names)}")
+
+    # Curation coverage, straight from the engine: the eight
+    # sections partition the catalog — full and disjoint.
+    catalog = menu_client.get_catalog()
+    by_section = {sid: shop_engine.section_items(catalog, sid)
+                  for sid in EXPECTED_SECTIONS}
+    flat = [i["id"] for items in by_section.values() for i in items]
+    check("COV1", all(by_section[s] for s in EXPECTED_SECTIONS)
+          and len(flat) == len(set(flat)) == len(ITEMS),
+          f"sections={[len(v) for v in by_section.values()]}")
+
+    # Ordering by name still works right after browsing.
+    r = rig.say("quiero un latte de caramelo 12oz")
+    check("ORD0", "Total: L.70" in r, r[:200])
+    rig.restore()
+
+    # A menu ask as the FIRST message (registered): the greeting
+    # rides the interactive reply's body, sections intact.
+    rig = Rig()
+    r = rig.say("¿me pasás el menú?")
+    raw = rig.last_raw
+    check("MENU11", isinstance(raw, WaReply)
+          and raw.body.startswith("¡Hola de nuevo, Carlos!")
+          and "richaromacoffee.com/order" in raw.body,
+          f"first-message menu: {type(raw).__name__}")
+    check("MENU12", "Carlos" in r and "1. Bebidas calientes" in r,
+          r[:200])
     rig.restore()
 
 

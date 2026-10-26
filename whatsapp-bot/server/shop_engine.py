@@ -11,6 +11,18 @@ real menu and order from it, end to end:
   ('cash' = pay at pickup -> OS 'pending'; 'transfer' -> OS
   'awaiting_transfer_approval', the staff verification queue).
 
+MENU PRESENTATION (bot-menu-fix, owner ruling 2026-10-26): the
+catalog is NEVER dumped into chat as one long text. A menu ask
+answers with a WaReply (wa_reply.py): a short body + an interactive
+LIST of curated browsing sections (Bebidas calientes · Bebidas
+frías · Frappés y granitas · Chai y té · Botellas y bolis · Comida
+· Panadería y postres · Combos — NOT the raw DB categories), and
+every menu rendering carries the photo storefront
+(richaromacoffee.com/order). Tapping a section (list_reply id
+"sec:<id>", or the section's number after the text fallback) shows
+ONLY that section's items. Browsing is presentation only: ordering
+by name works at any point, exactly as before.
+
 The engine is the cash register: the customer's words never set a
 price, an item the catalog doesn't hold is rejected gracefully, and
 unknown text changes nothing. Modifiers ride in the SAME snapshot
@@ -46,12 +58,15 @@ try:
     import menu_client
     import kds_push
     from orders import save_order
+    from wa_reply import WaReply
 except ImportError:  # running as part of the server package
     from server import menu_client, kds_push
     from server.orders import save_order
+    from server.wa_reply import WaReply
 
 BUSINESS_SLUG = "rich-aroma-honduras"
 CURRENCY = "HNL"
+STORE_URL = "https://www.richaromacoffee.com/order"
 
 NUMBER_WORDS = {
     "uno": 1, "una": 1, "un": 1, "dos": 2, "tres": 3, "cuatro": 4,
@@ -104,16 +119,99 @@ ALIASES = {
     "batch-coffee-12oz": [{"filtrado"}, {"batch"}],
 }
 
-CATEGORY_LABELS = [
-    ("combos", "Combos de la mañana"),
-    ("espresso_bar", "Café y espresso"),
-    ("tea_matcha", "Té y matcha"),
-    ("supremes_icees", "Fríos y supremes"),
-    ("grill_toast_crepes", "De la plancha y más"),
-    ("bakery", "Panadería"),
-    ("bowls_salads", "Bowls y ensaladas"),
-    ("reposteria", "Repostería"),
+# ------------------------------------------------------------ menu curation
+# Browsing sections are CURATED, not the raw OS categories (the
+# espresso_bar category alone holds 41 items). Every sellable item
+# lands in exactly one section via _section_of(); the map is the
+# presentation contract the shop battery pins (full, disjoint
+# coverage of the catalog). Order here is the browsing order.
+MENU_SECTIONS = [
+    {"id": "bebidas-calientes",
+     "title": {"es": "Bebidas calientes", "en": "Hot drinks"},
+     "desc": {"es": "Lattes, americano y café filtrado",
+              "en": "Lattes, americano & drip coffee"}},
+    {"id": "bebidas-frias",
+     "title": {"es": "Bebidas frías", "en": "Cold drinks"},
+     "desc": {"es": "Lattes helados, licuados y frescos",
+              "en": "Iced lattes, licuados & frescos"}},
+    {"id": "frappes-granitas",
+     "title": {"es": "Frappés y granitas", "en": "Frappés & granitas"},
+     "desc": {"es": "Frappés, supremes y granitas",
+              "en": "Frappés, supremes & granitas"}},
+    {"id": "chai-te",
+     "title": {"es": "Chai y té", "en": "Chai & tea"},
+     "desc": {"es": "Chai latte, chai frappé y tés",
+              "en": "Chai lattes, chai frappé & teas"}},
+    {"id": "botellas-bolis",
+     "title": {"es": "Botellas y bolis", "en": "Bottles & bolis"},
+     "desc": {"es": "Café embotellado y bolis",
+              "en": "Bottled coffee & bolis"}},
+    {"id": "comida",
+     "title": {"es": "Comida", "en": "Food"},
+     "desc": {"es": "Baleadas, sándwiches, crepas y bowls",
+              "en": "Baleadas, sandwiches, crepes & bowls"}},
+    {"id": "panaderia-postres",
+     "title": {"es": "Panadería y postres", "en": "Bakery & desserts"},
+     "desc": {"es": "Del horno de las 5am y postres",
+              "en": "From the 5am bake & desserts"}},
+    {"id": "combos",
+     "title": {"es": "Combos", "en": "Combos"},
+     "desc": {"es": "Los combos numerados de la mañana",
+              "en": "The numbered morning combos"}},
 ]
+_SECTION_IDS = [s["id"] for s in MENU_SECTIONS]
+
+
+def _section_of(item: dict) -> str:
+    """The one browsing section an item belongs to. Ordered rules
+    over the OS category + item id; flavor family wins over format
+    (the chai frappé lives with the chai, not the frappés)."""
+    iid = item["id"]
+    cat = item["category"]
+    if cat == "combos":
+        return "combos"
+    if iid.startswith("botella-") or iid.startswith("boli-"):
+        return "botellas-bolis"
+    if cat == "tea_matcha":
+        return "chai-te"
+    if cat == "supremes_icees":
+        if iid.startswith("granita-"):
+            return "frappes-granitas"
+        if iid.startswith("frappe-") or iid.endswith("-supreme"):
+            return "frappes-granitas"
+        return "bebidas-frias"  # licuado, frescos, limonada
+    if cat == "espresso_bar":
+        if iid.startswith("iced-"):
+            return "bebidas-frias"
+        return "bebidas-calientes"
+    if iid == "crepa-dulce":
+        return "panaderia-postres"
+    if cat in ("grill_toast_crepes", "bowls_salads"):
+        return "comida"
+    if cat in ("bakery", "reposteria"):
+        return "panaderia-postres"
+    return "comida"
+
+
+def section_items(catalog, section_id: str):
+    """One section's sellable items, name-sorted. [] for an unknown
+    or empty section."""
+    if section_id not in _SECTION_IDS:
+        return []
+    out = [i for i in catalog.items.values()
+           if _section_of(i) == section_id]
+    return sorted(out, key=lambda i: i["name"])
+
+
+def _sections_present(catalog):
+    """Curated sections holding at least one item, in browse
+    order, as (section_dict, items) pairs."""
+    out = []
+    for s in MENU_SECTIONS:
+        items = section_items(catalog, s["id"])
+        if items:
+            out.append((s, items))
+    return out
 
 
 # ---------------------------------------------------------------- text
@@ -421,38 +519,86 @@ def _add_matches(cart, catalog, matches, text):
     return added
 
 
-def menu_text(catalog, lang: str = "es") -> str:
-    by_cat = {}
-    for item in catalog.items.values():
-        by_cat.setdefault(item["category"], []).append(item)
-    order = [c for c, _ in CATEGORY_LABELS if c in by_cat]
-    order += sorted(c for c in by_cat if c not in order)
-    labels = dict(CATEGORY_LABELS)
-    if lang == "en":
-        lines = ["*Rich Aroma — Menu* ☕"]
-    else:
-        lines = ["*Rich Aroma — Menú* ☕"]
-    for cat in order:
-        lines.append("")
-        lines.append(f"*{labels.get(cat, cat.replace('_', ' ').title())}*")
-        for item in sorted(by_cat[cat], key=lambda i: i["name"]):
-            lines.append(f"• {item['name']} — {_fmt(item['price'])}")
-    if lang == "en":
-        lines.append("\nTell me what you'd like, e.g. "
-                     "'a 12oz caramel latte'.")
-    else:
-        lines.append("\nPedime lo que querás, ej: "
-                     "'un latte de caramelo 12oz'.")
-    return "\n".join(lines)
+def _section_title(section: dict, lang: str) -> str:
+    return section["title"].get(lang) or section["title"]["es"]
 
 
-def menu_reply(lang: str = "es") -> Optional[str]:
-    """The real menu when a catalog is available, else None (the
-    intro flow's parked copy takes over — pre-import behavior)."""
+def menu_reply(lang: str = "es", convo=None) -> Optional[WaReply]:
+    """The menu as a WaReply (interactive section LIST + numbered
+    text fallback) when a catalog is available, else None (the
+    intro flow's parked copy takes over — pre-import behavior).
+
+    The body is 3 short lines; the full catalog NEVER appears in
+    any single message. When convo is given, the presented section
+    order is remembered on it (convo.menu_sections) so a bare
+    number — the fallback's own instruction — opens that section.
+    """
     catalog = menu_client.get_catalog()
     if catalog is None or not catalog.items:
         return None
-    return menu_text(catalog, lang)
+    present = _sections_present(catalog)
+    if convo is not None:
+        convo.menu_sections = [s["id"] for s, _ in present]
+    rows = [{
+        "id": f"sec:{s['id']}",
+        "title": _section_title(s, lang),
+        "description": s["desc"].get(lang) or s["desc"]["es"],
+    } for s, _ in present]
+    sections = [{"title": "Menú" if lang != "en" else "Menu",
+                 "rows": rows}]
+    if lang == "en":
+        body = ("Sure! ☕ Here's the *Rich Aroma* menu.\n"
+                "Tap *See the menu* and pick a section — or just "
+                "tell me what you'd like.\n"
+                f"🌐 With photos: {STORE_URL}")
+        numbered = ["*Rich Aroma — Menu* ☕",
+                    "Reply with the number of the section you "
+                    "want to see:"]
+        numbered += [f"{n}. {_section_title(s, lang)}"
+                     for n, (s, _) in enumerate(present, 1)]
+        numbered.append(f"🌐 With photos: {STORE_URL}")
+        numbered.append("Or just tell me what you'd like, e.g. "
+                        "'a 12oz caramel latte'.")
+        button = "See the menu"
+    else:
+        body = ("¡Claro! ☕ Este es el menú de *Rich Aroma*.\n"
+                "Tocá *Ver el menú* y elegí una sección — o pedime "
+                "directo lo que querás.\n"
+                f"🌐 Con fotos: {STORE_URL}")
+        numbered = ["*Rich Aroma — Menú* ☕",
+                    "Respondé con el número de la sección que "
+                    "querés ver:"]
+        numbered += [f"{n}. {_section_title(s, lang)}"
+                     for n, (s, _) in enumerate(present, 1)]
+        numbered.append(f"🌐 Con fotos: {STORE_URL}")
+        numbered.append("O pedime directo lo que querás, ej: "
+                        "'un latte de caramelo 12oz'.")
+        button = "Ver el menú"
+    return WaReply("list", body, "\n".join(numbered),
+                   button_text=button, sections=sections)
+
+
+def section_reply(catalog, section_id: str,
+                  lang: str = "es") -> Optional[str]:
+    """ONE section's items as compact lines — nothing else from
+    the catalog. None for an unknown/empty section."""
+    items = section_items(catalog, section_id)
+    if not items:
+        return None
+    section = next(s for s in MENU_SECTIONS if s["id"] == section_id)
+    title = _section_title(section, lang)
+    lines = [f"*{title}* ☕"]
+    for item in items:
+        lines.append(f"• {item['name']} — {_fmt(item['price'])}")
+    if lang == "en":
+        lines.append(f"\n🌐 See it with photos: {STORE_URL}")
+        lines.append("Tell me what you'd like by name, or type "
+                     "'menu' for another section.")
+    else:
+        lines.append(f"\n🌐 Miralo con fotos: {STORE_URL}")
+        lines.append("Pedime lo que querás por nombre, o escribí "
+                     "'menú' para ver otra sección.")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------- orders
@@ -586,8 +732,12 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
                 if lang != "en" else
                 "Order cancelled. Want to start over? Type 'menu'.")
     if _is_menu_ask(t) and catalog is not None:
-        return (menu_text(catalog, lang)
-                + "\n\nTu pedido hasta ahora:\n" + _summary(cart))
+        mr = menu_reply(lang, convo)
+        if mr is not None:
+            return mr.append("Tu pedido hasta ahora:\n"
+                             + _summary(cart))
+        return ("El menú se está actualizando 🙏\n"
+                "Tu pedido hasta ahora:\n" + _summary(cart))
     matches, ambiguous = _find_matches(catalog, text) \
         if catalog is not None else ([], [])
     if ambiguous and not matches:
@@ -656,12 +806,28 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
             + "\nType 'menu' for the options, or 'listo' to confirm.")
 
 
-def try_handle(convo, text: str) -> Optional[str]:
+def try_handle(convo, text: str):
     """One shop turn for a LOUNGE conversation, or None when the
     shop has nothing to say (no catalog, or not shop business) and
-    the intro flow should answer as it always has."""
+    the intro flow should answer as it always has. The reply is a
+    string, or a WaReply when the turn is the menu presentation."""
     catalog = menu_client.get_catalog()
     lang = convo.lang or "es"
+
+    # Menu browsing: a section tap (the interactive list's reply
+    # id) is presentation, never an order answer — handle it before
+    # the cart session, so a mid-order peek can't be mistaken for
+    # a size or a payment reply. (The id keeps its ':' and '-' —
+    # _norm would eat both, so this check normalizes lightly.)
+    _tap = (text or "").strip().lower()
+    _tap = "".join(ch for ch in unicodedata.normalize("NFD", _tap)
+                   if unicodedata.category(ch) != "Mn")
+    if catalog is not None and catalog.items \
+            and _tap.startswith("sec:"):
+        sr = section_reply(catalog, _tap[len("sec:"):].strip(), lang)
+        if sr:
+            return sr
+    tn = _norm(text)
 
     if getattr(convo, "shop_cart", None):
         if catalog is None and convo.shop_cart.get("stage") != "paying":
@@ -682,8 +848,22 @@ def try_handle(convo, text: str) -> Optional[str]:
 
     matches, ambiguous = _find_matches(catalog, text)
 
+    # A bare number with no cart open is the menu fallback's own
+    # instruction ("respondé con el número") — it opens that
+    # browsing section. (Inside a session a number is a qty/size/
+    # payment answer; _handle_session owns those.) Only when the
+    # number names no item: a real match always wins.
+    _digits = tn.strip(" .!")
+    n = int(_digits) if _digits.isdigit() else None
+    presented = getattr(convo, "menu_sections", None) or []
+    if n is not None and not matches and not ambiguous \
+            and 1 <= n <= len(presented):
+        sr = section_reply(catalog, presented[n - 1], lang)
+        if sr:
+            return sr
+
     if _is_menu_ask(t) and not matches and not ambiguous:
-        return menu_text(catalog, lang)
+        return menu_reply(lang, convo)
 
     if any(c in t for c in PRICE_CUES) and (matches or ambiguous):
         named = (matches[0][0] if matches else ambiguous[0])

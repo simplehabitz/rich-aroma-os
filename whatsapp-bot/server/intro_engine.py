@@ -4,10 +4,9 @@ Intro engine for Rich Aroma Honduras (Quimistán) — tenant rich-aroma-honduras
 Scope (owner decision, 2026-10-25; ordering added by the
 bot-finalize build, 2026-10-26): a customer texts the shop number
 and gets a short get-to-know-you session:
-  1. greeting + offer (botella gratis con la primera compra),
+  1. greeting,
   2. nombre (required) and cumpleaños día/mes (optional, skippable),
-  3. confirm/correct, then the account is created in the OS and the
-     L.100 welcome gift is recorded as a PENDING grant,
+  3. confirm/correct, then the account is created in the OS,
   4. the preventa (bottle preorder) offer, intent captured for the owner.
 Once registered (the LOUNGE), the customer can also see the real OS
 menu and order from it end to end — that half lives in
@@ -16,10 +15,17 @@ with no catalog, every reply below is exactly what it was before.
 
 The OS (Supabase customers, phone-keyed) is the system of record; this
 module talks to it only through os_client.py (shared-secret,
-server-to-server). The gift is NEVER credited to rico_balance here — it
-stays a pending grant for the loyalty build to mint as a bonus lot.
-One welcome gift per customer: the WhatsApp signup gift and the
-preventa campaign grant are the same L.100 (same grant row).
+server-to-server).
+
+The L.100 Rico Cash WELCOME GIFT was RETIRED by owner decision
+(bot-menu-fix, 2026-10-26): signup mints nothing and no copy
+promises it; a customer who asks about "mi regalo" gets one honest
+line (the welcome gift is no longer active) plus what Rico Cash
+still is — every purchase earns 10% back in Rico Cash. Rico Cash
+itself is untouched: the 10% earn, recarga bonuses, mission
+rewards and creator credit all stay. Pending welcome rows created
+before the cutoff were left in the OS exactly as they are; their
+fate is a separate owner decision.
 
 Payment for a preventa is by transfer, confirmed by a human. This bot
 NEVER asks for a PIN or any payment credential in chat.
@@ -45,6 +51,8 @@ captured before signup rides the signup call as ref_word; a word
 from an already-registered customer goes through
 whatsapp_attribute. Speculative (bare-word) attempts the OS doesn't
 recognize stay SILENT — the customer was never promised anything.
+(The RETURNING_NO_GIFT state that used to be a fourth word-detection
+point was retired with the welcome gift, 2026-10-26.)
 
 Cali is GONE (bot-finalize, 2026-10-26): the old Cali order
 engine was removed — webhook.py routes only the
@@ -61,11 +69,13 @@ try:
     import shop_engine
     from orders import save_order
     from order_engine import detect_language, NUMBER_WORDS as _ENGINE_NUMWORDS
+    from wa_reply import WaReply
 except ImportError:  # running as part of the server package
     from server import os_client
     from server import shop_engine
     from server.orders import save_order
     from server.order_engine import detect_language, NUMBER_WORDS as _ENGINE_NUMWORDS
+    from server.wa_reply import WaReply
 
 BUSINESS_SLUG = "rich-aroma-honduras"
 INSTAGRAM = "@richaromacoffee"
@@ -121,7 +131,6 @@ class IntroConversation:
     name: str = ""
     birthday_dm: str = ""          # normalized "DD/MM", "" when skipped
     registered: bool = False
-    gift_status: str = ""          # 'pending' | 'minted' | '' (none)
     strikes: int = 0
     pending_signup: Optional[dict] = field(default=None)  # OS retry queue
     # Mission assignment_ids already announced in THIS conversation
@@ -139,6 +148,10 @@ class IntroConversation:
     # isn't mid-order. Lives here so the intro state can stay LOUNGE
     # for the whole order (missions pull-delivery keeps working).
     shop_cart: Optional[dict] = field(default=None)
+    # Menu browsing (bot-menu-fix): the curated section ids as last
+    # presented by shop_engine.menu_reply, in order — a bare number
+    # reply ("respondé con el número") opens that section.
+    menu_sections: list = field(default_factory=list)
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
@@ -322,13 +335,13 @@ def _greeting_text(lang: str) -> str:
     if lang == "en":
         return ("Hi! ☕ Welcome to *Rich Aroma* in Quimistán. "
                 "We reopen on *November 7* 🎉\n"
-                "Create your account today and get *a free bottle* "
-                "with your first purchase.\n"
+                "Create your account in a minute and you're ready "
+                "to order.\n"
                 "What's your name?")
     return ("¡Hola! ☕ Bienvenido a *Rich Aroma* en Quimistán. "
             "Reabrimos el *7 de noviembre* 🎉\n"
-            "Creá tu cuenta hoy y recibí *una botella gratis* "
-            "con tu primera compra.\n"
+            "Creá tu cuenta en un minuto y quedás listo para "
+            "pedir.\n"
             "¿Cómo te llamás?")
 
 
@@ -363,20 +376,18 @@ def _confirm_text(convo: "IntroConversation") -> str:
             "el nombre o la fecha correcta.")
 
 
-def _gift_saved_text(convo: "IntroConversation") -> str:
+def _account_created_text(convo: "IntroConversation") -> str:
+    """Signup completion. (The old copy also announced the L.100
+    welcome gift — retired 2026-10-26; what Rico Cash still is gets
+    one honest line instead, no balance promised.)"""
     first = convo.name.split(" ")[0] if convo.name else ""
     if convo.lang == "en":
-        return (f"Done, {first}! 🎉 Your account is created and your "
-                "gift is noted: *L.100 of Rico Cash* for house-made "
-                "items, ready to use with your first purchase.\n"
-                "Heads up: gifts have an expiry date, so use it at "
-                "the reopening 😉")
-    return (f"¡Listo, {first}! 🎉 Tu cuenta quedó creada y tu regalo "
-            "quedó anotado: *L.100 de regalo en tu Rico Cash* para "
-            "productos hechos en casa, listo para usar con tu "
-            "primera compra.\n"
-            "Ojo: los regalos tienen fecha de vencimiento, así que "
-            "aprovechalo en la reapertura 😉")
+        return (f"Done, {first}! 🎉 Your account is created.\n"
+                "Every purchase earns you *10% back in Rico Cash* "
+                "for house-made items 😉")
+    return (f"¡Listo, {first}! 🎉 Tu cuenta quedó creada.\n"
+            "Con cada compra ganás el *10% en Rico Cash* para "
+            "productos hechos en casa 😉")
 
 
 def _preventa_offer(lang: str) -> str:
@@ -419,32 +430,25 @@ def _menu_park_text(lang: str) -> str:
             "embotellado en preventa.")
 
 
-def _gift_status_text(convo: "IntroConversation") -> str:
-    first = convo.name.split(" ")[0] if convo.name else ""
+def _gift_retired_text(convo: "IntroConversation") -> str:
+    """The honest answer to '¿y mi regalo?' since the welcome gift
+    was retired (owner decision, 2026-10-26): one short line, no
+    promised balance — plus what Rico Cash still is."""
     if convo.lang == "en":
-        if convo.gift_status == "minted":
-            return (f"Your L.100 gift is already in your Rico Cash, "
-                    f"{first} 🎁 Use it with your first purchase — "
-                    "gifts have an expiry date.")
-        return (f"Your L.100 gift is noted and waiting for your "
-                f"first purchase, {first} 🎁 It's for house-made "
-                "items, and gifts have an expiry date.")
-    if convo.gift_status == "minted":
-        return (f"Tu regalo de L.100 ya está en tu Rico Cash, "
-                f"{first} 🎁 Usalo con tu primera compra — los "
-                "regalos tienen fecha de vencimiento.")
-    return (f"Tu regalo de L.100 está anotado y te espera en tu "
-            f"primera compra, {first} 🎁 Es para productos hechos "
-            "en casa, y los regalos tienen fecha de vencimiento.")
+        return ("The welcome gift isn't active anymore 🙏 But "
+                "your Rico Cash is alive and well: every purchase "
+                "earns you *10% in Rico Cash* for house-made "
+                "items 🎁")
+    return ("El regalo de bienvenida ya no está activo 🙏 Pero "
+            "tu Rico Cash sigue vivo: con cada compra ganás el "
+            "*10% en Rico Cash* para productos hechos en casa 🎁")
 
 
 def _returning_greeting(convo: "IntroConversation") -> str:
     first = convo.name.split(" ")[0] if convo.name else ""
     if convo.lang == "en":
-        return (f"Hi again, {first}! ☕ Good to see you.\n"
-                + _gift_status_text(convo))
-    return f"¡Hola de nuevo, {first}! ☕ Qué bueno verte por acá.\n" \
-        + _gift_status_text(convo)
+        return f"Hi again, {first}! ☕ Good to see you."
+    return f"¡Hola de nuevo, {first}! ☕ Qué bueno verte por acá."
 
 
 # ---------------------------------------------------------------- helpers
@@ -478,16 +482,16 @@ def _handoff(convo: "IntroConversation", stage: str) -> str:
 
 
 def _do_signup(convo: "IntroConversation") -> bool:
-    """Create/fetch the OS account + pending gift. True when the OS
-    confirms; on failure the signup is queued locally for retry."""
+    """Create/fetch the OS account. True when the OS confirms; on
+    failure the signup is queued locally for retry. (No grant is
+    requested or read — the welcome gift was retired 2026-10-26;
+    the OS gates off minting too.)"""
     convo.attribution_note = ""
     res = os_client.signup_customer(convo.customer_phone, convo.name,
                                     convo.birthday_dm,
                                     ref_word=convo.pending_word)
     if res.get("ok") and res.get("data"):
         data = res["data"]
-        gift = data.get("gift") or {}
-        convo.gift_status = gift.get("status") or "pending"
         convo.registered = True
         convo.pending_signup = None
         att = data.get("attribution") or {}
@@ -501,7 +505,6 @@ def _do_signup(convo: "IntroConversation") -> bool:
     _record_local("intro_signup_pending", convo,
                   {"birthday_dm": convo.birthday_dm})
     convo.registered = True  # recorded durably; OS sync retries later
-    convo.gift_status = "pending"
     print(f"[intro] signup OS call failed for {convo.customer_phone}: "
           f"{res.get('error')}", flush=True)
     return False
@@ -515,8 +518,6 @@ def _retry_pending_signup(convo: "IntroConversation"):
                                     convo.pending_signup.get("birthday", ""),
                                     ref_word=convo.pending_word)
     if res.get("ok"):
-        gift = (res.get("data") or {}).get("gift") or {}
-        convo.gift_status = gift.get("status") or convo.gift_status
         convo.pending_signup = None
         # The word rode this retry too; once the signup lands it has
         # been attempted — win or lose, it doesn't ride again. (The
@@ -660,7 +661,12 @@ def _append_mission_delivery(convo: "IntroConversation", start_state: str,
         return reply
     first = pending[0]
     convo.missions_delivered.add(first.get("assignment_id"))
-    return reply + _mission_delivery_text(convo, first)
+    line = _mission_delivery_text(convo, first)
+    if isinstance(reply, WaReply):
+        # A menu presentation carries the mission line in BOTH its
+        # renderings (interactive body + text fallback).
+        return reply.append(line.lstrip("\n"))
+    return reply + line
 
 
 def _submit_mission_link(convo: "IntroConversation", url: str) -> str:
@@ -865,11 +871,11 @@ def _detect_word(text: str):
     single-token wordlike message (3–20 letters) outside the
     stoplist — it MIGHT be a word; pre-signup it is only stashed,
     never announced. Conservative by design: detection is invoked
-    only at first contact, at the confirm step, in
-    RETURNING_NO_GIFT and in the lounge — never while the customer
-    is answering the name or birthday questions, where a token is
-    data. (A deliberate frame inside a LONG message is left for
-    another turn: short messages only, at first contact.)
+    only at first contact, at the confirm step and in the lounge
+    — never while the customer is answering the name or birthday
+    questions, where a token is data. (A deliberate frame inside a
+    LONG message is left for another turn: short messages only, at
+    first contact.)
     """
     t = (text or "").strip()
     if not t:
@@ -955,8 +961,9 @@ def _word_invite_line(convo: "IntroConversation", det: dict) -> str:
 
 # ---------------------------------------------------------------- engine
 
-def reply_for_intro(convo: IntroConversation, incoming_text: str) -> str:
-    """One message in, one reply out. Tenant: rich-aroma-honduras.
+def reply_for_intro(convo: IntroConversation, incoming_text: str):
+    """One message in, one reply out (a string, or a WaReply when
+    the turn is the menu presentation). Tenant: rich-aroma-honduras.
 
     Thin wrapper over _reply_core: once the core flow has answered, a
     registered customer who was ALREADY in the lounge when this
@@ -985,8 +992,6 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
         if data and data.get("found"):
             cust = data.get("customer") or {}
             convo.name = cust.get("name") or convo.name
-            gift = data.get("gift") or {}
-            convo.gift_status = gift.get("status") or ""
             convo.registered = True
             convo.state = "LOUNGE"
             # Creadores: a word in a short first message from a
@@ -995,21 +1000,6 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             _det = _detect_word(text) if len(text.split()) <= 6 else None
             _attr_line = _attribute_line(convo, _det) if _det else ""
             _attr_suffix = ("\n" + _attr_line) if _attr_line else ""
-            if not convo.gift_status:
-                convo.state = "RETURNING_NO_GIFT"
-                if lang == "en":
-                    return (f"Hi again, {convo.name.split(' ')[0]}! ☕ "
-                            "I see your account, but your welcome gift "
-                            "isn't noted yet. Want me to add it? "
-                            "It's *L.100 of Rico Cash* (a free bottle) "
-                            "for your first purchase. Reply 'yes'."
-                            + _attr_suffix)
-                return (f"¡Hola de nuevo, {convo.name.split(' ')[0]}! ☕ "
-                        "Veo tu cuenta, pero tu regalo de bienvenida "
-                        "todavía no está anotado. ¿Te lo anoto? Son "
-                        "*L.100 de regalo en tu Rico Cash* (una botella "
-                        "gratis) para tu primera compra. Respondé 'sí'."
-                        + _attr_suffix)
             # Registered: a post link as the very first message is a
             # mission submission — register it right away.
             _url = _extract_social_url(text)
@@ -1024,10 +1014,12 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                         + _preventa_recorded_text(packs, bottles,
                                                   boxes, lang))
             if _has_cue(t, MENU_CUES):
-                _shop_menu = shop_engine.menu_reply(lang)
-                if _shop_menu:
-                    return (_returning_greeting(convo) + "\n"
-                            + _shop_menu + _attr_suffix)
+                _shop_menu = shop_engine.menu_reply(lang, convo)
+                if _shop_menu is not None:
+                    _shop_menu.prepend(_returning_greeting(convo))
+                    if _attr_line:
+                        _shop_menu.append(_attr_line)
+                    return _shop_menu
                 return (_returning_greeting(convo) + "\n"
                         + _menu_park_text(lang) + _preventa_offer(lang)
                         + _attr_suffix)
@@ -1088,10 +1080,10 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                 return _handoff(convo, "ask_name_refused")
             if lang == "en":
                 return ("No problem at all! I do need a name for "
-                        "the account and the gift — what should I "
+                        "the account — what should I "
                         "put? (Just your first name is fine.)")
-            return ("¡Sin problema! Solo que para tu cuenta y tu "
-                    "regalo sí necesito un nombre — ¿cuál pongo? "
+            return ("¡Sin problema! Solo que para tu cuenta "
+                    "sí necesito un nombre — ¿cuál pongo? "
                     "(Con tu primer nombre basta.)")
         candidate = _clean_name(text)
         if _looks_like_name(candidate):
@@ -1140,7 +1132,7 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             _do_signup(convo)
             convo.strikes = 0
             convo.state = "PREVENTA"
-            return _gift_saved_text(convo) + _note_suffix(convo) \
+            return _account_created_text(convo) + _note_suffix(convo) \
                 + _preventa_offer(lang)
         if t.strip(" .!¡¿?") in ("no", "n", "nop", "nope"):
             if lang == "en":
@@ -1168,23 +1160,10 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
         return ("Decime 'sí' para guardar, o escribime el nombre "
                 "o la fecha correcta.")
 
-    if convo.state == "RETURNING_NO_GIFT":
-        _det = _detect_word(text)
-        if _det:
-            _line = _attribute_line(convo, _det)
-            if _line:
-                return _line
-        if _is_yes(t):
-            _do_signup(convo)
-            convo.state = "PREVENTA"
-            return _gift_saved_text(convo) + _note_suffix(convo) \
-                + _preventa_offer(lang)
-        convo.state = "LOUNGE"
-        if lang == "en":
-            return ("No problem! Your account stays as is. "
-                    + _preventa_offer(lang).lstrip())
-        return ("¡Sin problema! Tu cuenta queda como está. "
-                + _preventa_offer(lang).lstrip())
+    # (The RETURNING_NO_GIFT state was deleted with the welcome
+    # gift, 2026-10-26: a registered customer with no gift on file
+    # is simply a registered customer — the NEW branch sends them
+    # straight to the LOUNGE path now.)
 
     # ---------------- missions: link intake ----------------
     # A social post link from a registered customer in the lounge (or
@@ -1210,15 +1189,15 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             return ("¡Sin problema! Nos vemos el *7 de noviembre* 🎉 "
                     "Escribinos cuando quieras si cambiás de idea.")
         if _has_cue(t, MENU_CUES):
-            _menu_body = shop_engine.menu_reply(lang) \
-                or _menu_park_text(lang)
-            return (_menu_body
-                    + "\n¿Apartamos un paquete de 5? Decime la "
-                      "cantidad o 'no por ahora'."
-                    if lang != "en" else
-                    _menu_body
-                    + "\nShall we reserve a 5-pack? Tell me how many "
-                      "or 'not now'.")
+            _tail = ("¿Apartamos un paquete de 5? Decime la "
+                     "cantidad o 'no por ahora'."
+                     if lang != "en" else
+                     "Shall we reserve a 5-pack? Tell me how many "
+                     "or 'not now'.")
+            _shop_menu = shop_engine.menu_reply(lang, convo)
+            if _shop_menu is not None:
+                return _shop_menu.append(_tail)
+            return _menu_park_text(lang) + "\n" + _tail
         if _has_cue(t, PRICE_CUES):
             return (_prices_text(lang)
                     + "\n¿Te aparto algún paquete? Decime la cantidad."
@@ -1260,7 +1239,7 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             _record_preventa(convo, packs, bottles, boxes)
             return _preventa_recorded_text(packs, bottles, boxes, lang)
         if _has_cue(t, GIFT_CUES):
-            return _gift_status_text(convo)
+            return _gift_retired_text(convo)
         if _has_cue(t, ("botella", "botellas")):
             return _prices_text(lang) + _preventa_offer(lang)
         if _has_cue(t, ("paquete", "preventa", "apartar", "reservar",
@@ -1275,9 +1254,9 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             first = convo.name.split(" ")[0] if convo.name else ""
             if lang == "en":
                 return (f"Hi, {first}! ☕ Want to reserve bottles in "
-                        "preventa, or check your gift? Just tell me.")
+                        "preventa, or see the menu? Just tell me.")
             return (f"¡Hola, {first}! ☕ ¿Apartamos botellas en "
-                    "preventa o revisamos tu regalo? Contame.")
+                    "preventa o vemos el menú? Contame.")
         # Creadores: a word attempt in the lounge binds (or is
         # answered) here — after every conversational cue above has
         # had its chance, so a bare "botella"/"menú" is never
@@ -1289,10 +1268,10 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                 return _line
         if lang == "en":
             return ("I can help you reserve bottles in preventa, "
-                    "check your L.100 gift, or answer price questions. "
+                    "see the menu, or answer price questions. "
                     "The full menu arrives November 7 🗓️")
         return ("Te puedo ayudar a apartar botellas en preventa, "
-                "revisar tu regalo de L.100 o contarte precios. "
+                "ver el menú o contarte precios. "
                 "El menú completo llega el 7 de noviembre 🗓️")
 
     # ---------------- handoff holding pattern ----------------

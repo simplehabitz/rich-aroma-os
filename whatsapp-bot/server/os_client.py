@@ -3,8 +3,7 @@ Server-to-server client for the Rich Aroma OS (api/store.js).
 
 Used by the Honduras intro flow (intro_engine.py) to:
   - look up a customer by phone            (action=whatsapp_lookup)
-  - create their account + record the     (action=whatsapp_signup)
-    PENDING L.100 welcome gift
+  - create their account                  (action=whatsapp_signup)
   - record a preventa (preorder) intent   (action=whatsapp_preventa)
   - read a customer's Capitan missions    (action=whatsapp_mission_check)
   - submit a UGC post link for a mission  (action=whatsapp_mission_submit)
@@ -15,9 +14,10 @@ Auth follows the kds_push.py pattern: a bearer token over HTTPS. Here the
 token is a shared secret the owner sets as WHATSAPP_SIGNUP_SECRET in BOTH
 places (Render env for this bot, Vercel env for the OS). The OS fails
 closed when its copy is unset, and nothing here ever sends a customer PIN
-or payment credential — the OS action is the only writer and it never
-credits rico_balance (the gift stays a pending grant row for the loyalty
-build to mint).
+or payment credential. (The L.100 welcome gift this flow used to record
+was retired by owner decision, 2026-10-26 — signup mints nothing now,
+and the OS gates the mint off too; mission rewards still land as
+pending grants via the missions actions, which are untouched.)
 
 Env vars (nothing secret is committed):
     OS_STORE_URL            e.g. https://www.richaromacoffee.com/api/store
@@ -108,16 +108,17 @@ def _post(action: str, payload: dict) -> dict:
 
 
 def lookup_customer(phone: str) -> dict:
-    """Read-only: does this phone already have an account (and a gift)?"""
+    """Read-only: does this phone already have an account?"""
     return _post("whatsapp_lookup", {"phone": phone})
 
 
 def signup_customer(phone: str, name: str, birthday_dm: str = "",
                     ref_word: str = "") -> dict:
-    """Get-or-create the account + the pending L.100 welcome gift.
+    """Get-or-create the account.
 
-    Idempotent on the OS side (phone is UNIQUE; one welcome grant per
-    customer, enforced by a DB unique index). Safe to retry.
+    Idempotent on the OS side (phone is UNIQUE). Safe to retry.
+    No grant is created: the L.100 welcome gift was retired by
+    owner decision (2026-10-26) and the OS gates it off too.
 
     ref_word (Creadores): a creator's signup word the customer arrived
     with. The OS attempts first-touch attribution after the
