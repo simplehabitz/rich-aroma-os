@@ -14,7 +14,11 @@ Covered: menu ask serves an interactive section LIST, never a
 text dump (bot-menu-fix: curated sections, section taps, numbered
 fallback picks, a per-message item-line cap over a full browse,
 and a disjoint/full curation-coverage assertion over the 86
-items); item lookup across categories; size-by-name with iced
+items); the storefront link rides ONLY in the menu's text
+fallback, never the interactive body or section views
+(bot-ux-fix); a bare flavor-family ask ('un latte de 12') earns
+ONE flavor question and completes through the cart (bot-ux-fix);
+item lookup across categories; size-by-name with iced
 items distinct from hot; a size
 clarification round-trip; Dulzor (default, Poco dulce, Con
 Splenda with packet count, Sin azúcar); leche especial delta;
@@ -319,9 +323,11 @@ def s_menu():
     check("MENU1", isinstance(raw, WaReply) and raw.kind == "list",
           f"menu ask returned {type(raw).__name__}")
     if isinstance(raw, WaReply):
+        # bot-ux-fix: ONE menu message — the storefront link
+        # lives ONLY in the text fallback (MENU6), never the body.
         check("MENU2", raw.body.count("\n") <= 2
-              and "richaromacoffee.com/order" in raw.body,
-              f"body not short / no storefront link: {raw.body[:160]}")
+              and "richaromacoffee.com/order" not in raw.body,
+              f"body not short / link leaked into body: {raw.body[:160]}")
         check("MENU3", raw.button_text == "Ver el menú",
               str(raw.button_text))
         rows = raw.sections[0]["rows"] if raw.sections else []
@@ -348,7 +354,11 @@ def s_menu():
           and "Botella de Caramelo" not in r, "other sections leaked")
     check("SEC3", len(lines) == 26 and len(lines) <= 30,
           f"calientes lines={len(lines)}")
-    check("SEC4", "richaromacoffee.com/order" in r, "no web line")
+    # bot-ux-fix: section views carry no storefront link either;
+    # the "ask by name" closing line stays.
+    check("SEC4", "richaromacoffee.com/order" not in r
+          and "Pedime lo que querás por nombre" in r,
+          "web line leaked / closing line lost")
     r = rig.say("sec:combos")
     check("SEC5", "Capitana Combo ③" in r and "Latte" not in r,
           r[:200])
@@ -398,7 +408,7 @@ def s_menu():
     raw = rig.last_raw
     check("MENU11", isinstance(raw, WaReply)
           and raw.body.startswith("¡Hola de nuevo, Carlos!")
-          and "richaromacoffee.com/order" in raw.body,
+          and "richaromacoffee.com/order" not in raw.body,
           f"first-message menu: {type(raw).__name__}")
     check("MENU12", "Carlos" in r and "1. Bebidas calientes" in r,
           r[:200])
@@ -593,9 +603,83 @@ def s_no_catalog_fallback():
     rig = Rig(with_catalog=False)
     rig.to_lounge()
     r = rig.say("menú")
-    check("NOC1", "7 de noviembre" in r, r[:200])
+    # bot-ux-fix: the parked copy no longer announces the menu as
+    # arriving Nov 7 — it says the menu is being updated.
+    check("NOC1", "actualizando" in r and "7 de noviembre" not in r,
+          r[:200])
     r = rig.say("quiero un latte de caramelo 12oz")
     check("NOC2", rig.convo.shop_cart is None, "cart without catalog")
+    rig.restore()
+
+
+def s_flavor():
+    """Fix (bot-ux-fix): a bare family ask ('un latte de 12')
+    names no single item — there is no plain latte among the 11
+    flavors — so the engine asks ONE flavor question instead of
+    going silent, and the one-word answer completes the pick
+    through the normal cart flow."""
+    rig = Rig()
+    rig.to_lounge()
+    r = rig.say("un latte de 12")
+    check("FLV1", "¿De qué sabor" in r
+          and "Latte Caramel 12oz" in r
+          and "Latte Caramel 8oz" not in r, r[:300])
+    check("FLV2", rig.convo.shop_cart is not None
+          and (rig.convo.shop_cart.get("pending") or {}).get("kind")
+          == "flavor", str(rig.convo.shop_cart))
+    r = rig.say("caramel")
+    check("FLV3", "Total: L.70" in r, r[:200])
+    ids = [l["id"] for l in rig.convo.shop_cart["items"]]
+    check("FLV4", ids == ["latte-caramel-12oz"], str(ids))
+    rig.restore()
+
+    # No size cued: flavor first, then the existing size question
+    # — and a bare '12' is a complete answer to it.
+    rig = Rig()
+    rig.to_lounge()
+    r = rig.say("un latte")
+    check("FLV5", "¿De qué sabor" in r and "Latte Mocha" in r,
+          r[:300])
+    r = rig.say("mocha")
+    check("FLV6", "¿Cuál tamaño" in r, r[:200])
+    r = rig.say("12")
+    check("FLV7", "Total: L.70" in r, r[:200])
+    ids = [l["id"] for l in rig.convo.shop_cart["items"]]
+    check("FLV8", ids == ["latte-mocha-12oz"], str(ids))
+    rig.restore()
+
+    # Mid-order: the same ONE question, on the existing cart.
+    rig = Rig()
+    rig.to_lounge()
+    rig.say("quiero una baleada sencilla")
+    r = rig.say("un latte de 12")
+    check("FLV9", "¿De qué sabor" in r, r[:200])
+    r = rig.say("coco")
+    check("FLV10", "Total: L.100" in r, r[:240])  # 30 + 70, by hand
+    rig.restore()
+
+    # English: same flow, English copy.
+    rig = Rig()
+    rig.say("hello")
+    r = rig.say("I want a latte, 12oz")
+    check("FLV11", "Which flavor" in r
+          and "Latte Caramel 12oz" in r, r[:300])
+    r = rig.say("caramel")
+    check("FLV12", "Total: L.70" in r, r[:200])
+    ids = [l["id"] for l in rig.convo.shop_cart["items"]]
+    check("FLV13", ids == ["latte-caramel-12oz"], str(ids))
+    rig.restore()
+
+    # A single-format family never fires: 'una botella' keeps its
+    # existing intro answer (prices / preventa), no flavor
+    # question, no cart.
+    rig = Rig()
+    rig.to_lounge()
+    r = rig.say("quiero una botella")
+    check("FLV14", "¿De qué sabor" not in r and "L.100" in r,
+          r[:200])
+    check("FLV15", rig.convo.shop_cart is None,
+          "botella opened a cart")
     rig.restore()
 
 
@@ -726,7 +810,8 @@ def main():
         ("extras", s_extras), ("combo", s_combo_fixed),
         ("multi", s_multi_transfer), ("unknown", s_unknown),
         ("pricelock", s_price_lock), ("bottle", s_bottle_as_menu_item),
-        ("remove", s_remove_cancel), ("preventa", s_preventa_still_wins),
+        ("remove", s_remove_cancel), ("flavor", s_flavor),
+        ("preventa", s_preventa_still_wins),
         ("nocatalog", s_no_catalog_fallback),
         ("lifecycle", s_ticket_lifecycle), ("notify", s_notify),
         ("sweep", s_sweep_no_cali),

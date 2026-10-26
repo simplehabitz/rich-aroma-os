@@ -16,12 +16,27 @@ catalog is NEVER dumped into chat as one long text. A menu ask
 answers with a WaReply (wa_reply.py): a short body + an interactive
 LIST of curated browsing sections (Bebidas calientes · Bebidas
 frías · Frappés y granitas · Chai y té · Botellas y bolis · Comida
-· Panadería y postres · Combos — NOT the raw DB categories), and
-every menu rendering carries the photo storefront
-(richaromacoffee.com/order). Tapping a section (list_reply id
-"sec:<id>", or the section's number after the text fallback) shows
-ONLY that section's items. Browsing is presentation only: ordering
-by name works at any point, exactly as before.
+· Panadería y postres · Combos — NOT the raw DB categories).
+Tapping a section (list_reply id "sec:<id>", or the section's
+number after the text fallback) shows ONLY that section's items.
+Browsing is presentation only: ordering by name works at any
+point, exactly as before.
+
+ONE MENU MESSAGE (bot-ux-fix, owner ruling 2026-10-26): the photo
+storefront link rides ONLY in the WaReply's plain-text fallback —
+the fallback IS the menu for clients that can't render the list,
+so the link lives there. The interactive body and the section
+views carry no link: in chat, the chat is the store.
+
+FLAVOR QUESTION (bot-ux-fix, 2026-10-26): a bare family ask
+("un latte de 12") names no single item — the flavor families are
+honestly ambiguous (11 latte flavors, no plain latte) — so instead
+of going silent the engine asks ONE question ("¿De qué sabor?")
+and the one-word answer completes the pick through the normal
+cart flow. Detection is data-driven over the live catalog (see
+_detect_family); only true flavor x size matrices fire, so
+single-format families (botellas, bolis, frescos) keep their
+existing flows.
 
 The engine is the cash register: the customer's words never set a
 price, an item the catalog doesn't hold is rejected gracefully, and
@@ -374,6 +389,214 @@ def _size_cue(text: str, group):
     return None
 
 
+def _pending_size_pick(text: str, group):
+    """Size resolution for a conversational ANSWER — a size
+    question is already on the table, so a bare number is a
+    complete answer ('12' answers '¿Cuál tamaño?'). The usual cues
+    first, then the bare-number reading."""
+    picked = _size_cue(text, group)
+    if picked is not None:
+        return picked
+    toks = [x for x in _norm(text).split()
+            if x not in ("el", "la", "de", "oz")]
+    if len(toks) == 1:
+        m = re.fullmatch(r"(8|12|16)(?:oz)?", toks[0])
+        if m:
+            want = int(m.group(1))
+            for it in group:
+                if _size_of(it) == want:
+                    return it
+    return None
+
+
+# ------------------------------------------------------- flavor families
+
+def _name_tokens(item: dict):
+    """Ordered match tokens of an item's display name (stopwords
+    and size tokens removed) — the ordered shape of the first core
+    _core_tokens builds, so families can be read off the name:
+    'Latte Dulce de Leche 12oz' -> ['latte', 'dulce', 'leche']."""
+    return [t for t in _tokens(item.get("name") or "")
+            if t not in _STOPWORDS and t not in _SIZE_TOKENS]
+
+
+def _family_size_cue(text: str, sizes, toks, qty_pos):
+    """The size a family ask cues, or None: an explicit '12oz', a
+    grande/chico word, or a bare size number that isn't the token
+    already read as the quantity ('un latte de 12' — the 12 is the
+    size; '12 lattes' — the 12 is the quantity)."""
+    t = _norm(text)
+    m = re.search(r"\b(8|12|16)\s*oz\b", t)
+    if m and int(m.group(1)) in sizes:
+        return int(m.group(1))
+    if any(w in t for w in ("grande", "gran", "largo")):
+        return sizes[-1]
+    if any(w in t for w in ("pequeno", "pequena", "chico", "corto")):
+        return sizes[0]
+    for i, tk in enumerate(toks):
+        if i != qty_pos and tk.isdigit() and int(tk) in sizes:
+            return int(tk)
+    return None
+
+
+def _detect_family(catalog, text: str):
+    """A drink-family ask: the message names the shared head token
+    of a catalog family but no single item ('un latte de 12').
+    Returns {"head", "variants", "size", "qty"} or None.
+
+    Data-driven over the catalog: a family is the set of items
+    whose display names share a first token and differ in what
+    follows ('Latte <Flavor> <Size>'). It only counts when the
+    choice is a real flavor x size matrix — >= 3 variants, >= 2
+    sizes across the family, at least one variant sold in 2+
+    sizes — so single-format families (botellas, bolis, frescos,
+    granitas: one size each, and other flows own them) never fire.
+    """
+    by_head = {}
+    for item in catalog.items.values():
+        ntoks = _name_tokens(item)
+        if len(ntoks) < 2:
+            continue
+        by_head.setdefault(ntoks[0], {}).setdefault(
+            tuple(ntoks[1:]), []).append(item)
+    toks = _tokens(text)
+    raw = _tokens(text, singular=False)
+    for pos, tok in enumerate(toks):
+        fam = by_head.get(tok)
+        if not fam or len(fam) < 3:
+            continue
+        sizes = sorted({s for items in fam.values()
+                        for s in (_size_of(i) for i in items) if s})
+        if len(sizes) < 2:
+            continue
+        if not any(len({s for s in (_size_of(i) for i in items)
+                        if s}) >= 2 for items in fam.values()):
+            continue
+        qty = 1
+        qty_pos = None
+        for j in range(pos - 1, max(pos - 3, -1), -1):
+            tk = raw[j]
+            if tk.isdigit():
+                qty = max(1, min(20, int(tk)))
+                qty_pos = j
+                break
+            if tk in NUMBER_WORDS:
+                qty = NUMBER_WORDS[tk]
+                qty_pos = j
+                break
+        variants = []
+        for key in sorted(fam, key=lambda k: " ".join(k)):
+            items = sorted(fam[key],
+                           key=lambda i: (_size_of(i) or 0, i["name"]))
+            label = re.sub(r"\s+", " ", re.sub(
+                r"\s*\d+\s*oz", "", items[0]["name"],
+                flags=re.IGNORECASE)).strip()
+            variants.append({"tokens": list(key), "label": label,
+                             "items": items})
+        return {"head": tok, "variants": variants,
+                "size": _family_size_cue(text, sizes, toks, qty_pos),
+                "qty": qty}
+    return None
+
+
+def _flavor_pending(fam: dict, text: str) -> dict:
+    """The cart pending state a flavor question leaves behind —
+    same slot the size question uses, kind-tagged so the answer
+    turn can tell them apart."""
+    return {"kind": "flavor", "head": fam["head"],
+            "variants": fam["variants"], "size": fam["size"],
+            "qty": fam["qty"], "text": text}
+
+
+def _flavor_question(variants, size, lang: str) -> str:
+    """The ONE question a bare family ask earns. At a cued size it
+    lists that size's items with prices; without one it lists the
+    variant names (answer with a flavor, then size is asked)."""
+    if size:
+        lines = []
+        for var in variants:
+            for it in var["items"]:
+                if _size_of(it) == size:
+                    lines.append(f"• {it['name']} — "
+                                 f"{_fmt(it['price'])}")
+                    break
+        if lines:
+            head = ("¡Claro! ¿De qué sabor lo querés?"
+                    if lang != "en" else
+                    "Sure! Which flavor would you like?")
+            return head + "\n" + "\n".join(lines)
+    lines = [f"• {var['label']}" for var in variants]
+    head = ("¡Claro! ¿De qué sabor lo querés?"
+            if lang != "en" else
+            "Sure! Which flavor would you like?")
+    return head + "\n" + "\n".join(lines)
+
+
+def _flavor_pick(pend: dict, text: str):
+    """Resolve a flavor-question answer. Returns (item, None) when
+    fully resolved, (None, group) when the flavor is chosen but a
+    size question remains, (None, None) when no variant is named.
+    The longest variant token set wins, so 'caramel helado' picks
+    the iced caramel over the hot one."""
+    toks = set(_tokens(text))
+    best = None
+    for var in pend["variants"]:
+        vt = set(var["tokens"])
+        if vt and vt <= toks \
+                and (best is None
+                     or len(vt) > len(set(best["tokens"]))):
+            best = var
+    if best is None:
+        return None, None
+    items = best["items"]
+    if pend.get("size"):
+        for it in items:
+            if _size_of(it) == pend["size"]:
+                return it, None
+        return None, items
+    picked = _pending_size_pick(text, items)
+    if picked is not None:
+        return picked, None
+    if len(items) == 1:
+        return items[0], None
+    return None, items
+
+
+def _answer_flavor_pending(convo, cart, catalog, text: str,
+                           lang: str):
+    """One answer turn for a pending flavor question. Returns the
+    reply, or None when the answer names a different full item
+    instead — the pending is cleared and the caller keeps
+    processing the message as a fresh turn (the size question's
+    own moved-on behavior, mirrored)."""
+    pend = cart["pending"]
+    pick, group = _flavor_pick(pend, text)
+    src = ((pend.get("text") or "") + " " + text).strip()
+    if pick is not None:
+        cart["pending"] = None
+        _add_matches(cart, catalog,
+                     [(pick, pend.get("qty") or 1)], src)
+        return ("Anotado ✅\n" + _summary(cart)
+                + "\n¿Algo más? Escribí 'listo' para confirmar."
+                if lang != "en" else
+                "Got it ✅\n" + _summary(cart)
+                + "\nAnything else? Type 'listo' to confirm.")
+    if group is not None:
+        cart["pending"] = {"candidates": group,
+                           "qty": pend.get("qty") or 1, "text": src}
+        opts = "\n".join(f"• {g['name']} — {_fmt(g['price'])}"
+                         for g in group)
+        return ("¿Cuál tamaño preferís?\n" + opts
+                if lang != "en" else
+                "Which size would you like?\n" + opts)
+    if catalog is not None:
+        full, _amb = _find_matches(catalog, text)
+        if full:
+            cart["pending"] = None
+            return None
+    return _flavor_question(pend["variants"], pend.get("size"), lang)
+
+
 _SPLENDA_COUNT_RES = (
     re.compile(r"(\d)\s*(?:sobres?|splenda)"),
     re.compile(r"splenda\s*(?:x|por)?\s*(\d)"),
@@ -549,8 +772,7 @@ def menu_reply(lang: str = "es", convo=None) -> Optional[WaReply]:
     if lang == "en":
         body = ("Sure! ☕ Here's the *Rich Aroma* menu.\n"
                 "Tap *See the menu* and pick a section — or just "
-                "tell me what you'd like.\n"
-                f"🌐 With photos: {STORE_URL}")
+                "tell me what you'd like.")
         numbered = ["*Rich Aroma — Menu* ☕",
                     "Reply with the number of the section you "
                     "want to see:"]
@@ -563,8 +785,7 @@ def menu_reply(lang: str = "es", convo=None) -> Optional[WaReply]:
     else:
         body = ("¡Claro! ☕ Este es el menú de *Rich Aroma*.\n"
                 "Tocá *Ver el menú* y elegí una sección — o pedime "
-                "directo lo que querás.\n"
-                f"🌐 Con fotos: {STORE_URL}")
+                "directo lo que querás.")
         numbered = ["*Rich Aroma — Menú* ☕",
                     "Respondé con el número de la sección que "
                     "querés ver:"]
@@ -591,11 +812,9 @@ def section_reply(catalog, section_id: str,
     for item in items:
         lines.append(f"• {item['name']} — {_fmt(item['price'])}")
     if lang == "en":
-        lines.append(f"\n🌐 See it with photos: {STORE_URL}")
         lines.append("Tell me what you'd like by name, or type "
                      "'menu' for another section.")
     else:
-        lines.append(f"\n🌐 Miralo con fotos: {STORE_URL}")
         lines.append("Pedime lo que querás por nombre, o escribí "
                      "'menú' para ver otra sección.")
     return "\n".join(lines)
@@ -676,31 +895,43 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
     t = text.lower()
     tn = _norm(text)
 
-    # A pending size question outranks everything else in the cart.
+    # A pending question (flavor first, then size) outranks
+    # everything else in the cart.
     if cart.get("pending"):
-        group = cart["pending"]["candidates"]
-        picked = _size_cue(text, group)
-        if picked is None:
-            full, _amb = _find_matches(catalog, text) \
-                if catalog else ([], [])
-            if full:
-                cart["pending"] = None  # moved on to a new item
-            else:
-                opts = "\n".join(
-                    f"• {g['name']} — {_fmt(g['price'])}" for g in group)
-                return ("¿Cuál tamaño preferís?\n" + opts) \
-                    if lang != "en" else \
-                    ("Which size would you like?\n" + opts)
-        if picked is not None:
-            qty = cart["pending"]["qty"]
-            src = cart["pending"]["text"]
-            cart["pending"] = None
-            _add_matches(cart, catalog, [(picked, qty)], src)
-            return ("Anotado ✅\n" + _summary(cart)
-                    + "\n¿Algo más? Escribí 'listo' para confirmar."
-                    if lang != "en" else
-                    "Got it ✅\n" + _summary(cart)
-                    + "\nAnything else? Type 'listo' to confirm.")
+        if cart["pending"].get("kind") == "flavor":
+            _fr = _answer_flavor_pending(convo, cart, catalog,
+                                          text, lang)
+            if _fr is not None:
+                return _fr
+            # Moved on to a different full item: the pending is
+            # cleared and this message is processed as a fresh
+            # turn below.
+        else:
+            group = cart["pending"]["candidates"]
+            picked = _pending_size_pick(text, group)
+            if picked is None:
+                full, _amb = _find_matches(catalog, text) \
+                    if catalog else ([], [])
+                if full:
+                    cart["pending"] = None  # moved on to a new item
+                else:
+                    opts = "\n".join(
+                        f"• {g['name']} — {_fmt(g['price'])}"
+                        for g in group)
+                    return ("¿Cuál tamaño preferís?\n" + opts) \
+                        if lang != "en" else \
+                        ("Which size would you like?\n" + opts)
+            if picked is not None:
+                qty = cart["pending"]["qty"]
+                src = cart["pending"]["text"]
+                cart["pending"] = None
+                _add_matches(cart, catalog, [(picked, qty)], src)
+                return ("Anotado ✅\n" + _summary(cart)
+                        + "\n¿Algo más? Escribí 'listo' para "
+                          "confirmar."
+                        if lang != "en" else
+                        "Got it ✅\n" + _summary(cart)
+                        + "\nAnything else? Type 'listo' to confirm.")
 
     if cart["stage"] == "paying":
         if tn.strip(" .!") in ("no", "n"):
@@ -748,6 +979,16 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
         return ("¿Cuál tamaño preferís?\n" + opts
                 if lang != "en" else
                 "Which size would you like?\n" + opts)
+    if not matches and catalog is not None \
+            and not any(c in tn for c in REMOVE_CUES) \
+            and not any(c in t for c in PRICE_CUES):
+        # A bare family ask mid-order earns the same ONE flavor
+        # question as a fresh one (bot-ux-fix).
+        fam = _detect_family(catalog, text)
+        if fam is not None:
+            cart["pending"] = _flavor_pending(fam, text)
+            return _flavor_question(fam["variants"], fam["size"],
+                                    lang)
     if any(c in tn for c in REMOVE_CUES) and matches:
         removed = []
         for item, _q in matches:
@@ -884,6 +1125,21 @@ def try_handle(convo, text: str):
                 "Which size would you like?\n" + opts)
 
     if not matches:
+        # A bare drink-family ask ("un latte de 12") names no
+        # single item — the family is honestly ambiguous, so ask
+        # ONE flavor question instead of going silent and dropping
+        # the customer into the intro flow's fallback
+        # (bot-ux-fix, 2026-10-26). A price question about a
+        # family is not an order, though: it stays the intro
+        # flow's, exactly as before.
+        if not any(c in t for c in PRICE_CUES):
+            fam = _detect_family(catalog, text)
+            if fam is not None:
+                convo.shop_cart = _new_cart()
+                convo.shop_cart["pending"] = _flavor_pending(fam,
+                                                             text)
+                return _flavor_question(fam["variants"],
+                                        fam["size"], lang)
         return None
 
     convo.shop_cart = _new_cart()

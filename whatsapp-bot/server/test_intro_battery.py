@@ -160,12 +160,23 @@ CASES = [
       "no_grant": True}),
 
     # ---- menu & prices (parked, kindly) ----
+    # M1/M2 updated (bot-ux-fix): with no catalog to serve, the
+    # parked copy no longer announces the menu as arriving with
+    # the reopening — it says the menu is being updated.
     ("M1", "menu", [], "¿me pasás el menú?",
-     {"reply_contains": ["menú completo llega", "¿Cómo te llamás?"],
+     {"reply_contains": ["se está actualizando", "¿Cómo te llamás?"],
       "state": "ASK_NAME"}),
     ("M2", "menu", ["hola"], "menu",
      {"seed_customer": {"name": "Carlos Mendoza", "gift": "pending"},
-      "reply_contains": "7 de noviembre", "state": "LOUNGE"}),
+      "reply_contains": "se está actualizando",
+      "reply_not_contains": "7 de noviembre", "state": "LOUNGE"}),
+    # R5 (bot-ux-fix): the lounge fallback used to claim the full
+    # menu "llega el 7 de noviembre" and offer only preventa; it
+    # now leads with the live menu + ordering, preventa one clause.
+    ("R5", "returning", ["hola"], "zzz qq",
+     {"seed_customer": {"name": "Lucía Paz"},
+      "reply_contains": ["tomarte un pedido", "preventa"],
+      "reply_not_contains": "7 de noviembre", "state": "LOUNGE"}),
     ("P1", "prices", [], "¿cuánto cuesta la botella?",
      {"reply_contains": ["L.100", "L.350"], "state": "ASK_NAME"}),
     ("P2", "prices", SIGNUP, "quiero 2 paquetes y 1 botella",

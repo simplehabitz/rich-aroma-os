@@ -419,15 +419,19 @@ def _preventa_recorded_text(packs, bottles, boxes, lang: str) -> str:
 
 
 def _menu_park_text(lang: str) -> str:
+    # Reachable only when the shop engine has no catalog to serve
+    # (fetch down / import not run yet). The menu EXISTS — it is
+    # being updated (bot-ux-fix, 2026-10-26: the old copy announced
+    # it as arriving with the reopening, which stopped being true
+    # the day the bot started selling it). Callers keep appending
+    # the preventa offer as before.
     if lang == "en":
-        return ("The full menu arrives with the reopening on "
-                "*November 7* 🗓️ — lattes, frappés, baleadas, "
-                "panadería y más. For now I can reserve bottled "
-                "coffee for you in preventa.")
-    return ("El menú completo llega con la reapertura el "
-            "*7 de noviembre* 🗓️ — lattes, frappés, baleadas, "
-            "panadería y más. Por ahora te puedo apartar café "
-            "embotellado en preventa.")
+        return ("The menu is being updated right now 🙏 — "
+                "try again in a moment. For now I can reserve "
+                "bottled coffee for you in preventa.")
+    return ("El menú se está actualizando en este momento 🙏 — "
+            "probá de nuevo en un momentito. Por ahora te puedo "
+            "apartar café embotellado en preventa.")
 
 
 def _gift_retired_text(convo: "IntroConversation") -> str:
@@ -1267,12 +1271,15 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             if _line:
                 return _line
         if lang == "en":
-            return ("I can help you reserve bottles in preventa, "
-                    "see the menu, or answer price questions. "
-                    "The full menu arrives November 7 🗓️")
-        return ("Te puedo ayudar a apartar botellas en preventa, "
-                "ver el menú o contarte precios. "
-                "El menú completo llega el 7 de noviembre 🗓️")
+            return ("I can show you the menu, take your order, or "
+                    "answer price questions — just tell me what "
+                    "you'd like (e.g. 'a 12oz caramel latte'). "
+                    "I can also reserve bottles for you in "
+                    "preventa.")
+        return ("Te puedo mostrar el menú, tomarte un pedido o "
+                "contarte precios — pedime lo que querás "
+                "(ej: 'un latte de caramelo 12oz'). También te "
+                "puedo apartar botellas en preventa.")
 
     # ---------------- handoff holding pattern ----------------
     if convo.state == "HANDOFF":
