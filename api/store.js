@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
@@ -131,6 +132,37 @@ module.exports = async (req, res) => {
         delete copy.pin;
         delete copy.password;
         return copy;
+    }
+    // --- WhatsApp intro bot gate (server-to-server) ---
+    // The Honduras intro bot (whatsapp-front-desk) creates accounts and
+    // records pending welcome gifts through the whatsapp_* actions
+    // below. It authenticates with a shared secret the owner sets as
+    // WHATSAPP_SIGNUP_SECRET in BOTH Vercel (here) and Render (the bot).
+    // Not a staff PIN and NOT public: fail closed when the env var is
+    // unset, and compare in constant time.
+    function botSecretOk() {
+        const expected = process.env.WHATSAPP_SIGNUP_SECRET || '';
+        if (!expected) return false;
+        const cred = bearerCred();
+        if (!cred) return false;
+        const a = Buffer.from(cred);
+        const b = Buffer.from(expected);
+        return a.length === b.length && crypto.timingSafeEqual(a, b);
+    }
+    // Phone normalization shared by the whatsapp_* actions — mirrors
+    // customer_by_phone / customer_create: digits only, 8-digit local
+    // numbers gain the 504 country code.
+    function normalizePhone(raw) {
+        const clean = String(raw || '').replace(/\D/g, '');
+        if (!clean) return '';
+        return clean.length === 8 ? `504${clean}` : clean;
+    }
+    async function findCustomerByPhone(phoneToStore) {
+        if (!phoneToStore) return null;
+        const variants = [...new Set([phoneToStore, phoneToStore.replace(/^504/, '')])];
+        const { data } = await supabase.from('customers').select('*')
+            .in('phone', variants).limit(1);
+        return (data && data[0]) || null;
     }
 
     try {
@@ -1215,6 +1247,132 @@ module.exports = async (req, res) => {
 
             if (error) throw error;
             return res.json(sanitizeCustomer(data));
+        }
+
+        // --- WHATSAPP INTRO BOT (Honduras) — server-to-server only ---
+        // Gated by botSecretOk() (WHATSAPP_SIGNUP_SECRET). The bot's
+        // get-to-know-you flow uses exactly three actions:
+        //   whatsapp_lookup   — is this phone already a customer?
+        //   whatsapp_signup   — get-or-create the account AND its
+        //                       pending L.100 welcome gift (idempotent)
+        //   whatsapp_preventa — append a bottle-preorder intent record
+        // The welcome gift is a PENDING row in reward_grants for the
+        // loyalty build to mint as a bonus lot — it NEVER touches
+        // rico_balance (that bucket is the customer's own money and
+        // never expires; bonus lots are house money with an expiry).
+        // One welcome gift per customer, ever: grant_type
+        // 'welcome_bottle' has a UNIQUE (customer_id, grant_type)
+        // index, so the WhatsApp signup gift and the preventa campaign
+        // grant are the same L.100, never two.
+        if (action === 'whatsapp_lookup' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.json({ found: false });
+            const { data: grant } = await supabase.from('reward_grants')
+                .select('status, amount')
+                .eq('customer_id', cust.id).eq('grant_type', 'welcome_bottle')
+                .maybeSingle();
+            return res.json({
+                found: true,
+                customer: sanitizeCustomer(cust),
+                gift: grant ? { status: grant.status, amount: parseFloat(grant.amount) || 0 } : null
+            });
+        }
+
+        if (action === 'whatsapp_signup' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const { name, birthday } = req.body || {};
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+
+            let cust = await findCustomerByPhone(phoneToStore);
+            let created = false;
+            if (!cust) {
+                const { data, error } = await supabase.from('customers').insert({
+                    id: 'cust_' + Date.now() + Math.floor(Math.random() * 1000),
+                    name: (String(name || 'Cliente WhatsApp').trim() || 'Cliente WhatsApp').slice(0, 80),
+                    phone: phoneToStore,
+                    birthday_dm: birthday || null,
+                    points: 0,
+                    rico_balance: 0
+                }).select().single();
+                if (error) throw error;
+                cust = data;
+                created = true;
+            } else {
+                // Fill only what the account is missing — never overwrite
+                // a name/birthday the shop already has.
+                const fill = {};
+                if (birthday && !cust.birthday_dm) fill.birthday_dm = birthday;
+                if (name && (!cust.name || cust.name === 'Nuevo Cliente' || cust.name === 'Cliente WhatsApp')) {
+                    fill.name = String(name).trim().slice(0, 80);
+                }
+                if (Object.keys(fill).length > 0) {
+                    const { data: updated } = await supabase.from('customers')
+                        .update(fill).eq('id', cust.id).select().single();
+                    if (updated) cust = updated;
+                }
+            }
+
+            let { data: grant } = await supabase.from('reward_grants')
+                .select('*')
+                .eq('customer_id', cust.id).eq('grant_type', 'welcome_bottle')
+                .maybeSingle();
+            let grantCreated = false;
+            if (!grant) {
+                const { data: g, error: gErr } = await supabase.from('reward_grants').insert({
+                    id: 'grant_' + Date.now() + Math.floor(Math.random() * 1000),
+                    customer_id: cust.id,
+                    phone: phoneToStore,
+                    grant_type: 'welcome_bottle',
+                    amount: 100,
+                    status: 'pending',
+                    source: 'whatsapp_intro'
+                }).select().single();
+                if (gErr) throw gErr;
+                grant = g;
+                grantCreated = true;
+            }
+            return res.json({
+                ok: true,
+                created,
+                grantCreated,
+                customer: sanitizeCustomer(cust),
+                gift: { status: grant.status, amount: parseFloat(grant.amount) || 0 }
+            });
+        }
+
+        if (action === 'whatsapp_preventa' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const clampQty = (v) => Math.max(0, Math.min(999, parseInt(v) || 0));
+            const packs = clampQty(req.body?.packs);
+            const bottles = clampQty(req.body?.bottles);
+            const boxes = clampQty(req.body?.boxes);
+            if (packs + bottles + boxes === 0) return res.status(400).json({ error: 'Sin cantidades' });
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.status(404).json({ error: 'Cliente no registrado' });
+            // Prices are computed HERE, never taken from the caller
+            // (FINAL-MENU.md formats: botella L.100, preventa 5-pack
+            // L.350, caja 20+ a L.70 c/u = L.1,400 la caja).
+            const total = packs * 350 + bottles * 100 + boxes * 1400;
+            const { data, error } = await supabase.from('whatsapp_preorders').insert({
+                id: 'wpre_' + Date.now() + Math.floor(Math.random() * 1000),
+                customer_id: cust.id,
+                phone: phoneToStore,
+                name: cust.name,
+                packs_5: packs,
+                bottles,
+                boxes_20: boxes,
+                quoted_total: total,
+                status: 'intent',
+                source: 'whatsapp_intro'
+            }).select().single();
+            if (error) throw error;
+            return res.json({ ok: true, preorder: data });
         }
 
         if (action === 'customer_update') {
