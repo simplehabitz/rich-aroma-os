@@ -78,16 +78,39 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
             raise RuntimeError("redirect refused, verify endpoint")
 
     with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:
-        if HAS_VAULT:
-            return read_json_response(resp)
-        return json.loads(resp.read().decode("utf-8"))
+        return read_json_response(resp)
+
+
+def handle_intro_message(from_number: str, text: str, phone_number_id: str):
+    """
+    Honduras intro flow (rich-aroma-honduras ONLY): get-to-know-you
+    signup -> account created in the OS + pending L.100 welcome gift ->
+    preventa offer. Café-menu ordering is a later build; see
+    server/intro_engine.py. Other tenants never reach this function.
+    """
+    try:
+        from intro_engine import get_intro_conversation, reply_for_intro
+    except ImportError:
+        from server.intro_engine import get_intro_conversation, reply_for_intro
+
+    convo = get_intro_conversation(from_number)
+    reply = reply_for_intro(convo, text)
+    return send_whatsapp_text(phone_number_id, from_number, reply)
 
 
 def handle_order_message(from_number: str, text: str, phone_number_id: str):
     """
     AI order logic for Rich Aroma via order_engine state machine.
     Steps: greet -> collect items -> confirm -> create order -> notify staff.
+
+    Tenant routing: the Honduras slug runs the INTRO flow instead
+    (handle_intro_message). Every other slug keeps this exact path.
     """
+    route = ROUTES.get(phone_number_id,
+                       {"slug": "rich-aroma-honduras", "default_lang": "es"})
+    if route["slug"] == "rich-aroma-honduras":
+        return handle_intro_message(from_number, text, phone_number_id)
+
     try:
         from order_engine import get_conversation, reply_for, reset_conversation, build_order
         from orders import save_order
@@ -98,24 +121,10 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str):
 
     convo = get_conversation(
         from_number,
-        ROUTES.get(phone_number_id, {"slug": "rich-aroma-honduras", "default_lang": "es"})["slug"],
-        ROUTES.get(phone_number_id, {"slug": "rich-aroma-honduras", "default_lang": "es"})["default_lang"],
+        route["slug"],
+        route["default_lang"],
     )
-    # Hybrid LLM parser (server/hybrid_parse.py + GEMINI_API_KEY env var):
-    # Gemini understands the message, the deterministic engine still validates
-    # and prices everything. Any failure -> None -> the rule engine below
-    # handles it, so this can never make the bot worse, only smarter.
-    reply = None
-    try:
-        from hybrid_parse import try_hybrid_reply
-    except ImportError:
-        from server.hybrid_parse import try_hybrid_reply
-    try:
-        reply = try_hybrid_reply(convo, text)
-    except Exception as e:  # never let the parser break the webhook
-        print(f"[hybrid] fallback to rules: {e}", flush=True)
-    if reply is None:
-        reply = reply_for(convo, text)
+    reply = reply_for(convo, text)
     # Order just confirmed: persist, then fan out to staff/KDS before reset.
     if convo.state == "DONE":
         order = build_order(convo)
@@ -176,14 +185,6 @@ def incoming():
         # Log but ack to avoid Meta retries storm; inspect logs
         print(f"webhook error: {e}", flush=True)
     return Response("EVENT_RECEIVED", mimetype="text/plain")
-
-
-
-@app.get("/privacy")
-def privacy():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html")
-    with open(path, encoding="utf-8") as f:
-        return Response(f.read(), mimetype="text/html")
 
 
 @app.get("/health")
