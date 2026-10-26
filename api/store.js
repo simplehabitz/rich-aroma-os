@@ -1647,21 +1647,187 @@ module.exports = async (req, res) => {
             });
         }
 
+        // --- FLIGHT LANE (campaign fast lane, 2026-10-26) ---
+        // The campaign sells ONE product — EL FLIGHT DEL CAPITÁN,
+        // a fixed 5-pack (packs_5=1) in preventa — through this
+        // same whatsapp_preventa action, via TWO doors into ONE
+        // ledger: the WhatsApp bot flags flight:true (its customer
+        // signed up in-thread first), and the WEBSITE claim
+        // (account.js / /quimistan, server-to-server with this same
+        // secret) sends source:'web' with {phone, name, packs_5:1}
+        // and NO prior signup — the flight path then find-or-creates
+        // the customer by phone (the given name names a NEW account
+        // only, never overwrites). The source column records the
+        // door ('flight_lane' | 'web'); the accounting is identical.
+        // Flight records carry a 15-MINUTE HOLD (hold_expires_at)
+        // and race a DAILY CAP of 100 bottles, enforced HERE at
+        // record time (the bot only renders the verdict):
+        //   bottles_today (America/Tegucigalpa calendar day) =
+        //     paid_confirmed rows, counted in full
+        //       (packs_5×5 + bottles + boxes_20×20)
+        //   + flight intents whose hold is still live
+        //   + standard (non-flight) intents, counted until staff
+        //     cancel them or the day ends (staff-managed — there is
+        //     no hold to expire on those rows)
+        //   'cancelled' / 'expired' / 'waitlist' rows never count.
+        // A flight that doesn't fit lands as status 'waitlist'
+        // (with its position) instead of 'intent'. Expiry is LAZY
+        // (the missions pattern — no cron): stale flight holds flip
+        // to 'expired' opportunistically whenever availability is
+        // computed. whatsapp_preorders.status is free TEXT (no
+        // CHECK/enum anywhere in the schema), so 'waitlist' and
+        // 'expired' need no DDL — the migration only adds
+        // hold_expires_at (source already exists).
+        const FLIGHT_SOURCE = 'flight_lane';
+        const FLIGHT_DAILY_CAP_BOTTLES = 100;
+        const FLIGHT_HOLD_MINUTES = 15;
+        const TGU_OFFSET_MS = 6 * 60 * 60 * 1000; // America/Tegucigalpa = UTC-6 (no DST)
+        const preorderBottles = (r) => (parseInt(r.packs_5) || 0) * 5
+            + (parseInt(r.bottles) || 0) + (parseInt(r.boxes_20) || 0) * 20;
+        function tguDayWindow(now) {
+            const local = new Date(now.getTime() - TGU_OFFSET_MS);
+            const startUtc = Date.UTC(local.getUTCFullYear(),
+                local.getUTCMonth(), local.getUTCDate()) + TGU_OFFSET_MS;
+            return { start: new Date(startUtc).toISOString(),
+                     end: new Date(startUtc + 24 * 60 * 60 * 1000).toISOString() };
+        }
+        async function expireStaleFlightHolds(nowIso) {
+            // Any held intent (bot or web — the hold is what marks
+            // it, not the source) flips to 'expired' once stale.
+            await supabase.from('whatsapp_preorders')
+                .update({ status: 'expired' })
+                .eq('status', 'intent')
+                .not('hold_expires_at', 'is', null)
+                .lt('hold_expires_at', nowIso);
+        }
+        async function flightAvailability(now) {
+            const nowIso = now.toISOString();
+            await expireStaleFlightHolds(nowIso);
+            const w = tguDayWindow(now);
+            const { data: rows } = await supabase.from('whatsapp_preorders')
+                .select('*').gte('created_at', w.start).lt('created_at', w.end);
+            let used = 0;
+            let waitlistCount = 0;
+            for (const r of rows || []) {
+                if (r.status === 'waitlist') { waitlistCount++; continue; }
+                if (r.status === 'paid_confirmed') { used += preorderBottles(r); continue; }
+                if (r.status === 'intent') {
+                    if (r.hold_expires_at) {
+                        // A HELD intent (flight lane, either channel)
+                        // counts only while its hold lives.
+                        if (r.hold_expires_at > nowIso) used += preorderBottles(r);
+                    } else {
+                        // A standard intent carries no hold: it
+                        // counts until staff cancel it or the day ends.
+                        used += preorderBottles(r);
+                    }
+                }
+                // 'cancelled' / 'expired' never count.
+            }
+            return { cap: FLIGHT_DAILY_CAP_BOTTLES, used,
+                     remaining: Math.max(0, FLIGHT_DAILY_CAP_BOTTLES - used),
+                     waitlistCount };
+        }
+
         if (action === 'whatsapp_preventa' && req.method === 'POST') {
             if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
             const phoneToStore = normalizePhone(req.body?.phone);
             if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
             const clampQty = (v) => Math.max(0, Math.min(999, parseInt(v) || 0));
-            const packs = clampQty(req.body?.packs);
+            // The web shape names its quantities packs_5 / boxes_20;
+            // the bot shape says packs / boxes. Same numbers either way.
+            const packs = clampQty(req.body?.packs ?? req.body?.packs_5);
             const bottles = clampQty(req.body?.bottles);
-            const boxes = clampQty(req.body?.boxes);
+            const boxes = clampQty(req.body?.boxes ?? req.body?.boxes_20);
             if (packs + bottles + boxes === 0) return res.status(400).json({ error: 'Sin cantidades' });
-            const cust = await findCustomerByPhone(phoneToStore);
-            if (!cust) return res.status(404).json({ error: 'Cliente no registrado' });
+            // FLIGHT LANE trigger: the bot flags flight:true; the WEB
+            // shape (account.js / /quimistan, server-to-server with
+            // this same secret) flags source:'web'. Both run the ONE
+            // hold/cap/waitlist path below — one ledger, two doors.
+            const isFlight = req.body?.flight === true || req.body?.flight === 'true'
+                || req.body?.source === 'web';
+            let cust = await findCustomerByPhone(phoneToStore);
+            if (!cust && !isFlight) return res.status(404).json({ error: 'Cliente no registrado' });
             // Prices are computed HERE, never taken from the caller
             // (FINAL-MENU.md formats: botella L.100, preventa 5-pack
             // L.350, caja 20+ a L.70 c/u = L.1,400 la caja).
             const total = packs * 350 + bottles * 100 + boxes * 1400;
+            if (isFlight) {
+                // FLIGHT LANE: hold + cap, decided before the insert.
+                // The source column records the door: 'flight_lane'
+                // (bot) or 'web' (website claim).
+                const rowSource = req.body?.source === 'web' ? 'web' : FLIGHT_SOURCE;
+                if (!cust) {
+                    // WEB shape: no prior signup exists. Find-or-create
+                    // by phone — the given name names a NEW account
+                    // only; an existing customer's name is never
+                    // overwritten (this branch doesn't even run then).
+                    const givenName = (String(req.body?.name || '').trim()
+                        || 'Cliente').slice(0, 80);
+                    const { data: newCust, error: createErr } = await supabase.from('customers').insert({
+                        id: 'cust_' + Date.now() + Math.floor(Math.random() * 1000),
+                        name: givenName,
+                        phone: phoneToStore,
+                        points: 0,
+                        rico_balance: 0
+                    }).select().single();
+                    if (createErr) {
+                        // Lost a create race or a transient error:
+                        // re-read before giving up.
+                        cust = await findCustomerByPhone(phoneToStore);
+                        if (!cust) throw createErr;
+                    } else {
+                        cust = newCust;
+                    }
+                }
+                const now = new Date();
+                const avail = await flightAvailability(now);
+                const rowBottles = packs * 5 + bottles + boxes * 20;
+                const fits = rowBottles <= avail.remaining;
+                const holdExpiresAt = fits
+                    ? new Date(now.getTime() + FLIGHT_HOLD_MINUTES * 60 * 1000).toISOString()
+                    : null;
+                const row = {
+                    id: 'wpre_' + Date.now() + Math.floor(Math.random() * 1000),
+                    customer_id: cust.id,
+                    phone: phoneToStore,
+                    name: cust.name,
+                    packs_5: packs,
+                    bottles,
+                    boxes_20: boxes,
+                    quoted_total: total,
+                    status: fits ? 'intent' : 'waitlist',
+                    source: rowSource,
+                    hold_expires_at: holdExpiresAt
+                };
+                let ins = await supabase.from('whatsapp_preorders').insert(row).select().single();
+                if (ins.error && /hold_expires_at/.test(ins.error.message || '')) {
+                    // The migration hasn't run yet: keep the flight
+                    // (source exists since the intro schema) without
+                    // its hold stamp, and say so in the log — never
+                    // lose the sale to a missing column.
+                    console.error('[Flight] hold_expires_at column missing — run flight-lane-migration.sql; recording without a hold');
+                    const { hold_expires_at: _dropped, ...noHold } = row;
+                    ins = await supabase.from('whatsapp_preorders').insert(noHold).select().single();
+                }
+                if (ins.error) throw ins.error;
+                // RESPONSE CONTRACT (the web build relays these
+                // verbatim): status, remaining_bottles,
+                // hold_expires_at, customer_id, preorder_id — plus
+                // waitlist_position ONLY when waitlisted.
+                const payload = {
+                    ok: true,
+                    status: ins.data.status,
+                    remaining_bottles: fits ? avail.remaining - rowBottles : avail.remaining,
+                    hold_expires_at: ins.data.hold_expires_at || null,
+                    customer_id: cust.id,
+                    preorder_id: ins.data.id
+                };
+                if (ins.data.status === 'waitlist') {
+                    payload.waitlist_position = avail.waitlistCount + 1;
+                }
+                return res.json(payload);
+            }
             const { data, error } = await supabase.from('whatsapp_preorders').insert({
                 id: 'wpre_' + Date.now() + Math.floor(Math.random() * 1000),
                 customer_id: cust.id,
@@ -1676,6 +1842,35 @@ module.exports = async (req, res) => {
             }).select().single();
             if (error) throw error;
             return res.json({ ok: true, preorder: data });
+        }
+
+        // --- FLIGHT LANE: transfer details for the bot ---
+        // The fast lane's payment message prints the shop's REAL
+        // transfer details (restaurants.settings.bank_details for
+        // rich-aroma — the same record partner-os writes and the
+        // storefront reads). Secret-gated like every whatsapp_*
+        // action. `placeholder` flags the shipped placeholder
+        // strings (verified live 2026-10-26: "BANK NAME" /
+        // "ACCOUNT NUMBER" / "ACCOUNT HOLDER NAME") or an empty
+        // record, so the bot can withhold the details instead of
+        // printing them; the bot applies its own structural check
+        // on top — two guards, either one can stop the print.
+        if (action === 'whatsapp_bank_details' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const { data: rest } = await supabase.from('restaurants')
+                .select('settings').eq('id', 'rich-aroma').maybeSingle();
+            const bd = (rest && rest.settings && rest.settings.bank_details) || {};
+            const details = {
+                name: String(bd.name || '').trim(),
+                account: String(bd.account || '').trim(),
+                owner: String(bd.owner || '').trim()
+            };
+            const KNOWN_PLACEHOLDERS = ['BANK NAME', 'ACCOUNT NUMBER', 'ACCOUNT HOLDER NAME'];
+            const placeholder = !details.name || !details.account || !details.owner
+                || KNOWN_PLACEHOLDERS.includes(details.name.toUpperCase())
+                || KNOWN_PLACEHOLDERS.includes(details.account.toUpperCase())
+                || KNOWN_PLACEHOLDERS.includes(details.owner.toUpperCase());
+            return res.json({ ok: true, bank_details: details, placeholder });
         }
 
         // --- CREADORES: bind a signup word to an EXISTING account ---
