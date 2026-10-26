@@ -268,6 +268,34 @@ def order_notify():
                     mimetype="application/json")
 
 
+@app.post("/account-link")
+def account_link():
+    """
+    OS -> bot account access link delivery (Mi Rich Aroma).
+
+    api/account.js mints a single-use login token (15 minutes,
+    hash-only storage) and POSTs {phone, url} here, authenticated
+    with the shared WHATSAPP_SIGNUP_SECRET (Bearer, constant-time,
+    fail-closed — see server/account_link.py). The bot texts the
+    link to the number on file; that delivery is the proof of
+    possession — the phone number IS the account, no passwords.
+    """
+    try:
+        import account_link as account_link_mod
+    except ImportError:
+        from server import account_link as account_link_mod
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    code, body = account_link_mod.process(
+        payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "vault": HAS_VAULT}

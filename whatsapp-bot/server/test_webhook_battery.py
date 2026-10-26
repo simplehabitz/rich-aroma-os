@@ -15,11 +15,16 @@ monkeypatched: payloads are captured, never sent. What is pinned:
   W4  a plain string still sends as a plain text payload,
   W5  an inbound interactive list_reply is routed to the engines
       as its id ("sec:<section>"),
-  W6  an inbound text message still routes its body (regression).
+  W6  an inbound text message still routes its body (regression),
+  W7  POST /account-link (Mi Rich Aroma): no secret configured ->
+      403 and nothing sent; wrong bearer -> 403; bad payload ->
+      400; good payload -> ONE text with the exact link copy (es,
+      and en when lang=en rides the payload).
 
 Run:  python3 server/test_webhook_battery.py
 """
 
+import json
 import os
 import sys
 import types
@@ -186,10 +191,66 @@ def w6_inbound_text():
     check("W6", routed == [(TO, "hola", PID)], str(routed))
 
 
+LINK_URL = "https://www.richaromacoffee.com/cuenta?t=tok123"
+ES_COPY = ("Tu cuenta *Rich Aroma* 👉 " + LINK_URL + "\n"
+           "El link vence en 15 minutos. Tu cuenta es tu "
+           "número — sin contraseñas 🔐")
+EN_COPY = ("Your *Rich Aroma* account 👉 " + LINK_URL + "\n"
+           "The link expires in 15 minutes. Your account is "
+           "your number — no passwords 🔐")
+
+
+def _account_link_call(payload, auth=None):
+    _flask.request._json = payload
+    _flask.request.headers = \
+        ({"Authorization": auth} if auth is not None else {})
+    status, body = webhook.account_link()
+    return status, json.loads(body)
+
+
+def w7_account_link():
+    calls = capture()
+    # W7a: no secret configured on the bot -> fail-closed 403.
+    os.environ.pop("WHATSAPP_SIGNUP_SECRET", None)
+    status, _ = _account_link_call(
+        {"phone": TO, "url": LINK_URL}, "Bearer whatever")
+    check("W7a", status == 403 and len(calls) == 0,
+          f"status={status} calls={len(calls)}")
+    os.environ["WHATSAPP_SIGNUP_SECRET"] = "battery-secret"
+    # W7b: wrong bearer -> 403, nothing sent.
+    status, _ = _account_link_call(
+        {"phone": TO, "url": LINK_URL}, "Bearer wrong")
+    check("W7b", status == 403 and len(calls) == 0,
+          f"status={status} calls={len(calls)}")
+    # W7c: bad payloads -> 400, nothing sent.
+    status, _ = _account_link_call({}, "Bearer battery-secret")
+    s2, _ = _account_link_call({"phone": TO}, "Bearer battery-secret")
+    check("W7c", status == 400 and s2 == 400 and len(calls) == 0,
+          f"status={status}/{s2} calls={len(calls)}")
+    # W7d: good payload -> one text, exact es copy, shop number id.
+    status, body = _account_link_call(
+        {"phone": "+504 9999-8888", "url": LINK_URL},
+        "Bearer battery-secret")
+    check("W7d", status == 200 and body.get("ok") is True
+          and len(calls) == 1 and calls[0].get("type") == "text"
+          and calls[0].get("to") == TO
+          and calls[0]["text"]["body"] == ES_COPY,
+          f"status={status} calls={str(calls)[:220]}")
+    # W7e: lang=en -> exact en copy.
+    calls2 = capture()
+    status, _ = _account_link_call(
+        {"phone": TO, "url": LINK_URL, "lang": "en"},
+        "Bearer battery-secret")
+    check("W7e", status == 200 and len(calls2) == 1
+          and calls2[0]["text"]["body"] == EN_COPY,
+          f"status={status} calls={str(calls2)[:220]}")
+    os.environ.pop("WHATSAPP_SIGNUP_SECRET", None)
+
+
 def main():
     for fn in (w1_list_payload, w2_interactive_failure_falls_back,
                w3_cta_payload, w4_plain_string, w5_inbound_list_reply,
-               w6_inbound_text):
+               w6_inbound_text, w7_account_link):
         try:
             fn()
         except Exception as e:
