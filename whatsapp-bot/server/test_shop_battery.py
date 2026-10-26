@@ -31,6 +31,14 @@ no-catalog degradation to the parked copy; the full lifecycle —
 the placed order reaches a mock /api/orders-v2 with storefront
 shape and an honest UNPAID tender, and ready/cancelled
 notifications send exactly once, gated by the shared secret.
+Prep time (2026-10-26): 'listo' asks "¿Para cuándo lo
+preparamos?" when slots remain today — the shop clock is PINNED
+per Rig (a no-slots Monday 23:30) so the legacy checkout flow is
+deterministic at any wall-clock hour, and s_preptime re-pins the
+clock per case to prove the slot math (lead + grid rounding,
+Sunday hours, no-slots skip), the tap/typed/numbered answers,
+and the requested_for payload riding order -> ticket unchanged
+for ASAP.
 
 Run:  python3 server/test_shop_battery.py
 """
@@ -50,6 +58,14 @@ import menu_client
 import notify
 import os_client
 import shop_engine
+
+from datetime import datetime as _dt
+
+
+def _fixed_now(y, mo, d, h, mi):
+    """A shop_engine._now_shop stub pinned to one shop-time
+    moment (prep-time battery)."""
+    return lambda: _dt(y, mo, d, h, mi, tzinfo=shop_engine.SHOP_TZ)
 
 # ---------------------------------------------------------------- fixture
 
@@ -267,6 +283,11 @@ class Rig:
                 menu_client.build_catalog(fixture_payload()))
         else:
             menu_client.clear()
+        # Pin the shop clock to a no-slots moment (Monday 23:30
+        # shop time) so every legacy checkout — 'listo' straight
+        # to the payment question — is deterministic at any
+        # wall-clock hour. s_preptime re-pins per case.
+        shop_engine._now_shop = _fixed_now(2026, 10, 26, 23, 30)
         self.convo = intro_engine.get_intro_conversation(self.phone)
         self.replies = []       # plain-text renderings (fallback text
                                # for a WaReply) — what assertions read
@@ -683,6 +704,203 @@ def s_flavor():
     rig.restore()
 
 
+def s_preptime():
+    """Prep time (2026-10-26): after 'listo', before payment, the
+    bot asks "¿Para cuándo lo preparamos?" — 🔥 Ahora mismo or
+    one of today's remaining 30-minute slots (shop tz, +20 min
+    lead rounded UP to the :00/:30 grid, last slot 30 min before
+    close). The pick rides order -> OS ticket; ASAP leaves every
+    payload exactly as before. All clocks pinned via _fixed_now.
+    2026-10-26 is a Monday; 2026-10-25 a Sunday."""
+    from wa_reply import WaReply
+
+    def at(rig, y, mo, d, h, mi):
+        shop_engine._now_shop = _fixed_now(y, mo, d, h, mi)
+
+    def latte(rig):
+        rig.to_lounge()
+        rig.say("quiero un latte de caramelo 12oz")
+
+    # PT1: Monday 09:07 — 09:07+20 = 09:27 -> grid 09:30. The
+    # question is a LIST: ASAP + the next 9 slots (10-row cap).
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    r = rig.say("listo")
+    raw = rig.last_raw
+    check("PT1a", isinstance(raw, WaReply) and raw.kind == "list",
+          f"when question returned {type(raw).__name__}")
+    if isinstance(raw, WaReply):
+        rows = raw.sections[0]["rows"] if raw.sections else []
+        ids = [row["id"] for row in rows]
+        check("PT1b", ids[:2] == ["time:asap", "time:09:30"]
+              and len(ids) == 10, str(ids))
+        check("PT1c", raw.button_text == "Elegir hora",
+              str(raw.button_text))
+    check("PT1d", "¿Para cuándo lo preparamos?" in r
+          and "1. 🔥 Ahora mismo" in r and "2. 🕐 9:30 AM" in r,
+          r[:240])
+
+    # PT2: a tapped slot rides the order AND the OS ticket, with
+    # the shop's UTC offset in the ISO string.
+    r = rig.say("time:12:30")
+    check("PT2a", "¿Cómo pagás?" in r, r[:200])
+    r = rig.say("1")
+    check("PT2b", "Pedido confirmado" in r and "12:30 PM" in r,
+          r[:260])
+    check("PT2c", len(rig.pushed) == 1, f"pushed={len(rig.pushed)}")
+    if rig.pushed:
+        o = rig.pushed[0]
+        check("PT2d", o.get("requested_for")
+              == "2026-10-26T12:30:00-06:00",
+              str(o.get("requested_for")))
+        check("PT2e", o.get("requested_for_label") == "12:30 PM",
+              str(o.get("requested_for_label")))
+        tk = kds_push.build_ticket(o)
+        check("PT2f", tk.get("requestedFor")
+              == "2026-10-26T12:30:00-06:00"
+              and tk.get("requestedForLabel") == "12:30 PM",
+              str({k: tk.get(k) for k in
+                   ("requestedFor", "requestedForLabel")}))
+    rig.restore()
+
+    # PT3: ASAP tap — requested_for stays null and the order +
+    # ticket payloads are otherwise untouched.
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    rig.say("listo")
+    r = rig.say("time:asap")
+    check("PT3a", "¿Cómo pagás?" in r, r[:200])
+    rig.say("1")
+    check("PT3b", len(rig.pushed) == 1, f"pushed={len(rig.pushed)}")
+    if rig.pushed:
+        o = rig.pushed[0]
+        check("PT3c", o.get("requested_for") is None
+              and "requested_for" not in o,
+              str(o.get("requested_for")))
+        check("PT3d", o["total"] == 70, f"total={o['total']}")
+        tk = kds_push.build_ticket(o)
+        check("PT3e", "requestedFor" not in tk
+              and "requestedForLabel" not in tk, str(tk.keys()))
+    rig.restore()
+
+    # PT4: Monday 18:45 — now+20 = 19:05 is past the last slot
+    # (18:30): NO question, straight to payment, ASAP order.
+    rig = Rig()
+    at(rig, 2026, 10, 26, 18, 45)
+    latte(rig)
+    r = rig.say("listo")
+    check("PT4a", "¿Cómo pagás?" in r
+          and "¿Para cuándo" not in r
+          and not isinstance(rig.last_raw, WaReply), r[:200])
+    rig.say("1")
+    if rig.pushed:
+        check("PT4b", rig.pushed[0].get("requested_for") is None,
+              str(rig.pushed[0].get("requested_for")))
+    rig.restore()
+
+    # PT5: Sunday 06:30, before opening — Sunday hours (08:00
+    # open) govern: first slot is 08:00, not the weekday 07:00.
+    rig = Rig()
+    at(rig, 2026, 10, 25, 6, 30)
+    latte(rig)
+    r = rig.say("listo")
+    raw = rig.last_raw
+    check("PT5a", isinstance(raw, WaReply), type(raw).__name__)
+    if isinstance(raw, WaReply):
+        ids = [row["id"] for row in raw.sections[0]["rows"]]
+        check("PT5b", ids[1] == "time:08:00", str(ids[:3]))
+    rig.restore()
+
+    # PT6: a typed time matching a real slot ('a las 12:30').
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    rig.say("listo")
+    r = rig.say("a las 12:30")
+    check("PT6a", "¿Cómo pagás?" in r, r[:200])
+    rig.say("2")
+    if rig.pushed:
+        o = rig.pushed[0]
+        check("PT6b", o.get("requested_for_label") == "12:30 PM"
+              and o.get("requested_for")
+              == "2026-10-26T12:30:00-06:00",
+              f"{o.get('requested_for')}/{o.get('requested_for_label')}")
+    rig.restore()
+
+    # PT7: a typed NON-slot re-asks ONCE, kindly; a second miss
+    # defaults to ASAP and proceeds — never a trap.
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    rig.say("listo")
+    r = rig.say("a las 3:33")
+    check("PT7a", "No encontré esa hora" in r
+          and (rig.convo.shop_cart or {}).get("stage") == "when",
+          r[:200])
+    r = rig.say("cuando sea")
+    check("PT7b", "ahora mismo" in r and "¿Cómo pagás?" in r,
+          r[:240])
+    rig.say("1")
+    if rig.pushed:
+        check("PT7c", rig.pushed[0].get("requested_for") is None,
+              str(rig.pushed[0].get("requested_for")))
+    rig.restore()
+
+    # PT8: 'a la 1 pm' maps to the 13:00 slot.
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    rig.say("listo")
+    r = rig.say("a la 1 pm")
+    check("PT8a", "¿Cómo pagás?" in r, r[:200])
+    rig.say("1")
+    if rig.pushed:
+        o = rig.pushed[0]
+        check("PT8b", o.get("requested_for")
+              == "2026-10-26T13:00:00-06:00"
+              and o.get("requested_for_label") == "1:00 PM",
+              f"{o.get('requested_for')}/{o.get('requested_for_label')}")
+    rig.restore()
+
+    # PT9: English path — question + ASAP tap, unchanged payload.
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    rig.say("hello")
+    rig.say("a caramel latte 12oz")
+    r = rig.say("done")
+    raw = rig.last_raw
+    check("PT9a", isinstance(raw, WaReply)
+          and "When should we prepare it?" in raw.body,
+          f"{type(raw).__name__}: {r[:160]}")
+    r = rig.say("time:asap")
+    check("PT9b", "How will you pay?" in r, r[:200])
+    r = rig.say("1")
+    check("PT9c", "Order confirmed" in r, r[:200])
+    if rig.pushed:
+        check("PT9d", rig.pushed[0].get("requested_for") is None,
+              str(rig.pushed[0].get("requested_for")))
+    rig.restore()
+
+    # PT10: the numbered fallback's own numbering — '2' picks the
+    # first presented slot (9:30 AM at this clock).
+    rig = Rig()
+    at(rig, 2026, 10, 26, 9, 7)
+    latte(rig)
+    rig.say("listo")
+    r = rig.say("2")
+    check("PT10a", "¿Cómo pagás?" in r, r[:200])
+    rig.say("1")
+    if rig.pushed:
+        o = rig.pushed[0]
+        check("PT10b", o.get("requested_for")
+              == "2026-10-26T09:30:00-06:00"
+              and o.get("requested_for_label") == "9:30 AM",
+              f"{o.get('requested_for')}/{o.get('requested_for_label')}")
+    rig.restore()
+
+
 def s_ticket_lifecycle():
     """The placed order hits a mock /api/orders-v2 (real kds_push,
     stubbed HTTP) storefront-shaped and UNPAID."""
@@ -811,6 +1029,7 @@ def main():
         ("multi", s_multi_transfer), ("unknown", s_unknown),
         ("pricelock", s_price_lock), ("bottle", s_bottle_as_menu_item),
         ("remove", s_remove_cancel), ("flavor", s_flavor),
+        ("preptime", s_preptime),
         ("preventa", s_preventa_still_wins),
         ("nocatalog", s_no_catalog_fallback),
         ("lifecycle", s_ticket_lifecycle), ("notify", s_notify),

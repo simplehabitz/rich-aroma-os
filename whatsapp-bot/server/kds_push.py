@@ -78,7 +78,7 @@ def build_ticket(order: dict) -> dict:
                  "para recoger en tienda")
 
     total = float(order.get("total") or 0)
-    return {
+    ticket = {
         "items": items,
         "customerPhone": order.get("customer_phone"),
         "guestPhone": order.get("customer_phone"),
@@ -95,6 +95,16 @@ def build_ticket(order: dict) -> dict:
         "total": total,
         "source": order.get("channel", "whatsapp"),
     }
+    # Prep time (2026-10-26): a chosen slot rides to the OS under
+    # the same names end to end — the ticket's
+    # requestedFor/requestedForLabel become the order row's
+    # requested_for / requested_for_label. ASAP orders carry
+    # neither key: the ticket is exactly what it was before.
+    if order.get("requested_for"):
+        ticket["requestedFor"] = order["requested_for"]
+        ticket["requestedForLabel"] = \
+            order.get("requested_for_label")
+    return ticket
 
 
 def push_order(order: dict, url: str = None, api_key: str = None) -> dict:

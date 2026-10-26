@@ -117,6 +117,15 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
     const shiftId = orderRequest.shiftId || orderRequest.shift_id;
     const guestPhone = orderRequest.guestPhone || orderRequest.guest_phone;
     const scheduledFor = orderRequest.scheduledFor || orderRequest.scheduled_for;
+    // Prep time (WhatsApp bot "¿Para cuándo?", 2026-10-26): the slot
+    // the customer asked the shop to prepare for — an ISO 8601 string
+    // carrying the shop's UTC offset, plus its display label
+    // ("12:30 PM"). Absent/null = ASAP. Deliberately NOT stored in
+    // scheduled_for: that column belongs to the storefront/QuimiEats
+    // scheduling flow, with its own semantics — reusing it would let
+    // two features write each other's field.
+    const requestedFor = orderRequest.requestedFor || orderRequest.requested_for || null;
+    const requestedForLabel = orderRequest.requestedForLabel || orderRequest.requested_for_label || null;
     const category = orderRequest.category;
     let promoCode = (orderRequest.promoCode || orderRequest.promo_code || '').toString().trim().toUpperCase() || null;
     if (!promoCode && notes) {
@@ -449,6 +458,14 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
                    (notes || '')
         };
 
+        // Prep time: the columns are written ONLY when the payload
+        // carries a chosen slot, so a request without the field
+        // produces the exact order row it did before this feature.
+        if (requestedFor) {
+            dbOrder.requested_for = requestedFor;
+            dbOrder.requested_for_label = requestedForLabel;
+        }
+
         if (promoNote) dbOrder.notes = (dbOrder.notes || '') + ' ' + promoNote;
 
         if (fulfillment === 'delivery') {
@@ -521,6 +538,14 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
                     delete fallbackOrder.delivery_pin;
                     delete fallbackOrder.delivery_status;
                     delete fallbackOrder.driver_id;
+                }
+                if (errorMsg.includes('requested_for')) {
+                    // The prep-time migration has not run on this DB
+                    // yet — degrade loudly, never lose the order over
+                    // a display field: retry without the two columns.
+                    console.warn('[OrderService] requested_for columns missing (run the prep-time migration) — retrying without them');
+                    delete fallbackOrder.requested_for;
+                    delete fallbackOrder.requested_for_label;
                 }
                 if (errorMsg.includes('orders_restaurant_id_fkey')) {
                     fallbackOrder.notes = (fallbackOrder.notes || '') + ` [ORIGINAL_RESTAURANT: ${targetResId}]`;

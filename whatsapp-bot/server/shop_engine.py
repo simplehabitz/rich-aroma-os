@@ -38,6 +38,20 @@ _detect_family); only true flavor x size matrices fire, so
 single-format families (botellas, bolis, frescos) keep their
 existing flows.
 
+PREP TIME (owner-approved, 2026-10-26; mandaditos parked): at
+checkout — after 'listo', before the payment question — the
+customer picks WHEN: 🔥 Ahora mismo, or one of today's remaining
+30-minute prep slots. All slot math runs in the shop's timezone
+(America/Tegucigalpa — the host runs UTC): first slot = now +
+20 min lead, rounded UP to the :00/:30 grid and never before
+opening; last slot = 30 min before close; when no slot remains
+today the question is skipped and the order is simply ASAP. The
+pick rides the order end to end: build_order -> the kds_push
+ticket (requestedFor / requestedForLabel) -> the OS orders row
+(requested_for / requested_for_label). ASAP leaves the field
+null/absent at every hop — the payloads are exactly what they
+were before this feature.
+
 The engine is the cash register: the customer's words never set a
 price, an item the catalog doesn't hold is rejected gracefully, and
 unknown text changes nothing. Modifiers ride in the SAME snapshot
@@ -67,6 +81,7 @@ missions pull-model append keeps working over shop replies.
 import re
 import time
 import unicodedata
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 try:
@@ -82,6 +97,29 @@ except ImportError:  # running as part of the server package
 BUSINESS_SLUG = "rich-aroma-honduras"
 CURRENCY = "HNL"
 STORE_URL = "https://www.richaromacoffee.com/order"
+
+# ------------------------------------------------------------ prep time
+# All slot math is done in the SHOP's timezone — the host (Render)
+# runs UTC, so server local time is never used here.
+try:
+    from zoneinfo import ZoneInfo
+    SHOP_TZ = ZoneInfo("America/Tegucigalpa")
+except Exception:  # host without a tz database: Honduras is a
+    # fixed UTC-6 (no DST), so the offset fallback is exact.
+    SHOP_TZ = timezone(timedelta(hours=-6))
+
+# Shop hours by weekday (Mon=0 .. Sun=6) as (open, close) hours in
+# shop time. These are the GOOGLE LISTING hours; the owner has NOT
+# confirmed the real reopening hours yet — when he does, this dict
+# is the one place to change.
+SHOP_HOURS = {0: (7, 19), 1: (7, 19), 2: (7, 19), 3: (7, 19),
+              4: (7, 19), 5: (7, 19), 6: (8, 18)}
+PREP_LEAD_MINUTES = 20        # first slot = now + this lead,
+                              # rounded UP to the :00/:30 grid
+SLOT_STEP_MINUTES = 30
+LAST_SLOT_BEFORE_CLOSE = 30   # last slot = close - this many min
+PRESENTED_SLOTS = 9           # + the ASAP row = the list's
+                              # 10-row cap
 
 NUMBER_WORDS = {
     "uno": 1, "una": 1, "un": 1, "dos": 2, "tres": 3, "cuatro": 4,
@@ -820,6 +858,263 @@ def section_reply(catalog, section_id: str,
     return "\n".join(lines)
 
 
+# ------------------------------------------------------------ prep time
+
+def _now_shop() -> datetime:
+    """Now in the shop's timezone — the ONE clock the prep-time
+    math reads (the battery stubs this to pin conversations to a
+    fixed moment)."""
+    return datetime.now(SHOP_TZ)
+
+
+def _slot_label(dt: datetime) -> str:
+    h = dt.hour % 12 or 12
+    return f"{h}:{dt.minute:02d} {'AM' if dt.hour < 12 else 'PM'}"
+
+
+def _prep_slots(now: datetime = None):
+    """Today's remaining prep slots as {"iso", "label", "hm"}
+    dicts, in shop time. First slot: now + PREP_LEAD_MINUTES,
+    rounded UP to the next :00/:30, never before opening. Last
+    slot: LAST_SLOT_BEFORE_CLOSE minutes before close. [] when
+    no slot remains today — the caller then skips the question
+    entirely and the order is simply ASAP (never invent a slot).
+    """
+    now = now or _now_shop()
+    open_h, close_h = SHOP_HOURS[now.weekday()]
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    open_dt = midnight + timedelta(hours=open_h)
+    last_dt = midnight + timedelta(hours=close_h) \
+        - timedelta(minutes=LAST_SLOT_BEFORE_CLOSE)
+    cand = (now + timedelta(minutes=PREP_LEAD_MINUTES)) \
+        .replace(second=0, microsecond=0)
+    rem = cand.minute % SLOT_STEP_MINUTES
+    if rem:
+        cand += timedelta(minutes=SLOT_STEP_MINUTES - rem)
+    start = max(cand, open_dt)
+    out = []
+    t = start
+    while t <= last_dt:
+        out.append({"iso": t.isoformat(), "label": _slot_label(t),
+                    "hm": t.strftime("%H:%M")})
+        t += timedelta(minutes=SLOT_STEP_MINUTES)
+    return out
+
+
+def _payment_question(cart, lang: str) -> str:
+    """The payment-choice question that closes the order —
+    reached from 'listo', directly or via the prep-time answer."""
+    if lang == "en":
+        return ("Your order:\n" + _summary(cart)
+                + "\nHow will you pay?\n1️⃣ At pickup (cash or "
+                  "card)\n2️⃣ Transfer (the team verifies it)\n"
+                  "Reply *1* or *2*.")
+    return ("Tu pedido:\n" + _summary(cart)
+            + "\n¿Cómo pagás?\n1️⃣ Al recoger (efectivo o "
+              "tarjeta)\n2️⃣ Transferencia (el equipo la "
+              "verifica)\nRespondé *1* o *2*.")
+
+
+def _when_question(cart, lang: str) -> WaReply:
+    """The prep-time question as a WaReply — the same two
+    renderings pattern as the menu: an interactive LIST (🔥 Ahora
+    mismo + the next slots) the customer taps, and a numbered
+    text fallback. The presented slots ride on the cart
+    (when_presented); the FULL day list (when_all) is what typed
+    times match against."""
+    presented = cart["when_presented"]
+    if lang == "en":
+        body = ("Your order:\n" + _summary(cart)
+                + "\n\nWhen should we prepare it? "
+                  "Tap an option 👇")
+        lines = ["Your order:", _summary(cart), "",
+                 "When should we prepare it?",
+                 "Reply with the number:",
+                 "1. 🔥 Right away"]
+        lines += [f"{n}. 🕐 {s['label']}"
+                  for n, s in enumerate(presented, 2)]
+        lines.append("Or type the time, e.g. '12:30'.")
+        button = "Choose a time"
+        asap_title, asap_desc = "🔥 Right away", \
+            "We prepare it right away"
+        slot_desc = "We prepare it for this time"
+        sec_title = "What time?"
+    else:
+        body = ("Tu pedido:\n" + _summary(cart)
+                + "\n\n¿Para cuándo lo preparamos? "
+                  "Tocá una opción 👇")
+        lines = ["Tu pedido:", _summary(cart), "",
+                 "¿Para cuándo lo preparamos?",
+                 "Respondé con el número:",
+                 "1. 🔥 Ahora mismo"]
+        lines += [f"{n}. 🕐 {s['label']}"
+                  for n, s in enumerate(presented, 2)]
+        lines.append("O escribí la hora, ej: '12:30'.")
+        button = "Elegir hora"
+        asap_title, asap_desc = "🔥 Ahora mismo", \
+            "Lo preparamos de inmediato"
+        slot_desc = "Lo preparamos para esta hora"
+        sec_title = "¿Para cuándo?"
+    rows = [{"id": "time:asap", "title": asap_title,
+             "description": asap_desc}]
+    rows += [{"id": f"time:{s['hm']}", "title": f"🕐 {s['label']}",
+              "description": slot_desc} for s in presented]
+    sections = [{"title": sec_title, "rows": rows}]
+    return WaReply("list", body, "\n".join(lines),
+                   button_text=button, sections=sections)
+
+
+_TIME_RE = re.compile(
+    r"(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?")
+
+
+def _looks_like_time(text: str) -> bool:
+    """Does this message even try to name a time? Guards the
+    typed-slot matcher so a stray number (a quantity, a menu
+    pick) is never read as a clock time."""
+    t = (text or "").lower()
+    return bool(re.search(r"\d{1,2}[:.]\d{2}", t)
+                or re.search(r"\d{1,2}\s*(?:a\.?m\.?|p\.?m\.?)", t)
+                or re.search(r"\ba\s+las?\s+\d{1,2}\b", t))
+
+
+def _typed_slot(cart, text: str):
+    """Match a typed time — '12:30', 'a las 12:30', '1 pm',
+    '13:00' — against today's FULL slot list on the cart.
+    Returns the slot dict, or None when it names no real slot.
+    With no am/pm marker both readings are tried (12-hour first,
+    then +12): a slot exists on at most one of them in practice.
+    """
+    m = _TIME_RE.search((text or "").lower())
+    if not m:
+        return None
+    hour = int(m.group(1))
+    minute = int(m.group(2) or 0)
+    marker = (m.group(3) or "").replace(".", "")
+    if marker == "am":
+        cands = [(hour % 12, minute)]
+    elif marker == "pm":
+        cands = [(hour % 12 + 12, minute)]
+    elif hour > 12:
+        cands = [(hour, minute)]
+    else:
+        cands = [(hour, minute), (hour + 12, minute)]
+    for h, mi in cands:
+        hm = f"{h:02d}:{mi:02d}"
+        for s in cart.get("when_all") or []:
+            if s["hm"] == hm:
+                return s
+    return None
+
+
+def _choose_time(cart, slot):
+    """Record the prep-time pick (slot None = ASAP) and move on
+    to the payment question."""
+    if slot is None:
+        cart["requested_for"] = None
+        cart["requested_for_label"] = None
+    else:
+        cart["requested_for"] = slot["iso"]
+        cart["requested_for_label"] = slot["label"]
+    cart["stage"] = "paying"
+    for k in ("when_all", "when_presented", "when_attempts"):
+        cart.pop(k, None)
+
+
+def _answer_when(convo, cart, catalog, text: str, lang: str):
+    """One answer turn for the prep-time question. Returns the
+    reply, or None when the answer names a full item instead —
+    the stage reverts to collecting and the caller keeps
+    processing the message as a fresh collecting turn (the
+    pending questions' moved-on behavior, mirrored)."""
+    t = text.lower()
+    tn = _norm(text)
+    # A list tap arrives as its reply id ("time:asap" /
+    # "time:12:30") — read it lightly normalized, like the
+    # section taps, because _norm would eat the ':'.
+    tap = (text or "").strip().lower()
+    tap = "".join(ch for ch in unicodedata.normalize("NFD", tap)
+                  if unicodedata.category(ch) != "Mn")
+    if tap.startswith("time:"):
+        want = tap[len("time:"):].strip()
+        if want == "asap":
+            _choose_time(cart, None)
+            return _payment_question(cart, lang)
+        for s in cart.get("when_all") or []:
+            if s["hm"] == want:
+                _choose_time(cart, s)
+                return _payment_question(cart, lang)
+        # A tap naming a slot that isn't today's: re-ask below.
+    stripped = tn.strip(" .!")
+    if stripped in ("cancelar", "cancel", "anular"):
+        convo.shop_cart = None
+        return ("Pedido cancelado. ¿Querés empezar de nuevo? "
+                "Escribí 'menú' para ver las opciones."
+                if lang != "en" else
+                "Order cancelled. Want to start over? Type 'menu'.")
+    if stripped in ("no", "n"):
+        cart["stage"] = "collecting"
+        for k in ("when_all", "when_presented", "when_attempts"):
+            cart.pop(k, None)
+        return ("Sin problema, seguimos con tu pedido:\n"
+                + _summary(cart)
+                + "\nPodés agregar o quitar artículos, o "
+                  "'cancelar' para anular todo."
+                if lang != "en" else
+                "No problem, let's keep editing:\n" + _summary(cart)
+                + "\nAdd or remove items, or 'cancelar' to void it.")
+    if _is_menu_ask(t) and catalog is not None:
+        mr = menu_reply(lang, convo)
+        if mr is not None:
+            return mr.append("Tu pedido hasta ahora:\n"
+                             + _summary(cart))
+    if stripped.isdigit():
+        # The numbered fallback's own numbering: 1 = ASAP, then
+        # the presented slots in order.
+        n = int(stripped)
+        presented = cart.get("when_presented") or []
+        if n == 1:
+            _choose_time(cart, None)
+            return _payment_question(cart, lang)
+        if 2 <= n <= len(presented) + 1:
+            _choose_time(cart, presented[n - 2])
+            return _payment_question(cart, lang)
+    toks = set(tn.split())
+    if toks & {"ahora", "ya", "asap"} or "antes posible" in tn \
+            or "right away" in t:
+        _choose_time(cart, None)
+        return _payment_question(cart, lang)
+    if _looks_like_time(text):
+        slot = _typed_slot(cart, text)
+        if slot is not None:
+            _choose_time(cart, slot)
+            return _payment_question(cart, lang)
+    if catalog is not None:
+        full, _amb = _find_matches(catalog, text)
+        if full:
+            cart["stage"] = "collecting"
+            for k in ("when_all", "when_presented",
+                      "when_attempts"):
+                cart.pop(k, None)
+            return None
+    # No usable answer: re-ask ONCE kindly; a second miss
+    # defaults to ASAP rather than trapping the customer inside
+    # the question.
+    cart["when_attempts"] = (cart.get("when_attempts") or 0) + 1
+    if cart["when_attempts"] >= 2:
+        _choose_time(cart, None)
+        note = ("No encontré esa hora — te lo dejo para "
+                "*ahora mismo* 🔥\n"
+                if lang != "en" else
+                "I couldn't place that time — I'll set it to "
+                "*right away* 🔥\n")
+        return note + _payment_question(cart, lang)
+    return _when_question(cart, lang).prepend(
+        "No encontré esa hora 🙏 Probemos de nuevo:"
+        if lang != "en" else
+        "I couldn't place that time 🙏 Let's try again:")
+
+
 # ---------------------------------------------------------------- orders
 
 def build_order(convo, cart, payment_method: str) -> dict:
@@ -835,7 +1130,7 @@ def build_order(convo, cart, payment_method: str) -> dict:
             "line_total": round(l["qty"] * l["unit_price"], 2),
             "mods": l["mods"],
         })
-    return {
+    order = {
         "order_id": oid,
         "business": BUSINESS_SLUG,
         "channel": "whatsapp",
@@ -850,6 +1145,15 @@ def build_order(convo, cart, payment_method: str) -> dict:
         "payment_method": payment_method,  # 'cash' | 'transfer'
         "status": "new",
     }
+    # Prep time (2026-10-26): a chosen slot rides the order end to
+    # end — kds_push maps it onto the OS ticket, order-service
+    # stores it on the row. ASAP keeps both keys OFF the order:
+    # the dict is exactly what it was before this feature.
+    if cart.get("requested_for"):
+        order["requested_for"] = cart["requested_for"]
+        order["requested_for_label"] = \
+            cart.get("requested_for_label")
+    return order
 
 
 def _finalize(convo, cart, payment_method: str, lang: str) -> str:
@@ -864,9 +1168,16 @@ def _finalize(convo, cart, payment_method: str, lang: str) -> str:
               flush=True)
     convo.shop_cart = None
     total = _fmt(order["total"])
+    when_line = ""
+    if order.get("requested_for"):
+        _label = order.get("requested_for_label") or ""
+        when_line = (f"\n⏰ We'll prepare it for {_label}."
+                     if lang == "en" else
+                     f"\n⏰ Te lo preparamos para las {_label}.")
     if lang == "en":
         head = (f"Order confirmed! 🎉\nOrder {order['order_id']} — "
-                f"*Total: {total}*\n📍 Pickup at Rich Aroma, Quimistán.")
+                f"*Total: {total}*\n📍 Pickup at Rich Aroma, "
+                "Quimistán.") + when_line
         if payment_method == "transfer":
             return (head + "\n🏦 Pay by transfer — the team will "
                     "share the account details here and verify it; "
@@ -875,7 +1186,7 @@ def _finalize(convo, cart, payment_method: str, lang: str) -> str:
                 "message you here when it's ready 😊")
     head = (f"¡Pedido confirmado! 🎉\nPedido {order['order_id']} — "
             f"*Total: {total}*\n📍 Para recoger en Rich Aroma, "
-            "Quimistán.")
+            "Quimistán.") + when_line
     if payment_method == "transfer":
         return (head + "\n🏦 Pagás por transferencia — el equipo te "
                 "pasa los datos de la cuenta por acá, la verifica, "
@@ -932,6 +1243,14 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
                         if lang != "en" else
                         "Got it ✅\n" + _summary(cart)
                         + "\nAnything else? Type 'listo' to confirm.")
+
+    if cart["stage"] == "when":
+        _wr = _answer_when(convo, cart, catalog, text, lang)
+        if _wr is not None:
+            return _wr
+        # Moved on to a different item: the stage reverted to
+        # collecting inside _answer_when and this message is
+        # processed as a fresh collecting turn below.
 
     if cart["stage"] == "paying":
         if tn.strip(" .!") in ("no", "n"):
@@ -1027,16 +1346,18 @@ def _handle_session(convo, text: str, catalog, lang: str) -> str:
                     if lang != "en" else
                     "Your order is empty — tell me what you'd like, "
                     "or type 'menu'.")
+        # Prep time (2026-10-26): with slots left today, ask WHEN
+        # before asking how they'll pay; with none left, the
+        # question is skipped — the order is simply ASAP.
+        slots = _prep_slots()
+        if slots:
+            cart["stage"] = "when"
+            cart["when_attempts"] = 0
+            cart["when_all"] = slots
+            cart["when_presented"] = slots[:PRESENTED_SLOTS]
+            return _when_question(cart, lang)
         cart["stage"] = "paying"
-        return ("Tu pedido:\n" + _summary(cart)
-                + "\n¿Cómo pagás?\n1️⃣ Al recoger (efectivo o "
-                  "tarjeta)\n2️⃣ Transferencia (el equipo la "
-                  "verifica)\nRespondé *1* o *2*."
-                if lang != "en" else
-                "Your order:\n" + _summary(cart)
-                + "\nHow will you pay?\n1️⃣ At pickup (cash or "
-                  "card)\n2️⃣ Transfer (the team verifies it)\n"
-                  "Reply *1* or *2*.")
+        return _payment_question(cart, lang)
     return ("No reconocí ese artículo 🙏 Tu pedido sigue así:\n"
             + _summary(cart)
             + "\nEscribí 'menú' para ver las opciones, o 'listo' "
