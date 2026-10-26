@@ -166,6 +166,77 @@ module.exports = async (req, res) => {
         return (data && data[0]) || null;
     }
 
+    // --- CREADORES: signup-word attribution (first-touch) ---
+    // Every creator in the Creadores program gets a signup WORD. A
+    // customer who arrives carrying it is attributed to that creator
+    // (creators earn a share of attributed customers' sales — the
+    // earnings math itself is the month-2 build; this build only
+    // CAPTURES, because a month of unattributed signups is data lost
+    // forever). Attribution is FIRST-TOUCH and permanent:
+    // customer_attribution is insert-once — its customer_id PRIMARY
+    // KEY is the rule — and this helper NEVER updates it; a later
+    // word is answered, not written.
+    // Normalization is one function used in BOTH directions (staff
+    // creating a code, customers sending a word): trim, single token,
+    // UPPERCASE, diacritics stripped (NFD + combining-mark removal
+    // turns Á→A and Ñ→N). "Capitán", "capitan" and "CAPITÁN" are one
+    // word. Surrounding punctuation and a leading @/# are dropped so
+    // a word copied off a flyer still matches; anything with inner
+    // whitespace or nothing left after cleanup is not a word ('').
+    function normalizeWord(raw) {
+        if (raw == null) return '';
+        let w = String(raw).trim();
+        if (!w || /\s/.test(w)) return '';
+        w = w.replace(/^[@#]+/, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+        w = w.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        if (!w || /\s/.test(w) || !/^[\p{L}\p{N}]+$/u.test(w)) return '';
+        return w;
+    }
+    async function attributeCustomer(customerId, wordRaw, channel) {
+        const word = normalizeWord(wordRaw);
+        if (!customerId) return { attributed: false, reason: 'unknown_word' };
+        // First touch wins over everything: an existing row answers
+        // for ANY later word (valid, invalid, unparseable or retired).
+        const { data: existing } = await supabase.from('customer_attribution')
+            .select('*').eq('customer_id', customerId).maybeSingle();
+        if (existing) {
+            let existingName = existing.creator_code;
+            const { data: ec } = await supabase.from('creator_codes')
+                .select('creator_name').eq('code', existing.creator_code).maybeSingle();
+            if (ec && ec.creator_name) existingName = ec.creator_name;
+            return { attributed: false, reason: 'already_attributed', creator_name: existingName };
+        }
+        if (!word) return { attributed: false, reason: 'unknown_word' };
+        const { data: codeRow } = await supabase.from('creator_codes')
+            .select('*').eq('code', word).maybeSingle();
+        if (!codeRow) return { attributed: false, reason: 'unknown_word' };
+        if (!codeRow.is_active) return { attributed: false, reason: 'inactive_code', creator_name: codeRow.creator_name };
+        const { error } = await supabase.from('customer_attribution').insert({
+            customer_id: customerId,
+            creator_code: word,
+            word_raw: String(wordRaw || '').slice(0, 80),
+            channel: ['whatsapp', 'pos', 'web'].includes(channel) ? channel : 'whatsapp'
+        });
+        if (error) {
+            // The PRIMARY KEY is the backstop: a concurrent first
+            // touch won the race — report it as already_attributed
+            // and never overwrite.
+            if (error.code === '23505') {
+                const { data: row } = await supabase.from('customer_attribution')
+                    .select('*').eq('customer_id', customerId).maybeSingle();
+                let winner = row ? row.creator_code : null;
+                if (row) {
+                    const { data: wc } = await supabase.from('creator_codes')
+                        .select('creator_name').eq('code', row.creator_code).maybeSingle();
+                    if (wc && wc.creator_name) winner = wc.creator_name;
+                }
+                return { attributed: false, reason: 'already_attributed', creator_name: winner };
+            }
+            throw error;
+        }
+        return { attributed: true, creator_name: codeRow.creator_name };
+    }
+
     // --- MISIONES DEL CAPITÁN: purchase-unlocked UGC challenges ---
     // A PAID order containing a mission's trigger item unlocks that
     // mission for the customer (one OPEN assignment per customer,
@@ -1462,7 +1533,7 @@ module.exports = async (req, res) => {
 
         if (action === 'whatsapp_signup' && req.method === 'POST') {
             if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
-            const { name, birthday } = req.body || {};
+            const { name, birthday, ref_word } = req.body || {};
             const phoneToStore = normalizePhone(req.body?.phone);
             if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
 
@@ -1510,12 +1581,29 @@ module.exports = async (req, res) => {
                 .eq('customer_id', cust.id).eq('grant_type', 'welcome_bottle')
                 .maybeSingle();
             const grantCreated = false;
+            // Creadores: if the bot carried a signup word (ref_word),
+            // attempt first-touch attribution for this account. A
+            // failed attribution NEVER fails the signup: an unknown
+            // or retired word comes back 'silently null' — the
+            // customer was never promised anything, and their account
+            // is exactly as if no word had been sent.
+            let attribution = null;
+            if (ref_word) {
+                try {
+                    const att = await attributeCustomer(cust.id, ref_word, 'whatsapp');
+                    if (att && (att.attributed || att.reason === 'already_attributed')) attribution = att;
+                } catch (e) {
+                    console.warn('attribution attempt failed (signup unaffected):', e && e.message);
+                    attribution = null;
+                }
+            }
             return res.json({
                 ok: true,
                 created,
                 grantCreated,
                 customer: sanitizeCustomer(cust),
-                gift: grant ? { status: grant.status, amount: parseFloat(grant.amount) || 0 } : null
+                gift: grant ? { status: grant.status, amount: parseFloat(grant.amount) || 0 } : null,
+                attribution
             });
         }
 
@@ -1548,6 +1636,23 @@ module.exports = async (req, res) => {
             }).select().single();
             if (error) throw error;
             return res.json({ ok: true, preorder: data });
+        }
+
+        // --- CREADORES: bind a signup word to an EXISTING account ---
+        // Same gate as the intro actions: botSecretOk(). Used when a
+        // customer who already signed up sends a creator's word (or
+        // sends it after their signup completed). First-touch rules
+        // live in attributeCustomer: a second word never overwrites.
+        // Answers mirror the helper's reasons so the bot can render
+        // each one kindly; no_customer is the only bot-level reason.
+        if (action === 'whatsapp_attribute' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.json({ ok: false, reason: 'no_customer' });
+            const att = await attributeCustomer(cust.id, req.body?.word, 'whatsapp');
+            return res.json({ ok: !!att.attributed, ...att });
         }
 
         // --- MISIONES DEL CAPITÁN (bot side) ---
@@ -1801,6 +1906,65 @@ module.exports = async (req, res) => {
                 .select().single();
             if (uErr) throw uErr;
             return res.json({ ok: true, preorder: updated });
+        }
+
+        // --- ADMIN: CREADORES — creator signup words ---
+        // Staff-only (requireStaff, SEC-FIX 1) — the bot secret does
+        // NOT unlock any of this. One action, three ops:
+        //   list       — every code with its attribution count
+        //   create     — normalize + insert a creator's word
+        //                (duplicate word -> 409)
+        //   deactivate — retire a word (binds nobody new; existing
+        //                attributions are history and stay)
+        // Earnings, standings and the Creadores admin view are the
+        // month-2 build; this is the codes registry the capture
+        // stands on.
+        if (action === 'admin_creator_codes' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
+            const b = req.body || {};
+            const op = String(b.op || 'list');
+            if (op === 'list') {
+                const { data: codes, error } = await supabase.from('creator_codes')
+                    .select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                const { data: attrs } = await supabase.from('customer_attribution').select('creator_code');
+                const counts = {};
+                (attrs || []).forEach(a => { counts[a.creator_code] = (counts[a.creator_code] || 0) + 1; });
+                return res.json({
+                    ok: true,
+                    codes: (codes || []).map(c => ({ ...c, attributions: counts[c.code] || 0 }))
+                });
+            }
+            if (op === 'create') {
+                const code = normalizeWord(b.code || b.word);
+                const creatorName = String(b.creator_name || '').trim().slice(0, 80);
+                if (!code) return res.status(400).json({ error: 'code requerido (una sola palabra)' });
+                if (!creatorName) return res.status(400).json({ error: 'creator_name requerido' });
+                const { data: existing } = await supabase.from('creator_codes')
+                    .select('code').eq('code', code).maybeSingle();
+                if (existing) return res.status(409).json({ error: 'Ese código ya existe' });
+                const { data, error } = await supabase.from('creator_codes').insert({
+                    code,
+                    creator_name: creatorName,
+                    creator_customer_id: b.creator_customer_id || null,
+                    is_active: true
+                }).select().single();
+                if (error) {
+                    if (error.code === '23505') return res.status(409).json({ error: 'Ese código ya existe' });
+                    throw error;
+                }
+                return res.json({ ok: true, code: data });
+            }
+            if (op === 'deactivate') {
+                const code = normalizeWord(b.code || b.word);
+                if (!code) return res.status(400).json({ error: 'code requerido' });
+                const { data, error } = await supabase.from('creator_codes')
+                    .update({ is_active: false }).eq('code', code).select();
+                if (error) throw error;
+                if (!data || data.length === 0) return res.status(404).json({ error: 'Código no encontrado' });
+                return res.json({ ok: true, code: data[0] });
+            }
+            return res.status(400).json({ error: 'op no soportada' });
         }
 
         // --- ADMIN: MISIONES DEL CAPITÁN ---
