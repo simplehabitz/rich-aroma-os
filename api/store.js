@@ -392,7 +392,17 @@ module.exports = async (req, res) => {
             if (order.status !== 'ready' && order.status !== 'cancelled') return false;
             const url = (process.env.BOT_NOTIFY_URL || '').trim();
             const secret = (process.env.WHATSAPP_SIGNUP_SECRET || '').trim();
-            if (!url || !secret) return false;
+            if (!url || !secret) {
+                // A WhatsApp customer is owed a message and the hook
+                // cannot run — say so LOUDLY in the function logs.
+                // (2026-10-26: notifications died silently in
+                // production because this gate returned false without
+                // a trace; the PATCH still succeeded, so the KDS/POS
+                // looked fine and nobody could see why no message
+                // ever arrived.)
+                console.error(`[Notify] SKIPPED order ${order.order_number || order.id} (${order.status}): ${!url ? 'BOT_NOTIFY_URL' : 'WHATSAPP_SIGNUP_SECRET'} not configured in this deployment's env`);
+                return false;
+            }
             let phone = '';
             if (order.customer_id) {
                 const { data: cust } = await supabase.from('customers')
@@ -403,7 +413,10 @@ module.exports = async (req, res) => {
                 const m = /\[TEL:\s*([^\]]+)\]/.exec(order.notes || '');
                 if (m) phone = m[1].trim();
             }
-            if (!phone) return false;
+            if (!phone) {
+                console.error(`[Notify] SKIPPED order ${order.order_number || order.id} (${order.status}): no customer phone (customer_id=${order.customer_id || 'none'}, no [TEL:] in notes)`);
+                return false;
+            }
             const reason = String(order.cancel_reason || order.cancellation_reason || '').trim();
             const resp = await fetch(url, {
                 method: 'POST',
@@ -416,7 +429,14 @@ module.exports = async (req, res) => {
                     ...(reason ? { reason } : {}),
                 }),
             });
-            return !!(resp && resp.ok);
+            if (!resp || !resp.ok) {
+                // A bot-side rejection (bad secret, bad payload,
+                // Meta send failure) used to vanish into this bare
+                // false — log the status so the logs name the gate.
+                console.error(`[Notify] bot endpoint answered HTTP ${resp ? resp.status : 'no-response'} for order ${order.order_number || order.id} (${order.status})`);
+                return false;
+            }
+            return true;
         } catch (e) {
             console.error('[Notify] bot notify failed (order unaffected):', e && e.message);
             return false;
@@ -2844,6 +2864,11 @@ module.exports = async (req, res) => {
                 .single();
 
             if (error) throw error;
+            // NOTIFICACIONES (bot-finalize): same hook as order_update
+            // — a flip to ready/cancelled owes a WhatsApp customer
+            // their message no matter which surface set it (this
+            // action previously flipped status with no hook at all).
+            if (data && (data.status === 'ready' || data.status === 'cancelled')) await notifyBotOrderStatus(data);
             return res.json({ success: true, order: data });
         }
 
