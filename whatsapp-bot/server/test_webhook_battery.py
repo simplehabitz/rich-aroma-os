@@ -47,6 +47,13 @@ monkeypatched: payloads are captured, never sent. What is pinned:
   W18 ffmpeg resolution (voice-fix): PATH wins when present;
       with PATH empty the imageio-ffmpeg bundled binary resolves,
       and the PCM->OGG conversion runs exactly that binary.
+  W19 speech normalization: prices expand for the TTS model
+      only — "L.350" is spoken "350 lempiras", "L.1" as the words
+      "un lempira", "L.1,400" as "1400 lempiras", "$" as dólares/
+      dollars by lang; a bare "L", times and phone numbers pass
+      through; the synth cache keys on the normalized text;
+      every mood direction carries the Honduran accent clause;
+      a TTS failure still delivers the ORIGINAL "L.350" text.
 
 Run:  python3 server/test_webhook_battery.py
 """
@@ -358,8 +365,8 @@ def w10_mirror_plain_reply_goes_audio():
     calls = capture()
     spoken = []
     orig_s = voice.speak
-    voice.speak = lambda pid, text: (spoken.append(text),
-                                     "MEDIA_OUT_9")[1]
+    voice.speak = lambda pid, text, *a, **k: (spoken.append(text),
+                                              "MEDIA_OUT_9")[1]
     try:
         webhook.deliver_reply(PID, TO, "Anotado ✅", voice=True)
     finally:
@@ -377,7 +384,7 @@ def w11_voice_order_end_to_end():
     orig_t, orig_s = voice.transcribe_media, voice.speak
     voice.transcribe_media = lambda mid: "quiero un latte"
 
-    def fake_speak(pid, text):
+    def fake_speak(pid, text, *a, **k):
         spoken.append(text)
         return "MEDIA_OUT_1"
     voice.speak = fake_speak
@@ -410,8 +417,8 @@ def w11_voice_order_end_to_end():
 def _speak_spy():
     seen = []
     orig = voice.speak
-    voice.speak = lambda pid, text: (seen.append(text),
-                                     "MEDIA_X")[1]
+    voice.speak = lambda pid, text, *a, **k: (seen.append(text),
+                                              "MEDIA_X")[1]
     return seen, orig
 
 
@@ -444,7 +451,7 @@ def w14_tts_failure_falls_back_to_text():
     calls = capture()
     orig = voice.speak
 
-    def boom(pid, text):
+    def boom(pid, text, *a, **k):
         raise RuntimeError("simulated TTS outage")
     voice.speak = boom
     try:
@@ -636,6 +643,98 @@ def w18_ffmpeg_resolution():
             sys.modules["imageio_ffmpeg"] = _saved_mod
 
 
+# ---------------------------------- speech normalization (W19)
+
+_ACCENT_PHRASE = "con acento hondureño centroamericano natural"
+
+
+def _tts_capture():
+    """Mock the two seams under synthesize_ogg: _gemini_call
+    records the EXACT string the TTS model would read and returns
+    a fake PCM part; _pcm_to_ogg passes through. Returns
+    (seen_texts, restore). The synth cache is cleared so every
+    call really synthesizes."""
+    seen = []
+    orig_g, orig_c = voice._gemini_call, voice._pcm_to_ogg
+
+    def fake_gemini(model, body):
+        seen.append(body["contents"][0]["parts"][0]["text"])
+        import base64 as _b64
+        return {"candidates": [{"content": {"parts": [
+            {"inlineData": {
+                "data": _b64.b64encode(b"pcm").decode()}}]}}]}
+    voice._gemini_call = fake_gemini
+    voice._pcm_to_ogg = lambda pcm: b"OGG"
+    voice._synth_cache.clear()
+
+    def restore():
+        voice._gemini_call, voice._pcm_to_ogg = orig_g, orig_c
+        voice._synth_cache.clear()
+    return seen, restore
+
+
+def w19_speech_normalization():
+    n = voice.normalize_for_speech
+    check("W19a", n("Total: L.350") == "Total: 350 lempiras",
+          n("Total: L.350"))
+    check("W19b", n("L.1") == "un lempira", n("L.1"))
+    check("W19c", n("L.1,400") == "1400 lempiras", n("L.1,400"))
+    check("W19d", n("L. 350") == "350 lempiras"
+          and n("L350") == "350 lempiras",
+          f"{n('L. 350')} / {n('L350')}")
+    check("W19e", n("$5", "es") == "5 dólares"
+          and n("$5", "en") == "5 dollars"
+          and n("$ 22", "es") == "22 dólares",
+          f"{n('$5', 'es')} / {n('$5', 'en')} / {n('$ 22', 'es')}")
+    untouched = ("¿Lo querés en talla L?", "Te lo tengo a las "
+                 "12:30 PM", "Escribinos al 504 9905-4412",
+                 "50% de descuento hoy")
+    check("W19f", all(n(t) == t for t in untouched),
+          str([n(t) for t in untouched]))
+    check("W19g", all(_ACCENT_PHRASE in d
+                      for d in voice.MOODS.values()),
+          str(list(voice.MOODS.values())))
+
+    # The string the TTS model actually receives: normalized,
+    # accent-directed, no "L." remnant.
+    seen, restore = _tts_capture()
+    try:
+        ogg = voice.synthesize_ogg("Total: L.350", mood="mediodia")
+        check("W19h", ogg == b"OGG" and len(seen) == 1
+              and seen[0] == voice.MOODS["mediodia"]
+              + "Total: 350 lempiras"
+              and _ACCENT_PHRASE in seen[0]
+              and "L." not in seen[0].split(": ", 1)[-1],
+              str(seen))
+        # Cache keys on the NORMALIZED text: a differently
+        # written price that normalizes identically hits.
+        voice.synthesize_ogg("Total: L. 350", mood="mediodia")
+        check("W19i", len(seen) == 1, f"gemini calls={len(seen)}")
+        # A non-price "L" reaches the model unchanged.
+        voice.synthesize_ogg("¿Lo querés en talla L?",
+                             mood="mediodia")
+        check("W19j", len(seen) == 2
+              and seen[1].endswith("¿Lo querés en talla L?"),
+              str(seen))
+    finally:
+        restore()
+
+    # TTS failure: the ORIGINAL text goes out, "L.350" intact.
+    calls = capture()
+    orig = voice.speak
+
+    def boom(pid, text, *a, **k):
+        raise RuntimeError("simulated TTS outage")
+    voice.speak = boom
+    try:
+        webhook.deliver_reply(PID, TO, "Total: L.350", voice=True)
+    finally:
+        voice.speak = orig
+    check("W19k", len(calls) == 1 and calls[0].get("type") == "text"
+          and calls[0]["text"]["body"] == "Total: L.350",
+          f"calls={str(calls)[:200]}")
+
+
 def main():
     for fn in (w1_list_payload, w2_interactive_failure_falls_back,
                w3_cta_payload, w4_plain_string, w5_inbound_list_reply,
@@ -650,7 +749,8 @@ def main():
                w15_exclusions_and_typed_turns,
                w16_mood_clock,
                w17_no_vault_paths,
-               w18_ffmpeg_resolution):
+               w18_ffmpeg_resolution,
+               w19_speech_normalization):
         try:
             fn()
         except Exception as e:

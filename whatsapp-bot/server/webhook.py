@@ -150,7 +150,8 @@ def send_whatsapp_interactive(phone_number_id: str, to: str, reply):
     })
 
 
-def _try_speak(phone_number_id: str, to: str, text: str):
+def _try_speak(phone_number_id: str, to: str, text: str,
+               lang: str = "es"):
     """Mirror rule (server/voice.py): speak a plain-text reply to
     a voice-originated turn. Returns the Graph result when the
     voice note went out; None when the reply must stay text —
@@ -166,7 +167,7 @@ def _try_speak(phone_number_id: str, to: str, text: str):
         print(f"[Voice] reply stays text ({why})", flush=True)
         return None
     try:
-        media_id = voice_mod.speak(phone_number_id, text)
+        media_id = voice_mod.speak(phone_number_id, text, lang=lang)
         return send_whatsapp_audio(phone_number_id, to, media_id)
     except Exception as e:
         print(f"[Voice] speak failed, text fallback: {e}", flush=True)
@@ -174,7 +175,7 @@ def _try_speak(phone_number_id: str, to: str, text: str):
 
 
 def deliver_reply(phone_number_id: str, to: str, reply,
-                  voice: bool = False):
+                  voice: bool = False, lang: str = "es"):
     """Deliver one engine reply. A WaReply goes out as its
     interactive message; ANY failure (API error, a client that
     can't render it) falls back to the reply's plain-text
@@ -195,7 +196,7 @@ def deliver_reply(phone_number_id: str, to: str, reply,
             return send_whatsapp_text(phone_number_id, to,
                                       reply.fallback_text())
     if voice:
-        spoken = _try_speak(phone_number_id, to, reply)
+        spoken = _try_speak(phone_number_id, to, reply, lang=lang)
         if spoken is not None:
             return spoken
     return send_whatsapp_text(phone_number_id, to, reply)
@@ -230,7 +231,8 @@ def handle_intro_message(from_number: str, text: str, phone_number_id: str,
     convo.last_turn_voice = bool(voice_turn)
     reply = reply_for_intro(convo, text)
     return deliver_reply(phone_number_id, from_number, reply,
-                         voice=bool(convo.last_turn_voice))
+                         voice=bool(convo.last_turn_voice),
+                         lang=(getattr(convo, "lang", None) or "es"))
 
 
 def handle_order_message(from_number: str, text: str, phone_number_id: str,

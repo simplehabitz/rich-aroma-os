@@ -41,6 +41,17 @@ on this host"), so the package in requirements.txt is how the
 deployed bot converts. Absent both: the loud NOT FOUND log and
 the text fallback, exactly as before.
 
+Speech normalization (normalize_for_speech): before synthesis,
+currency symbols in the SPOKEN copy expand to words — "L.350"
+is said as "350 lempiras", "L.1" as "un lempira", "$5" as
+"5 dólares" / "5 dollars" — the way "$" reads as dollars
+(owner's rule, 2026-10-26: the TTS model otherwise reads the
+letter "L" aloud in Spanish). The
+normalization touches ONLY the string handed to the TTS model:
+text sends and the text fallback always carry the original
+"L.350" untouched, and the synth cache keys on the normalized
+text, i.e. on what is actually spoken.
+
 /order-notify does NOT come through here: ready/cancelled
 notifications stay text in v1, exactly as before.
 """
@@ -71,16 +82,21 @@ MAX_SPOKEN_CHARS = 400
 MAX_AUDIO_BYTES = 20 * 1024 * 1024  # a voice note is seconds long;
 # anything near this is not one — refuse it before base64 inflation
 
-# Mood directions — the EXACT phrasings from the voice audition
-# (voice-audition/make_audition.py), so what the owner approved by
-# ear is what ships.
+# Mood directions — the phrasings from the voice audition
+# (voice-audition/make_audition.py), so what the owner approved
+# by ear is what ships — plus the owner's Honduran accent clause
+# (2026-10-26) appended to every mood, riding the same direction
+# channel. A nudge for the model, to be judged by ear.
+_ACCENT = ", con acento hondureño centroamericano natural"
 MOODS = {
     "despertando": ("Say it warm and a little sleepy, unhurried, "
-                    "like you just woke up and are opening the shop: "),
+                    "like you just woke up and are opening the shop"
+                    + _ACCENT + ": "),
     "mediodia": ("Say it bright, upbeat and quick, full midday "
-                 "energy, ready for anything: "),
+                 "energy, ready for anything" + _ACCENT + ": "),
     "fiesta": ("Say it playful and cheeky, festive after-hours "
-               "energy, like you are out on the town having fun: "),
+               "energy, like you are out on the town having fun"
+               + _ACCENT + ": "),
 }
 
 TRANSCRIBE_INSTRUCTION = (
@@ -286,6 +302,48 @@ def speakable(text):
     return True, ""
 
 
+# A lempira price: "L.350", "L. 350", "L350", "L.1,400" (a
+# trailing ".00" is dropped). A digit MUST follow the L (plus its
+# optional dot/space) — a stray "L" (sizes, initials) has none and
+# is left alone — and the L may not be glued to a preceding word
+# character or "$".
+_LEMPIRA_PRICE = re.compile(
+    r"(?<![\w$])L\.?\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.00)?")
+_DOLLAR_PRICE = re.compile(r"\$\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.00)?")
+
+
+def _spoken_amount(match, singular, plural):
+    digits = match.group(1).replace(",", "")
+    return f"{digits} {singular if int(digits) == 1 else plural}"
+
+
+def _spoken_lempira(match):
+    digits = match.group(1).replace(",", "")
+    # Owner's rule: a single lempira is spoken as the words
+    # "un lempira" (masculine) — no numeral, never "una".
+    if int(digits) == 1:
+        return "un lempira"
+    return f"{digits} lempiras"
+
+
+def normalize_for_speech(text: str, lang: str = "es") -> str:
+    """Expand currency symbols in the string the TTS model will
+    read: lempira prices gain the word lempiras — a value of
+    exactly 1 becomes the words "un lempira" — and dollar prices
+    dólares/dollars by lang. Everything else — %, times
+    ("12:30 PM"), phone numbers, a bare "L" with no amount after
+    it — passes through untouched. Applied ONLY to the TTS input
+    inside synthesize_ogg; the original text is what text sends
+    and the text fallback carry."""
+    if not isinstance(text, str) or not text:
+        return text
+    en = (lang or "es").strip().lower().startswith("en")
+    text = _LEMPIRA_PRICE.sub(_spoken_lempira, text)
+    dollar = ("dollar", "dollars") if en else ("dólar", "dólares")
+    return _DOLLAR_PRICE.sub(
+        lambda m: _spoken_amount(m, *dollar), text)
+
+
 _ffmpeg = False   # False = unresolved; None = looked, not found
 
 
@@ -332,19 +390,24 @@ def _pcm_to_ogg(pcm: bytes) -> bytes:
             return f.read()
 
 
-def synthesize_ogg(text: str, mood: str = None) -> bytes:
-    """Text -> OGG/Opus bytes in Capitán Rico's voice. Cached per
-    process by (mood, text): fixed lines are synthesized once.
-    Raises on ANY failure — the webhook falls back to text."""
+def synthesize_ogg(text: str, mood: str = None,
+                   lang: str = "es") -> bytes:
+    """Text -> OGG/Opus bytes in Capitán Rico's voice. The text
+    is normalized for speech first (currency symbols -> words:
+    normalize_for_speech) and the cache keys on (mood, normalized
+    text) — on what is actually spoken — so fixed lines are
+    synthesized once however their prices were written. Raises on
+    ANY failure — the webhook falls back to the ORIGINAL text."""
     mood = mood or mood_for(_now_tegucigalpa())
+    spoken = normalize_for_speech(text, lang)
     key = hashlib.sha256(
-        (mood + "\x00" + text).encode("utf-8")).hexdigest()
+        (mood + "\x00" + spoken).encode("utf-8")).hexdigest()
     if key in _synth_cache:
         print(f"[Voice] synth cache hit (mood={mood})", flush=True)
         return _synth_cache[key]
     body = {
         "contents": [{"role": "user",
-                      "parts": [{"text": MOODS[mood] + text}]}],
+                      "parts": [{"text": MOODS[mood] + spoken}]}],
         "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {
@@ -358,7 +421,7 @@ def synthesize_ogg(text: str, mood: str = None) -> bytes:
     if len(_synth_cache) >= 128:
         _synth_cache.clear()
     _synth_cache[key] = ogg
-    print(f"[Voice] synthesized {len(text)} chars "
+    print(f"[Voice] synthesized {len(spoken)} chars "
           f"(mood={mood}, {len(ogg)} bytes ogg)", flush=True)
     return ogg
 
@@ -397,10 +460,10 @@ def upload_media(phone_number_id: str, ogg: bytes) -> str:
     return media_id
 
 
-def speak(phone_number_id: str, text: str) -> str:
+def speak(phone_number_id: str, text: str, lang: str = "es") -> str:
     """Text -> uploaded voice note; returns the media id for the
     webhook's audio send. Raises on any failure (text fallback)."""
-    ogg = synthesize_ogg(text)
+    ogg = synthesize_ogg(text, lang=lang)
     media_id = upload_media(phone_number_id, ogg)
     print(f"[Voice] voice note uploaded (media {media_id})",
           flush=True)
