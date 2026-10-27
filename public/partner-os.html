@@ -535,11 +535,25 @@
                 </div>
 
                 <div id="sett-bank-fields" class="hidden space-y-3 p-4 bg-black/20 rounded-2xl border border-white/5">
-                    <p class="text-[9px] font-black text-white/40 uppercase tracking-widest">Cuenta de Transferencia</p>
+                    <p class="text-[9px] font-black text-white/40 uppercase tracking-widest">Cuentas de Transferencia (hasta 3)</p>
+                    <p class="text-[10px] text-white/40">El cliente transfiere a la cuenta de SU banco (mismo banco = al instante) y confirma el banco al pagar.</p>
                     <div class="space-y-2">
-                        <input type="text" id="sett-bank-name" placeholder="Banco (e.g. BAC, Occidente)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">Cuenta 1</p>
+                        <input type="text" id="sett-bank-name" placeholder="Banco (e.g. BanPais, BAC)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
                         <input type="text" id="sett-bank-acc" placeholder="Número de Cuenta" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
                         <input type="text" id="sett-bank-owner" placeholder="Nombre del Titular" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">Cuenta 2</p>
+                        <input type="text" id="sett-bank2-name" placeholder="Banco (e.g. BanPais, BAC)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank2-acc" placeholder="Número de Cuenta" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank2-owner" placeholder="Nombre del Titular" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                    </div>
+                    <div class="space-y-2">
+                        <p class="text-[9px] font-black text-white/30 uppercase tracking-widest">Cuenta 3</p>
+                        <input type="text" id="sett-bank3-name" placeholder="Banco (e.g. BanPais, BAC)" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank3-acc" placeholder="Número de Cuenta" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
+                        <input type="text" id="sett-bank3-owner" placeholder="Nombre del Titular" class="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-cyan">
                     </div>
                 </div>
 
@@ -1843,10 +1857,23 @@
             document.getElementById('sett-pay-card').checked = !!accepted.card;
             document.getElementById('sett-pay-rico').checked = !!accepted.rico;
 
-            // Populate bank details
-            document.getElementById('sett-bank-name').value = bank.name || '';
-            document.getElementById('sett-bank-acc').value = bank.account || '';
-            document.getElementById('sett-bank-owner').value = bank.owner || '';
+            // Populate bank accounts (multi-bank): the bank_accounts
+            // array wins; without it, the legacy single bank_details
+            // record shows as block 1.
+            const bankAccountsList = (Array.isArray(settings.bank_accounts) && settings.bank_accounts.length)
+                ? settings.bank_accounts
+                : ((bank.name || bank.account || bank.owner)
+                    ? [{ bank: bank.name || '', account: bank.account || '', owner: bank.owner || '' }]
+                    : []);
+            [['sett-bank-name', 'sett-bank-acc', 'sett-bank-owner'],
+             ['sett-bank2-name', 'sett-bank2-acc', 'sett-bank2-owner'],
+             ['sett-bank3-name', 'sett-bank3-acc', 'sett-bank3-owner']
+            ].forEach(function(ids, i) {
+                const a = bankAccountsList[i] || {};
+                document.getElementById(ids[0]).value = a.bank || '';
+                document.getElementById(ids[1]).value = a.account || '';
+                document.getElementById(ids[2]).value = a.owner || '';
+            });
 
             // Populate Gacha Campaign
             document.getElementById('sett-gacha-active').checked = !!campaign.isActive;
@@ -1937,6 +1964,23 @@
                 owner: document.getElementById('sett-bank-owner').value.trim()
             };
 
+            // Multi-bank: the 3 account blocks; only blocks with
+            // something written are sent. The OS stores the array
+            // (settings.bank_accounts) and mirrors block 1 into
+            // bank_details, so bankDetails above stays as the
+            // block-1 copy for older OS builds.
+            const bankAccounts = [['sett-bank-name', 'sett-bank-acc', 'sett-bank-owner'],
+                                  ['sett-bank2-name', 'sett-bank2-acc', 'sett-bank2-owner'],
+                                  ['sett-bank3-name', 'sett-bank3-acc', 'sett-bank3-owner']]
+                .map(function(ids) {
+                    return {
+                        bank: document.getElementById(ids[0]).value.trim(),
+                        account: document.getElementById(ids[1]).value.trim(),
+                        owner: document.getElementById(ids[2]).value.trim()
+                    };
+                })
+                .filter(function(a) { return a.bank || a.account || a.owner; });
+
             const gachaCampaign = {
                 isActive: document.getElementById('sett-gacha-active').checked,
                 itemId: document.getElementById('sett-gacha-item-id').value || '',
@@ -1973,6 +2017,7 @@
                         restaurantId: session.restaurantId,
                         acceptedPayments,
                         bankDetails,
+                        bankAccounts,
                         gachaCampaign,
                         operatingHours,
                         bookingLeadTime,

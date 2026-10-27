@@ -1443,7 +1443,13 @@
                 const boton = p.status === 'intent'
                     ? `<button onclick="confirmarPreventa('${p.id}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold block mt-1">Marcar pagado</button>`
                     : '';
-                return `<div class="mb-1">${resumen} — ${formatoLempiras(p.total)} <span class="text-gray-400">(${estado})</span>${boton}</div>`;
+                // Multi-bank: the bank the customer declared they
+                // transferred from — staff verify against THAT
+                // account before Marcar pagado.
+                const banco = p.payment_bank
+                    ? ` <span class="inline-block bg-cyan-100 text-cyan-800 text-[10px] font-bold px-1.5 py-0.5 rounded align-middle">🏦 ${escapeHtml(p.payment_bank)}</span>`
+                    : '';
+                return `<div class="mb-1">${resumen} — ${formatoLempiras(p.total)} <span class="text-gray-400">(${estado})</span>${banco}${boton}</div>`;
             }).join('');
         }
 
