@@ -68,6 +68,26 @@ class FakeOS:
                      "account": "200012345678",
                      "owner": "Rich Aroma S de RL"}
         self.bank_placeholder = False
+        # Multi-bank (2026-10-26): bank_accounts_mode selects the
+        # whatsapp_bank_details answer shape. "legacy" (default) is
+        # the pre-v2 single-record shape every older case runs
+        # against; "v2_two" is the real two-account world;
+        # "v2_mixed" returns a RAW accounts list carrying one
+        # placeholder entry next to one real account (the bot's own
+        # per-entry guard must filter it); "v2_all_placeholder" is
+        # zero real accounts. set_bank_calls records the canonical
+        # bank of every whatsapp_preventa_set_bank stamp.
+        self.bank_accounts_mode = "legacy"
+        self.set_bank_calls = []
+
+    def _real_bank_names(self):
+        if self.bank_accounts_mode == "v2_two":
+            return ["BanPais", "BAC"]
+        if self.bank_accounts_mode == "v2_mixed":
+            return ["BanPais"]
+        if self.bank_accounts_mode == "v2_all_placeholder":
+            return []
+        return [] if self.bank_placeholder else [self.bank["name"]]
 
     def seed(self, phone, name, gift=None):
         # `gift` is accepted for legacy case compat and IGNORED:
@@ -127,8 +147,53 @@ class FakeOS:
                              "waitlist_position": self.flight_waitlisted}
             return 200, {"ok": True, "preorder": row}
         if action == "whatsapp_bank_details":
+            if self.bank_accounts_mode == "v2_two":
+                accs = [{"bank": "BanPais", "account": "2100123456",
+                         "owner": "Rich Aroma S de RL"},
+                        {"bank": "BAC", "account": "730098765",
+                         "owner": "Rich Aroma S de RL"}]
+                return 200, {"ok": True, "placeholder": False,
+                             "accounts": accs,
+                             "bank_details": {"name": "BanPais",
+                                              "account": "2100123456",
+                                              "owner": "Rich Aroma S de RL"}}
+            if self.bank_accounts_mode == "v2_mixed":
+                # RAW on purpose: the placeholder entry rides along
+                # and the BOT must not print it (its per-entry
+                # structural guard — the OS filters too, defense in
+                # depth is the design).
+                accs = [{"bank": "BANK NAME",
+                         "account": "ACCOUNT NUMBER",
+                         "owner": "ACCOUNT HOLDER NAME"},
+                        {"bank": "BanPais", "account": "2100123456",
+                         "owner": "Rich Aroma S de RL"}]
+                return 200, {"ok": True, "placeholder": False,
+                             "accounts": accs,
+                             "bank_details": {"name": "BanPais",
+                                              "account": "2100123456",
+                                              "owner": "Rich Aroma S de RL"}}
+            if self.bank_accounts_mode == "v2_all_placeholder":
+                return 200, {"ok": True, "placeholder": True,
+                             "accounts": [],
+                             "bank_details": {
+                                 "name": "BANK NAME",
+                                 "account": "ACCOUNT NUMBER",
+                                 "owner": "ACCOUNT HOLDER NAME"}}
             return 200, {"ok": True, "bank_details": dict(self.bank),
                          "placeholder": self.bank_placeholder}
+        if action == "whatsapp_preventa_set_bank":
+            # Mirrors the OS: validate against the configured REAL
+            # accounts (case-insensitive), stamp the most recent
+            # preorder, answer in the data payload.
+            bank = str(payload.get("bank") or "")
+            match = next((b for b in self._real_bank_names()
+                          if b.lower() == bank.lower()), None)
+            if match is None:
+                return 200, {"ok": False, "updated": False}
+            if phone not in self.customers or not self.preorders:
+                return 200, {"ok": True, "updated": False}
+            self.set_bank_calls.append((phone, match))
+            return 200, {"ok": True, "updated": True}
         return 400, {"error": "unknown action"}
 
 
@@ -332,6 +397,98 @@ CASES = [
      {"reply_contains": "cumpleaños", "state": "ASK_BIRTHDAY",
       "os_actions": ["whatsapp_lookup"], "signup_count": 0,
       "no_reply_contains": ["EL FLIGHT DEL CAPITÁN"]}),
+
+    # ---- MULTI-BANK (2026-10-26) ----
+    # BK1: two configured accounts — the fast-lane payment message
+    # lists BOTH, numbered with bank names, and the reply is the
+    # interactive LIST carrying the one-tap bank ask.
+    ("BK1", "bank", [], "quiero mi flight",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": ["1️⃣ *BanPais* — cuenta 2100123456 "
+                         "a nombre de Rich Aroma S de RL",
+                         "2️⃣ *BAC* — cuenta 730098765",
+                         "15 minutos", "comprobante",
+                         "Respondé con el nombre"],
+      "final_reply_kind": "list",
+      "os_actions": ["whatsapp_lookup", "whatsapp_preventa",
+                     "whatsapp_bank_details"],
+      "state": "LOUNGE"}),
+    # BK2: the typed declaration ("transferí por BAC") is matched
+    # against the configured names and stamped via set_bank; the
+    # confirmation is the exact house line with the canonical name.
+    ("BK2", "bank", ["quiero mi flight"], "transferí por BAC",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": "Anotado: BAC ✅ el equipo lo confirma "
+                        "en minutos.",
+      "set_bank": ["BAC"], "state": "LOUNGE"}),
+    # BK3: the LIST tap arrives as its row id ("bank:bac") and is
+    # read exactly like the typed declaration.
+    ("BK3", "bank", ["quiero mi flight"], "bank:bac",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": "Anotado: BAC ✅ el equipo lo confirma "
+                        "en minutos.",
+      "set_bank": ["BAC"], "state": "LOUNGE"}),
+    # BK4: mixed placeholder+real in the v2 list — only the REAL
+    # account prints; the placeholder strings never reach her.
+    ("BK4", "bank", [], "quiero mi flight",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_mixed",
+      "reply_contains": ["BanPais", "2100123456"],
+      "reply_not_contains": "BAC",
+      "no_reply_contains": ["BANK NAME", "ACCOUNT NUMBER",
+                            "ACCOUNT HOLDER NAME"],
+      "state": "LOUNGE"}),
+    # BK5: zero real accounts in v2 -> the honest fallback line,
+    # unchanged, and no bank ask is opened (nothing to declare).
+    ("BK5", "bank", [], "quiero mi flight",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_all_placeholder",
+      "reply_contains": "te pasamos los datos de la cuenta por acá "
+                        "mismo en un momento",
+      "no_reply_contains": ["BANK NAME", "ACCOUNT NUMBER",
+                            "ACCOUNT HOLDER NAME"],
+      "set_bank": [], "state": "LOUNGE"}),
+    # BK6: a bank that is NOT configured is never stamped — the
+    # message falls through to the normal lounge flow and no
+    # set_bank call happens at all.
+    ("BK6", "bank", ["quiero mi flight"], "transferí por Ficohsa",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_not_contains": "Anotado:",
+      "set_bank": [], "state": "LOUNGE"}),
+    # BK7: no answer = nothing recorded. An unrelated follow-up
+    # after the payment message makes zero set_bank calls and the
+    # conversation carries on as before.
+    ("BK7", "bank", ["quiero mi flight"], "hola",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": "¡Hola, Carlos!",
+      "set_bank": [], "state": "LOUNGE"}),
+    # BK8: the STANDARD preventa path lists the accounts too,
+    # under the recorded text, with the declaration ask open.
+    ("BK8", "bank", [], "quiero 2 paquetes",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": ["L.700", "BanPais", "BAC", "2100123456"],
+      "preventa": (2, 0, 0), "state": "LOUNGE"}),
+    # BK9: ...and the bare bank name declares on that path too.
+    ("BK9", "bank", ["quiero 2 paquetes"], "BanPais",
+     {"seed_customer": {"name": "Carlos Mendoza"},
+      "bank_accounts": "v2_two",
+      "reply_contains": "Anotado: BanPais ✅ el equipo lo "
+                        "confirma en minutos.",
+      "set_bank": ["BanPais"], "state": "LOUNGE"}),
+    # BK10: a brand-new flight customer hears both accounts in the
+    # close (birthday skipped), numbered, after the deal flow.
+    ("BK10", "bank", ["Quiero mi Flight 🧳", "Ana María"], "saltar",
+     {"bank_accounts": "v2_two",
+      "reply_contains": ["1️⃣ *BanPais* — cuenta 2100123456",
+                         "2️⃣ *BAC* — cuenta 730098765",
+                         "15 minutos"],
+      "final_reply_kind": "list", "state": "LOUNGE"}),
 ]
 
 _n = [0]
@@ -351,6 +508,8 @@ def run_case(case):
         fake.bank_placeholder = True
         fake.bank = {"name": "BANK NAME", "account": "ACCOUNT NUMBER",
                      "owner": "ACCOUNT HOLDER NAME"}
+    if "bank_accounts" in expect:
+        fake.bank_accounts_mode = expect["bank_accounts"]
     os_client.set_transport(fake)
     saved = []
     intro_engine.save_order = lambda slug, rec: saved.append(rec)
@@ -365,7 +524,8 @@ def run_case(case):
     replies = []
     for m in setup:
         replies.append(_as_text(intro_engine.reply_for_intro(convo, m)))
-    reply = _as_text(intro_engine.reply_for_intro(convo, msg))
+    raw_reply = intro_engine.reply_for_intro(convo, msg)
+    reply = _as_text(raw_reply)
     replies.append(reply)
 
     ok = True
@@ -437,6 +597,18 @@ def run_case(case):
         if len(signups) != expect["signup_count"]:
             ok = False
             why.append(f"signup_count {len(signups)} != {expect['signup_count']}")
+    # ---- multi-bank keys (2026-10-26) ----
+    if "set_bank" in expect:
+        got_sb = [b for _, b in fake.set_bank_calls]
+        if got_sb != expect["set_bank"]:
+            ok = False
+            why.append(f"set_bank {got_sb} != {expect['set_bank']}")
+    if "final_reply_kind" in expect:
+        kind = getattr(raw_reply, "kind", None)
+        if kind != expect["final_reply_kind"]:
+            ok = False
+            why.append(f"final reply kind {kind!r} "
+                       f"!= {expect['final_reply_kind']!r}")
     if expect.get("no_grant"):
         if fake.grants:
             ok = False

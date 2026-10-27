@@ -180,6 +180,12 @@ class IntroConversation:
     # no count and no status it doesn't know).
     flight_lane: bool = False
     flight_result: Optional[dict] = field(default=None)
+    # Multi-bank: the canonical bank names of the REAL accounts as
+    # last listed in a payment message this conversation. Non-empty
+    # = the one-tap bank declaration ask is open: the LOUNGE branch
+    # matches the customer's next messages against these names.
+    # Cleared when a declaration is recorded; never re-asked.
+    bank_options: list = field(default_factory=list)
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
@@ -446,6 +452,22 @@ def _preventa_recorded_text(packs, bottles, boxes, lang: str) -> str:
             "nombre. 🙌")
 
 
+def _preventa_recorded_reply(convo: "IntroConversation", packs,
+                             bottles, boxes, lang: str):
+    """The standard preventa's recorded reply, MULTI-BANK: the
+    recorded text plus the same numbered accounts block the fast
+    lane prints, opening the same bank declaration ask (the
+    customer's declaration is matched in the LOUNGE). Zero real
+    accounts -> the recorded text alone, exactly as before."""
+    base = _preventa_recorded_text(packs, bottles, boxes, lang)
+    accounts = _fetch_bank_accounts()
+    if not accounts:
+        return base
+    convo.bank_options = [a["bank"] for a in accounts]
+    return _bank_ask_reply(
+        convo, base + "\n\n" + _accounts_block(accounts, lang), lang)
+
+
 def _menu_park_text(lang: str) -> str:
     # Reachable only when the shop engine has no catalog to serve
     # (fetch down / import not run yet). The menu EXISTS — it is
@@ -668,46 +690,225 @@ def _bank_details_usable(details: Optional[dict]) -> bool:
     return True
 
 
-def _flight_payment_text(result: Optional[dict], name: str,
-                         lang: str) -> str:
+# ------------------------------------------------------------- multi-bank
+# The shop lists ALL its real transfer accounts (BanPais + BAC at
+# launch, list open — settings.bank_accounts on the OS). The
+# customer transfers to the account matching THEIR bank (in-bank
+# transfers land instantly in Honduras) and declares which bank
+# they used with one tap; the declaration is stamped on the OS
+# preorder (payment_bank) so staff verifying payment in /admin
+# know which account to check. No answer = nothing recorded —
+# staff work from the comprobante exactly as before.
+
+_NUM_EMOJI = ("1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣")
+
+
+def _account_usable(a) -> bool:
+    """One v2 account entry through the same structural check as
+    _bank_details_usable: all three fields present, none a known
+    placeholder string. The OS already filters placeholders per
+    entry; this is the bot-side second guard, as with the legacy
+    single record."""
+    if not isinstance(a, dict):
+        return False
+    for field_name in ("bank", "account", "owner"):
+        value = str(a.get(field_name) or "").strip()
+        if not value or _norm_key(value) in _BANK_PLACEHOLDERS:
+            return False
+    return True
+
+
+def _fetch_bank_accounts() -> list:
+    """The shop's REAL transfer accounts via whatsapp_bank_details
+    v2: [{bank, account, owner}...], real entries only. A pre-v2 OS
+    answer (no `accounts` key in the payload) converts its single
+    legacy record through the same structural check, so the bot
+    works against either deploy. [] when nothing is printable
+    (placeholder / incomplete / OS down) — callers fall back to
+    the honest line, exactly as before."""
+    try:
+        resp = os_client.bank_accounts()
+        if not resp.get("ok"):
+            return []
+        raw = resp.get("data") or {}
+        if raw.get("placeholder"):
+            return []
+        accs = raw.get("accounts")
+        if isinstance(accs, list):
+            return [{"bank": str(a.get("bank") or "").strip(),
+                     "account": str(a.get("account") or "").strip(),
+                     "owner": str(a.get("owner") or "").strip()}
+                    for a in accs if _account_usable(a)]
+        legacy = raw.get("bank_details") or {}
+        single = {"bank": str(legacy.get("name") or "").strip(),
+                  "account": str(legacy.get("account") or "").strip(),
+                  "owner": str(legacy.get("owner") or "").strip()}
+        return [single] if _account_usable(single) else []
+    except Exception as exc:  # never let the read break the flow
+        print(f"[bank] accounts fetch failed: {exc}")
+        return []
+
+
+def _accounts_block(accounts: list, lang: str) -> str:
+    """The numbered accounts list shared by both preventa paths:
+    one line per real account, bank name first — transfer to the
+    account of YOUR bank."""
+    lines = []
+    for i, a in enumerate(accounts):
+        num = _NUM_EMOJI[i] if i < len(_NUM_EMOJI) else f"{i + 1}."
+        lines.append(f"{num} *{a['bank']}* — cuenta {a['account']} "
+                     f"a nombre de {a['owner']}")
+    if lang == "en":
+        head = ("💳 Transfer to your own bank's account "
+                "(same bank = instant):")
+    else:
+        head = ("💳 Transferí a la cuenta de tu banco "
+                "(mismo banco = al instante):")
+    return head + "\n" + "\n".join(lines)
+
+
+def _bank_ask_reply(convo: "IntroConversation", body: str, lang: str):
+    """Fold the one-tap bank question into a payment message: an
+    interactive LIST (the codebase's interactive pattern — a tap
+    comes back as the row id 'bank:<normkey>', read exactly like
+    typed text) with up to 3 options = the configured bank names,
+    plus the typed fallback spelled out in the text rendering
+    ("respondé BanPais o BAC"). Plain string when no options are
+    open — nothing to ask."""
+    options = convo.bank_options
+    if not options:
+        return body
+    if lang == "en":
+        names = " or ".join(f"*{b}*" for b in options)
+        ask = "\n\n❓ Which bank did you transfer from? Tap it below 👇"
+        fallback_ask = ("\n\n❓ Which bank did you transfer from? "
+                        f"Reply with the name: {names}.")
+        button, section_title = "Choose bank", "Your bank"
+    else:
+        names = " o ".join(f"*{b}*" for b in options)
+        ask = "\n\n❓ ¿De qué banco transferiste? Tocá el tuyo acá 👇"
+        fallback_ask = ("\n\n❓ ¿De qué banco transferiste? "
+                        f"Respondé con el nombre: {names}.")
+        button, section_title = "Elegir banco", "Tu banco"
+    rows = [{"id": "bank:" + _norm_key(b), "title": b}
+            for b in options[:3]]
+    return WaReply("list", body + ask, body + fallback_ask,
+                   button_text=button,
+                   sections=[{"title": section_title, "rows": rows}])
+
+
+def _join_reply(head: str, tail):
+    """head + blank line + tail, where tail may be a WaReply (the
+    bank ask): the head folds into BOTH of the tail's renderings,
+    so whichever one the customer sees tells the whole story."""
+    if isinstance(tail, WaReply):
+        return tail.prepend(head + "\n")
+    return head + "\n\n" + tail
+
+
+def _join_reply1(head: str, tail):
+    """head + single newline + tail (WaReply-aware, like
+    _join_reply)."""
+    if isinstance(tail, WaReply):
+        return tail.prepend(head)
+    return head + "\n" + tail
+
+
+# Words that may precede the bank name in a typed declaration
+# ("transferí por BAC", "pago de BanPais") without turning the
+# message into something else. A declaration ENDING in a bank name
+# whose other words are ALL filler matches; a real sentence that
+# merely mentions a bank ("quiero un latte y pago por BAC") does
+# not — it has non-filler words before the name.
+_BANK_DECL_HEAD = {"transferi", "transfiriendo", "pague", "pago",
+                   "deposite", "deposito", "desde", "por", "en",
+                   "el", "la", "mi", "banco", "cuenta"}
+
+
+def _match_bank_declaration(text: str, options: list):
+    """Match a customer message against the configured bank names
+    while the declaration ask is open. Returns the canonical
+    (configured) bank name, or None. Shapes: the LIST tap id
+    ('bank:<normkey>'), the bare bank name, or a short declaration
+    ending in the bank name over filler words only."""
+    t = _norm_key(text or "").strip()
+    if not t or not options:
+        return None
+    if t.startswith("bank:"):
+        key = t[len("bank:"):].strip()
+        for b in options:
+            if _norm_key(b) == key:
+                return b
+        return None
+    for b in options:
+        nb = _norm_key(b)
+        if t == nb:
+            return b
+        if t.endswith(nb):
+            head = t[: -len(nb)].strip(" ,.")
+            words = [w for w in head.split() if w]
+            if words and all(w in _BANK_DECL_HEAD for w in words):
+                return b
+    return None
+
+
+def _record_bank_declaration(convo: "IntroConversation",
+                             canonical: str) -> str:
+    """Fire whatsapp_preventa_set_bank and answer. The ask is
+    always closed by an answer — no loops; and when the OS can't
+    stamp it (row gone, unknown bank) the customer still gets a
+    kind confirmation: staff verify from the comprobante anyway."""
+    convo.bank_options = []
+    updated = False
+    try:
+        resp = os_client.set_preventa_bank(convo.customer_phone,
+                                           canonical)
+        updated = bool(resp.get("ok")
+                       and (resp.get("data") or {}).get("updated"))
+    except Exception as exc:
+        print(f"[bank] set_preventa_bank failed: {exc}")
+    if updated:
+        return (f"Anotado: {canonical} ✅ el equipo lo confirma "
+                f"en minutos.")
+    return ("¡Gracias! 🙏 El equipo lo confirma con tu comprobante "
+            "en minutos.")
+
+
+def _flight_payment_text(convo: "IntroConversation",
+                         result: Optional[dict], name: str,
+                         lang: str):
     """The lane's LAST message: transfer instructions + the hold
     copy. A waitlist verdict swaps in the no-payment line — nobody
-    pays for a cupo that doesn't exist yet."""
+    pays for a cupo that doesn't exist yet. MULTI-BANK: every REAL
+    account is listed, numbered by bank name, and the message
+    carries the one-tap bank declaration ask (the convo's
+    bank_options open here and the LOUNGE matcher reads the
+    answer). Zero real accounts -> the honest fallback line,
+    unchanged, and no ask."""
     first = (name or "").split()[0] if name else ""
     if result is not None and result.get("status") == "waitlist":
         return (f"Por ahora no transferás nada, {first} 🙏 Si se "
                 f"libera un cupo, escribinos y te lo confirmamos "
                 f"por acá mismo — y ahí sí cerramos con la "
                 f"transferencia 💛")
-    details = None
-    try:
-        resp = os_client.bank_details()
-        if resp.get("ok"):
-            raw = resp.get("data") or {}
-            details = dict(raw.get("bank_details") or {})
-            # The OS flags placeholder at the response root; fold it
-            # into the details dict _bank_details_usable reads.
-            details["placeholder"] = bool(raw.get("placeholder"))
-    except Exception as exc:  # never let the read break the lane
-        print(f"[flight] bank_details call failed: {exc}")
-    if not _bank_details_usable(details):
-        print("[flight] ⚠️ BANK DETAILS NOT PRINTABLE (placeholder "
+    accounts = _fetch_bank_accounts()
+    if not accounts:
+        print("[flight] ⚠️ BANK ACCOUNTS NOT PRINTABLE (placeholder "
               "or incomplete) — payment message used the fallback "
-              "line. Fill restaurants.settings.bank_details in "
-              "partner-os NOW.")
+              "line. Fill the bank accounts in partner-os NOW.")
         return (f"💳 Para cerrar tu apartado: transferí *L.350* — "
                 f"te pasamos los datos de la cuenta por acá mismo "
                 f"en un momento 🙏\n"
                 f"Tu cupo queda guardado por *15 minutos* 🕐 — "
                 f"cuando transferás, mandame el comprobante por "
                 f"acá 📸 y te confirmamos en minutos ✅")
-    return (f"💳 Para cerrar tu apartado, transferí *L.350* a:\n"
-            f"🏦 {details['name']}\n"
-            f"Cuenta: {details['account']}\n"
-            f"A nombre de: {details['owner']}\n\n"
+    convo.bank_options = [a["bank"] for a in accounts]
+    body = (f"💳 Para cerrar tu apartado, transferí *L.350*:\n"
+            + _accounts_block(accounts, lang) + "\n\n"
             f"Tu cupo queda guardado por *15 minutos* 🕐 — "
             f"transferí y mandame el comprobante por acá 📸; te "
             f"confirmamos en minutos ✅")
+    return _bank_ask_reply(convo, body, lang)
 
 
 def _record_flight(convo: "IntroConversation") -> Optional[dict]:
@@ -767,12 +968,12 @@ def _flight_full_reply(convo: "IntroConversation") -> str:
     return status + "\n\n" + _birthday_ask(convo.name, convo.lang)
 
 
-def _flight_close(convo: "IntroConversation") -> str:
+def _flight_close(convo: "IntroConversation"):
     """Birthday answered or skipped: the payment message is the
     lane's last word, then the conversation rests in the LOUNGE."""
     convo.state = "LOUNGE"
-    return _flight_payment_text(convo.flight_result, convo.name,
-                                convo.lang)
+    return _flight_payment_text(convo, convo.flight_result,
+                                convo.name, convo.lang)
 
 
 def _is_yes(t: str) -> bool:
@@ -1249,18 +1450,19 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
             # and the payment close follows in the same reply.
             if _is_flight_key(text):
                 convo.flight_result = _record_flight(convo)
-                return (_returning_greeting(convo) + "\n"
-                        + _flight_status_text(convo.flight_result,
-                                              convo.name, lang)
-                        + "\n\n"
-                        + _flight_payment_text(convo.flight_result,
-                                               convo.name, lang))
+                return _join_reply(
+                    _returning_greeting(convo) + "\n"
+                    + _flight_status_text(convo.flight_result,
+                                          convo.name, lang),
+                    _flight_payment_text(convo, convo.flight_result,
+                                         convo.name, lang))
             packs, bottles, boxes = parse_preventa_explicit(text)
             if packs or bottles or boxes:
                 _record_preventa(convo, packs, bottles, boxes)
-                return (_returning_greeting(convo) + "\n"
-                        + _preventa_recorded_text(packs, bottles,
-                                                  boxes, lang))
+                return _join_reply1(
+                    _returning_greeting(convo),
+                    _preventa_recorded_reply(convo, packs, bottles,
+                                             boxes, lang))
             if _has_cue(t, MENU_CUES):
                 _shop_menu = shop_engine.menu_reply(lang, convo)
                 if _shop_menu is not None:
@@ -1466,16 +1668,17 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
         if _is_flight_key(text):
             convo.flight_result = _record_flight(convo)
             convo.state = "LOUNGE"
-            return (_flight_status_text(convo.flight_result,
-                                        convo.name, lang)
-                    + "\n\n"
-                    + _flight_payment_text(convo.flight_result,
-                                           convo.name, lang))
+            return _join_reply(
+                _flight_status_text(convo.flight_result,
+                                    convo.name, lang),
+                _flight_payment_text(convo, convo.flight_result,
+                                     convo.name, lang))
         packs, bottles, boxes = parse_preventa(text)
         if packs or bottles or boxes:
             _record_preventa(convo, packs, bottles, boxes)
             convo.state = "LOUNGE"
-            return _preventa_recorded_text(packs, bottles, boxes, lang)
+            return _preventa_recorded_reply(convo, packs, bottles,
+                                            boxes, lang)
         if t.strip(" .!¡¿?") in NO_CUES:
             convo.state = "LOUNGE"
             if lang == "en":
@@ -1519,13 +1722,24 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
         # same hold + cap, payment close in the same reply. Before
         # missions and before the shop engine: "flight" is a
         # campaign word, never a menu item.
+        # MULTI-BANK: a bank declaration while the ask is open —
+        # the LIST tap id ('bank:<name>'), the bare bank name, or
+        # "transferí por X". Recorded on the OS preorder so staff
+        # verify against the right account. Only while options are
+        # open: an empty list costs zero OS calls and changes
+        # nothing, and a non-matching message falls through to the
+        # normal lounge flow untouched.
+        if convo.bank_options:
+            _bank = _match_bank_declaration(text, convo.bank_options)
+            if _bank:
+                return _record_bank_declaration(convo, _bank)
         if _is_flight_key(text):
             convo.flight_result = _record_flight(convo)
-            return (_flight_status_text(convo.flight_result,
-                                        convo.name, lang)
-                    + "\n\n"
-                    + _flight_payment_text(convo.flight_result,
-                                           convo.name, lang))
+            return _join_reply(
+                _flight_status_text(convo.flight_result,
+                                    convo.name, lang),
+                _flight_payment_text(convo, convo.flight_result,
+                                     convo.name, lang))
         if _has_cue(t, MISSION_CUES):
             return _mission_status_reply(convo, incoming_text)
         # Shop ordering (bot-finalize): the real OS menu + café
@@ -1544,7 +1758,8 @@ def _reply_core(convo: IntroConversation, incoming_text: str) -> str:
                 t, ("quiero", "apart", "reserv", "dame", "want",
                     "reserve", "book")):
             _record_preventa(convo, packs, bottles, boxes)
-            return _preventa_recorded_text(packs, bottles, boxes, lang)
+            return _preventa_recorded_reply(convo, packs, bottles,
+                                            boxes, lang)
         if _has_cue(t, GIFT_CUES):
             return _gift_retired_text(convo)
         if _has_cue(t, ("botella", "botellas")):

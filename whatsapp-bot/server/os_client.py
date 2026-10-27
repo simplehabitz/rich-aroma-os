@@ -8,6 +8,10 @@ Used by the Honduras intro flow (intro_engine.py) to:
   - record the campaign Flight (5-pack)   (action=whatsapp_preventa,
     with a 15-min hold + daily cap           flight=true)
   - read the shop's transfer details      (action=whatsapp_bank_details)
+  - read ALL the shop's bank accounts     (action=whatsapp_bank_details,
+    (multi-bank, v2 shape)                   v2 accounts list)
+  - stamp the customer's declared bank    (action=whatsapp_preventa_
+    on their preorder of today               set_bank)
   - read a customer's Capitan missions    (action=whatsapp_mission_check)
   - submit a UGC post link for a mission  (action=whatsapp_mission_submit)
   - bind a creator's signup word to an    (action=whatsapp_attribute,
@@ -170,6 +174,33 @@ def bank_details() -> dict:
     data["placeholder"]; the bot applies its own structural check
     before printing anything (intro_engine._bank_details_usable)."""
     return _post("whatsapp_bank_details", {})
+
+
+def bank_accounts() -> dict:
+    """Read-only, MULTI-BANK (v2): the shop's REAL transfer accounts
+    for the preventa payment messages. Same action as bank_details()
+    — the v2 response is a superset: data["accounts"] is the list of
+    {bank, account, owner} REAL entries only (settings.bank_accounts,
+    with the legacy bank_details as account #1 when no array is
+    configured), data["bank_details"] still carries the first real
+    account for backward readability, and data["placeholder"] is
+    True ONLY when zero real accounts exist. The bot still applies
+    its own per-entry structural check before printing anything
+    (intro_engine._fetch_bank_accounts)."""
+    return _post("whatsapp_bank_details", {})
+
+
+def set_preventa_bank(phone: str, bank: str) -> dict:
+    """Stamp the bank the customer declared they transferred from
+    (whatsapp_preventa_set_bank): the OS validates the name against
+    the configured REAL accounts (case-insensitive) and stamps
+    payment_bank on the customer's most recent non-cancelled
+    preorder of today (America/Tegucigalpa). Answers in the data
+    payload: {"ok": True, "updated": bool}, or {"ok": False} for an
+    unknown bank. A failed declaration never blocks the flow — staff
+    verify from the comprobante as before."""
+    return _post("whatsapp_preventa_set_bank",
+                 {"phone": phone, "bank": bank})
 
 
 def mission_check(phone: str) -> dict:
