@@ -89,6 +89,18 @@
     <!-- Audio Chimes -->
     <audio id="chime-new" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
 
+    <!-- BUILD CARD OVERLAY (receta por ticket: pasos + ingredientes con
+         los modificadores YA aplicados a las cantidades) -->
+    <div id="build-card-overlay" class="hidden fixed inset-0 z-[600] bg-dark/95 backdrop-blur-xl overflow-y-auto p-4" onclick="if(event.target===this) closeBuildCard()">
+        <div class="bg-charcoal w-full max-w-lg rounded-[2rem] border border-white/10 shadow-2xl my-6 mx-auto">
+            <div class="p-5 border-b border-white/5 flex justify-between items-center">
+                <h3 id="build-card-title" class="text-lg font-black uppercase">Receta</h3>
+                <button onclick="closeBuildCard()" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 shrink-0"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="build-card-body" class="p-5"></div>
+        </div>
+    </div>
+
     <script>
         let orders = [];
         function escHtml(v) {
@@ -467,7 +479,7 @@
                 const groupCode = groupMatch ? groupMatch[1] : null;
 
                 return `
-                <div class="bg-charcoal border ${schedTime ? 'border-blue-500/40' : 'border-white/5'} rounded-[2.5rem] p-6 space-y-5 shadow-2xl order-card ${o.status === 'ready' ? 'opacity-50 grayscale' : (waitingOther ? 'opacity-60' : '')}">
+                <div onclick="cardBodyClick(event, '${o.id}')" class="bg-charcoal border ${schedTime ? 'border-blue-500/40' : 'border-white/5'} rounded-[2.5rem] p-6 space-y-5 shadow-2xl order-card ${o.status === 'ready' ? 'opacity-50 grayscale' : (waitingOther ? 'opacity-60' : '')}">
                     <div class="flex justify-between items-start">
                         <div class="flex items-center gap-3">
                             <span class="${groupCode ? 'bg-orange-500' : 'bg-gold'} text-dark w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-gold/20">#${o.order_number || '---'}</span>
@@ -514,6 +526,8 @@
                             </div>`;
                         }).join('')}
                     </div>
+
+                    <p class="text-center text-[9px] font-black uppercase tracking-widest text-white/20"><i class="fas fa-book-open mr-1"></i> Tocá la tarjeta para ver la receta</p>
 
                     ${o.notes && o.notes.includes('[DIRECCIÓN:') ? `
                         <div class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
@@ -689,6 +703,179 @@
         }
 
         function logout() { localStorage.removeItem('ra_staff_pin'); location.reload(); }
+
+        // --- BUILD CARD (receta por ticket) ---
+        // Tapping the ticket BODY (not its buttons, not its item rows —
+        // those keep LISTO / item-state behavior) opens the build card:
+        // the item's steps with their tied ingredients, quantities already
+        // adjusted by the ticket's chosen modifiers via the delta table.
+        // Data: ONE staff-gated read (action=kds_recipe_data), cached here
+        // for a minute; refetched on open when stale.
+        const recipeCache = {}; // itemId -> { data|null, at }
+        const RECIPE_TTL_MS = 60000;
+
+        async function fetchRecipeData(ids) {
+            const need = [...new Set(ids)].filter(id => {
+                const c = recipeCache[id];
+                return !c || (Date.now() - c.at > RECIPE_TTL_MS);
+            });
+            if (!need.length) return true;
+            try {
+                const res = await fetch('/api/store?action=kds_recipe_data&ids=' + encodeURIComponent(need.join(',')), { headers: staffHeaders() });
+                if (res.status === 401) { alert("Sesión expirada. Ingresa tu PIN de nuevo."); relogin(); return false; }
+                const data = await res.json();
+                const items = (data && data.items) || {};
+                need.forEach(id => { recipeCache[id] = { data: items[id] || null, at: Date.now() }; });
+                return true;
+            } catch (e) { console.error(e); return false; }
+        }
+
+        function cardBodyClick(e, orderId) {
+            // A tap that landed on a button or inside any element carrying
+            // its own onclick (the item rows cycle state) is NOT a body tap.
+            let el = e.target;
+            while (el && el !== e.currentTarget) {
+                if (el.tagName === 'BUTTON' || el.hasAttribute('onclick')) return;
+                el = el.parentElement;
+            }
+            openBuildCard(orderId);
+        }
+
+        async function openBuildCard(orderId) {
+            const o = orders.find(x => String(x.id) === String(orderId));
+            if (!o) return;
+            const overlay = document.getElementById('build-card-overlay');
+            const body = document.getElementById('build-card-body');
+            document.getElementById('build-card-title').innerText = 'Receta #' + (o.order_number || '---');
+            overlay.classList.remove('hidden');
+            body.innerHTML = '<p class="text-center text-white/40 py-10 font-bold uppercase text-xs tracking-widest"><i class="fas fa-spinner fa-spin mr-2"></i>Cargando receta...</p>';
+            const ids = (o.items || []).map(i => i.id).filter(Boolean);
+            const ok = await fetchRecipeData(ids);
+            if (!ok) {
+                body.innerHTML = '<p class="text-center text-red-400 py-10 font-bold uppercase text-xs tracking-widest">No se pudo cargar la receta</p>';
+                return;
+            }
+            body.innerHTML = (o.items || []).map(i => buildItemHtml(i)).join('') || '<p class="text-white/40 text-sm">Sin artículos.</p>';
+        }
+
+        function closeBuildCard() {
+            document.getElementById('build-card-overlay').classList.add('hidden');
+        }
+
+        function buildItemHtml(item) {
+            const entry = recipeCache[item.id];
+            const data = entry && entry.data;
+            const qty = parseInt(item.qty) > 0 ? parseInt(item.qty) : 1;
+            let inner = '';
+            if (!data || (((!data.lines || !data.lines.length) && (!data.steps || !data.steps.length)))) {
+                inner = '<p class="text-[11px] font-bold text-amber-400/80 uppercase tracking-widest">Sin receta cargada</p>';
+            } else {
+                const adj = adjustRecipeLines(data.lines || [], data.options || [], data.deltas || [], item.mods || [], qty);
+                const steps = data.steps || [];
+                const byStep = {};
+                const baseLines = [];
+                adj.forEach(l => {
+                    if (l.step_no && l.step_no >= 1 && l.step_no <= steps.length) (byStep[l.step_no] = byStep[l.step_no] || []).push(l);
+                    else baseLines.push(l);
+                });
+                const lineTxt = (l) => `${escHtml(l.name)} ${fmtBuildQty(l.qty)} ${escHtml(l.unit)}`;
+                let blocks = '';
+                steps.forEach((s, ix) => {
+                    const n = ix + 1;
+                    const ings = (byStep[n] || []).map(lineTxt).join(' · ');
+                    blocks += `<div class="p-3 rounded-xl bg-white/5 border border-white/5">
+                        <p class="text-xs leading-relaxed"><span class="font-black text-gold uppercase">Paso ${n}</span>${ings ? ` — <span class="font-bold text-white/90">${ings}</span>` : ''}${s ? ` <span class="text-white/50">· ${escHtml(s)}</span>` : ''}</p>
+                    </div>`;
+                });
+                if (baseLines.length) {
+                    blocks += `<div class="p-3 rounded-xl bg-white/5 border border-white/5">
+                        <p class="text-xs leading-relaxed"><span class="font-black text-gold uppercase">Base</span> — <span class="font-bold text-white/90">${baseLines.map(lineTxt).join(' · ')}</span></p>
+                    </div>`;
+                }
+                if (!adj.length) {
+                    inner = '<p class="text-[11px] text-white/40">Sin ingredientes cargados.</p>';
+                } else {
+                    const totals = adj.map(l => `<span class="px-2 py-1 rounded-lg bg-black/30 border border-white/10 text-[10px] font-bold">${lineTxt(l)}</span>`).join(' ');
+                    inner = `<div class="space-y-2">${blocks}</div>
+                        <p class="text-[9px] font-black uppercase tracking-widest text-white/30 mt-3 mb-1">Totales ×${qty}</p>
+                        <div class="flex flex-wrap gap-1.5">${totals}</div>`;
+                }
+            }
+            return `<div class="border-b border-white/5 pb-4 mb-4 last:border-0 last:mb-0 last:pb-0">
+                <p class="font-black text-sm uppercase text-white/90">${qty}x ${escHtml(item.name)}</p>
+                ${modsHtml(item)}
+                <div class="mt-2">${inner}</div>
+            </div>`;
+        }
+
+        // === BUILD-CARD-MATH-BEGIN ===
+        // Pure recipe math for the build card (the computation harness
+        // extracts exactly this block — keep it free of DOM/fetch calls).
+        // Count units scale with a countable option's chosen qty (Splenda
+        // sobres); bulk units (ml, g) apply flat per serving — that is how
+        // the seed encodes swap-aways vs countable add-ins.
+        const BUILD_COUNT_UNITS = ['sobre', 'sobres', 'pieza', 'piezas', 'unidad', 'unidades', 'unit', 'units', 'pc', 'pcs'];
+        function buildModQty(mod, opt) {
+            const q = parseInt(mod && mod.qty);
+            if (Number.isInteger(q) && q > 0) return Math.min(q, 8);
+            if (opt && opt.allow_qty && opt.default_qty) return opt.default_qty;
+            return 1;
+        }
+        function resolveBuildOption(options, mod) {
+            if (!mod) return null;
+            const pool = options || [];
+            const modId = mod.id || mod.option_id || mod.optionId || null;
+            if (modId) { const byId = pool.find(o => o.id === modId); if (byId) return byId; }
+            const modName = String(mod.name || '').trim().toLowerCase();
+            if (!modName) return null;
+            const named = pool.filter(o => String(o.name || '').trim().toLowerCase() === modName);
+            if (named.length <= 1) return named[0] || null;
+            const g = String(mod.group || '').trim().toLowerCase();
+            return named.find(o => String(o.group || '').trim().toLowerCase() === g) || named[0];
+        }
+        // baseLines/options/deltas come from action=kds_recipe_data; mods
+        // are the ticket item's chosen modifiers (POS snapshot shape).
+        // Returns adjusted totals for the whole ticket line (x item qty).
+        function adjustRecipeLines(baseLines, options, deltas, mods, itemQty) {
+            // Deltas ADJUST a recipe; with no base lines there is nothing
+            // to build from (the card renders "Sin receta cargada").
+            if (!baseLines || !baseLines.length) return [];
+            const lines = baseLines.map(l => ({ slug: l.slug, name: l.name, unit: l.unit, qty: parseFloat(l.qty) || 0, step_no: (l.step_no === undefined ? null : l.step_no) }));
+            const findLine = (slug, unit) => lines.find(l => l.slug === slug && l.unit === unit);
+            (mods || []).forEach(mod => {
+                const opt = resolveBuildOption(options, mod);
+                if (!opt) return;
+                const rows = (deltas || []).filter(d => d.option_id === opt.id);
+                if (!rows.length) return;
+                const chosen = buildModQty(mod, opt);
+                // Negatives first: a line this option swaps AWAY lends its
+                // step to the line the same option swaps IN (leche entera
+                // -> avena renders on the milk step, not under Base).
+                let removedStep = null;
+                const ordered = [...rows.filter(r => (parseFloat(r.qty_delta) || 0) < 0), ...rows.filter(r => (parseFloat(r.qty_delta) || 0) >= 0)];
+                ordered.forEach(d => {
+                    const dQty = parseFloat(d.qty_delta) || 0;
+                    const factor = (opt.allow_qty && BUILD_COUNT_UNITS.includes(String(d.unit || '').toLowerCase())) ? chosen : 1;
+                    const eff = dQty * factor;
+                    const ex = findLine(d.slug, d.unit);
+                    if (ex) {
+                        ex.qty += eff;
+                        if (eff < 0 && ex.qty <= 0.0001 && removedStep === null) removedStep = ex.step_no;
+                    } else if (eff > 0) {
+                        lines.push({ slug: d.slug, name: d.name || d.slug, unit: d.unit, qty: eff, step_no: removedStep });
+                    }
+                });
+            });
+            const mult = parseInt(itemQty) > 0 ? parseInt(itemQty) : 1;
+            return lines
+                .filter(l => l.qty > 0.0001)
+                .map(l => ({ ...l, qty: Math.round(l.qty * mult * 100) / 100 }));
+        }
+        function fmtBuildQty(q) {
+            const n = Math.round((parseFloat(q) || 0) * 100) / 100;
+            return Number.isInteger(n) ? String(n) : String(n).replace(/\.?0+$/, '');
+        }
+        // === BUILD-CARD-MATH-END ===
     </script>
     <script src="/quimi-nav.js"></script>
 </body>
