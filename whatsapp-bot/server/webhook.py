@@ -9,6 +9,9 @@ Secrets:
     1. Secure Vault as custom.whatsapp-business (this workspace, preferred)
     2. WHATSAPP_API_TOKEN env var (deployed host — set by the owner in the
        host dashboard, never committed to the repo)
+- GEMINI_API_KEY env var: the bot's Gemini key (server/voice.py —
+  voice-note transcription + Capitán Rico's spoken replies; the
+  same env the parked hybrid parser was built against)
 """
 import os
 import sys
@@ -93,6 +96,18 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
     })
 
 
+def send_whatsapp_audio(phone_number_id: str, to: str, media_id: str):
+    """Send an uploaded voice note (server/voice.py): an audio
+    message with voice:true, so it renders as a voice memo in the
+    customer's chat, not an audio-file attachment."""
+    return _deliver_message(phone_number_id, {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "audio",
+        "audio": {"id": media_id, "voice": True},
+    })
+
+
 def send_whatsapp_interactive(phone_number_id: str, to: str, reply):
     """Send a WaReply (wa_reply.py) as a WhatsApp interactive
     message: an interactive LIST for menu browsing, or a CTA-URL
@@ -124,13 +139,42 @@ def send_whatsapp_interactive(phone_number_id: str, to: str, reply):
     })
 
 
-def deliver_reply(phone_number_id: str, to: str, reply):
+def _try_speak(phone_number_id: str, to: str, text: str):
+    """Mirror rule (server/voice.py): speak a plain-text reply to
+    a voice-originated turn. Returns the Graph result when the
+    voice note went out; None when the reply must stay text —
+    excluded content (URL / bank details / > 400 chars) or ANY
+    failure in synth/convert/upload/send. Every gate logs a
+    [Voice] line; a reply is never lost to a voice failure."""
+    try:
+        import voice as voice_mod
+    except ImportError:
+        from server import voice as voice_mod
+    ok, why = voice_mod.speakable(text)
+    if not ok:
+        print(f"[Voice] reply stays text ({why})", flush=True)
+        return None
+    try:
+        media_id = voice_mod.speak(phone_number_id, text)
+        return send_whatsapp_audio(phone_number_id, to, media_id)
+    except Exception as e:
+        print(f"[Voice] speak failed, text fallback: {e}", flush=True)
+        return None
+
+
+def deliver_reply(phone_number_id: str, to: str, reply,
+                  voice: bool = False):
     """Deliver one engine reply. A WaReply goes out as its
     interactive message; ANY failure (API error, a client that
     can't render it) falls back to the reply's plain-text
     rendering — a short numbered section list plus the web link,
     never a catalog dump (bot-menu-fix, 2026-10-26). Plain strings
-    send as text, exactly as before."""
+    send as text, exactly as before.
+
+    voice=True marks a voice-originated turn (the customer sent a
+    voice note): a PLAIN string reply may then be spoken instead
+    (mirror rule — _try_speak). Interactive replies are never
+    spoken; typed turns (voice=False, the default) never are."""
     if isinstance(reply, WaReply):
         try:
             return send_whatsapp_interactive(phone_number_id, to, reply)
@@ -139,10 +183,15 @@ def deliver_reply(phone_number_id: str, to: str, reply):
                   f"fallback: {e}", flush=True)
             return send_whatsapp_text(phone_number_id, to,
                                       reply.fallback_text())
+    if voice:
+        spoken = _try_speak(phone_number_id, to, reply)
+        if spoken is not None:
+            return spoken
     return send_whatsapp_text(phone_number_id, to, reply)
 
 
-def handle_intro_message(from_number: str, text: str, phone_number_id: str):
+def handle_intro_message(from_number: str, text: str, phone_number_id: str,
+                         voice_turn: bool = False):
     """
     Honduras flow (rich-aroma-honduras — the only tenant this bot
     serves): get-to-know-you signup -> account created in the OS ->
@@ -150,6 +199,11 @@ def handle_intro_message(from_number: str, text: str, phone_number_id: str):
     (server/shop_engine.py) serves the real OS menu (as an
     interactive section list, never a text dump) and takes café
     orders. See server/intro_engine.py.
+
+    voice_turn: this turn arrived as a voice note (its text is a
+    transcript). The turn is marked on the conversation and the
+    mirror rule applies at delivery — a plain-text reply may be
+    spoken back (server/voice.py).
     """
     try:
         from intro_engine import get_intro_conversation, reply_for_intro
@@ -162,18 +216,46 @@ def handle_intro_message(from_number: str, text: str, phone_number_id: str):
     # failure) so the shop engine prices from the live OS catalog.
     menu_client.maybe_refresh()
     convo = get_intro_conversation(from_number)
+    convo.last_turn_voice = bool(voice_turn)
     reply = reply_for_intro(convo, text)
-    return deliver_reply(phone_number_id, from_number, reply)
+    return deliver_reply(phone_number_id, from_number, reply,
+                         voice=bool(convo.last_turn_voice))
 
 
-def handle_order_message(from_number: str, text: str, phone_number_id: str):
+def handle_order_message(from_number: str, text: str, phone_number_id: str,
+                         voice_turn: bool = False):
     """
     Incoming customer message entry point. This bot serves exactly
     one number — the Quimistán shop's — so every route lands in the
     Honduras flow. (The Cali order engine that used to sit behind
     the other branch was removed in the bot-finalize build.)
     """
-    return handle_intro_message(from_number, text, phone_number_id)
+    return handle_intro_message(from_number, text, phone_number_id,
+                                voice_turn=voice_turn)
+
+
+def handle_audio_message(from_number: str, media_id: str,
+                         phone_number_id: str):
+    """
+    Incoming voice note: download + transcribe (server/voice.py),
+    then the transcript enters the existing pipeline EXACTLY as if
+    typed, marked voice-originated so the reply can be spoken back
+    (mirror rule). Any failure — download, Gemini, empty/garbled
+    transcript — earns ONE retry line as text and no other action:
+    an order is never invented from unclear audio.
+    """
+    try:
+        import voice as voice_mod
+    except ImportError:
+        from server import voice as voice_mod
+    transcript = voice_mod.transcribe_media(media_id)
+    if not transcript:
+        print(f"[Voice] no usable transcript for media {media_id} "
+              f"from {from_number} — asking for a repeat", flush=True)
+        return send_whatsapp_text(phone_number_id, from_number,
+                                  voice_mod.RETRY_TEXT)
+    return handle_order_message(from_number, transcript,
+                                phone_number_id, voice_turn=True)
 
 
 def push_to_kds(order: dict):
@@ -229,6 +311,18 @@ def incoming():
                         rep = (inter.get("list_reply")
                                or inter.get("button_reply") or {})
                         text_body = rep.get("id", "")
+                    elif msg_type == "audio":
+                        # A voice note (or any audio message): the
+                        # media id is the whole payload — download,
+                        # transcribe, and the transcript runs the
+                        # same pipeline as typed text, marked
+                        # voice-originated (mirror rule, voice.py).
+                        media_id = (msg.get("audio") or {}).get("id", "")
+                        from_number = msg.get("from")
+                        if from_number and phone_number_id and media_id:
+                            handle_audio_message(from_number, media_id,
+                                                 phone_number_id)
+                        continue
                     else:
                         continue
                     from_number = msg.get("from")

@@ -186,6 +186,12 @@ class IntroConversation:
     # matches the customer's next messages against these names.
     # Cleared when a declaration is recorded; never re-asked.
     bank_options: list = field(default_factory=list)
+    # Voice (2026-10-26): True when the CURRENT turn arrived as a
+    # voice note — set by the webhook on every message (typed turns
+    # reset it). The mirror rule reads it at delivery: a plain-text
+    # reply to a voice turn may be spoken back (server/voice.py);
+    # typed turns and interactive replies always stay as they are.
+    last_turn_voice: bool = False
 
 
 def get_intro_conversation(customer_phone: str) -> IntroConversation:
