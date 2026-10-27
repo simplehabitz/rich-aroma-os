@@ -470,6 +470,13 @@
       }).format(new Date(iso));
     } catch (e) { return ''; }
   }
+  function flBankBlock(bank, account, owner){
+    return '<div class="fl-bank">' +
+      '<div class="row"><span class="l">Banco</span><span class="r">' + esc(bank) + '</span></div>' +
+      '<div class="row"><span class="l">Cuenta</span><span class="r">' + esc(account) + '</span></div>' +
+      '<div class="row"><span class="l">Titular</span><span class="r">' + esc(owner) + '</span></div>' +
+      '</div>';
+  }
   function flRenderHeld(r, name){
     var box = $('fl-result');
     var html = '<h3>✅ ¡Apartado, ' + esc(name) + '!</h3>';
@@ -480,17 +487,29 @@
     if (r.remaining_bottles != null) {
       html += '<p>Quedan <b>' + esc(String(r.remaining_bottles)) + '</b> botellas hoy.</p>';
     }
-    if (r.bank_details) {
-      html += '<div class="fl-bank">' +
-        '<div class="row"><span class="l">Banco</span><span class="r">' + esc(r.bank_details.name) + '</span></div>' +
-        '<div class="row"><span class="l">Cuenta</span><span class="r">' + esc(r.bank_details.account) + '</span></div>' +
-        '<div class="row"><span class="l">Titular</span><span class="r">' + esc(r.bank_details.owner) + '</span></div>' +
-        '</div>';
+    // MULTI-BANK: todas las cuentas REALES que manda el OS
+    // (r.accounts). Transferí a la de TU banco — mismo banco = la
+    // transferencia cae al instante — y cada cuenta lleva SU botón
+    // de comprobante, con el banco ya declarado en el mensaje.
+    var accounts = (r.accounts && r.accounts.length) ? r.accounts : null;
+    if (accounts) {
+      html += '<p>💳 Transferí <b>L.350</b> a la cuenta de <b>tu banco</b>:</p>';
+      accounts.forEach(function(a){
+        html += flBankBlock(a.bank, a.account, a.owner);
+      });
+      accounts.forEach(function(a){
+        var msg = 'Hola, soy ' + name + ', aparté mi Flight 🧳 — transferí por ' + a.bank + '. Te mando el comprobante 📸';
+        html += '<a class="cta" href="https://wa.me/' + SHOP_WA + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">Enviar comprobante — ' + esc(a.bank) + ' 📸</a>';
+      });
+    } else if (r.bank_details) {
+      html += flBankBlock(r.bank_details.name, r.bank_details.account, r.bank_details.owner);
+      var msg1 = 'Hola, soy ' + name + ', acabo de apartar mi Flight 🧳 — te mando el comprobante';
+      html += '<a class="cta" href="https://wa.me/' + SHOP_WA + '?text=' + encodeURIComponent(msg1) + '" target="_blank" rel="noopener">Enviar comprobante 📸</a>';
     } else {
       html += '<p>Te pasamos los datos de la cuenta por WhatsApp en un momento 🙏</p>';
+      var msg2 = 'Hola, soy ' + name + ', acabo de apartar mi Flight 🧳 — te mando el comprobante';
+      html += '<a class="cta" href="https://wa.me/' + SHOP_WA + '?text=' + encodeURIComponent(msg2) + '" target="_blank" rel="noopener">Enviar comprobante 📸</a>';
     }
-    var msg = 'Hola, soy ' + name + ', acabo de apartar mi Flight 🧳 — te mando el comprobante';
-    html += '<a class="cta" href="https://wa.me/' + SHOP_WA + '?text=' + encodeURIComponent(msg) + '" target="_blank" rel="noopener">Enviar comprobante 📸</a>';
     html += '<p>Recogés tu Flight el <b>7 de noviembre</b> en la tienda, con tu nombre y tu número.</p>';
     box.innerHTML = html;
     box.hidden = false;

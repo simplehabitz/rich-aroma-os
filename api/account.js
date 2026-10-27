@@ -376,7 +376,8 @@ async function actionFlightClaim(req, res) {
         hold_expires_at: verdict.hold_expires_at || null,
         customer_id: verdict.customer_id || null,
         preorder_id: verdict.preorder_id || null,
-        bank_details: null
+        bank_details: null,
+        accounts: null
     };
     if (verdict.status === 'waitlist') {
         // Relayed verbatim; present ONLY because the OS sent it.
@@ -385,20 +386,43 @@ async function actionFlightClaim(req, res) {
     }
 
     // Held. Fetch the transfer details; attach them ONLY when the OS
-    // flags them as real (placeholder === false). Any doubt — call
-    // failed, flagged, fields missing — means null, and the page
-    // shows its "te pasamos los datos por WhatsApp" fallback. The
-    // hold itself is already real either way.
+    // flags them as real (placeholder === false). MULTI-BANK (v2):
+    // the OS also sends `accounts` — every REAL account; relay the
+    // validated list and keep bank_details = the first account, so
+    // older pages keep working. A pre-v2 OS answer has no accounts
+    // key: its one legacy record becomes a one-element list. Any
+    // doubt — call failed, flagged, fields missing — means null,
+    // and the page shows its "te pasamos los datos por WhatsApp"
+    // fallback. The hold itself is already real either way.
     try {
         const bd = await osStorePost('whatsapp_bank_details', {}, secret);
-        if (bd && bd.ok === true && bd.placeholder === false
-            && bd.bank_details && bd.bank_details.name && bd.bank_details.account && bd.bank_details.owner) {
-            out.bank_details = {
-                name: bd.bank_details.name,
-                account: bd.bank_details.account,
-                owner: bd.bank_details.owner
+        let attached = false;
+        if (bd && bd.ok === true && bd.placeholder === false) {
+            const clean = (a) => {
+                const bank = String((a && a.bank) || '').trim();
+                const account = String((a && a.account) || '').trim();
+                const owner = String((a && a.owner) || '').trim();
+                return (bank && account && owner)
+                    ? { bank, account, owner } : null;
             };
-        } else {
+            let accounts = Array.isArray(bd.accounts)
+                ? bd.accounts.map(clean).filter(Boolean)
+                : [];
+            if (!accounts.length && bd.bank_details) {
+                const one = clean({ bank: bd.bank_details.name,
+                                    account: bd.bank_details.account,
+                                    owner: bd.bank_details.owner });
+                if (one) accounts = [one];
+            }
+            if (accounts.length) {
+                out.accounts = accounts;
+                out.bank_details = { name: accounts[0].bank,
+                                     account: accounts[0].account,
+                                     owner: accounts[0].owner };
+                attached = true;
+            }
+        }
+        if (!attached) {
             console.error(`[Account] flight_claim: bank details withheld for preorder ${out.preorder_id} (placeholder or unusable response from whatsapp_bank_details)`);
         }
     } catch (e) {
