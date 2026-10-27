@@ -2884,8 +2884,16 @@
 
         async function openIngredientsModal(itemId, itemName) {
             document.getElementById('ing-item-id').value = itemId;
-            document.getElementById('ing-item-name').innerText = itemName;
+            document.getElementById('ing-item-name-header').innerText = itemName;
             document.getElementById('ing-item-id-display').innerText = itemId;
+            // Step tie-in (admin-recipes): offer the item's saved steps so an
+            // ingredient can hang off one specific step; "General" = no step.
+            const stepSel = document.getElementById('ing-step');
+            if (stepSel) {
+                const it = (window.allMenuItems || []).find(i => i.id === itemId);
+                const steps = (it && Array.isArray(it.recipe_steps)) ? it.recipe_steps : [];
+                stepSel.innerHTML = '<option value="">General</option>' + steps.map((s, ix) => `<option value="${ix + 1}">Paso ${ix + 1}</option>`).join('');
+            }
             document.getElementById('manage-ingredients-modal').classList.remove('hidden');
             
             loadRecipeIngredients(itemId);
@@ -2917,7 +2925,7 @@
                 data.forEach(ing => {
                     tbody.innerHTML += `
                         <tr>
-                            <td class="py-3 text-sm font-bold text-gray-700">${escapeHtml(ing.inventory?.name || 'Unknown')}</td>
+                            <td class="py-3 text-sm font-bold text-gray-700">${escapeHtml(ing.inventory?.name || 'Unknown')}${ing.step_no ? ` <span class="ml-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 text-[9px] font-black uppercase">Paso ${ing.step_no}</span>` : ''}</td>
                             <td class="py-3 text-sm text-gray-500">${ing.quantity} ${ing.unit}</td>
                             <td class="py-3 text-right">
                                 <button onclick="deleteIngredientFromRecipe('${ing.id}', '${itemId}')" class="text-red-500 hover:text-red-700"><i class="fas fa-trash-alt"></i></button>
@@ -2933,6 +2941,7 @@
             const invId = document.getElementById('ing-select').value;
             const qty = document.getElementById('ing-qty').value;
             const unit = document.getElementById('ing-unit-display').innerText;
+            const stepVal = document.getElementById('ing-step')?.value;
 
             if(!invId || !qty) return alert("Select ingredient and quantity");
 
@@ -2943,7 +2952,8 @@
                     menu_item_id: itemId,
                     inventory_item_id: invId,
                     quantity: parseFloat(qty),
-                    unit: unit
+                    unit: unit,
+                    step_no: stepVal ? parseInt(stepVal) : null
                 })
             });
 
@@ -3714,6 +3724,12 @@
                     <input type="number" id="ing-qty" class="w-full border rounded-lg p-2 text-sm outline-none focus:border-blue-500">
                     <span id="ing-unit-display" class="text-xs font-bold text-gray-500"></span>
                 </div>
+            </div>
+            <div class="w-24">
+                <label class="block text-[10px] font-black text-gray-400 uppercase mb-1">Paso</label>
+                <select id="ing-step" class="w-full border rounded-lg p-2 text-sm outline-none focus:border-blue-500">
+                    <option value="">General</option>
+                </select>
             </div>
             <div class="flex items-end">
                 <button onclick="addIngredientToRecipe()" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition"><i class="fas fa-plus"></i></button>

@@ -241,6 +241,47 @@ module.exports = async function handler(req, res) {
                 return res.json({ items: flattened, modGroups: [], modOptions: [] });
             }
             
+            // PATCH /api/admin/menu/{id} — partial update. This is the path
+            // the Steps editor (saveRecipeSteps) has always called with
+            // { recipe_steps: [...] }; until now no PATCH branch existed,
+            // so step saves fell through to the 404 at the bottom.
+            if (req.method === 'PATCH') {
+                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                const itemId = id || req.query.id || (req.body && req.body.id);
+                if (!itemId) return res.status(400).json({ error: "Missing product ID" });
+                const b = req.body || {};
+                const updates = {};
+                if (b.name) updates.name = b.name;
+                if (b.description !== undefined) updates.description = b.description;
+                if (b.price !== undefined) updates.price = parseFloat(b.price);
+                if (b.category) updates.category = b.category;
+                if (b.image_url !== undefined) updates.image_url = b.image_url;
+                if (b.is_bundle !== undefined) updates.is_bundle = !!b.is_bundle;
+                if (b.is_house_made !== undefined) updates.is_house_made = !!b.is_house_made;
+                if (b.available !== undefined) updates.available = !!b.available;
+                if (b.recipe_steps !== undefined) {
+                    if (!Array.isArray(b.recipe_steps)) return res.status(400).json({ error: "recipe_steps must be an array" });
+                    updates.recipe_steps = b.recipe_steps.map(s => String(s).trim()).filter(s => s !== '');
+                }
+                if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update" });
+
+                const { error } = await supabase.from('menu_items').update(updates).eq('id', itemId);
+                if (error) {
+                    if (updates.recipe_steps !== undefined && /recipe_steps/.test(error.message || '')) {
+                        return res.status(500).json({ error: "La columna recipe_steps no existe — corré admin-recipes-migration.sql en Supabase." });
+                    }
+                    return res.status(500).json({ error: error.message });
+                }
+
+                const local = loadLocalMenu();
+                (local.categories || []).forEach(cat => {
+                    (cat.items || []).forEach(it => { if (it.id === itemId) Object.assign(it, updates); });
+                });
+                saveLocalMenu(local);
+
+                return res.json({ success: true, data: updates });
+            }
+
             // SEC-FIX 4 (F7): menu/modifier WRITES require admin — the gate
             // existed in this file but only covered later actions, leaving
             // the whole menu write surface open. Every write in this block
@@ -286,8 +327,8 @@ module.exports = async function handler(req, res) {
                 if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
                 const itemId = req.query.id || req.body.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
-                const { name, description, price, category, image_url, is_bundle, is_house_made, available } = req.body || {};
-                
+                const { name, description, price, category, image_url, is_bundle, is_house_made, available, recipe_steps } = req.body || {};
+
                 const updates = {};
                 if (name) updates.name = name;
                 if (description !== undefined) updates.description = description;
@@ -297,6 +338,7 @@ module.exports = async function handler(req, res) {
                 if (is_bundle !== undefined) updates.is_bundle = !!is_bundle;
                 if (is_house_made !== undefined) updates.is_house_made = !!is_house_made;
                 if (available !== undefined) updates.available = !!available;
+                if (Array.isArray(recipe_steps)) updates.recipe_steps = recipe_steps.map(s => String(s).trim()).filter(s => s !== '');
                 
                 try {
                     await supabase.from('menu_items').update(updates).eq('id', itemId);
@@ -388,6 +430,154 @@ module.exports = async function handler(req, res) {
             }
 
             return res.json({ success: true, data: updates });
+        }
+
+        // --- INVENTORY CATALOG + RECIPES (admin-recipes build, 2026-10-26) ---
+        // The admin UI for this layer (Raw Ingredients & Inventory section,
+        // per-item Ingredients modal) shipped long before its backend: every
+        // action below was called by public/admin.html but never implemented
+        // here. Shapes follow the FRONTEND's field usage exactly:
+        //   GET    action=inventory                  -> [ {id, name, slug, unit, current_stock, min_stock, daily_count_role, ...} ]
+        //   POST   action=inventory_update           -> upsert by id (full save OR partial, e.g. {id, daily_count_role})
+        //   DELETE action=inventory_delete&id=       -> deletes the catalog row + its recipe links
+        //   GET    action=menu_item_ingredients&id=  -> [ {id, menu_item_id, inventory_item_id, quantity, unit, step_no, inventory:{...}} ]
+        //   POST   action=menu_item_ingredient_add   -> {menu_item_id, inventory_item_id, quantity, unit, step_no?}
+        //   DELETE action=menu_item_ingredient_delete&id=
+        // Tables: `inventory` + `menu_item_ingredients` (rebuild-v4 shapes,
+        // see admin-recipes-migration.sql). The catalog row's `slug` is the
+        // join key the modifier-delta table (modifier_ingredients) uses —
+        // hyphenated, accent-free, matching the seed-v3 slug contract.
+        const slugifyInv = (s) => String(s || '')
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+        if (action === 'inventory' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { data, error } = await supabase.from('inventory').select('*').order('name');
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json(data || []);
+        }
+
+        if (action === 'inventory_update' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const b = req.body || {};
+            const name = b.name !== undefined ? String(b.name).trim() : undefined;
+            let invId = b.id ? String(b.id) : '';
+            if (!invId && name) invId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            if (!invId) return res.status(400).json({ error: "Missing ingredient id/name" });
+
+            const row = { id: invId };
+            if (name !== undefined) row.name = name;
+            if (b.unit !== undefined) row.unit = String(b.unit);
+            if (b.current_stock !== undefined) row.current_stock = parseFloat(b.current_stock) || 0;
+            if (b.min_stock !== undefined) row.min_stock = parseFloat(b.min_stock) || 0;
+            if (b.daily_count_role !== undefined) row.daily_count_role = String(b.daily_count_role);
+            if (b.category !== undefined) row.category = b.category;
+            if (b.cost_per_unit !== undefined) row.cost_per_unit = parseFloat(b.cost_per_unit);
+            if (b.supplier !== undefined) row.supplier = b.supplier;
+            const slug = b.slug ? slugifyInv(b.slug) : (name ? slugifyInv(name) : '');
+            if (slug) row.slug = slug;
+
+            let { data, error } = await supabase.from('inventory').upsert(row, { onConflict: 'id' }).select().single();
+            if (error && row.slug) {
+                // Pre-migration DB (no slug column yet): save without it
+                // rather than failing the owner's edit.
+                const { slug: _drop, ...rowNoSlug } = row;
+                ({ data, error } = await supabase.from('inventory').upsert(rowNoSlug, { onConflict: 'id' }).select().single());
+            }
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true, data });
+        }
+
+        if (action === 'inventory_delete' && req.method === 'DELETE') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const invId = id || req.query.id;
+            if (!invId) return res.status(400).json({ error: "Missing ingredient ID" });
+            try { await supabase.from('menu_item_ingredients').delete().eq('inventory_item_id', invId); } catch (e) {}
+            const { error } = await supabase.from('inventory').delete().eq('id', invId);
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true });
+        }
+
+        if (action === 'menu_item_ingredients' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const itemId = id || req.query.id;
+            if (!itemId) return res.status(400).json({ error: "Missing menu item ID" });
+            let q = supabase.from('menu_item_ingredients').select('*').eq('menu_item_id', itemId);
+            const { data, error } = await q;
+            if (error) return res.status(500).json({ error: error.message });
+            const rows = data || [];
+            const invIds = [...new Set(rows.map(r => r.inventory_item_id || r.inventory_id).filter(Boolean))];
+            let invById = {};
+            if (invIds.length) {
+                const { data: inv } = await supabase.from('inventory').select('id, name, slug, unit').in('id', invIds);
+                (inv || []).forEach(v => { invById[v.id] = v; });
+            }
+            const out = rows.map(r => {
+                const invId = r.inventory_item_id || r.inventory_id;
+                const inv = invById[invId] || {};
+                const qty = r.quantity !== undefined ? parseFloat(r.quantity) : parseFloat(r.qty);
+                return {
+                    id: r.id,
+                    menu_item_id: r.menu_item_id,
+                    inventory_item_id: invId,
+                    inventory_id: invId,
+                    quantity: qty,
+                    qty: qty,
+                    unit: r.unit || inv.unit || '',
+                    step_no: (r.step_no === undefined || r.step_no === null) ? null : parseInt(r.step_no),
+                    inventory: { id: invId, name: inv.name || invId, slug: inv.slug || invId, unit: inv.unit || r.unit || '' }
+                };
+            });
+            return res.json(out);
+        }
+
+        if (action === 'menu_item_ingredient_add' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const b = req.body || {};
+            const menuItemId = b.menu_item_id;
+            const invId = b.inventory_item_id || b.inventory_id;
+            const qtyRaw = b.quantity !== undefined ? b.quantity : b.qty;
+            if (!menuItemId || !invId || qtyRaw === undefined || qtyRaw === null || qtyRaw === '') {
+                return res.status(400).json({ error: "Missing menu_item_id, inventory_item_id or quantity" });
+            }
+            let unit = b.unit ? String(b.unit) : '';
+            if (!unit) {
+                const { data: inv } = await supabase.from('inventory').select('unit').eq('id', invId).maybeSingle();
+                unit = inv?.unit || 'g';
+            }
+            let stepNo = null;
+            if (b.step_no !== undefined && b.step_no !== null && b.step_no !== '') {
+                const sn = parseInt(b.step_no);
+                if (Number.isInteger(sn) && sn >= 1) stepNo = sn;
+            }
+            const row = {
+                menu_item_id: menuItemId,
+                inventory_item_id: invId,
+                quantity: parseFloat(qtyRaw) || 0,
+                unit
+            };
+            if (stepNo !== null) row.step_no = stepNo;
+            let { data, error } = await supabase.from('menu_item_ingredients')
+                .upsert(row, { onConflict: 'menu_item_id,inventory_item_id' }).select().single();
+            if (error && stepNo !== null) {
+                // Pre-migration DB (no step_no column yet): keep the link,
+                // drop the step tie rather than failing the save.
+                const { step_no: _drop, ...rowNoStep } = row;
+                ({ data, error } = await supabase.from('menu_item_ingredients')
+                    .upsert(rowNoStep, { onConflict: 'menu_item_id,inventory_item_id' }).select().single());
+            }
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true, data });
+        }
+
+        if (action === 'menu_item_ingredient_delete' && req.method === 'DELETE') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const rowId = id || req.query.id;
+            if (!rowId) return res.status(400).json({ error: "Missing ingredient link ID" });
+            const { error } = await supabase.from('menu_item_ingredients').delete().eq('id', rowId);
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true });
         }
 
         // --- IMAGE UPLOAD ---
