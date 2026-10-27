@@ -150,6 +150,7 @@
                 <button onclick="switchTab('overview')" id="tab-overview" class="font-bold text-blue-600 border-b-2 border-blue-600 pb-2 px-2">Overview</button>
                 <button onclick="switchTab('employees')" id="tab-employees" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Employees</button>
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
+                <button onclick="switchTab('inventory')" id="tab-inventory" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Inventory</button>
                 <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
                 <button onclick="switchTab('clientes')" id="tab-clientes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Clientes</button>
                 <button onclick="switchTab('misiones')" id="tab-misiones" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Misiones</button>
@@ -1351,7 +1352,7 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
-                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones'];
+                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones', 'inventory'];
                 if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
@@ -1374,6 +1375,7 @@
                 if(tabId === 'promocodes') loadPromoCodes();
                 if(tabId === 'clientes') loadClientes();
                 if(tabId === 'misiones') loadMisiones();
+                if(tabId === 'inventory') loadInventory();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
