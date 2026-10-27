@@ -1740,6 +1740,15 @@ module.exports = async (req, res) => {
             const bottles = clampQty(req.body?.bottles);
             const boxes = clampQty(req.body?.boxes ?? req.body?.boxes_20);
             if (packs + bottles + boxes === 0) return res.status(400).json({ error: 'Sin cantidades' });
+            // MULTI-BANK (bank-accounts): the caller may already
+            // know which bank the customer transferred from and pass
+            // it as `bank`; it is stored verbatim on the row as
+            // payment_bank so staff verifying in /admin Clientes see
+            // which account to check. The usual declaration arrives
+            // AFTER recording and goes through
+            // whatsapp_preventa_set_bank, which validates the name
+            // against the configured accounts.
+            const declaredBank = String(req.body?.bank || '').trim().slice(0, 40) || null;
             // FLIGHT LANE trigger: the bot flags flight:true; the WEB
             // shape (account.js / /quimistan, server-to-server with
             // this same secret) flags source:'web'. Both run the ONE
@@ -1798,17 +1807,18 @@ module.exports = async (req, res) => {
                     quoted_total: total,
                     status: fits ? 'intent' : 'waitlist',
                     source: rowSource,
-                    hold_expires_at: holdExpiresAt
+                    hold_expires_at: holdExpiresAt,
+                    payment_bank: declaredBank
                 };
                 let ins = await supabase.from('whatsapp_preorders').insert(row).select().single();
-                if (ins.error && /hold_expires_at/.test(ins.error.message || '')) {
-                    // The migration hasn't run yet: keep the flight
+                if (ins.error && /hold_expires_at|payment_bank/.test(ins.error.message || '')) {
+                    // A migration hasn't run yet: keep the flight
                     // (source exists since the intro schema) without
-                    // its hold stamp, and say so in the log — never
-                    // lose the sale to a missing column.
-                    console.error('[Flight] hold_expires_at column missing — run flight-lane-migration.sql; recording without a hold');
-                    const { hold_expires_at: _dropped, ...noHold } = row;
-                    ins = await supabase.from('whatsapp_preorders').insert(noHold).select().single();
+                    // the missing stamps, and say so in the log —
+                    // never lose the sale to a missing column.
+                    console.error('[Flight] optional column missing (hold_expires_at / payment_bank) — run flight-lane-migration.sql + bank-accounts-migration.sql; recording without those stamps:', ins.error.message);
+                    const { hold_expires_at: _dropped, payment_bank: _droppedBank, ...bareRow } = row;
+                    ins = await supabase.from('whatsapp_preorders').insert(bareRow).select().single();
                 }
                 if (ins.error) throw ins.error;
                 // RESPONSE CONTRACT (the web build relays these
@@ -1828,7 +1838,7 @@ module.exports = async (req, res) => {
                 }
                 return res.json(payload);
             }
-            const { data, error } = await supabase.from('whatsapp_preorders').insert({
+            const stdRow = {
                 id: 'wpre_' + Date.now() + Math.floor(Math.random() * 1000),
                 customer_id: cust.id,
                 phone: phoneToStore,
@@ -1838,39 +1848,133 @@ module.exports = async (req, res) => {
                 boxes_20: boxes,
                 quoted_total: total,
                 status: 'intent',
-                source: 'whatsapp_intro'
-            }).select().single();
-            if (error) throw error;
-            return res.json({ ok: true, preorder: data });
+                source: 'whatsapp_intro',
+                payment_bank: declaredBank
+            };
+            let stdIns = await supabase.from('whatsapp_preorders').insert(stdRow).select().single();
+            if (stdIns.error && /payment_bank/.test(stdIns.error.message || '')) {
+                // Same degrade as the flight path: the migration
+                // hasn't run — record the preventa without the bank
+                // stamp rather than losing the sale.
+                console.error('[Bank] payment_bank column missing — run bank-accounts-migration.sql; recording without the bank stamp');
+                const { payment_bank: _droppedBank, ...noBankRow } = stdRow;
+                stdIns = await supabase.from('whatsapp_preorders').insert(noBankRow).select().single();
+            }
+            if (stdIns.error) throw stdIns.error;
+            return res.json({ ok: true, preorder: stdIns.data });
         }
 
-        // --- FLIGHT LANE: transfer details for the bot ---
-        // The fast lane's payment message prints the shop's REAL
-        // transfer details (restaurants.settings.bank_details for
-        // rich-aroma — the same record partner-os writes and the
-        // storefront reads). Secret-gated like every whatsapp_*
-        // action. `placeholder` flags the shipped placeholder
-        // strings (verified live 2026-10-26: "BANK NAME" /
-        // "ACCOUNT NUMBER" / "ACCOUNT HOLDER NAME") or an empty
-        // record, so the bot can withhold the details instead of
-        // printing them; the bot applies its own structural check
-        // on top — two guards, either one can stop the print.
-        if (action === 'whatsapp_bank_details' && req.method === 'POST') {
-            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+        // --- MULTI-BANK: the shop's REAL transfer accounts ---
+        // Source of truth is restaurants.settings (the same record
+        // partner-os writes and the storefront reads):
+        //   settings.bank_accounts = [{bank, account, owner}...]
+        //     — up to 3 accounts, written by partner-os;
+        //   settings.bank_details {name, account, owner} — the
+        //     legacy single account; wherever bank_accounts is
+        //     absent/empty it counts as account #1 (name -> bank).
+        // An entry is a PLACEHOLDER when any of its fields is empty
+        // after trim OR any field's uppercased value is one of the
+        // shipped placeholder strings (verified live 2026-10-26:
+        // "BANK NAME" / "ACCOUNT NUMBER" / "ACCOUNT HOLDER NAME") —
+        // the exact rule the v1 whatsapp_bank_details applied to
+        // the single record, now applied per entry. Only REAL
+        // entries leave this helper; the bot applies its own
+        // structural check on top — two guards, either one can
+        // stop a print.
+        const KNOWN_BANK_PLACEHOLDERS = ['BANK NAME', 'ACCOUNT NUMBER', 'ACCOUNT HOLDER NAME'];
+        function bankEntryIsPlaceholder(e) {
+            return !e.bank || !e.account || !e.owner
+                || KNOWN_BANK_PLACEHOLDERS.includes(e.bank.toUpperCase())
+                || KNOWN_BANK_PLACEHOLDERS.includes(e.account.toUpperCase())
+                || KNOWN_BANK_PLACEHOLDERS.includes(e.owner.toUpperCase());
+        }
+        async function loadBankSettings() {
             const { data: rest } = await supabase.from('restaurants')
                 .select('settings').eq('id', 'rich-aroma').maybeSingle();
-            const bd = (rest && rest.settings && rest.settings.bank_details) || {};
-            const details = {
+            const settings = (rest && rest.settings) || {};
+            const bd = settings.bank_details || {};
+            const legacyDetails = {
                 name: String(bd.name || '').trim(),
                 account: String(bd.account || '').trim(),
                 owner: String(bd.owner || '').trim()
             };
-            const KNOWN_PLACEHOLDERS = ['BANK NAME', 'ACCOUNT NUMBER', 'ACCOUNT HOLDER NAME'];
-            const placeholder = !details.name || !details.account || !details.owner
-                || KNOWN_PLACEHOLDERS.includes(details.name.toUpperCase())
-                || KNOWN_PLACEHOLDERS.includes(details.account.toUpperCase())
-                || KNOWN_PLACEHOLDERS.includes(details.owner.toUpperCase());
-            return res.json({ ok: true, bank_details: details, placeholder });
+            const raw = Array.isArray(settings.bank_accounts) && settings.bank_accounts.length
+                ? settings.bank_accounts
+                : null;
+            const candidates = raw
+                ? raw.map(a => ({
+                    bank: String((a && a.bank) || '').trim(),
+                    account: String((a && a.account) || '').trim(),
+                    owner: String((a && a.owner) || '').trim()
+                }))
+                : [{ bank: legacyDetails.name, account: legacyDetails.account, owner: legacyDetails.owner }];
+            return { accounts: candidates.filter(a => !bankEntryIsPlaceholder(a)), legacyDetails };
+        }
+
+        // --- FLIGHT LANE: transfer details for the bot (v2) ---
+        // v2 returns the full REAL accounts list; `placeholder` is
+        // true ONLY when zero real accounts exist. `bank_details`
+        // stays for backward readability: the first real account in
+        // the legacy shape, or the legacy record verbatim (trimmed,
+        // exactly as v1 returned it) when nothing real exists — so
+        // nothing unfixed breaks mid-deploy.
+        if (action === 'whatsapp_bank_details' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const { accounts, legacyDetails } = await loadBankSettings();
+            const first = accounts[0];
+            return res.json({
+                ok: true,
+                accounts,
+                bank_details: first
+                    ? { name: first.bank, account: first.account, owner: first.owner }
+                    : legacyDetails,
+                placeholder: accounts.length === 0
+            });
+        }
+
+        // --- MULTI-BANK: the customer's bank declaration ---
+        // After the payment message the bot asks "¿a cuál banco
+        // transferiste?" (one tap, or typed). This stamps
+        // payment_bank on the customer's most recent TODAY
+        // (America/Tegucigalpa) non-cancelled preorder, so staff
+        // verifying in /admin Clientes see which account to check.
+        // The name is validated against the configured REAL
+        // accounts (case-insensitive) and stored with the
+        // CONFIGURED casing; an unknown bank answers {ok:false}
+        // with HTTP 200 (the bot renders from data — the
+        // declaration never blocks the flow).
+        if (action === 'whatsapp_preventa_set_bank' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const wanted = String(req.body?.bank || '').trim();
+            if (!wanted) return res.status(400).json({ error: 'bank requerido' });
+            const { accounts } = await loadBankSettings();
+            const match = accounts.find(a => a.bank.toLowerCase() === wanted.toLowerCase());
+            if (!match) return res.json({ ok: false, updated: false });
+            const w = tguDayWindow(new Date());
+            const { data: rows } = await supabase.from('whatsapp_preorders')
+                .select('*')
+                .eq('phone', phoneToStore)
+                .neq('status', 'cancelled')
+                .gte('created_at', w.start).lt('created_at', w.end)
+                .order('created_at', { ascending: false })
+                .limit(1);
+            const target = (rows || [])[0];
+            if (!target) return res.json({ ok: true, updated: false });
+            const { error: updErr } = await supabase.from('whatsapp_preorders')
+                .update({ payment_bank: match.bank })
+                .eq('id', target.id);
+            if (updErr) {
+                if (/payment_bank/.test(updErr.message || '')) {
+                    // Migration not run yet: say so loudly and
+                    // answer updated:false — never crash the bot.
+                    console.error('[Bank] payment_bank column missing — run bank-accounts-migration.sql; declaration dropped');
+                    return res.json({ ok: true, updated: false });
+                }
+                throw updErr;
+            }
+            return res.json({ ok: true, updated: true });
         }
 
         // --- CREADORES: bind a signup word to an EXISTING account ---
@@ -2108,6 +2212,11 @@ module.exports = async (req, res) => {
                             boxes_20: p.boxes_20 || 0,
                             total: parseFloat(p.quoted_total) || 0,
                             status: p.status,
+                            // MULTI-BANK: the bank the customer
+                            // declared they transferred from (null
+                            // until declared) — /admin renders it
+                            // as a tag on the preorder row.
+                            payment_bank: p.payment_bank || null,
                             created_at: p.created_at
                         }))
                     };
@@ -2979,13 +3088,31 @@ module.exports = async (req, res) => {
 
         if (action === 'partner_update_settings') {
             if (!(await requireStaff())) return;
-            const { restaurantId, acceptedPayments, bankDetails, gachaCampaign, operatingHours, bookingLeadTime, bookingBuffer } = req.body || {};
+            const { restaurantId, acceptedPayments, bankDetails, bankAccounts, gachaCampaign, operatingHours, bookingLeadTime, bookingBuffer } = req.body || {};
             if (!restaurantId) return res.status(400).json({ error: "restaurantId is required" });
 
             const { data: resData } = await supabase.from('restaurants').select('settings').eq('id', restaurantId).single();
             const settings = resData?.settings || {};
             settings.accepted_payments = acceptedPayments || {};
-            settings.bank_details = bankDetails || {};
+            if (Array.isArray(bankAccounts)) {
+                // MULTI-BANK (bank-accounts): partner-os sends up to
+                // 3 account blocks. Sanitize (trim, drop fully-empty
+                // blocks, cap 3), store the array, and MIRROR
+                // account #1 into the legacy bank_details so every
+                // unfixed reader keeps working mid-deploy.
+                const clean = bankAccounts.map(a => ({
+                    bank: String((a && a.bank) || '').trim().slice(0, 60),
+                    account: String((a && a.account) || '').trim().slice(0, 60),
+                    owner: String((a && a.owner) || '').trim().slice(0, 80)
+                })).filter(a => a.bank || a.account || a.owner).slice(0, 3);
+                settings.bank_accounts = clean;
+                const first = clean[0];
+                settings.bank_details = first
+                    ? { name: first.bank, account: first.account, owner: first.owner }
+                    : (bankDetails || {});
+            } else {
+                settings.bank_details = bankDetails || {};
+            }
             if (operatingHours) {
                 settings.operating_hours = operatingHours;
             }
