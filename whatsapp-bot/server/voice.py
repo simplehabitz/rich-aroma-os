@@ -34,6 +34,13 @@ the x-goog-api-key header. If that env var is missing on the
 host, both directions fail safe (retry line in, text out) and the
 logs say why — see voice-note.md for the owner's env step.
 
+ffmpeg resolution (_resolve_ffmpeg): PATH first, then the
+imageio-ffmpeg package's bundled binary — Render's native Python
+ships no ffmpeg at all (live log, 2026-10-26: "ffmpeg NOT FOUND
+on this host"), so the package in requirements.txt is how the
+deployed bot converts. Absent both: the loud NOT FOUND log and
+the text fallback, exactly as before.
+
 /order-notify does NOT come through here: ready/cancelled
 notifications stay text in v1, exactly as before.
 """
@@ -83,7 +90,12 @@ TRANSCRIBE_INSTRUCTION = (
     "no speaker labels.")
 
 # Vault transport (same guard as webhook.py): on the deployed
-# host there is no vault, and the env token rules.
+# host there is no vault, and the env token rules. Both helper
+# names are DEFINED on the no-vault path too — the surrogate as
+# None (never called: every use is HAS_VAULT-gated, and a request
+# here already carries its env-token credentials) and the JSON
+# reader as a plain body parse — so no vault helper can raise
+# NameError where the import didn't provide it.
 sys.path.insert(0, "/opt/muse/skills/custom-connector-setup/bin")
 try:
     from dynamic_credentials import (add_surrogate_to_request,
@@ -91,6 +103,10 @@ try:
     HAS_VAULT = True
 except ImportError:
     HAS_VAULT = False
+    add_surrogate_to_request = None
+
+    def read_json_response(resp):
+        return json.loads(resp.read().decode("utf-8") or "{}")
 
 _synth_cache = {}   # sha256(mood + text) -> ogg bytes, per process
 
@@ -115,9 +131,10 @@ def _authorize(req):
 
 
 def _read_json(resp):
-    if HAS_VAULT:
-        return read_json_response(resp)
-    return json.loads(resp.read().decode("utf-8") or "{}")
+    # read_json_response is always defined: the vault's helper
+    # when imported, the module-level plain-JSON fallback above
+    # when it wasn't (the deployed host).
+    return read_json_response(resp)
 
 
 def _gemini_call(model: str, body: dict) -> dict:
@@ -269,11 +286,38 @@ def speakable(text):
     return True, ""
 
 
-def _pcm_to_ogg(pcm: bytes) -> bytes:
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
+_ffmpeg = False   # False = unresolved; None = looked, not found
+
+
+def _resolve_ffmpeg():
+    """Locate an ffmpeg binary, once per process. Order: PATH
+    (shutil.which), then the imageio-ffmpeg package's bundled
+    binary (requirements.txt — Render's native Python ships no
+    ffmpeg, so the package is the deployed bot's converter). The
+    resolved path — or the NOT FOUND line — is logged at first
+    use, so the Render log names the converter in play."""
+    global _ffmpeg
+    if _ffmpeg is not False:
+        return _ffmpeg
+    path = shutil.which("ffmpeg")
+    if not path:
+        try:
+            import imageio_ffmpeg
+            path = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:
+            path = None
+    if path:
+        print(f"[Voice] ffmpeg: {path}", flush=True)
+    else:
         print("[Voice] ffmpeg NOT FOUND on this host — voice "
               "replies fall back to text", flush=True)
+    _ffmpeg = path
+    return path
+
+
+def _pcm_to_ogg(pcm: bytes) -> bytes:
+    ffmpeg = _resolve_ffmpeg()
+    if not ffmpeg:
         raise RuntimeError("ffmpeg missing")
     with tempfile.TemporaryDirectory(prefix="voice-") as td:
         src = os.path.join(td, "in.pcm")

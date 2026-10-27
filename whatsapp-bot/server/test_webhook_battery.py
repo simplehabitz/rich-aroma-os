@@ -38,6 +38,15 @@ monkeypatched: payloads are captured, never sent. What is pinned:
   W16 the mood clock: pinned Tegucigalpa times map to the
       audition's despertando / mediodia / fiesta, Sunday close
       included.
+  W17 no-vault host (voice-fix): dynamic_credentials blocked, as
+      on Render — voice reads a mocked Gemini response through
+      its fallback read_json_response, and webhook's
+      _deliver_message reads its Graph response, no NameError
+      from either (the live 2026-10-26 "webhook error" bug: the
+      POST went out, then the unguarded name crashed the read).
+  W18 ffmpeg resolution (voice-fix): PATH wins when present;
+      with PATH empty the imageio-ffmpeg bundled binary resolves,
+      and the PCM->OGG conversion runs exactly that binary.
 
 Run:  python3 server/test_webhook_battery.py
 """
@@ -475,6 +484,158 @@ def w16_mood_clock():
                          "fiesta", "mediodia", "fiesta"], str(got))
 
 
+# ------------------------------------------- voice-fix (2026-10-26)
+
+_W17_SCRIPT = r'''
+import json, os, sys, types, urllib.request
+
+sys.path.insert(0, os.environ["BATTERY_DIR"])
+
+
+class _Block:
+    """dynamic_credentials does not exist on the deployed host."""
+    def find_spec(self, name, path=None, target=None):
+        if name == "dynamic_credentials":
+            raise ImportError("blocked by battery")
+        return None
+
+
+sys.meta_path.insert(0, _Block())
+sys.modules.pop("dynamic_credentials", None)
+
+_flask = types.ModuleType("flask")
+
+
+class _App:
+    def __init__(self, name):
+        self.name = name
+
+    def get(self, rule):
+        return lambda f: f
+
+    def post(self, rule):
+        return lambda f: f
+
+    def run(self, **kw):
+        pass
+
+
+_flask.Flask = _App
+_flask.request = types.SimpleNamespace(
+    _json={}, headers={}, args={},
+    get_json=lambda force=True, silent=True: {})
+_flask.Response = lambda body="", status=200, mimetype=None: \
+    (status, body)
+sys.modules["flask"] = _flask
+
+
+class _Resp:
+    def __init__(self, body):
+        self._b = body
+
+    def read(self):
+        return self._b
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+import voice
+
+assert voice.HAS_VAULT is False, "vault must read as absent"
+assert voice.add_surrogate_to_request is None
+assert voice.read_json_response(_Resp(b'{"a": 1}')) == {"a": 1}
+
+_gem = {"candidates": [{"content": {"parts": [{"text": "hola"}]}}]}
+urllib.request.urlopen = \
+    lambda req, timeout=None: _Resp(json.dumps(_gem).encode())
+out = voice._gemini_call("m", {})
+assert out == _gem, out
+assert voice.transcribe(b"oggbytes", "audio/ogg") == "hola"
+print("W17A_OK")
+
+import webhook
+
+assert webhook.HAS_VAULT is False, "vault must read as absent"
+
+
+class _Opener:
+    def open(self, req, timeout=None):
+        return _Resp(b'{"messages": [{"id": "wamid.1"}]}')
+
+
+urllib.request.build_opener = lambda *a, **k: _Opener()
+res = webhook._deliver_message("pid", {"x": 1})
+assert res == {"messages": [{"id": "wamid.1"}]}, res
+assert webhook.read_json_response(_Resp(b'{"b": 2}')) == {"b": 2}
+print("W17B_OK")
+'''
+
+
+def w17_no_vault_paths():
+    import subprocess
+    env = dict(os.environ)
+    env["BATTERY_DIR"] = os.path.dirname(os.path.abspath(__file__))
+    env["GEMINI_API_KEY"] = "battery-key"
+    env["WHATSAPP_API_TOKEN"] = "battery-token"
+    proc = subprocess.run(
+        [sys.executable, "-c", _W17_SCRIPT],
+        capture_output=True, text=True, env=env, timeout=60)
+    tail = (proc.stdout + proc.stderr)[-300:]
+    check("W17a", "W17A_OK" in proc.stdout, tail)
+    check("W17b", "W17B_OK" in proc.stdout
+          and proc.returncode == 0, tail)
+
+
+def w18_ffmpeg_resolution():
+    calls = {"imageio": 0}
+    stub = types.ModuleType("imageio_ffmpeg")
+
+    def _exe():
+        calls["imageio"] += 1
+        return "/fake/imageio-ffmpeg"
+    stub.get_ffmpeg_exe = _exe
+    missing = object()
+    saved = (voice.shutil.which, voice.subprocess.run,
+             sys.modules.get("imageio_ffmpeg", missing), voice._ffmpeg)
+    try:
+        sys.modules["imageio_ffmpeg"] = stub
+        # PATH wins when it has ffmpeg; imageio is never consulted.
+        voice.shutil.which = lambda name: "/usr/bin/ffmpeg"
+        voice._ffmpeg = False
+        check("W18a", voice._resolve_ffmpeg() == "/usr/bin/ffmpeg"
+              and calls["imageio"] == 0,
+              f"imageio calls={calls['imageio']}")
+        # PATH empty -> the bundled binary resolves.
+        voice.shutil.which = lambda name: None
+        voice._ffmpeg = False
+        check("W18b", voice._resolve_ffmpeg() == "/fake/imageio-ffmpeg"
+              and calls["imageio"] == 1,
+              f"imageio calls={calls['imageio']}")
+        # ...and the conversion runs exactly that binary.
+        argv0 = []
+
+        def fake_run(argv, **kw):
+            argv0.append(argv[0])
+            with open(argv[-1], "wb") as f:
+                f.write(b"OGGBYTES")
+            return types.SimpleNamespace(returncode=0)
+        voice.subprocess.run = fake_run
+        ogg = voice._pcm_to_ogg(b"pcm-bytes")
+        check("W18c", ogg == b"OGGBYTES"
+              and argv0 == ["/fake/imageio-ffmpeg"], f"argv0={argv0}")
+    finally:
+        (voice.shutil.which, voice.subprocess.run,
+         _saved_mod, voice._ffmpeg) = saved
+        if _saved_mod is missing:
+            sys.modules.pop("imageio_ffmpeg", None)
+        else:
+            sys.modules["imageio_ffmpeg"] = _saved_mod
+
+
 def main():
     for fn in (w1_list_payload, w2_interactive_failure_falls_back,
                w3_cta_payload, w4_plain_string, w5_inbound_list_reply,
@@ -487,7 +648,9 @@ def main():
                w13_list_reply_stays_interactive,
                w14_tts_failure_falls_back_to_text,
                w15_exclusions_and_typed_turns,
-               w16_mood_clock):
+               w16_mood_clock,
+               w17_no_vault_paths,
+               w18_ffmpeg_resolution):
         try:
             fn()
         except Exception as e:

@@ -33,6 +33,17 @@ try:
 except ImportError:
     HAS_VAULT = False
 
+    def read_json_response(resp):
+        # No vault on this host (the deployed bot): read the
+        # response body as plain JSON. This fallback must exist —
+        # _deliver_message calls read_json_response(resp)
+        # unconditionally, and without the name defined the call
+        # dies with a NameError AFTER the Graph POST has already
+        # gone out: the customer gets the message, then the log
+        # shows "webhook error: name 'read_json_response' is not
+        # defined" (live Render log, 2026-10-26).
+        return json.loads(resp.read().decode("utf-8") or "{}")
+
 app = Flask(__name__)
 
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "change-me")
