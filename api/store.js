@@ -933,6 +933,138 @@ module.exports = async (req, res) => {
             }
         }
 
+        // --- 2c. KDS BUILD CARD DATA (admin-recipes build, 2026-10-26) ---
+        // ONE staff-gated read for the kitchen build card: for a set of menu
+        // item ids, return each item's recipe steps, base ingredient lines
+        // (per serving, with their step tie) and the modifier-ingredient
+        // DELTA rows for the item's modifier options — item-specific rows
+        // plus the global (item_id NULL) ones. The KDS page combines these
+        // with the ticket's chosen mods (matched by option id, else name)
+        // to render adjusted amounts inline per step. Resilient by design:
+        // a missing recipe_steps column, a missing step_no column, or the
+        // legacy modifier_ingredients table (seed v3 not yet applied) each
+        // degrade to an empty layer instead of failing the whole read.
+        if (action === 'kds_recipe_data') {
+            if (!(await requireStaff())) return;
+            const ids = [...new Set(String(req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean))].slice(0, 50);
+            if (!ids.length) return res.status(400).json({ error: "ids requeridos" });
+            try {
+                const titleizeSlug = (s) => String(s || '').replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+                // Menu items + steps (recipe_steps may not exist pre-migration)
+                let menuRows = [];
+                {
+                    const r = await supabase.from('menu_items').select('id, name, recipe_steps').in('id', ids);
+                    if (r.error) {
+                        const r2 = await supabase.from('menu_items').select('id, name').in('id', ids);
+                        menuRows = (r2.data || []).map(m => ({ ...m, recipe_steps: [] }));
+                    } else menuRows = r.data || [];
+                }
+                const stepsByItem = {};
+                menuRows.forEach(m => { stepsByItem[m.id] = Array.isArray(m.recipe_steps) ? m.recipe_steps : []; });
+
+                // Base lines (step_no may not exist pre-migration)
+                let lineRows = [];
+                {
+                    const r = await supabase.from('menu_item_ingredients')
+                        .select('menu_item_id, inventory_item_id, quantity, unit, step_no')
+                        .in('menu_item_id', ids);
+                    if (r.error) {
+                        const r2 = await supabase.from('menu_item_ingredients')
+                            .select('menu_item_id, inventory_item_id, quantity, unit')
+                            .in('menu_item_id', ids);
+                        lineRows = (r2.data || []).map(x => ({ ...x, step_no: null }));
+                    } else lineRows = r.data || [];
+                }
+
+                // Inventory catalog (resolve names/slugs for base lines AND
+                // delta rows — delta slugs may match a row by slug OR by id)
+                const { data: invAll } = await supabase.from('inventory').select('id, name, slug, unit');
+                const invByKey = {};
+                (invAll || []).forEach(v => {
+                    if (v.id) invByKey[v.id] = v;
+                    if (v.slug) invByKey[v.slug] = v;
+                });
+                const invFor = (key) => invByKey[key] || null;
+
+                // Modifier options linked to these items
+                const { data: links } = await supabase.from('item_modifier_groups').select('item_id, group_id').in('item_id', ids);
+                const groupIds = [...new Set((links || []).map(l => l.group_id).filter(Boolean))];
+                let optRows = [];
+                let groupName = {};
+                if (groupIds.length) {
+                    const [oRes, gRes] = await Promise.all([
+                        supabase.from('modifier_options').select('id, group_id, name, allow_qty, default_qty').in('group_id', groupIds),
+                        supabase.from('modifier_groups').select('id, name').in('id', groupIds)
+                    ]);
+                    optRows = oRes.data || [];
+                    (gRes.data || []).forEach(g => { groupName[g.id] = g.name; });
+                }
+                const optById = {};
+                optRows.forEach(o => { optById[o.id] = o; });
+                const optionsByItem = {};
+                (links || []).forEach(l => {
+                    (optionsByItem[l.item_id] = optionsByItem[l.item_id] || []);
+                });
+                optRows.forEach(o => {
+                    (links || []).filter(l => l.group_id === o.group_id).forEach(l => {
+                        if (optionsByItem[l.item_id] && !optionsByItem[l.item_id].some(x => x.id === o.id)) {
+                            optionsByItem[l.item_id].push({ id: o.id, name: o.name, group: groupName[o.group_id] || '', allow_qty: !!o.allow_qty, default_qty: o.default_qty ?? null });
+                        }
+                    });
+                });
+
+                // Delta rows: option-keyed (seed v3 shape). Legacy table or
+                // unseeded DB -> no deltas; the card still renders base recipes.
+                let deltaRows = [];
+                if (optRows.length) {
+                    try {
+                        const r = await supabase.from('modifier_ingredients')
+                            .select('modifier_option_id, item_id, inventory_item_id, quantity, unit')
+                            .in('modifier_option_id', optRows.map(o => o.id));
+                        if (!r.error) deltaRows = r.data || [];
+                    } catch (e) { deltaRows = []; }
+                }
+
+                const items = {};
+                ids.forEach(itemId => {
+                    const lines = lineRows.filter(x => x.menu_item_id === itemId).map(x => {
+                        const inv = invFor(x.inventory_item_id);
+                        return {
+                            slug: (inv && inv.slug) || x.inventory_item_id,
+                            name: (inv && inv.name) || titleizeSlug(x.inventory_item_id),
+                            unit: x.unit || (inv && inv.unit) || '',
+                            qty: parseFloat(x.quantity) || 0,
+                            step_no: (x.step_no === undefined || x.step_no === null) ? null : parseInt(x.step_no)
+                        };
+                    });
+                    const myOptIds = new Set((optionsByItem[itemId] || []).map(o => o.id));
+                    const deltas = deltaRows
+                        .filter(d => myOptIds.has(d.modifier_option_id) && (d.item_id === null || d.item_id === itemId))
+                        .map(d => {
+                            const inv = invFor(d.inventory_item_id);
+                            return {
+                                option_id: d.modifier_option_id,
+                                slug: d.inventory_item_id,
+                                name: (inv && inv.name) || titleizeSlug(d.inventory_item_id),
+                                unit: d.unit || (inv && inv.unit) || '',
+                                qty_delta: parseFloat(d.quantity) || 0
+                            };
+                        });
+                    items[itemId] = {
+                        steps: stepsByItem[itemId] || [],
+                        lines,
+                        options: optionsByItem[itemId] || [],
+                        deltas
+                    };
+                });
+                return res.json({ success: true, items });
+            } catch (err) {
+                console.error("[KDS Recipe Data Error]", err);
+                return res.status(500).json({ error: err.message });
+            }
+        }
+
         // --- 3. CASH / SHIFT ACTIONS ---
         if (action === 'current-shift' || action === 'current_shift') {
             const { data: shift } = await supabase.from('cash_shifts').select('*').eq('status', 'open').eq('restaurant_id', 'rich-aroma').order('opened_at', { ascending: false }).limit(1).maybeSingle();
