@@ -802,24 +802,8 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Category</label>
-                    <select id="edit-item-category" class="w-full border rounded-lg p-3 outline-none focus:border-green-500">
-                        <option value="combos">🔥 Combos / Paquetes</option>
-                        <option value="coffee">☕ Café / Calientes</option>
-                        <option value="drinks">🥤 Heladas / Refreshers</option>
-                        <option value="food">🥐 Comida / Salados</option>
-                        <option value="pastry">🍰 Repostería / Dulce</option>
-                        <option value="dentista">🦷 Dentista</option>
-                        <option value="médico">🩺 Médico</option>
-                        <option value="abogado">⚖️ Abogado</option>
-                        <option value="supermercado">🛒 Supermercado</option>
-                        <option value="farmacia">💊 Farmacia</option>
-                        <option value="casero">🏠 Comida Casera</option>
-                        <option value="ac">❄️ Aire Acondicionado</option>
-                        <option value="eléctrico">⚡ Electricista</option>
-                        <option value="side">🍟 Acompañamientos</option>
-                        <option value="secret">🤫 Menú Secreto</option>
-                        <option value="retail">🛍️ Retail / Otros</option>
-                    </select>
+                    <input type="text" id="edit-item-category" list="menu-category-list" class="w-full border rounded-lg p-3 outline-none focus:border-green-500" placeholder="Pick an existing category or type a new one">
+                    <datalist id="menu-category-list"></datalist>
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Price (Lps)</label>
@@ -863,24 +847,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Category</label>
-                    <select id="new-menu-category" class="w-full border rounded-lg p-3 outline-none focus:border-green-500">
-                        <option value="combos">🔥 Combos / Paquetes</option>
-                        <option value="coffee">☕ Café / Calientes</option>
-                        <option value="drinks">🥤 Heladas / Refreshers</option>
-                        <option value="food">🥐 Comida / Salados</option>
-                        <option value="pastry">🍰 Repostería / Dulce</option>
-                        <option value="dentista">🦷 Dentista</option>
-                        <option value="médico">🩺 Médico</option>
-                        <option value="abogado">⚖️ Abogado</option>
-                        <option value="supermercado">🛒 Supermercado</option>
-                        <option value="farmacia">💊 Farmacia</option>
-                        <option value="casero">🏠 Comida Casera</option>
-                        <option value="ac">❄️ Aire Acondicionado</option>
-                        <option value="eléctrico">⚡ Electricista</option>
-                        <option value="side">🍟 Acompañamientos</option>
-                        <option value="secret">🤫 Menú Secreto</option>
-                        <option value="retail">🛍️ Retail / Otros</option>
-                    </select>
+                    <input type="text" id="new-menu-category" list="menu-category-list" class="w-full border rounded-lg p-3 outline-none focus:border-green-500" placeholder="Pick an existing category or type a new one">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Price (Lempiras)</label>
@@ -2577,6 +2544,20 @@
             } catch(e) { console.error(e); }
         }
     
+        function populateCategoryList(items) {
+            const canonical = ['espresso_bar', 'tea_matcha', 'supremes_icees', 'grill_toast_crepes', 'bakery', 'bowls_salads', 'reposteria', 'combos'];
+            const seen = new Set(canonical);
+            (items || []).forEach(it => { if (it.category) seen.add(it.category); });
+            const dl = document.getElementById('menu-category-list');
+            if (!dl) return;
+            dl.innerHTML = '';
+            [...seen].sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                dl.appendChild(opt);
+            });
+        }
+
         async function loadMenu() {
             try {
                 // Populate Restaurant Selector if empty
@@ -2609,6 +2590,7 @@
                 tbody.innerHTML = '';
                 
                 const items = data.items || [];
+                populateCategoryList(items);
                 items.forEach(item => {
                     const row = document.createElement('tr');
                     const isAvailable = item.available !== false;
