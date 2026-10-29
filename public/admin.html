@@ -2616,6 +2616,7 @@
                     } else {
                         marginHtml = '<span class="text-[10px] text-gray-400">cost L ' + fc.toFixed(2) + (item.cost_partial ? ' \u26a0 floor' : '') + '</span>';
                     }
+                    const sugHtml = (item.suggested === null || item.suggested === undefined) ? '' : '<br><span class="text-[10px] text-gray-500">sugerido L ' + parseFloat(item.suggested).toFixed(0) + '</span>';
 
                     row.innerHTML = `
                         <td class="p-4">
@@ -2623,7 +2624,7 @@
                             <div class="text-[10px] text-gray-400 font-mono">${item.id}</div>
                         </td>
                         <td class="p-4 text-gray-600 capitalize">${escapeHtml(category)}</td>
-                        <td class="p-4 text-gray-600 font-mono">L ${price.toFixed(2)}<br>${marginHtml}</td>
+                        <td class="p-4 text-gray-600 font-mono">L ${price.toFixed(2)}<br>${marginHtml}${sugHtml}</td>
                         <td class="p-4 text-center">${availabilityBtn}</td>
                         <td class="p-4 text-center">
                             <div class="flex flex-col gap-1">

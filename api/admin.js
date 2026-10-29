@@ -240,6 +240,7 @@ module.exports = async function handler(req, res) {
                                     else { sum += parseFloat(l.quantity || 0) * c; priced++; }
                                 });
                                 it.food_cost = priced > 0 ? Math.round(sum * 100) / 100 : null;
+                                it.suggested = priced > 0 ? Math.round((sum / 0.30) / 5) * 5 : null;
                                 it.cost_partial = unpriced > 0;
                             });
                         } catch(costErr) {
