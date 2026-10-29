@@ -2261,6 +2261,99 @@ module.exports = async (req, res) => {
             return res.json({ ok: true, assignment_id: assignment.id, submission_id: sub.id });
         }
 
+        // --- OWNER'S DOOR (2026-10-29) — live shop snapshot for the
+        // bot's owner interface. READ-ONLY: sales today, active
+        // orders, low stock, preventa, Rico Cash outstanding. Same
+        // botSecretOk() gate as every whatsapp_* action; the bot
+        // calls it ONLY for numbers on its OWNER_WHATSAPP list, and
+        // the owner's number itself never reaches this action.
+        // "Today" = the America/Tegucigalpa calendar day (UTC-6, no
+        // DST) expressed as a UTC window. Sales follow the close-
+        // shift semantics: every non-cancelled order counts.
+        if (action === 'whatsapp_owner_snapshot' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            try {
+                const nowMs = Date.now();
+                const tgu = new Date(nowMs - 6 * 3600 * 1000);
+                const yy = tgu.getUTCFullYear();
+                const mm = String(tgu.getUTCMonth() + 1).padStart(2, '0');
+                const dd = String(tgu.getUTCDate()).padStart(2, '0');
+                const dayStart = `${yy}-${mm}-${dd}T06:00:00.000Z`;
+                const dayEnd = new Date(Date.parse(dayStart) + 24 * 3600 * 1000).toISOString();
+
+                const { data: ords } = await supabase.from('orders')
+                    .select('total, status, payment_method, secondary_payment_method, rico_amount_paid, items, created_at')
+                    .eq('restaurant_id', 'rich-aroma')
+                    .gte('created_at', dayStart).lt('created_at', dayEnd)
+                    .not('status', 'eq', 'cancelled');
+                const orders = ords || [];
+                const byMethod = { cash: 0, card: 0, transfer: 0, rico: 0 };
+                let salesTotal = 0;
+                const itemCount = {};
+                const active = { cocina: 0, por_cobrar: 0, listos: 0 };
+                orders.forEach(o => {
+                    const tot = parseFloat(o.total) || 0;
+                    salesTotal += tot;
+                    const r = parseFloat(o.rico_amount_paid) || 0;
+                    byMethod.rico += r;
+                    const method = o.secondary_payment_method || o.payment_method;
+                    const net = tot - r;
+                    if (method === 'cash') byMethod.cash += net;
+                    else if (method === 'card') byMethod.card += net;
+                    else if (method === 'transfer') byMethod.transfer += net;
+                    const st = String(o.status || '');
+                    if (['paid', 'preparing', 'in_progress'].includes(st)) active.cocina++;
+                    else if (['pending', 'pending_verification', 'awaiting_transfer_approval'].includes(st)) active.por_cobrar++;
+                    else if (['ready', 'drinks_ready', 'food_ready'].includes(st)) active.listos++;
+                    (Array.isArray(o.items) ? o.items : []).forEach(it => {
+                        const nm = it && (it.name || it.item_name);
+                        if (nm) itemCount[nm] = (itemCount[nm] || 0) + (parseFloat(it.quantity || it.qty) || 1);
+                    });
+                });
+                const topItems = Object.entries(itemCount)
+                    .sort((a, b) => b[1] - a[1]).slice(0, 5)
+                    .map(([name, qty]) => ({ name, qty }));
+
+                const { data: inv } = await supabase.from('inventory')
+                    .select('name, current_stock, min_stock, unit');
+                const lowStock = (inv || [])
+                    .filter(r => (parseFloat(r.min_stock) || 0) > 0 && (parseFloat(r.current_stock) || 0) <= (parseFloat(r.min_stock) || 0))
+                    .map(r => ({ name: r.name, current_stock: parseFloat(r.current_stock) || 0, min_stock: parseFloat(r.min_stock) || 0, unit: r.unit || '' }))
+                    .slice(0, 15);
+
+                const { data: prev } = await supabase.from('whatsapp_preorders')
+                    .select('status, packs, bottles, hold_expires_at, created_at')
+                    .gte('created_at', dayStart).lt('created_at', dayEnd);
+                let pvIntents = 0, pvPaid = 0, pvPacks = 0, pvBottles = 0, pvHolds = 0;
+                const nowIso = new Date(nowMs).toISOString();
+                (prev || []).forEach(pr => {
+                    const st = String(pr.status || '');
+                    if (st === 'cancelled') return;
+                    if (st === 'paid') pvPaid++; else pvIntents++;
+                    pvPacks += parseInt(pr.packs) || 0;
+                    pvBottles += parseInt(pr.bottles) || 0;
+                    if (pr.hold_expires_at && pr.hold_expires_at > nowIso && st !== 'paid') pvHolds++;
+                });
+
+                const { data: custs } = await supabase.from('customers').select('rico_balance');
+                const ricoOutstanding = (custs || []).reduce((s, c) => s + (parseFloat(c.rico_balance) || 0), 0);
+
+                return res.json({ ok: true, snapshot: {
+                    day: `${yy}-${mm}-${dd}`,
+                    sales_today: { orders: orders.length, total: Math.round(salesTotal * 100) / 100, by_method: byMethod },
+                    active,
+                    top_items: topItems,
+                    low_stock: lowStock,
+                    preventa_today: { intents: pvIntents, paid: pvPaid, packs: pvPacks, bottles: pvBottles, holds_active: pvHolds },
+                    rico_outstanding: Math.round(ricoOutstanding * 100) / 100,
+                    clock: null
+                } });
+            } catch (err) {
+                console.error('[OwnerSnapshot]', err);
+                return res.status(500).json({ error: err.message });
+            }
+        }
+
         // Manual/idempotent unlock for one order — for orders that are
         // born PAID outside this file (the /api/orders-v2 engine in
         // order-service creates Rico-paid orders directly) until that

@@ -231,3 +231,13 @@ def attribute_word(phone: str, word: str) -> dict:
     with reason one of already_attributed | unknown_word |
     inactive_code | no_customer. The bot only renders the verdict."""
     return _post("whatsapp_attribute", {"phone": phone, "word": word})
+
+
+def owner_snapshot() -> dict:
+    """Read-only (OWNER'S DOOR, 2026-10-29): the live shop snapshot
+    behind the bot's owner interface — sales today, active orders,
+    low stock, preventa, Rico Cash outstanding. The OS computes
+    everything (America/Tegucigalpa day, close-shift sales
+    semantics); the bot only formats. Called ONLY for numbers on
+    the bot's OWNER_WHATSAPP list (server/owner_door.py)."""
+    return _post("whatsapp_owner_snapshot", {})

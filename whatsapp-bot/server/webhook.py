@@ -243,6 +243,27 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str,
     Honduras flow. (The Cali order engine that used to sit behind
     the other branch was removed in the bot-finalize build.)
     """
+    # OWNER'S DOOR (2026-10-29): a sender on the OWNER_WHATSAPP list
+    # gets the live-shop interface for data questions (server/
+    # owner_door.py, read-only). Anything the door doesn't claim
+    # falls through to the customer pipeline untouched — the owner
+    # can still order and test like a customer. A door error also
+    # falls through: the customer flow is the safe default.
+    try:
+        try:
+            from owner_door import is_owner, reply_for_owner
+        except ImportError:
+            from server.owner_door import is_owner, reply_for_owner
+        if is_owner(from_number):
+            owner_reply = reply_for_owner(from_number, text)
+            if owner_reply is not None:
+                text_out, lang = owner_reply
+                return deliver_reply(phone_number_id, from_number,
+                                     text_out, voice=bool(voice_turn),
+                                     lang=lang)
+    except Exception as e:
+        print(f"[OwnerDoor] error, falling through to customer "
+              f"flow: {e}", flush=True)
     return handle_intro_message(from_number, text, phone_number_id,
                                 voice_turn=voice_turn)
 
