@@ -2601,6 +2601,21 @@
                     const price = parseFloat(item.price || 0);
                     const name = item.name || 'Unnamed Item';
                     const category = item.category || 'otros';
+                    const fc = (item.food_cost === null || item.food_cost === undefined) ? null : parseFloat(item.food_cost);
+                    let marginHtml = '';
+                    if (item.has_recipe === undefined) {
+                        marginHtml = '';
+                    } else if (!item.has_recipe) {
+                        marginHtml = '<span class="text-[10px] text-gray-400">no recipe</span>';
+                    } else if (fc === null) {
+                        marginHtml = '<span class="text-[10px] text-gray-400">no cost yet</span>';
+                    } else if (price > 0) {
+                        const pct = (fc / price) * 100;
+                        const band = pct <= 30 ? 'background:#dcfce7;color:#166534' : (pct <= 35 ? 'background:#fef9c3;color:#854d0e' : 'background:#fee2e2;color:#991b1b');
+                        marginHtml = '<span class="text-[10px] font-bold" style="' + band + ';padding:1px 6px;border-radius:9999px">cost L ' + fc.toFixed(2) + ' \u00b7 ' + pct.toFixed(1) + '%' + (item.cost_partial ? ' \u26a0 floor' : '') + '</span>';
+                    } else {
+                        marginHtml = '<span class="text-[10px] text-gray-400">cost L ' + fc.toFixed(2) + (item.cost_partial ? ' \u26a0 floor' : '') + '</span>';
+                    }
 
                     row.innerHTML = `
                         <td class="p-4">
@@ -2608,7 +2623,7 @@
                             <div class="text-[10px] text-gray-400 font-mono">${item.id}</div>
                         </td>
                         <td class="p-4 text-gray-600 capitalize">${escapeHtml(category)}</td>
-                        <td class="p-4 text-gray-600 font-mono">L ${price.toFixed(2)}</td>
+                        <td class="p-4 text-gray-600 font-mono">L ${price.toFixed(2)}<br>${marginHtml}</td>
                         <td class="p-4 text-center">${availabilityBtn}</td>
                         <td class="p-4 text-center">
                             <div class="flex flex-col gap-1">

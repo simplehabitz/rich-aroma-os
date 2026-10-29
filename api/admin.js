@@ -215,6 +215,36 @@ module.exports = async function handler(req, res) {
                         supabase.from('modifier_options').select('*')
                     ]);
                     if (rItems.data && rItems.data.length > 0) {
+                        // Margin chip data (2026-10-29): per-item food cost =
+                        // sum(recipe lines x inventory.cost_per_unit), one level
+                        // deep -- preps carry their computed unit cost. Partial
+                        // when any line's ingredient has no cost yet. Any failure
+                        // here leaves the items untouched (menu load never breaks).
+                        try {
+                            const itemIds = rItems.data.map(i => i.id);
+                            const [rLines, rInv] = await Promise.all([
+                                supabase.from('menu_item_ingredients').select('menu_item_id, inventory_item_id, quantity').in('menu_item_id', itemIds),
+                                supabase.from('inventory').select('id, cost_per_unit')
+                            ]);
+                            const costOf = {};
+                            (rInv.data || []).forEach(r => { costOf[r.id] = (r.cost_per_unit === null || r.cost_per_unit === undefined) ? null : parseFloat(r.cost_per_unit); });
+                            const byItem = {};
+                            (rLines.data || []).forEach(l => { (byItem[l.menu_item_id] = byItem[l.menu_item_id] || []).push(l); });
+                            rItems.data.forEach(it => {
+                                const lines = byItem[it.id] || [];
+                                it.has_recipe = lines.length > 0;
+                                let sum = 0, priced = 0, unpriced = 0;
+                                lines.forEach(l => {
+                                    const c = costOf[l.inventory_item_id];
+                                    if (c === null || c === undefined) { unpriced++; }
+                                    else { sum += parseFloat(l.quantity || 0) * c; priced++; }
+                                });
+                                it.food_cost = priced > 0 ? Math.round(sum * 100) / 100 : null;
+                                it.cost_partial = unpriced > 0;
+                            });
+                        } catch(costErr) {
+                            console.warn("[admin.js] margin cost attach failed:", costErr.message);
+                        }
                         return res.json({ items: rItems.data || [], modGroups: rModGroups.data || [], modOptions: rModOptions.data || [] });
                     }
                 } catch(sbErr) {
