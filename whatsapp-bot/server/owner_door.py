@@ -36,15 +36,28 @@ question-aware, the mascot's name is stripped before matching, and
 an order-shaped message ALWAYS falls through: the door answers
 data questions, it doesn't eat orders.
 
-MODO CLIENTE / MODO DUEÑO (2026-10-30): the owner can text
-"modo cliente" ("customer mode") to switch his own number to
-customer mode — the door then claims NOTHING, not even data
-questions, and he orders/tests exactly like a real customer —
-and "modo dueño" ("owner mode", "modo dueno") to switch back.
-Default is owner mode; the flag lives in an in-memory dict like
-the bot's other per-phone state, so a restart forgets it toward
-owner mode, the safe direction. Outbound owner traffic (close
-reports, the missed-report flush) is never gated by the mode.
+LA ETIQUETA «CLIENTE» (door fix #3, 2026-10-30): when the owner
+wants to order as a customer, he starts the order with the tag
+"Cliente" — "Cliente quiero un latte de caramelo". webhook.py
+checks the tag BEFORE the door is consulted (client_tag_order,
+below): the tag is stripped and the rest of the message goes
+straight to the customer pipeline as the start of a conversation,
+which the guard below then protects turn by turn. No state, no
+mode to forget you are in: the tag is per-order and dies with the
+message. (This replaces the short-lived modo cliente / modo
+dueño switch from the first fix — the owner's call: a tag on the
+order, not a mode on the number.)
+
+CONVERSATION GUARD (door fix #2, 2026-10-30): the door is
+consulted on EVERY inbound owner message — including the turns of
+a customer conversation already in progress. Live test: the owner
+ordered a latte, the pipeline asked 8oz/12oz, he confirmed, then
+asked when it would be ready — and the door answered with the
+sales snapshot, because the question carried a door keyword. Now,
+while the customer engine holds a live conversation for the
+owner's phone (see _conversation_active for the definition, taken
+from the engine's own structures), the door stands down
+completely and every turn belongs to that conversation.
 
 Env:
     OWNER_WHATSAPP   e.g. "19097068510" (or several, comma-separated)
@@ -203,66 +216,102 @@ def _falls_through(text: str) -> bool:
 
 
 # ------------------------------------------------------------------
-# MODO CLIENTE / MODO DUEÑO (2026-10-30) — see the module docstring.
-# The commands are whole-message matches (after trim/punctuation),
-# recognized in BOTH modes, and reachable only from owner numbers:
-# reply_for_owner's is_owner gate runs before any of this, so a
-# customer texting "modo cliente" just gets the customer flow.
+# LA ETIQUETA «CLIENTE» (door fix #3, 2026-10-30) — see the module
+# docstring. An OWNER message that STARTS with the word "cliente"
+# (any case; an optional ":" or "," right after) is a customer
+# order wearing a tag: webhook.py calls client_tag_order() before
+# the door, strips the tag, and hands the rest of the message to
+# the customer pipeline as a conversation start — no confirmation
+# reply of its own, the pipeline's first answer is the
+# confirmation. Follow-up turns need no tag: the conversation
+# guard below owns them.
+#
+# Owner-only by construction: client_tag_order re-checks
+# is_owner, so a customer's own leading "cliente" is never
+# stripped or rerouted by this path — for them the word is just
+# their text. A tag with nothing after it ("Cliente" alone) is
+# not a tag: there is no order to route, and the message falls
+# back to the door's ordinary rules.
 # ------------------------------------------------------------------
 
-_OWNER_MODES = {}  # owner digits -> "customer"; missing = owner mode
-
-_MODE_COMMANDS = {
-    "modo cliente": ("customer", "es"),
-    "customer mode": ("customer", "en"),
-    "modo dueño": ("owner", "es"),
-    "modo dueno": ("owner", "es"),
-    "owner mode": ("owner", "en"),
-}
-
-_MODE_REPLY = {
-    ("customer", "es"): (
-        "✅ Modo cliente activado. Ahora te atiendo como a cualquier "
-        "cliente: pedí, mirá el menú, probá todo. La puerta quedó "
-        "apagada hasta que escribas «modo dueño»."),
-    ("customer", "en"): (
-        "✅ Customer mode is on. I'll treat you like any customer "
-        "now — order, browse the menu, test away. The door stays "
-        "off until you text \"owner mode\"."),
-    ("owner", "es"): (
-        "✅ Modo dueño activado. La puerta está abierta: preguntame "
-        "«¿cómo vamos hoy?», ventas, stock, preventa, el reloj o "
-        "Rico Cash. «modo cliente» cuando quieras comprar como "
-        "cliente."),
-    ("owner", "en"): (
-        "✅ Owner mode is on. The door is open: ask me \"how are we "
-        "doing today?\", sales, stock, preorders, the clock or "
-        "Rico Cash. \"customer mode\" when you want to shop like a "
-        "customer."),
-}
+_CLIENT_TAG_RE = re.compile(
+    r"^\s*cliente\b(?:\s*[:,]\s*|\s+)", re.IGNORECASE)
 
 
-def _mode_command(text: str):
-    """(mode, lang) when the WHOLE message is a mode command."""
-    norm = re.sub(r"\s+", " ", (text or "").strip().lower())
-    return _MODE_COMMANDS.get(norm.strip(" .!¡¿?"))
+def client_tag_order(phone: str, text: str):
+    """The order text with the «Cliente» tag stripped, when an
+    OWNER's message carries the tag — else None."""
+    if not is_owner(phone):
+        return None
+    raw = text or ""
+    m = _CLIENT_TAG_RE.match(raw)
+    if not m:
+        return None
+    rest = raw[m.end():].strip()
+    return rest or None
 
 
-def _customer_mode(phone: str) -> bool:
+# ------------------------------------------------------------------
+# CONVERSATION GUARD (door fix #2, 2026-10-30) — see the module
+# docstring. While the customer engine holds a live conversation
+# for this phone, the door stands down and the pipeline owns every
+# turn — a mid-order "¿está listo hoy?" is about HIS order, not
+# about today's sales.
+#
+# "Active" is defined from the engine's own structures
+# (intro_engine.IntroConversation):
+#   - a mid-flow intro state — ASK_NAME / ASK_BIRTHDAY / CONFIRM /
+#     PREVENTA / HANDOFF: the engine asked something and is
+#     waiting for the answer;
+#   - a bank-declaration ask is open (convo.bank_options non-empty
+#     — the engine matches the next message against bank names);
+#   - a shop cart that is actually going somewhere: items in it,
+#     a pending size/flavor question awaiting its answer, or a
+#     checkout stage ("when" / "paying") awaiting its answer.
+# An idle LOUNGE with an empty, untouched cart is NOT active: the
+# owner can browse the menu and still ask the door about the day.
+#
+# The lookup is best-effort BY DESIGN: any failure (import drift,
+# state shape drift) returns False and the door behaves exactly as
+# it did before this guard existed. A state error must never break
+# the door or swallow a message the pipeline needed.
+# ------------------------------------------------------------------
+
+_ACTIVE_INTRO_STATES = frozenset(
+    ("ASK_NAME", "ASK_BIRTHDAY", "CONFIRM", "PREVENTA", "HANDOFF"))
+
+
+def conversation_is_active(convo) -> bool:
+    """Does THIS conversation object hold a live, answer-expecting
+    exchange? Kept engine-free so the definition can be read (and
+    tested) on its own."""
+    if convo is None:
+        return False
+    if (getattr(convo, "state", "") or "") in _ACTIVE_INTRO_STATES:
+        return True
+    if getattr(convo, "bank_options", None):
+        return True
+    cart = getattr(convo, "shop_cart", None)
+    if cart:
+        if cart.get("items"):
+            return True
+        if cart.get("pending") is not None:
+            return True
+        if cart.get("stage") in ("when", "paying"):
+            return True
+    return False
+
+
+def _conversation_active(phone: str) -> bool:
     try:
-        return _OWNER_MODES.get(_digits(phone)) == "customer"
+        try:
+            import intro_engine
+        except ImportError:  # pragma: no cover - package import
+            from server import intro_engine
+        return conversation_is_active(
+            intro_engine.get_intro_conversation(phone))
     except Exception:
-        return False  # unknown state fails toward owner mode
-
-
-def _set_mode(phone: str, mode: str) -> None:
-    try:
-        if mode == "customer":
-            _OWNER_MODES[_digits(phone)] = "customer"
-        else:
-            _OWNER_MODES.pop(_digits(phone), None)
-    except Exception:
-        pass  # a storage hiccup must never break the door
+        return False  # fall back to the door's pre-guard behavior
 
 
 # ------------------------------------------------------------------
@@ -448,8 +497,7 @@ _HELP = {
            "• «¿preventa?» — apartados de hoy\n"
            "• «¿quién está adentro?» / «¿quién llegó tarde?» — el reloj\n"
            "• «¿cuánto Rico Cash circula?»\n"
-           "• «modo cliente» — apagá la puerta y comprá como un cliente más\n"
-           "• «modo dueño» — volvé a modo dueño\n"
+           "• Para pedir como cliente, empezá tu orden con «Cliente».\n"
            "Y si querés pedir algo como cliente, pedí normal — te atiendo igual."),
     "en": ("You can ask me:\n• \"how are we doing today?\" — the day summary\n"
            "• \"sales?\" — sales and payment mix\n"
@@ -457,8 +505,7 @@ _HELP = {
            "• \"low stock?\" — inventory below minimum\n"
            "• \"preorders?\" — today's holds and paid preorders\n"
            "• \"how much Rico Cash is out there?\"\n"
-           "• \"customer mode\" — turn the door off and shop like any customer\n"
-           "• \"owner mode\" — back to owner mode\n"
+           "• To order as a customer, start your order with \"Cliente\".\n"
            "And if you want to order like a customer, just order — "
            "I'll take it the same way."),
 }
@@ -473,12 +520,13 @@ def reply_for_owner(phone: str, text: str):
     """(text, lang) when the door claims the message, else None."""
     if not is_owner(phone):
         return None
-    cmd = _mode_command(text)
-    if cmd is not None:
-        mode, lang = cmd
-        _set_mode(phone, mode)
-        return _MODE_REPLY[(mode, lang)], lang
-    if _customer_mode(phone):
+    if _conversation_active(phone):
+        # Mid-conversation (door fix #2): the customer engine owns
+        # this turn — even a question that looks like a door
+        # question is about the exchange in progress. A «Cliente»-
+        # tagged order never reaches this function at all: the
+        # webhook routes it straight to the pipeline, and the
+        # conversation it starts is what this guard protects.
         return None
     if _falls_through(text):
         return None

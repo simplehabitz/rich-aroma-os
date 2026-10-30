@@ -16,6 +16,7 @@ Secrets:
 import os
 import sys
 import json
+import time
 import urllib.request
 
 from flask import Flask, request, Response
@@ -60,6 +61,53 @@ ROUTES = {
     # 2026-10-26: the Cali order engine was removed, not just unrouted).
 }
 SHOP_PHONE_NUMBER_ID = "1354660681066143"
+
+
+# ------------------------------------------------------------------
+# Delivery dedupe (door fix #2, 2026-10-30). Meta re-delivers a
+# webhook when this endpoint is slow to ack — and this endpoint
+# does ALL its work (transcription, engine, OS calls, sends)
+# before acking, on a host that cold-wakes in ~35 s. There was no
+# message-id tracking anywhere, so a re-delivered message was
+# processed a second time, end to end: the customer got two
+# replies (owner live test 2026-10-30 — his sales answer arrived
+# twice, identical, which is the re-delivery shape; the known
+# interactive-send fallback produces two DIFFERENT messages, so
+# it is not this). Every WhatsApp message carries a unique id
+# (wamid): remember handled ids and ack-and-ignore repeats,
+# checked before ANY processing — door or engine.
+#
+# In-memory, like the bot's other state: a restart forgets, which
+# only risks re-answering an ancient redelivery — harmless next
+# to double-processing a live one. Bounded by a TTL (redeliveries
+# arrive within minutes; an hour is generous) plus a hard cap.
+# ------------------------------------------------------------------
+
+_SEEN_MSG_IDS = {}  # wamid -> epoch seconds when first handled
+_SEEN_MSG_TTL = 3600.0
+_SEEN_MSG_CAP = 2000
+
+
+def _already_seen(msg_id) -> bool:
+    """True when this WhatsApp message id was already handled.
+    First sight records the id BEFORE processing, so a redelivery
+    that lands while the original is still being worked on is
+    ignored too. Messages without an id can't be deduped and are
+    always processed."""
+    if not msg_id:
+        return False
+    now = time.time()
+    first = _SEEN_MSG_IDS.get(msg_id)
+    if first is not None and now - first < _SEEN_MSG_TTL:
+        return True
+    _SEEN_MSG_IDS[msg_id] = now
+    if len(_SEEN_MSG_IDS) > _SEEN_MSG_CAP:
+        cutoff = now - _SEEN_MSG_TTL
+        for key in [k for k, v in _SEEN_MSG_IDS.items() if v < cutoff]:
+            del _SEEN_MSG_IDS[key]
+        while len(_SEEN_MSG_IDS) > _SEEN_MSG_CAP:
+            _SEEN_MSG_IDS.pop(next(iter(_SEEN_MSG_IDS)), None)
+    return False
 
 
 def _deliver_message(phone_number_id: str, payload: dict):
@@ -328,9 +376,11 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str,
     # falls through: the customer flow is the safe default.
     try:
         try:
-            from owner_door import is_owner, reply_for_owner
+            from owner_door import (client_tag_order, is_owner,
+                                    reply_for_owner)
         except ImportError:
-            from server.owner_door import is_owner, reply_for_owner
+            from server.owner_door import (client_tag_order, is_owner,
+                                           reply_for_owner)
         if is_owner(from_number):
             # MISSED-REPORT FLUSH (2026-10-30): this inbound message
             # just reopened the owner's 24h window — deliver any
@@ -349,6 +399,21 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str,
             except Exception as flush_err:
                 print(f"[OwnerReport] flush on owner message failed: "
                       f"{flush_err}", flush=True)
+            # CLIENTE TAG (door fix #3, 2026-10-30): an owner order
+            # that starts with «Cliente» is a customer order, full
+            # stop — the tag is stripped here and the rest goes to
+            # the pipeline untouched by the door. No confirmation of
+            # its own: the pipeline's first answer is the
+            # confirmation. The conversation this starts is then
+            # protected turn by turn by the door's own guard, so
+            # follow-ups need no tag. A customer's leading "cliente"
+            # never reaches this branch (is_owner gate) and is
+            # never stripped.
+            tagged = client_tag_order(from_number, text)
+            if tagged is not None:
+                return handle_intro_message(from_number, tagged,
+                                            phone_number_id,
+                                            voice_turn=voice_turn)
             owner_reply = reply_for_owner(from_number, text)
             if owner_reply is not None:
                 text_out, lang = owner_reply
@@ -427,6 +492,12 @@ def incoming():
                 metadata = value.get("metadata", {})
                 phone_number_id = metadata.get("phone_number_id")
                 for msg in value.get("messages", []):
+                    # Delivery dedupe (door fix #2): a re-delivered
+                    # wamid is acked and ignored — see _already_seen.
+                    if _already_seen(msg.get("id")):
+                        print(f"[webhook] duplicate delivery ignored: "
+                              f"{msg.get('id')}", flush=True)
+                        continue
                     msg_type = msg.get("type")
                     if msg_type == "text":
                         text_body = msg.get("text", {}).get("body", "")
