@@ -143,9 +143,25 @@
     <p class="hero-sub">Esto es lo que tenés en Rich Aroma:</p>
 
     <div class="card balance">
-      <div class="lbl">💵 Tu Rico Cash</div>
+      <div class="lbl">Tu Rico Cash</div>
       <div class="amt" id="balance">L.0.00</div>
-      <p class="note">Ganás el <b>10% en Rico Cash</b> en cada compra de productos hechos en casa.</p>
+      <div id="wallet-split" hidden>
+        <p class="note" style="margin-top:6px">💵 <b>Tu dinero:</b> <span id="wallet-dinero">L.0.00</span> — tuyo para todo, nunca vence.</p>
+        <p class="note">🎁 <b>Regalo de la casa:</b> <span id="wallet-regalo">L.0.00</span> — válido en lo hecho en casa.<span id="wallet-regalo-vence"></span></p>
+        <div id="wallet-lots"></div>
+      </div>
+      <p class="note">Ganás el <b>10% de regalo</b> en cada compra. El regalo es para lo hecho en casa y tiene fecha; tu dinero es tuyo, para todo y para siempre.</p>
+    </div>
+
+    <div class="card" id="streak-card" hidden>
+      <h2>🔥 Racha del Capitán</h2>
+      <p class="note" id="streak-line" style="font-size:1.05em"></p>
+      <p class="note" id="streak-sub"></p>
+    </div>
+
+    <div class="card" id="historial-card" hidden>
+      <h2>📜 Historial</h2>
+      <div id="historial-body"></div>
     </div>
 
     <div class="card" id="preorder-card" hidden>
@@ -238,10 +254,49 @@
     }
     return s;
   }
+  var SOURCE_LABEL = { earn_10pct: 'Regalo por tu compra', recarga_bonus: 'Bono por tu recarga', campaign: 'Regalo de la casa', mission: 'Misión cumplida', manual: 'Regalo del equipo', promo: 'Regalo de la casa' };
+  function histLabel(h){
+    if(h.type === 'load') return '💵 Recarga';
+    if(h.type === 'payment') return '💵 Pago con tu dinero';
+    if(h.type === 'bonus_grant') return '🎁 ' + (SOURCE_LABEL[h.source] || 'Regalo de la casa');
+    if(h.type === 'bonus_spend') return '🎁 Pagaste con tu regalo';
+    if(h.type === 'bonus_expire') return '🎁 Regalo vencido';
+    if(h.type === 'adjustment') return 'Ajuste';
+    return 'Movimiento';
+  }
   function render(c){
     var prof = c.profile || {};
     $('greeting').textContent = '¡Hola, ' + (prof.first_name || 'de nuevo') + '! 👋';
     $('balance').textContent = money(c.rico_balance);
+    if (c.streak) {
+      $('streak-card').hidden = false;
+      $('streak-line').textContent = '🔥 Racha: semana ' + c.streak.weeks + ' · ' + c.streak.pct + '% en lo hecho en casa';
+      $('streak-sub').textContent = (c.streak.counted_this_week
+        ? 'Ya contaste esta semana ✓ Tu descuento se aplica solo en caja.'
+        : 'Pedí esta semana (con dinero real, no solo regalo) y tu racha sigue viva.') +
+        ' Tu descuento crece cada semana: ' + (c.streak.ladder || [2,4,6,8,10]).map(function(p){ return p + '%'; }).join(' → ') + '.';
+    }
+    var w = c.wallet;
+    if(w){
+      $('balance').textContent = money((parseFloat(w.dinero) || 0) + (parseFloat(w.regalo) || 0));
+      $('wallet-split').hidden = false;
+      $('wallet-dinero').textContent = money(w.dinero);
+      $('wallet-regalo').textContent = money(w.regalo);
+      var lots = w.lots || [];
+      if(lots.length && lots[0].expires_at){
+        $('wallet-regalo-vence').textContent = ' El próximo vence el ' + fecha(lots[0].expires_at) + '.';
+      }
+      $('wallet-lots').innerHTML = lots.map(function(l){
+        return '<p class="note" style="margin-top:4px">🎁 ' + esc(SOURCE_LABEL[l.source] || 'Regalo de la casa') + ': <b>' + esc(money(l.remaining)) + '</b>' + (l.expires_at ? ' · vence el ' + esc(fecha(l.expires_at)) : '') + '</p>';
+      }).join('');
+      var visibleHist = (w.historial || []).filter(function(h){ return h.type !== 'bonus_warn'; });
+      if(visibleHist.length){
+        $('historial-card').hidden = false;
+        $('historial-body').innerHTML = visibleHist.map(function(h){
+          return '<div class="row"><span class="l">' + esc(histLabel(h)) + (h.created_at ? '<br><span class="order-status">' + esc(fecha(h.created_at)) + '</span>' : '') + '</span><span class="r">' + (h.amount < 0 ? '−' : '+') + ' ' + esc(money(Math.abs(h.amount))) + '</span></div>';
+        }).join('');
+      }
+    }
     var pre = (c.preorders || [])[0];
     if(pre){
       $('preorder-card').hidden = false;

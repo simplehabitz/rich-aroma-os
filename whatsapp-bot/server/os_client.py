@@ -233,6 +233,24 @@ def attribute_word(phone: str, word: str) -> dict:
     return _post("whatsapp_attribute", {"phone": phone, "word": word})
 
 
+def presence(phone: str, text: str = "") -> dict:
+    """Stamp an inbound message (Difusión/opt-outs, 2026-10-30): the OS
+    records wa_last_inbound_at (the broadcast opt-in evidence + the
+    24h-window clock) and honors ALTO / STOP / BAJA absolutely — the
+    answer reports {found, opted_out, just_opted_out} so the webhook
+    can confirm a fresh opt-out in the house voice."""
+    return _post("whatsapp_presence", {"phone": phone, "text": text})
+
+
+def special_reveal(phone: str) -> dict:
+    """Especial del Día, the pull door (2026-10-30): the OS resolves
+    the account by phone, claims today's special server-side (cap
+    enforced there) and answers with {state, text} — the reveal copy
+    is composed once, on the OS; the bot only sends it. State is one
+    of none | before | after | exhausted | claimed | already."""
+    return _post("whatsapp_special", {"phone": phone})
+
+
 def owner_snapshot() -> dict:
     """Read-only (OWNER'S DOOR, 2026-10-29): the live shop snapshot
     behind the bot's owner interface — sales today, active orders,

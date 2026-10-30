@@ -339,6 +339,25 @@
         </div>
     </div>
 
+    <!-- DAR REGALO MODAL (Rico Cash two-bucket, 2026-10-30) -->
+    <div id="regalo-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[80] backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">🎁 Dar regalo</h2>
+            <p class="text-center text-gray-500 mb-6 text-sm">Regalo de la casa para <b id="regalo-customer-name">Cliente</b>. Sirve solo en productos hechos en casa y vence según la configuración de Regalos.</p>
+
+            <input type="number" id="regalo-amount" placeholder="Monto (Lps)" oninput="regaloAmountChanged()" class="w-full border-2 border-gray-300 rounded-xl p-4 mb-4 text-center text-2xl font-bold focus:border-pink-400 outline-none">
+
+            <textarea id="regalo-reason" rows="2" placeholder="Motivo (obligatorio) — ej: cumpleaños, disculpa por la espera" class="w-full border-2 border-gray-300 rounded-xl p-3 mb-4 text-sm focus:border-pink-400 outline-none"></textarea>
+
+            <div id="regalo-pin-wrap" class="hidden">
+                <input type="password" id="regalo-manager-pin" placeholder="PIN de encargado (el monto pasa el límite)" class="w-full border-2 border-amber-400 rounded-xl p-4 mb-4 text-center text-lg font-bold focus:border-amber-500 outline-none bg-amber-50">
+            </div>
+
+            <button onclick="submitDarRegalo()" class="w-full bg-pink-600 text-white py-3 rounded-xl font-bold hover:bg-pink-700 mb-2">Acreditar regalo</button>
+            <button onclick="document.getElementById('regalo-modal').classList.add('hidden')" class="w-full bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300">Cancelar</button>
+        </div>
+    </div>
+
     <!-- SHIFT CLOSE WIZARD -->
     <div id="shift-close-modal" class="hidden fixed inset-0 bg-black/95 z-[9999] flex items-center justify-center p-6 backdrop-blur-xl">
         <div class="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border-t-8 border-gold">
@@ -431,6 +450,7 @@
                 <i class="fas fa-coins mb-2 text-2xl text-gold"></i>
                 <p class="font-bold">Pago con Rico Cash</p>
                 <p id="rico-available-msg" class="text-sm mt-1">Balance disponible: L. 0.00</p>
+                <p class="text-xs mt-1 text-dark/60">El 🎁 regalo se usa primero, pero solo cubre lo hecho en casa; el resto sale de 💵 su dinero.</p>
                 
                 <div id="rico-split-ui" class="hidden mt-4 p-3 bg-white/50 rounded-xl space-y-2">
                     <p class="text-[10px] font-black text-gold uppercase tracking-widest">Saldo Insuficiente - Pago Dividido</p>
@@ -2968,7 +2988,7 @@ function openTenderModal() {
         if (btnRico) {
             if (window.loadedCustomer && acceptedPayments.rico !== false) {
                 btnRico.classList.remove('hidden');
-                document.getElementById('rico-available-msg').innerText = `Balance: L. ${(parseFloat(window.loadedCustomer.rico_balance) || 0).toFixed(2)}`;
+                document.getElementById('rico-available-msg').innerText = ricoBalanceLabel(window.loadedCustomer);
             } else {
                 btnRico.classList.add('hidden');
             }
@@ -2978,6 +2998,19 @@ function openTenderModal() {
         const defaultMethod = acceptedPayments.cash !== false ? 'cash' : (acceptedPayments.card ? 'card' : (acceptedPayments.transfer ? 'transfer' : 'cash'));
         setTender(defaultMethod);
         document.getElementById('tender-modal').classList.remove('hidden');
+    }
+
+    // Rico Cash two-bucket (2026-10-30): the register spends the
+    // COMBINED wallet — 🎁 gift first (house-made only, enforced by the
+    // server), then 💵 the customer's own money.
+    function ricoTotalBalance(c) {
+        return (parseFloat(c && c.rico_balance) || 0) + (parseFloat(c && c.rico_bonus_balance) || 0);
+    }
+    function ricoBalanceLabel(c) {
+        const dinero = parseFloat(c && c.rico_balance) || 0;
+        const regalo = parseFloat(c && c.rico_bonus_balance) || 0;
+        if (regalo > 0) return `Balance: L. ${(dinero + regalo).toFixed(2)} (💵 ${dinero.toFixed(2)} · 🎁 ${regalo.toFixed(2)})`;
+        return `Balance: L. ${dinero.toFixed(2)}`;
     }
 
     function setTender(method) {
@@ -2993,9 +3026,9 @@ function openTenderModal() {
         if (method === 'rico_balance') {
             const calc = calculateTotalWithRule();
             const total = calc.total;
-            const balance = window.loadedCustomer ? parseFloat(window.loadedCustomer.rico_balance) : 0;
-            
-            document.getElementById('rico-available-msg').innerText = `Balance disponible: L. ${balance.toFixed(2)}`;
+            const balance = window.loadedCustomer ? ricoTotalBalance(window.loadedCustomer) : 0;
+
+            document.getElementById('rico-available-msg').innerText = ricoBalanceLabel(window.loadedCustomer).replace('Balance:', 'Balance disponible:');
             
             if (balance < total && balance > 0) {
                 document.getElementById('rico-split-ui').classList.remove('hidden');
@@ -3043,8 +3076,8 @@ function openTenderModal() {
             }
         }
         if (currentTenderMethod === 'rico_balance') {
-            const balance = window.loadedCustomer ? parseFloat(window.loadedCustomer.rico_balance) : 0;
-            
+            const balance = window.loadedCustomer ? ricoTotalBalance(window.loadedCustomer) : 0;
+
             if (!window.loadedCustomer) {
                 valid = false;
                 confirmBtn.innerText = "Cargar Cliente First";
@@ -3275,7 +3308,7 @@ function openTenderModal() {
         let ricoAmountToDeduct = total;
         if (currentTenderMethod === 'rico_balance') {
             if (!window.loadedCustomer) return alert("Debes cargar un cliente para usar Rico Cash");
-            const balance = parseFloat(window.loadedCustomer.rico_balance) || 0;
+            const balance = ricoTotalBalance(window.loadedCustomer);
             
             if (balance < total && !secondaryTenderMethod) {
                 return alert(`Saldo insuficiente (Disponible: L. ${balance})`);
@@ -3377,7 +3410,24 @@ function openTenderModal() {
                 safeSetItem(SYNC_KEY, JSON.stringify(filtered));
                 updateSyncUI();
 
-                alert(" Venta Completada");
+                // Two-bucket split (2026-10-30): when gift money moved,
+                // the completion alert shows the split the customer
+                // will also see in Mi Rich Aroma.
+                let doneMsg = " Venta Completada";
+                try {
+                    const data = await res.clone().json().catch(() => null);
+                    const ord = (data && (data.order || data)) || {};
+                    const bonusUsed = data && data.rico_split
+                        ? (parseFloat(data.rico_split.bonus) || 0)
+                        : (parseFloat(ord.rico_bonus_used) || 0);
+                    const paidUsed = data && data.rico_split
+                        ? (parseFloat(data.rico_split.paid) || 0)
+                        : Math.max(0, (parseFloat(ord.rico_amount_paid) || 0) - bonusUsed);
+                    if (bonusUsed > 0) {
+                        doneMsg += `\n🎁 Regalo usado: L. ${bonusUsed.toFixed(2)}\n💵 Dinero del cliente usado: L. ${paidUsed.toFixed(2)}`;
+                    }
+                } catch (e) { /* the plain alert stands */ }
+                alert(doneMsg);
                 clearOrderState(true);
                 document.getElementById('tender-modal').classList.add('hidden');
                 fetchLiveOrders();
@@ -3529,7 +3579,8 @@ function openTenderModal() {
                     <div class="overflow-hidden mr-2">
                         <div class="font-black text-blue-900 truncate text-sm uppercase tracking-tighter"> ${escHtml(data.name || 'Cliente')}</div>
                         <div class="flex gap-2 mt-1 flex-wrap">
-                            <div class="text-[9px] font-black text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-full uppercase">L. ${(parseFloat(data.rico_balance) || 0).toFixed(0)} Cash</div>
+                            <div class="text-[9px] font-black text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-full uppercase">💵 L. ${(parseFloat(data.rico_balance) || 0).toFixed(0)}</div>
+                            ${(parseFloat(data.rico_bonus_balance) || 0) > 0 ? `<div class="text-[9px] font-black text-pink-600 bg-pink-100/60 px-2 py-0.5 rounded-full uppercase">🎁 L. ${(parseFloat(data.rico_bonus_balance) || 0).toFixed(0)} Regalo</div>` : ''}
                             <div class="text-[9px] font-black text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-full uppercase">${data.points || 0} pts</div>
                             <div class="text-[9px] font-black ${stampsCount >= 9 ? 'animate-pulse text-emerald-700 bg-emerald-200 border border-emerald-300' : 'text-emerald-600 bg-emerald-100/50'} px-2 py-0.5 rounded-full uppercase">
                                 <i class="fas fa-mug-hot mr-1"></i>${stampsCount}/10 Sellos
@@ -3539,6 +3590,10 @@ function openTenderModal() {
                     <button onclick="clearCustomer()" class="w-8 h-8 rounded-xl bg-white/50 text-blue-900/20 flex items-center justify-center hover:text-red-500 transition-all border border-blue-100 shadow-sm"><i class="fas fa-times text-xs"></i></button>
                 </div>
                 ${allowanceHtml}
+                <div class="flex gap-2 mt-2">
+                    <button onclick="openDarRegalo()" class="flex-1 py-2 bg-pink-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-pink-700 transition-all">🎁 Dar regalo</button>
+                    <button onclick="document.getElementById('recarga-modal').classList.remove('hidden')" class="flex-1 py-2 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition-all">➕ Recargar</button>
+                </div>
             </div>
         `;
         profile.classList.remove('hidden');
@@ -3713,6 +3768,67 @@ function openTenderModal() {
                 alert("Error al recargar saldo");
             }
         } catch (e) { console.error(e); alert("Error de conexin"); }
+    }
+
+    // --- DAR REGALO (Rico Cash two-bucket, 2026-10-30) ---
+    let darRegaloCap = 100;
+    async function fetchLoyaltyConfig() {
+        try {
+            const res = await fetch('/api/store?action=loyalty_config', {
+                headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') }
+            });
+            const d = await res.json();
+            if (d && d.ok && d.manual_grant_cap != null) darRegaloCap = parseFloat(d.manual_grant_cap) || 100;
+        } catch (e) { /* default cap stands */ }
+    }
+    function openDarRegalo() {
+        if (!window.loadedCustomer) return alert("Cargá un cliente primero");
+        document.getElementById('regalo-customer-name').innerText = window.loadedCustomer.name || 'Cliente';
+        document.getElementById('regalo-amount').value = '';
+        document.getElementById('regalo-reason').value = '';
+        document.getElementById('regalo-manager-pin').value = '';
+        document.getElementById('regalo-pin-wrap').classList.add('hidden');
+        document.getElementById('regalo-modal').classList.remove('hidden');
+        fetchLoyaltyConfig();
+    }
+    function regaloAmountChanged() {
+        const amt = parseFloat(document.getElementById('regalo-amount').value) || 0;
+        document.getElementById('regalo-pin-wrap').classList.toggle('hidden', !(amt > darRegaloCap));
+    }
+    async function submitDarRegalo() {
+        const amount = parseFloat(document.getElementById('regalo-amount').value) || 0;
+        const reason = document.getElementById('regalo-reason').value.trim();
+        const managerPin = document.getElementById('regalo-manager-pin').value.trim();
+        if (!window.loadedCustomer) return alert("Cargá un cliente primero");
+        if (!(amount > 0)) return alert("Ingresá un monto válido");
+        if (!reason) return alert("El motivo es obligatorio: queda en el registro del cliente.");
+        if (amount > darRegaloCap && !managerPin) {
+            document.getElementById('regalo-pin-wrap').classList.remove('hidden');
+            return alert(`Sobre L. ${darRegaloCap} necesitás el PIN de un encargado.`);
+        }
+        try {
+            const res = await fetch('/api/store?action=pos_manual_grant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
+                body: JSON.stringify({
+                    customerId: window.loadedCustomer.id,
+                    amount: amount,
+                    reason: reason,
+                    managerPin: managerPin || undefined
+                })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.success) {
+                alert(data.message || `🎁 Regalo de L. ${amount} acreditado`);
+                document.getElementById('regalo-modal').classList.add('hidden');
+                lookupCustomer(); // Refresh profile
+            } else if (data.code === 'MANAGER_PIN_REQUIRED') {
+                document.getElementById('regalo-pin-wrap').classList.remove('hidden');
+                alert(data.error || "Se requiere el PIN de un encargado para este monto.");
+            } else {
+                alert("Error: " + (data.error || "No se pudo acreditar el regalo"));
+            }
+        } catch (e) { console.error(e); alert("Error de conexión"); }
     }
 
     // --- DAILY INVENTORY CHECKLIST LOGIC ---

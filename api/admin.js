@@ -2,6 +2,7 @@
 const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
+const ricoLoyalty = require('./lib/rico-loyalty');
 
 module.exports = async function handler(req, res) {
     try {
@@ -1113,6 +1114,372 @@ module.exports = async function handler(req, res) {
                 totalSales,
                 currency: 'HNL'
             });
+        }
+
+        // --- LOYALTY: REGALOS (two-bucket config + deals engine, 2026-10-30) ---
+        // Everything the Regalos tab needs: the settings that govern
+        // Rico Cash (restaurants.settings.loyalty), the campaign CRUD
+        // for deals types 1–3, and the numbers the COST PANEL runs on
+        // (per-item food cost — the same computation as the margin chip
+        // — plus recent sales and the month's granted face so far).
+        if (action === 'loyalty_data' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.query.restaurantId || 'rich-aroma';
+            try {
+                const settings = await ricoLoyalty.getLoyaltySettings(supabase, resId);
+                const [rItems, rLines, rInv, rCustCount, rSales, rGrants] = await Promise.all([
+                    supabase.from('menu_items').select('id, name, price, category, is_house_made').eq('restaurant_id', resId).order('name'),
+                    supabase.from('menu_item_ingredients').select('menu_item_id, inventory_item_id, quantity'),
+                    supabase.from('inventory').select('id, cost_per_unit'),
+                    supabase.from('customers').select('id'),
+                    supabase.from('orders').select('total, created_at').gte('created_at', new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()),
+                    supabase.from('balance_history').select('amount, source, created_at').eq('type', 'bonus_grant').gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+                ]);
+                const costOf = {};
+                (rInv.data || []).forEach(r => { costOf[r.id] = (r.cost_per_unit === null || r.cost_per_unit === undefined) ? null : parseFloat(r.cost_per_unit); });
+                const byItem = {};
+                (rLines.data || []).forEach(l => { (byItem[l.menu_item_id] = byItem[l.menu_item_id] || []).push(l); });
+                const items = (rItems.data || []).map(it => {
+                    let sum = 0, priced = 0;
+                    (byItem[it.id] || []).forEach(l => {
+                        const c = costOf[l.inventory_item_id];
+                        if (c !== null && c !== undefined) { sum += parseFloat(l.quantity || 0) * c; priced++; }
+                    });
+                    return { ...it, food_cost: priced > 0 ? Math.round(sum * 100) / 100 : null };
+                });
+                const sales7d = (rSales.data || []).reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+                const orders7d = (rSales.data || []).length;
+                const monthGranted = (rGrants.data || [])
+                    .filter(g => ['campaign', 'manual', 'mission'].includes(g.source))
+                    .reduce((s, g) => s + (parseFloat(g.amount) || 0), 0);
+                return res.json({
+                    success: true, settings, items,
+                    customers_count: (rCustCount.data || []).length,
+                    sales_last_7d: Math.round(sales7d * 100) / 100,
+                    orders_last_7d: orders7d,
+                    avg_ticket_7d: orders7d > 0 ? Math.round((sales7d / orders7d) * 100) / 100 : 0,
+                    month_granted_face: Math.round(monthGranted * 100) / 100
+                });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'loyalty_settings_save' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.body?.restaurantId || 'rich-aroma';
+            const incoming = (req.body && req.body.loyalty) || {};
+            try {
+                const clean = {};
+                if (incoming.earn_rate !== undefined) clean.earn_rate = Math.min(1, Math.max(0, parseFloat(incoming.earn_rate) || 0));
+                if (incoming.launch_week !== undefined) clean.launch_week = !!incoming.launch_week;
+                if (incoming.launch_multiplier !== undefined) clean.launch_multiplier = Math.min(5, Math.max(1, parseFloat(incoming.launch_multiplier) || 1));
+                if (incoming.gift_expiry_days !== undefined) clean.gift_expiry_days = Math.min(365, Math.max(1, parseInt(incoming.gift_expiry_days) || 60));
+                if (incoming.manual_grant_cap !== undefined) clean.manual_grant_cap = Math.max(0, parseFloat(incoming.manual_grant_cap) || 0);
+                if (incoming.monthly_promo_cap !== undefined) clean.monthly_promo_cap = Math.max(0, parseFloat(incoming.monthly_promo_cap) || 0);
+                if (Array.isArray(incoming.ladder)) {
+                    clean.ladder = incoming.ladder
+                        .map(t => ({ min: parseFloat(t.min) || 0, bonus: parseFloat(t.bonus) || 0 }))
+                        .filter(t => t.min > 0 && t.bonus > 0)
+                        .sort((a, b) => a.min - b.min);
+                }
+                // Racha del Capitán (2026-10-30)
+                if (incoming.streak_enabled !== undefined) clean.streak_enabled = !!incoming.streak_enabled;
+                if (Array.isArray(incoming.streak_ladder)) {
+                    clean.streak_ladder = incoming.streak_ladder
+                        .map(v => Math.min(50, Math.max(0, parseFloat(v) || 0)))
+                        .filter(v => v > 0).slice(0, 8);
+                    if (!clean.streak_ladder.length) delete clean.streak_ladder;
+                }
+                // Difusión del Capitán (2026-10-30): ceiling is 2–4/month, structurally
+                if (incoming.broadcast_monthly_cap !== undefined) clean.broadcast_monthly_cap = Math.min(4, Math.max(2, parseInt(incoming.broadcast_monthly_cap) || 4));
+                if (incoming.broadcast_template_name !== undefined) clean.broadcast_template_name = String(incoming.broadcast_template_name || '').slice(0, 120);
+                if (incoming.broadcast_template_approved !== undefined) clean.broadcast_template_approved = !!incoming.broadcast_template_approved;
+                if (incoming.broadcast_template_cost !== undefined) clean.broadcast_template_cost = Math.max(0, parseFloat(incoming.broadcast_template_cost) || 0);
+                // Especial del Día (2026-10-30)
+                if (incoming.especial_push_time !== undefined && /^\d{1,2}:\d{2}$/.test(String(incoming.especial_push_time))) clean.especial_push_time = String(incoming.especial_push_time);
+                if (incoming.especial_template_name !== undefined) clean.especial_template_name = String(incoming.especial_template_name || '').slice(0, 120);
+                const { data: resRow } = await supabase.from('restaurants').select('settings').eq('id', resId).maybeSingle();
+                const settings = (resRow && resRow.settings) || {};
+                settings.loyalty = { ...(settings.loyalty || {}), ...clean };
+                const { error } = await supabase.from('restaurants').update({ settings }).eq('id', resId);
+                if (error) throw error;
+                return res.json({ success: true, loyalty: settings.loyalty, message: 'Configuración de Rico Cash guardada' });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'loyalty_campaigns' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.query.restaurantId || 'rich-aroma';
+            try {
+                const { data: campaigns, error } = await supabase.from('loyalty_campaigns')
+                    .select('*').eq('restaurant_id', resId).order('created_at', { ascending: false });
+                if (error) throw error;
+                const { data: grants } = await supabase.from('balance_history')
+                    .select('campaign_id, amount').eq('type', 'bonus_grant').not('campaign_id', 'is', null);
+                const stats = {};
+                (grants || []).forEach(g => {
+                    const s = stats[g.campaign_id] || (stats[g.campaign_id] = { grants_count: 0, granted_face: 0 });
+                    s.grants_count++; s.granted_face = Math.round((s.granted_face + (parseFloat(g.amount) || 0)) * 100) / 100;
+                });
+                return res.json({ success: true, campaigns: (campaigns || []).map(c => ({ ...c, stats: stats[c.id] || { grants_count: 0, granted_face: 0 } })) });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'loyalty_campaign_save' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const b = req.body || {};
+            const TYPES = ['multiplicador', 'compra_x_lleva', 'regalo'];
+            if (!TYPES.includes(b.type)) return res.status(400).json({ error: 'Tipo de oferta no válido' });
+            if (!String(b.name || '').trim()) return res.status(400).json({ error: 'La oferta necesita un nombre' });
+            try {
+                const row = {
+                    id: b.id || ('camp_' + Date.now() + Math.floor(Math.random() * 1000)),
+                    restaurant_id: b.restaurantId || 'rich-aroma',
+                    type: b.type,
+                    name: String(b.name).trim().slice(0, 80),
+                    config: (b.config && typeof b.config === 'object') ? b.config : {},
+                    active: !!b.active,
+                    starts_at: b.starts_at || null,
+                    ends_at: b.ends_at || null,
+                    over_cap_ack: !!b.over_cap_ack,
+                    created_by: b.created_by || 'admin',
+                    updated_at: new Date().toISOString()
+                };
+                const { data, error } = await supabase.from('loyalty_campaigns')
+                    .upsert(row, { onConflict: 'id' }).select().single();
+                if (error) throw error;
+                return res.json({ success: true, campaign: data, message: `Oferta "${row.name}" guardada` });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'loyalty_campaign_toggle' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const { id: campId, active, over_cap_ack } = req.body || {};
+            if (!campId) return res.status(400).json({ error: 'id requerido' });
+            try {
+                const updates = { active: !!active, updated_at: new Date().toISOString() };
+                if (over_cap_ack !== undefined) updates.over_cap_ack = !!over_cap_ack;
+                const { data, error } = await supabase.from('loyalty_campaigns')
+                    .update(updates).eq('id', campId).select().single();
+                if (error) throw error;
+                return res.json({ success: true, campaign: data });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        // --- DIFUSIÓN DEL CAPITÁN (2026-10-30) ---
+        // The cost panel is computed server-side (rico-loyalty) from the
+        // live audience: customers inside an open 24h window receive a
+        // free-form message (no Meta cost); everyone else opted-in is
+        // reachable ONLY through the approved marketing template.
+        async function broadcastContext(resId, campaignId) {
+            let campaign = null, getItem = null;
+            if (campaignId) {
+                const { data: c } = await supabase.from('loyalty_campaigns')
+                    .select('*').eq('id', campaignId).maybeSingle();
+                campaign = c || null;
+            }
+            // Blended COGS from the costed menu (same math as loyalty_data).
+            const [rItems, rLines, rInv, rSales] = await Promise.all([
+                supabase.from('menu_items').select('id, price').eq('restaurant_id', resId),
+                supabase.from('menu_item_ingredients').select('menu_item_id, inventory_item_id, quantity'),
+                supabase.from('inventory').select('id, cost_per_unit'),
+                supabase.from('orders').select('total, created_at').gte('created_at', new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString())
+            ]);
+            const costOf = {};
+            (rInv.data || []).forEach(r => { costOf[r.id] = (r.cost_per_unit === null || r.cost_per_unit === undefined) ? null : parseFloat(r.cost_per_unit); });
+            const byItem = {};
+            (rLines.data || []).forEach(l => { (byItem[l.menu_item_id] = byItem[l.menu_item_id] || []).push(l); });
+            let fcSum = 0, priceSum = 0;
+            const itemCosts = {};
+            (rItems.data || []).forEach(it => {
+                let sum = 0, priced = 0;
+                (byItem[it.id] || []).forEach(l => {
+                    const cst = costOf[l.inventory_item_id];
+                    if (cst !== null && cst !== undefined) { sum += parseFloat(l.quantity || 0) * cst; priced++; }
+                });
+                const fc = priced > 0 ? Math.round(sum * 100) / 100 : null;
+                itemCosts[it.id] = { price: parseFloat(it.price) || 0, food_cost: fc };
+                if (fc !== null) { fcSum += fc; priceSum += parseFloat(it.price) || 0; }
+            });
+            const blendedCogs = priceSum > 0 ? Math.min(0.9, Math.max(0.05, fcSum / priceSum)) : 0.30;
+            const sales7d = (rSales.data || []).reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
+            const avgTicket = (rSales.data || []).length > 0 ? sales7d / (rSales.data || []).length : 0;
+            if (campaign && campaign.type === 'compra_x_lleva' && (campaign.config || {}).get_item_id) {
+                getItem = itemCosts[campaign.config.get_item_id] || null;
+            }
+            return { campaign, getItem, blendedCogs, avgTicket };
+        }
+
+        if (action === 'broadcast_preview' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.body?.restaurantId || 'rich-aroma';
+            try {
+                const ctx = await broadcastContext(resId, req.body?.campaign_id || null);
+                const preview = await ricoLoyalty.broadcastPreview(supabase, {
+                    restaurantId: resId, campaign: ctx.campaign, getItem: ctx.getItem,
+                    blendedCogs: ctx.blendedCogs, avgTicket: ctx.avgTicket,
+                    expectedUses: req.body?.expected_uses != null ? parseInt(req.body.expected_uses) : null
+                });
+                return res.json({ success: true, preview });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'broadcast_send' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.body?.restaurantId || 'rich-aroma';
+            const message = String(req.body?.message || '').trim();
+            if (!message) return res.status(400).json({ error: 'Escribí el mensaje de la difusión.' });
+            try {
+                const settings = await ricoLoyalty.getLoyaltySettings(supabase, resId);
+                const used = await ricoLoyalty.broadcastsThisMonth(supabase, resId);
+                const cap = parseInt(settings.broadcast_monthly_cap) || 4;
+                if (used >= cap) {
+                    return res.status(400).json({ error: `Ya usaste las ${cap} difusiones de este mes. El límite se renueva el mes que viene.` });
+                }
+                const ctx = await broadcastContext(resId, req.body?.campaign_id || null);
+                const preview = await ricoLoyalty.broadcastPreview(supabase, {
+                    restaurantId: resId, campaign: ctx.campaign, getItem: ctx.getItem,
+                    blendedCogs: ctx.blendedCogs, avgTicket: ctx.avgTicket,
+                    expectedUses: req.body?.expected_uses != null ? parseInt(req.body.expected_uses) : null
+                });
+                const scope = req.body?.scope === 'window' ? 'window' : 'all';
+                if (scope === 'all' && preview.template_state === 'pending') {
+                    return res.status(400).json({ error: 'Tu plantilla de marketing todavía no está aprobada por Meta, así que por ahora la difusión solo puede salir para los clientes que te escribieron en las últimas 24 horas. Elegí "Solo ventana de 24h" o esperá la aprobación.' });
+                }
+                const aud = await ricoLoyalty.broadcastAudience(supabase);
+                const windowPhones = aud.window.map(c => c.phone);
+                const templatePhones = scope === 'all' ? aud.template.map(c => c.phone) : [];
+                const row = {
+                    id: 'bcast_' + Date.now(),
+                    restaurant_id: resId,
+                    message,
+                    template_name: settings.broadcast_template_name || null,
+                    campaign_id: req.body?.campaign_id || null,
+                    window_count: aud.window.length,
+                    template_count: aud.template.length,
+                    est_cost: preview.total_cost,
+                    status: 'sending',
+                    created_by: 'admin'
+                };
+                const { error: insErr } = await supabase.from('broadcasts').insert(row);
+                if (insErr) throw insErr;
+                const result = await ricoLoyalty.sendViaBotBroadcast({
+                    windowPhones, templatePhones, message,
+                    templateName: settings.broadcast_template_name || ''
+                });
+                if (!result) {
+                    await supabase.from('broadcasts').update({ status: 'failed' }).eq('id', row.id);
+                    return res.status(502).json({ error: 'El bot de WhatsApp no respondió. La difusión quedó registrada como fallida y NO cuenta contra tu límite si la reintentás desde una conexión sana — revisá que el bot esté despierto y probá de nuevo.' });
+                }
+                await supabase.from('broadcasts').update({
+                    status: 'sent',
+                    sent_window: result.sent_window || 0,
+                    sent_template: result.sent_template || 0
+                }).eq('id', row.id);
+                return res.json({
+                    success: true,
+                    sent_window: result.sent_window || 0,
+                    sent_template: result.sent_template || 0,
+                    failed: result.failed || 0,
+                    month_used: used + 1,
+                    month_cap: cap,
+                    message: `Difusión enviada: ${result.sent_window || 0} mensajes libres (ventana de 24h) y ${result.sent_template || 0} por plantilla. Te quedan ${cap - used - 1} este mes.`
+                });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        // --- ESPECIAL DEL DÍA (2026-10-30) ---
+        if (action === 'especial_data' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.query.restaurantId || 'rich-aroma';
+            try {
+                const settings = await ricoLoyalty.getLoyaltySettings(supabase, resId);
+                const today = ricoLoyalty.tguDateKey(new Date());
+                const tomorrow = ricoLoyalty.tguDateKey(new Date(Date.now() + 24 * 3600 * 1000));
+                const { data: specials } = await supabase.from('daily_specials')
+                    .select('*').eq('restaurant_id', resId).in('special_date', [today, tomorrow]);
+                const out = [];
+                for (const s of (specials || [])) {
+                    const { data: claims } = await supabase.from('special_claims')
+                        .select('id, redeemed_at').eq('special_id', s.id);
+                    out.push({
+                        ...s,
+                        claims_count: (claims || []).length,
+                        redeemed_count: (claims || []).filter(r => r.redeemed_at).length
+                    });
+                }
+                return res.json({ success: true, settings, today, tomorrow, specials: out });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
+        }
+
+        if (action === 'especial_save' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const resId = req.body?.restaurantId || 'rich-aroma';
+            try {
+                const dateKey = req.body?.date
+                    || (parseInt(req.body?.date_offset) === 1
+                        ? ricoLoyalty.tguDateKey(new Date(Date.now() + 24 * 3600 * 1000))
+                        : ricoLoyalty.tguDateKey(new Date()));
+                const kind = req.body?.kind === 'deal' ? 'deal' : 'item';
+                const row = {
+                    restaurant_id: resId,
+                    special_date: dateKey,
+                    item_id: kind === 'item' ? (req.body?.item_id || null) : null,
+                    campaign_id: kind === 'deal' ? (req.body?.campaign_id || null) : null,
+                    cap: Math.max(1, parseInt(req.body?.cap) || 20),
+                    starts_time: /^\d{1,2}:\d{2}$/.test(String(req.body?.starts_time || '')) ? String(req.body.starts_time) : '08:00',
+                    ends_time: /^\d{1,2}:\d{2}$/.test(String(req.body?.ends_time || '')) ? String(req.body.ends_time) : '18:00',
+                    active: req.body?.active !== false,
+                    // The caption NEVER reveals the deal — it drives people
+                    // to text ESPECIAL. The owner posts it himself.
+                    ig_caption: '🤫 Hoy hay un secreto en Rich Aroma… ☕\nTenemos un ESPECIAL DEL DÍA que solo se revela por WhatsApp.\nEscribinos "ESPECIAL" al +504 9905-4412 y te lo contamos 🎁\n📍 Quimistán, Santa Bárbara — Rich Aroma Coffee Shop'
+                };
+                if (kind === 'item' && !row.item_id) return res.status(400).json({ error: 'Elegí el artículo del especial.' });
+                if (kind === 'deal' && !row.campaign_id) return res.status(400).json({ error: 'Elegí la oferta del especial.' });
+                const { data: existing } = await supabase.from('daily_specials')
+                    .select('id').eq('restaurant_id', resId).eq('special_date', dateKey).maybeSingle();
+                let saved;
+                if (existing) {
+                    const { data, error } = await supabase.from('daily_specials')
+                        .update(row).eq('id', existing.id).select().single();
+                    if (error) throw error;
+                    saved = data;
+                } else {
+                    const { data, error } = await supabase.from('daily_specials')
+                        .insert({ id: 'especial_' + dateKey.replace(/-/g, ''), created_by: 'admin', ...row })
+                        .select().single();
+                    if (error) throw error;
+                    saved = data;
+                }
+                // Cost panel verdict: max exposure = cap × margin cost.
+                const ctx = await broadcastContext(resId, null);
+                const per = await ricoLoyalty.especialPerUseCost(supabase, saved, {
+                    blendedCogs: ctx.blendedCogs, avgTicket: ctx.avgTicket
+                });
+                return res.json({
+                    success: true, special: saved,
+                    per_use_cost: per.perUse, cost_basis: per.basis,
+                    max_exposure: Math.round(per.perUse * row.cap * 100) / 100,
+                    message: `Especial guardado para el ${dateKey}. Si nadie lo reclama, no cuesta nada.`
+                });
+            } catch (e) {
+                return res.status(500).json({ error: e.message });
+            }
         }
 
         // --- EMPLOYEES ---

@@ -1,5 +1,15 @@
 {
   "version": 2,
+  "crons": [
+    {
+      "path": "/api/loyalty-sweep",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/especial-push",
+      "schedule": "30 15 * * *"
+    }
+  ],
   "builds": [
     {
       "src": "api/*.js",
@@ -156,6 +166,14 @@
     {
       "src": "/api/store",
       "dest": "/api/store.js"
+    },
+    {
+      "src": "/api/loyalty-sweep",
+      "dest": "/api/store.js?action=loyalty_sweep"
+    },
+    {
+      "src": "/api/especial-push",
+      "dest": "/api/store.js?action=especial_push"
     },
     {
       "src": "/api/store/status",

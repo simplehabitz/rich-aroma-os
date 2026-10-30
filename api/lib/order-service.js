@@ -1,5 +1,7 @@
 const { supabase: defaultSupabase } = require('./supabase');
 const { awardPoints, syncMembershipState, getHondurasDate } = require('./loyalty');
+const ricoLoyalty = require('./rico-loyalty');
+const { unlockMissionsForOrder } = require('./mission-unlock');
 const { applyVipBenefits, applyBootcampBenefits, calculateSurgeDiscounts } = require('./pricing');
 const { deductInventoryForOrder } = require('./inventory-service');
 const { notifyOrder } = require('./email-service');
@@ -374,6 +376,64 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
             }
         }
 
+        // 2.6 LOYALTY (2026-10-30): deals-engine type 2 (Compra X, llevá Y)
+        // and the Creadores BOGO door adjust the price HERE — server-side,
+        // before any wallet math. Deals NEVER stack with a promo code:
+        // when a promo discount was actually granted above, both skip.
+        let bogoApplied = false;
+        let dealDiscountApplied = 0;
+        if (!promoApplied) {
+            const bg = await ricoLoyalty.buyGetDiscount(supabase, { restaurantId: targetResId, items: finalOrderData.items });
+            if (bg.discount > 0) {
+                finalOrderData.discount = round2((parseFloat(finalOrderData.discount) || 0) + bg.discount);
+                finalOrderData.total = round2(finalOrderData.total - bg.discount);
+                promoNote = (promoNote + ` [OFERTA: ${bg.campaign.name}]`).trim();
+                dealDiscountApplied += bg.discount;
+            }
+            if (customer) {
+                const bo = await ricoLoyalty.bogoDiscount(supabase, { customerId: customer.id, items: finalOrderData.items, restaurantId: targetResId });
+                if (bo.discount > 0) {
+                    finalOrderData.discount = round2((parseFloat(finalOrderData.discount) || 0) + bo.discount);
+                    finalOrderData.total = round2(finalOrderData.total - bo.discount);
+                    promoNote = (promoNote + ' [BOGO CREADORES]').trim();
+                    bogoApplied = true;
+                    dealDiscountApplied += bo.discount;
+                }
+            }
+        }
+        // 2.7 ESPECIAL DEL DÍA + RACHA (2026-10-30): price-side effects of
+        // a special the customer claimed today, and the Racha streak
+        // discount. Neither stacks with a promo code or a price deal —
+        // the Especial wins over the Racha (it was claimed on purpose).
+        // The streak WEEK still counts at paid time either way; only the
+        // discount is suppressed when another deal touched the order.
+        if (!promoApplied && customer) {
+            if (dealDiscountApplied <= 0) {
+                const ed = await ricoLoyalty.especialDiscountForOrder(supabase, {
+                    customer, items: finalOrderData.items, restaurantId: targetResId
+                });
+                if (ed.discount > 0) {
+                    finalOrderData.discount = round2((parseFloat(finalOrderData.discount) || 0) + ed.discount);
+                    finalOrderData.total = round2(finalOrderData.total - ed.discount);
+                    promoNote = (promoNote + ' [ESPECIAL DEL DÍA]').trim();
+                    dealDiscountApplied += ed.discount;
+                }
+            }
+            if (dealDiscountApplied <= 0) {
+                const sd = await ricoLoyalty.streakDiscountForOrder(supabase, {
+                    customer, items: finalOrderData.items,
+                    discount: parseFloat(finalOrderData.discount) || 0,
+                    restaurantId: targetResId
+                });
+                if (sd.discount > 0) {
+                    finalOrderData.discount = round2((parseFloat(finalOrderData.discount) || 0) + sd.discount);
+                    finalOrderData.total = round2(finalOrderData.total - sd.discount);
+                    promoNote = (promoNote + ` [RACHA: ${sd.pct}%]`).trim();
+                }
+            }
+        }
+        if ((parseFloat(finalOrderData.discount) || 0) > serverSubtotal) finalOrderData.discount = serverSubtotal;
+
         // SEC-FIX 2: with totals computed server-side, a discount can never
         // push an order below zero.
         finalOrderData.total = Math.max(0, round2(finalOrderData.total));
@@ -405,36 +465,46 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
 
         let orderStatus = 'pending';
         let ricoAmountPaid = 0;
-        if (paymentMethod === 'rico_balance' && customer) {
-            const currentBalance = parseFloat(customer.rico_balance) || 0;
-            if (currentBalance >= finalOrderData.total) {
-                orderStatus = 'paid';
-                ricoAmountPaid = finalOrderData.total;
-                await supabase.from('customers').update({ rico_balance: currentBalance - finalOrderData.total }).eq('id', customer.id);
-                await supabase.from('balance_history').insert({
-                    customer_id: customer.id,
-                    type: 'payment',
-                    amount: -finalOrderData.total,
-                    notes: `Order #${finalOrderData.total}`
-                });
-            } else if (currentBalance > 0) {
-                orderStatus = 'partial_paid';
-                ricoAmountPaid = currentBalance;
-                await supabase.from('customers').update({ rico_balance: 0 }).eq('id', customer.id);
-                await supabase.from('balance_history').insert({
-                    customer_id: customer.id,
-                    type: 'payment',
-                    amount: -currentBalance,
-                    notes: `Partial Order #${currentBalance}`
-                });
-            } else {
-                throw new Error('Saldo insuficiente en Rico Cash');
+        let ricoBonusUsed = 0;
+        // Order identity is minted HERE (it used to be section 4) because
+        // the wallet ledger rows below carry the order id.
+        const orderNum = Math.floor(Date.now() / 1000) - 1769000000;
+        const orderId = 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+        // LOYALTY (2026-10-30): the two-bucket spend replaces the one-pot
+        // debit. Gift money ("Regalo de la casa") draws FIRST, capped at
+        // the order's house-made net portion — server-enforced in
+        // rico-loyalty.settleWalletForOrder — then the customer's own
+        // money ("Tu dinero", the legacy rico_balance). Runs whenever
+        // Rico is involved: as the primary tender it keeps the legacy
+        // status semantics (full → 'paid', partial → 'partial_paid',
+        // empty wallet → throw), as a secondary tender it debits without
+        // touching the status.
+        const ricoPrimary = paymentMethod === 'rico_balance' || paymentMethod === 'rico_cash';
+        const ricoSecondary = secondaryPaymentMethod === 'rico_balance' || secondaryPaymentMethod === 'rico_cash';
+        if ((ricoPrimary || ricoSecondary || (parseFloat(ricoAmount) || 0) > 0) && customer) {
+            const totalWallet = (parseFloat(customer.rico_balance) || 0)
+                + await ricoLoyalty.getBonusBalance(supabase, customer.id);
+            if (ricoPrimary && totalWallet <= 0) throw new Error('Saldo insuficiente en Rico Cash');
+            const walletTarget = (parseFloat(ricoAmount) || 0) > 0 ? parseFloat(ricoAmount) : finalOrderData.total;
+            const settled = await ricoLoyalty.settleWalletForOrder(supabase, {
+                id: orderId,
+                order_number: orderNum,
+                customer_id: customer.id,
+                total: finalOrderData.total,
+                discount: finalOrderData.discount,
+                items: finalOrderData.items
+            }, { walletTarget });
+            ricoBonusUsed = settled.bonusUsed;
+            ricoAmountPaid = round2(settled.bonusUsed + settled.paidUsed);
+            finalOrderData.items = settled.items;
+            if (ricoPrimary) {
+                if (ricoAmountPaid >= finalOrderData.total) orderStatus = 'paid';
+                else if (ricoAmountPaid > 0) orderStatus = 'partial_paid';
             }
         }
 
         // 4. Create Order
-        const orderNum = Math.floor(Date.now() / 1000) - 1769000000;
-        const orderId = 'ORD-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
 
         const dbOrder = {
             id: orderId,
@@ -448,6 +518,7 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
             payment_method: paymentMethod,
             secondary_payment_method: secondaryPaymentMethod,
             rico_amount_paid: ricoAmountPaid || ricoAmount || 0,
+            rico_bonus_used: ricoBonusUsed,
             customer_id: finalCustomerId,
             restaurant_id: targetResId,
             shift_id: shiftId,
@@ -547,6 +618,14 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
                     delete fallbackOrder.requested_for;
                     delete fallbackOrder.requested_for_label;
                 }
+                if (errorMsg.includes('rico_bonus_used')) {
+                    // The loyalty migration has not run on this DB yet —
+                    // degrade loudly, never lose the order over the new
+                    // column (the in-memory split below still feeds the
+                    // earn/mission readers).
+                    console.warn('[OrderService] rico_bonus_used column missing (run the loyalty migration) — retrying without it');
+                    delete fallbackOrder.rico_bonus_used;
+                }
                 if (errorMsg.includes('orders_restaurant_id_fkey')) {
                     fallbackOrder.notes = (fallbackOrder.notes || '') + ` [ORIGINAL_RESTAURANT: ${targetResId}]`;
                     fallbackOrder.restaurant_id = 'rich-aroma';
@@ -579,6 +658,12 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
             noDataErr.code = 'ORDER_PERSIST_FAILED';
             throw noDataErr;
         }
+
+        // LOYALTY: the locally computed split is authoritative even when
+        // the rico_bonus_used column is not in the DB yet (the fallback
+        // above) — the earn/mission readers below consume this object.
+        data.rico_bonus_used = ricoBonusUsed;
+        if (bogoApplied && customer) await ricoLoyalty.markBogoRedeemed(supabase, customer.id);
 
         // 4.4 Promo code use counting (only when a discount was actually granted)
         if (promoRow && promoApplied) {
@@ -631,6 +716,17 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
 
         // 5. Post-Order Background Tasks
         (async () => {
+            // LOYALTY (2026-10-30): an order BORN paid in this engine
+            // earns its gift + drops campaign gifts, and unlocks its
+            // missions — the one-line unlock the missions build waited
+            // for (orders created already-paid never passed through the
+            // store.js status paths). Both helpers are failure-silent
+            // and idempotent; orders that turn paid LATER are covered
+            // by the store.js order_update hook instead.
+            if (data.status === 'paid' && finalCustomerId) {
+                await ricoLoyalty.processPaidOrder(supabase, data);
+                await unlockMissionsForOrder(data, supabase);
+            }
             // Loyalty Points
             if (finalCustomerId) {
                 await awardPoints(finalCustomerId, dbOrder.total, paymentMethod, supabase);
@@ -763,6 +859,12 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
             // Email Notification (Every order triggers an email)
             await notifyOrder(data);
         })();
+
+        // The wallet split rides the response so the POS can show it on
+        // the receipt ("🎁 Regalo L.X · 💵 Tu dinero L.Y").
+        if (ricoAmountPaid > 0 || ricoBonusUsed > 0) {
+            data.rico_split = { bonus: ricoBonusUsed, paid: round2(ricoAmountPaid - ricoBonusUsed) };
+        }
 
         // Ensure caller receives delivery_pin even if database stripped the custom column
         if (dbOrder.delivery_pin && !data.delivery_pin) {

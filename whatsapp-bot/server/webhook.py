@@ -107,6 +107,22 @@ def send_whatsapp_text(phone_number_id: str, to: str, text: str):
     })
 
 
+def send_whatsapp_template(phone_number_id: str, to: str,
+                           template_name: str, language: str = "es"):
+    """Send an approved marketing template message via Graph API
+    (Difusión del Capitán + Especial VIP push, 2026-10-30). The
+    template's text lives in Meta's manager — approved once by the
+    owner; the bot only names it. No body parameters: the approved
+    templates for this shop are parameter-free."""
+    return _deliver_message(phone_number_id, {
+        "messaging_product": "whatsapp",
+        "to": to,
+        "type": "template",
+        "template": {"name": template_name,
+                     "language": {"code": language}},
+    })
+
+
 def send_whatsapp_audio(phone_number_id: str, to: str, media_id: str):
     """Send an uploaded voice note (server/voice.py): an audio
     message with voice:true, so it renders as a voice memo in the
@@ -243,6 +259,67 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str,
     Honduras flow. (The Cali order engine that used to sit behind
     the other branch was removed in the bot-finalize build.)
     """
+    # PRESENCE + OPT-OUT + ESPECIAL (loyalty build, 2026-10-30).
+    # Every inbound message stamps the customer's WhatsApp presence
+    # on the OS (broadcast opt-in evidence + the 24h window clock).
+    # ALTO / STOP / BAJA opt the customer out absolutely and are
+    # answered here, never by the engine. ESPECIAL reveals today's
+    # Especial del Día — claimed server-side, cap enforced there.
+    # Any failure falls through to the normal flow untouched.
+    try:
+        import re as _re
+        import unicodedata as _ud
+        _norm = _ud.normalize("NFD", (text or "").strip().lower())
+        _norm = "".join(ch for ch in _norm if not _ud.combining(ch))
+        _norm = _re.sub(r"[^a-z0-9 ]", "", _norm).strip()
+        _norm = _re.sub(r"\s+", " ", _norm)
+        try:
+            import os_client
+        except ImportError:
+            from server import os_client
+        if _norm in ("alto", "stop", "baja"):
+            res = os_client.presence(from_number, text)
+            data = (res or {}).get("data") or {}
+            if data.get("just_opted_out"):
+                return deliver_reply(
+                    phone_number_id, from_number,
+                    "Listo ✅ No te mandamos más avisos ni difusiones. "
+                    "Podés seguir pidiendo por aquí cuando quieras ☕",
+                    voice=bool(voice_turn))
+            if data.get("opted_out"):
+                return deliver_reply(
+                    phone_number_id, from_number,
+                    "Ya estabas fuera de los avisos ✅ Tranquilo, no te "
+                    "mandamos difusiones.", voice=bool(voice_turn))
+            # OS unreachable: the word is still honored in this reply.
+            return deliver_reply(
+                phone_number_id, from_number,
+                "Listo ✅ No te mandamos más avisos ni difusiones.",
+                voice=bool(voice_turn))
+        os_client.presence(from_number, text)
+        if _norm in ("especial", "especial del dia", "especial de hoy",
+                     "que hay hoy", "el especial"):
+            res = os_client.special_reveal(from_number)
+            data = (res or {}).get("data") or {}
+            text_out = (data.get("text") or "").strip()
+            if text_out:
+                sent = deliver_reply(phone_number_id, from_number,
+                                     text_out, voice=bool(voice_turn))
+                if data.get("state") == "none":
+                    # Warm fallback + the menu, never an error.
+                    return handle_intro_message(
+                        from_number, "menu", phone_number_id,
+                        voice_turn=voice_turn)
+                return sent
+            return deliver_reply(
+                phone_number_id, from_number,
+                "Hoy el Capitán no escondió ningún especial 😄 "
+                "Escribí \"menú\" y te muestro todo lo que hay.",
+                voice=bool(voice_turn))
+    except Exception as e:
+        print(f"[Loyalty] presence/especial hook failed, normal "
+              f"flow: {e}", flush=True)
+
     # OWNER'S DOOR (2026-10-29): a sender on the OWNER_WHATSAPP list
     # gets the live-shop interface for data questions (server/
     # owner_door.py, read-only). Anything the door doesn't claim
@@ -420,6 +497,65 @@ def account_link():
 
     code, body = account_link_mod.process(
         payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
+
+
+@app.post("/loyalty-notify")
+def loyalty_notify():
+    """
+    OS -> bot loyalty notifications (gift grants + expiry heads-ups).
+
+    Called by api/lib/rico-loyalty.js whenever a gift lot is minted
+    and by the daily sweep for the ~3-day expiry warning;
+    authenticated with the shared WHATSAPP_SIGNUP_SECRET (Bearer,
+    constant-time, fail-closed — see server/loyalty_notify.py). The
+    bot formats and sends; the OS ledger is the durable record.
+    """
+    try:
+        import loyalty_notify as loyalty_notify_mod
+    except ImportError:
+        from server import loyalty_notify as loyalty_notify_mod
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    code, body = loyalty_notify_mod.process(
+        payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
+
+
+@app.post("/broadcast-send")
+def broadcast_send():
+    """
+    OS -> bot broadcast delivery (Difusión del Capitán + Especial
+    del Día VIP push).
+
+    The OS owns the audience, the opt-outs, the segments and the
+    monthly ceiling; this route only delivers: free-form text to the
+    window segment, the named approved template to the rest.
+    Authenticated with the shared WHATSAPP_SIGNUP_SECRET (Bearer,
+    constant-time, fail-closed — see server/broadcast_send.py).
+    """
+    try:
+        import broadcast_send as broadcast_mod
+    except ImportError:
+        from server import broadcast_send as broadcast_mod
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send_text(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    def _send_template(to: str, template_name: str):
+        return send_whatsapp_template(SHOP_PHONE_NUMBER_ID, to, template_name)
+
+    code, body = broadcast_mod.process(
+        payload, request.headers.get("Authorization", ""),
+        _send_text, _send_template)
     return Response(json.dumps(body), status=code,
                     mimetype="application/json")
 

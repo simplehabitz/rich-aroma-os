@@ -154,6 +154,7 @@
                 <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
                 <button onclick="switchTab('clientes')" id="tab-clientes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Clientes</button>
                 <button onclick="switchTab('misiones')" id="tab-misiones" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Misiones</button>
+                <button onclick="switchTab('regalos')" id="tab-regalos" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Regalos</button>
             </div>
             
             <!-- Store Status Toggle -->
@@ -432,6 +433,330 @@
                         <!-- Injected via JS -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- TAB: REGALOS (Rico Cash: dos bolsillos + ofertas) -->
+        <div id="section-regalos" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Regalos — Rico Cash 🎁</h2>
+                <button onclick="loadRegalos()" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest">Actualizar</button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6">Acá vive el Rico Cash de tus clientes: <strong>💵 su dinero</strong> (lo que recargan — sirve para todo y nunca vence) y <strong>🎁 el regalo de la casa</strong> (lo que la tienda regala — solo sirve en productos hechos en casa y vence a los <span id="rg-exp-days-label">60</span> días). Cada regalo, gasto y vencimiento queda en el registro del cliente; los saldos nunca se editan a mano.</p>
+
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-4">Cómo funciona el regalo</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Regalo por compra (%)</label>
+                        <input type="number" id="rg-earn-pct" min="0" max="100" step="1" value="10" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">De cada compra pagada, el cliente recibe este % de regalo. Ej: 10% de L.200 = L.20.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Semana de apertura ×</label>
+                        <input type="number" id="rg-launch-mult" min="1" max="5" step="0.5" value="2" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <label class="flex items-center gap-2 mt-2 text-sm"><input type="checkbox" id="rg-launch" class="w-4 h-4"> Activar semana de apertura</label>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">El regalo vence a los (días)</label>
+                        <input type="number" id="rg-exp-days" min="1" max="365" value="60" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">El dinero del cliente nunca vence; solo el regalo.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">"Dar regalo" en caja: hasta L.</label>
+                        <input type="number" id="rg-manual-cap" min="0" value="100" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">Sobre este monto, caja necesita el PIN de un encargado.</p>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Presupuesto de ofertas del mes (L.)</label>
+                        <input type="number" id="rg-monthly-cap" min="0" value="3000" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">El panel de costo de cada oferta se mide contra esto.</p>
+                    </div>
+                </div>
+                <h4 class="font-bold mt-6 mb-2">Bonos por recarga</h4>
+                <p class="text-xs text-gray-400 mb-2">Cuando un cliente recarga su dinero, la casa le suma un regalo según el monto. Ej: recarga L.500 → recibe L.500 suyos + L.75 de regalo.</p>
+                <div class="grid grid-cols-3 gap-3 max-w-xl">
+                    <div class="flex items-center gap-2"><span class="text-sm text-gray-500">Desde L.</span><input type="number" id="rg-ladder-min-0" value="100" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"><span class="text-sm text-gray-500">→ +L.</span><input type="number" id="rg-ladder-bonus-0" value="10" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"></div>
+                    <div class="flex items-center gap-2"><span class="text-sm text-gray-500">Desde L.</span><input type="number" id="rg-ladder-min-1" value="200" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"><span class="text-sm text-gray-500">→ +L.</span><input type="number" id="rg-ladder-bonus-1" value="25" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"></div>
+                    <div class="flex items-center gap-2"><span class="text-sm text-gray-500">Desde L.</span><input type="number" id="rg-ladder-min-2" value="500" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"><span class="text-sm text-gray-500">→ +L.</span><input type="number" id="rg-ladder-bonus-2" value="75" class="border rounded-lg p-2 w-full outline-none focus:border-green-500"></div>
+                </div>
+                <h4 class="font-bold mt-6 mb-2">🔥 Racha del Capitán</h4>
+                <p class="text-xs text-gray-400 mb-2">Si un cliente paga (con dinero real) al menos una vez por semana, su descuento en lo hecho en casa crece solo: semana 1 → 2%, y así hasta el tope. Nunca se suma con un código promo ni con otra oferta, y una semana perdida por trimestre la cubre un "congelamiento" automático. Cero pasos para el equipo: todo pasa solo al cobrar.</p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <label class="flex items-center gap-2 text-sm font-bold"><input type="checkbox" id="rg-streak-on" class="w-4 h-4" checked> Racha activa</label>
+                    <div class="flex items-center gap-1 text-sm text-gray-500">Semana 1 <input type="number" id="rg-streak-pct-0" value="2" min="0" max="50" class="border rounded-lg p-2 w-16 outline-none focus:border-green-500">%</div>
+                    <div class="flex items-center gap-1 text-sm text-gray-500">Semana 2 <input type="number" id="rg-streak-pct-1" value="4" min="0" max="50" class="border rounded-lg p-2 w-16 outline-none focus:border-green-500">%</div>
+                    <div class="flex items-center gap-1 text-sm text-gray-500">Semana 3 <input type="number" id="rg-streak-pct-2" value="6" min="0" max="50" class="border rounded-lg p-2 w-16 outline-none focus:border-green-500">%</div>
+                    <div class="flex items-center gap-1 text-sm text-gray-500">Semana 4 <input type="number" id="rg-streak-pct-3" value="8" min="0" max="50" class="border rounded-lg p-2 w-16 outline-none focus:border-green-500">%</div>
+                    <div class="flex items-center gap-1 text-sm text-gray-500">Semana 5+ <input type="number" id="rg-streak-pct-4" value="10" min="0" max="50" class="border rounded-lg p-2 w-16 outline-none focus:border-green-500">%</div>
+                </div>
+                <button onclick="guardarConfigRegalos()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 mt-4">Guardar configuración</button>
+                <p id="rg-settings-msg" class="text-xs mt-3"></p>
+                <p id="rg-stats-line" class="text-sm text-gray-600 mt-4"></p>
+                <div class="mt-4 flex items-center gap-3">
+                    <button onclick="correrBarrido()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-900">Correr el barrido de vencimientos ahora</button>
+                    <span id="rg-sweep-msg" class="text-xs text-gray-500"></span>
+                </div>
+                <p class="text-xs text-gray-400 mt-2">El barrido vence los regalos cumplidos, acredita los premios de misiones pendientes y manda el aviso de WhatsApp de los regalos que vencen en 3 días. Corre solo cada día a las 9:00 a.m.; este botón es para probarlo.</p>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-4">Crear oferta</h3>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="rgPreset('martes')" class="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-xs font-bold">Preset: Martes ×2</button>
+                    <button onclick="rgPreset('regalo')" class="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-xs font-bold">Preset: Regalo por compra</button>
+                    <button onclick="rgPreset('compra')" class="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg text-xs font-bold">Preset: Compra y llevá</button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Nombre</label>
+                        <input type="text" id="rg-c-name" placeholder="Ej: Martes ×2" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Tipo</label>
+                        <select id="rg-c-type" onchange="rgTypeChange()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="multiplicador">Multiplicador (regalo ×N)</option>
+                            <option value="compra_x_lleva">Compra X, llevá Y</option>
+                            <option value="regalo">Regalo de la casa</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Desde (opcional)</label>
+                        <input type="date" id="rg-c-from" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Hasta (opcional)</label>
+                        <input type="date" id="rg-c-to" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                </div>
+
+                <div id="rg-f-multi" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Multiplica el regalo por</label>
+                        <input type="number" id="rg-m-mult" min="1" step="0.5" value="2" oninput="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Aplica a</label>
+                        <select id="rg-m-scope" onchange="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="all">Toda compra</option>
+                            <option value="item">Un artículo</option>
+                            <option value="category">Una categoría</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Artículo (si aplica)</label>
+                        <select id="rg-m-item" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Cargando menú…</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Categoría (si aplica)</label>
+                        <input type="text" id="rg-m-cat" placeholder="bebidas" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div class="col-span-2 md:col-span-4">
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Días (vacío = todos)</label>
+                        <div class="flex gap-3 text-sm" id="rg-m-days">
+                            <label><input type="checkbox" value="0" class="mr-1">Dom</label>
+                            <label><input type="checkbox" value="1" class="mr-1">Lun</label>
+                            <label><input type="checkbox" value="2" class="mr-1">Mar</label>
+                            <label><input type="checkbox" value="3" class="mr-1">Mié</label>
+                            <label><input type="checkbox" value="4" class="mr-1">Jue</label>
+                            <label><input type="checkbox" value="5" class="mr-1">Vie</label>
+                            <label><input type="checkbox" value="6" class="mr-1">Sáb</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="rg-f-buyget" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3 hidden">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Compra</label>
+                        <select id="rg-b-buy" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Cargando menú…</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Cantidad</label>
+                        <input type="number" id="rg-b-buyqty" min="1" value="1" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Y llevá (hecho en casa)</label>
+                        <select id="rg-b-get" onchange="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Cargando menú…</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Cantidad</label>
+                        <input type="number" id="rg-b-getqty" min="1" value="1" oninput="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Descuento en el que lleva (%)</label>
+                        <input type="number" id="rg-b-pct" min="0" max="100" value="100" oninput="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">100 = gratis.</p>
+                    </div>
+                </div>
+
+                <div id="rg-f-regalo" class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3 hidden">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Se regala cuando</label>
+                        <select id="rg-r-trigger" onchange="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="total">La compra llega a un monto</option>
+                            <option value="item">La compra incluye un artículo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Artículo (si aplica)</label>
+                        <select id="rg-r-item" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Cargando menú…</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Monto mínimo (L.)</label>
+                        <input type="number" id="rg-r-min" min="0" value="200" oninput="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Regalo (L.)</label>
+                        <input type="number" id="rg-r-amount" min="1" value="25" oninput="rgRecalcCost()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Veces por cliente</label>
+                        <input type="number" id="rg-r-cap" min="1" value="1" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mt-4">
+                    <div class="flex flex-wrap items-end gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-amber-600 mb-1" id="rg-c-base-label">Ventas esperadas en el período (L.)</label>
+                            <input type="number" id="rg-c-base" min="0" value="0" oninput="rgRecalcCost()" class="border rounded-lg p-2 w-44 outline-none focus:border-amber-500 bg-white">
+                        </div>
+                        <p id="rg-cost-panel" class="text-sm text-amber-900 flex-1 min-w-[260px]">Completá la oferta y acá ves cuánto cuesta de verdad (al costo, no al precio).</p>
+                    </div>
+                    <label id="rg-c-ack-wrap" class="hidden items-center gap-2 mt-3 text-sm font-bold text-red-700"><input type="checkbox" id="rg-c-ack" class="w-4 h-4"> Lo acepto a sabiendas: esta oferta se pasa del presupuesto del mes.</label>
+                </div>
+
+                <button onclick="guardarCampana()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 mt-4">Guardar oferta (nace pausada)</button>
+                <p id="rg-campaign-msg" class="text-xs mt-3"></p>
+            </div>
+
+            <h3 class="font-bold mb-4">Ofertas</h3>
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-50 text-gray-500 text-xs uppercase">
+                        <tr>
+                            <th class="p-4">Oferta</th>
+                            <th class="p-4">Tipo</th>
+                            <th class="p-4">Cómo va</th>
+                            <th class="p-4">Estado</th>
+                            <th class="p-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="rgCampaignsTable" class="divide-y divide-gray-100 text-sm">
+                        <!-- Injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-2">📣 Difusión del Capitán</h3>
+                <p class="text-sm text-gray-500 mb-4">Un mensaje de WhatsApp para tus clientes que ya conversaron con la tienda y no se dieron de baja (quien responde ALTO queda fuera para siempre). Quienes te escribieron en las últimas 24 horas reciben el mensaje libre, sin costo; al resto solo se llega con la plantilla de marketing aprobada por Meta. <strong>Esta pantalla nunca mezcla una difusión con un pedido de reseña.</strong></p>
+                <p id="rg-b-counter" class="text-sm font-bold text-gray-700 mb-3">Difusiones este mes: …</p>
+                <div id="rg-b-template-state" class="text-sm rounded-xl p-3 mb-4 bg-gray-50 text-gray-600">Cargando estado de la plantilla…</div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Nombre de la plantilla (en Meta)</label>
+                        <input type="text" id="rg-b-template-name" placeholder="apertura_rich_aroma" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Costo por mensaje de plantilla (L., estimado)</label>
+                        <input type="number" id="rg-b-template-cost" min="0" step="0.05" value="1.25" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Difusiones por mes (2 a 4)</label>
+                        <input type="number" id="rg-b-monthly-cap" min="2" max="4" value="4" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div class="flex items-end">
+                        <label class="flex items-center gap-2 text-sm pb-3"><input type="checkbox" id="rg-b-template-approved" class="w-4 h-4"> La plantilla ya está aprobada</label>
+                    </div>
+                </div>
+                <button onclick="guardarDifusion()" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-900 mb-6">Guardar datos de difusión</button>
+                <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Mensaje</label>
+                <textarea id="rg-b-message" rows="3" placeholder="Ej: ¡Hola! Soy Capitán Rico ☕ Esta semana en Rich Aroma…" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 mb-3"></textarea>
+                <div class="flex flex-wrap items-end gap-3 mb-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Adjuntar una oferta (opcional)</label>
+                        <select id="rg-b-campaign" class="border rounded-lg p-3 outline-none focus:border-green-500 bg-white"><option value="">Sin oferta</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Canjes esperados (solo "Compra y llevá")</label>
+                        <input type="number" id="rg-b-uses" min="0" placeholder="20% de la audiencia" class="border rounded-lg p-3 w-44 outline-none focus:border-green-500">
+                    </div>
+                    <button onclick="rgBroadcastPreview()" class="bg-amber-500 text-white px-4 py-3 rounded-lg font-bold hover:bg-amber-600">Calcular costo</button>
+                </div>
+                <div id="rg-b-cost" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mb-4">Tocá "Calcular costo" antes de enviar: acá ves cuántos reciben, cuánto cobra Meta y cuánto cuesta la oferta si la adjuntás. Nada se envía a ciegas.</div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button onclick="rgBroadcastSend()" id="rg-b-send" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700" disabled>Enviar difusión</button>
+                    <span id="rg-b-result" class="text-xs text-gray-500"></span>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+                <h3 class="font-bold mb-2">🎁 Especial del Día</h3>
+                <p class="text-sm text-gray-500 mb-4">Un especial sorpresa por día. El cliente lo descubre escribiendo <strong>ESPECIAL</strong> por WhatsApp; al revelarlo queda guardado a su nombre y se aplica solo en su pedido de hoy (caja y web), hasta agotar el cupo. Si un día no cargás especial, el módulo queda en silencio: el Capitán responde con cariño y muestra el menú. A los VIP (etiqueta VIP o 1,500+ puntos) les llega un aviso solo, a la hora que elijas, si tienen los avisos del especial activos — ese aviso no gasta tus difusiones del mes.</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Día</label>
+                        <select id="rg-e-date" onchange="rgEspecialFill()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="0">Hoy</option>
+                            <option value="1">Mañana</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">El especial es</label>
+                        <select id="rg-e-kind" onchange="rgEspecialKind()" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white">
+                            <option value="item">Un artículo (uno gratis)</option>
+                            <option value="deal">Una oferta</option>
+                        </select>
+                    </div>
+                    <div id="rg-e-item-wrap">
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Artículo</label>
+                        <select id="rg-e-item" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Cargando menú…</option></select>
+                    </div>
+                    <div id="rg-e-campaign-wrap" class="hidden">
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Oferta</label>
+                        <select id="rg-e-campaign" class="border rounded-lg p-3 w-full outline-none focus:border-green-500 bg-white"><option value="">Elegir…</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Cupo (hasta agotar)</label>
+                        <input type="number" id="rg-e-cap" min="1" value="20" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Se revela desde</label>
+                        <input type="time" id="rg-e-from" value="08:00" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Hasta</label>
+                        <input type="time" id="rg-e-to" value="18:00" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Hora del aviso a VIPs</label>
+                        <input type="time" id="rg-e-push-time" value="09:30" class="border rounded-lg p-3 w-full outline-none focus:border-green-500">
+                        <p class="text-xs text-gray-400 mt-1">Se guarda con el botón de configuración de arriba ("Guardar configuración").</p>
+                    </div>
+                </div>
+                <div id="rg-e-cost" class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-900 mt-4">Al guardar, acá ves la exposición máxima: cupo × costo real del especial. Si nadie lo reclama, cuesta cero.</div>
+                <div class="flex flex-wrap items-center gap-3 mt-4">
+                    <button onclick="guardarEspecial()" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700">Guardar especial</button>
+                    <span id="rg-e-status" class="text-xs text-gray-500"></span>
+                </div>
+                <div id="rg-e-ig-wrap" class="hidden mt-4">
+                    <label class="block text-[10px] font-bold uppercase text-gray-400 mb-1">Texto listo para Instagram (no revela el especial — vos lo publicás)</label>
+                    <textarea id="rg-e-ig" rows="4" readonly class="border rounded-lg p-3 w-full bg-gray-50 text-sm outline-none"></textarea>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 p-6 rounded-2xl mb-8 text-sm text-blue-900">
+                <h3 class="font-bold mb-2">Guía rápida (para apoyo)</h3>
+                <ol class="list-decimal ml-5 space-y-1">
+                    <li>Para cambiar cuánto regala la tienda: ajustá los valores de arriba y tocá <b>Guardar configuración</b>. El cambio aplica a los regalos nuevos; los ya dados no cambian.</li>
+                    <li>Para crear una oferta: elegí el tipo, completá los datos y mirá el <b>costo estimado</b> antes de guardar. Toda oferta nace pausada.</li>
+                    <li>Para activarla: tocá <b>Activar</b> en la lista. Si el costo se pasa del presupuesto del mes, el sistema te pide confirmarlo con "lo acepto a sabiendas".</li>
+                    <li>Los regalos vencen solos: el barrido corre cada día a las 9:00 a.m. y avisa por WhatsApp unos 3 días antes del vencimiento.</li>
+                    <li>Si un cliente reclama un regalo: su historial está en su cuenta (Mi Rich Aroma) y en el registro. Los saldos nunca se ajustan a mano fuera del POS ("Dar regalo").</li>
+                    <li>Para una difusión: escribí el mensaje, tocá <b>Calcular costo</b> y recién ahí <b>Enviar</b>. El límite es de 2 a 4 por mes. Si la plantilla figura "pendiente", la difusión solo llega a quienes te escribieron en las últimas 24 horas.</li>
+                    <li>Para el Especial del Día: elegí el día, el artículo u oferta, el cupo y el horario, y tocá <b>Guardar especial</b>. El texto de Instagram que aparece no revela el especial: es para que la gente escriba ESPECIAL por WhatsApp.</li>
+                </ol>
             </div>
         </div>
 
@@ -1322,7 +1647,7 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
-                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones', 'inventory'];
+                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones', 'regalos', 'inventory'];
                 if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
@@ -1345,9 +1670,518 @@
                 if(tabId === 'promocodes') loadPromoCodes();
                 if(tabId === 'clientes') loadClientes();
                 if(tabId === 'misiones') loadMisiones();
+                if(tabId === 'regalos') loadRegalos();
                 if(tabId === 'inventory') loadInventory();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
+            }
+        }
+
+        // --- REGALOS LOGIC (Rico Cash: configuración + ofertas, 2026-10-30) ---
+        let rgData = null;
+        let rgCampaigns = [];
+        let rgBaseTouched = false;
+        const RG_REDEMPTION = 0.875; // ~12% de los regalos nunca se usa (quiebre)
+
+        function rgMoney(n) {
+            const v = Math.round((parseFloat(n) || 0) * 100) / 100;
+            return 'L.' + v.toLocaleString('es-HN', { minimumFractionDigits: v % 1 ? 2 : 0 });
+        }
+        function rgItemById(id) { return ((rgData && rgData.items) || []).find(i => i.id === id) || null; }
+        function rgCogsRate() {
+            const items = ((rgData && rgData.items) || []).filter(i => i.food_cost !== null && i.food_cost !== undefined && (parseFloat(i.price) || 0) > 0);
+            if (!items.length) return 0.30;
+            const fc = items.reduce((s, i) => s + i.food_cost, 0);
+            const pr = items.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+            return pr > 0 ? Math.min(0.9, Math.max(0.05, fc / pr)) : 0.30;
+        }
+        function rgFillSelect(el, houseOnly) {
+            if (!el) return;
+            const items = (rgData && rgData.items) || [];
+            el.innerHTML = '<option value="">Elegir…</option>' + items
+                .filter(i => !houseOnly || i.is_house_made)
+                .map(i => `<option value="${i.id}">${escapeHtml(i.name || i.id)} — ${rgMoney(i.price)}${i.is_house_made ? ' (hecho en casa)' : ''}</option>`).join('');
+        }
+
+        async function loadRegalos() {
+            const setMsg = document.getElementById('rg-settings-msg');
+            try {
+                const res = await fetch('/api/admin?action=loyalty_data', { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo cargar');
+                rgData = data;
+                const s = data.settings || {};
+                document.getElementById('rg-earn-pct').value = Math.round((parseFloat(s.earn_rate) || 0) * 100);
+                document.getElementById('rg-launch').checked = !!s.launch_week;
+                document.getElementById('rg-launch-mult').value = s.launch_multiplier || 2;
+                document.getElementById('rg-exp-days').value = s.gift_expiry_days || 60;
+                document.getElementById('rg-exp-days-label').textContent = s.gift_expiry_days || 60;
+                document.getElementById('rg-manual-cap').value = s.manual_grant_cap != null ? s.manual_grant_cap : 100;
+                document.getElementById('rg-monthly-cap').value = s.monthly_promo_cap != null ? s.monthly_promo_cap : 3000;
+                (s.ladder || []).forEach((t, i) => {
+                    const mn = document.getElementById('rg-ladder-min-' + i);
+                    const bn = document.getElementById('rg-ladder-bonus-' + i);
+                    if (mn) mn.value = t.min; if (bn) bn.value = t.bonus;
+                });
+                document.getElementById('rg-stats-line').textContent =
+                    `${data.customers_count || 0} clientes con cuenta · Ventas de los últimos 7 días: ${rgMoney(data.sales_last_7d)} · Regalado este mes (ofertas y caja): ${rgMoney(data.month_granted_face)} de un presupuesto de ${rgMoney(s.monthly_promo_cap)}.`;
+                // Racha + Difusión + Especial settings
+                document.getElementById('rg-streak-on').checked = s.streak_enabled !== false;
+                (s.streak_ladder || [2, 4, 6, 8, 10]).forEach((v, i) => {
+                    const el = document.getElementById('rg-streak-pct-' + i);
+                    if (el) el.value = v;
+                });
+                document.getElementById('rg-b-template-name').value = s.broadcast_template_name || '';
+                document.getElementById('rg-b-template-cost').value = s.broadcast_template_cost != null ? s.broadcast_template_cost : 1.25;
+                document.getElementById('rg-b-monthly-cap').value = s.broadcast_monthly_cap || 4;
+                document.getElementById('rg-b-template-approved').checked = !!s.broadcast_template_approved;
+                document.getElementById('rg-e-push-time').value = s.especial_push_time || '09:30';
+                rgTemplateState();
+                rgLoadEspecial();
+                rgFillSelect(document.getElementById('rg-m-item'), false);
+                rgFillSelect(document.getElementById('rg-b-buy'), false);
+                rgFillSelect(document.getElementById('rg-b-get'), true);
+                rgFillSelect(document.getElementById('rg-r-item'), false);
+                rgFillSelect(document.getElementById('rg-e-item'), false);
+                document.getElementById('rg-c-base').addEventListener('input', () => { rgBaseTouched = true; });
+                const cres = await fetch('/api/admin?action=loyalty_campaigns', { headers: getHeaders() });
+                const cdata = await cres.json();
+                rgCampaigns = cdata.campaigns || [];
+                rgRenderCampaigns();
+                rgTypeChange();
+            } catch (e) {
+                if (setMsg) setMsg.innerHTML = `<span class="text-red-600 font-bold">No se pudo cargar: ${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        function rgRenderCampaigns() {
+            // Keep the Difusión + Especial deal pickers in sync with the list.
+            const opts = rgCampaigns.map(c => `<option value="${c.id}">${escapeHtml(c.name)} (${c.type})</option>`).join('');
+            const bc = document.getElementById('rg-b-campaign');
+            if (bc) bc.innerHTML = '<option value="">Sin oferta</option>' + opts;
+            const ec = document.getElementById('rg-e-campaign');
+            if (ec) ec.innerHTML = '<option value="">Elegir…</option>' + opts;
+            const tbody = document.getElementById('rgCampaignsTable');
+            const TYPE_LABEL = { multiplicador: 'Multiplicador', compra_x_lleva: 'Compra X, llevá Y', regalo: 'Regalo de la casa' };
+            if (!rgCampaigns.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-gray-400">Todavía no hay ofertas. Creá la primera arriba — nace pausada.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = rgCampaigns.map(c => {
+                const st = c.stats || { grants_count: 0, granted_face: 0 };
+                const comoVa = c.type === 'compra_x_lleva'
+                    ? 'Se aplica sola en caja al cobrar'
+                    : `${st.grants_count} regalos dados · ${rgMoney(st.granted_face)} regalados`;
+                const estado = c.active
+                    ? '<span class="text-green-700 font-bold">Activa</span>'
+                    : '<span class="text-gray-400 font-bold">Pausada</span>';
+                const btn = c.active
+                    ? `<button onclick="toggleCampana('${c.id}', false)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold">Pausar</button>`
+                    : `<button onclick="toggleCampana('${c.id}', true)" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Activar</button>`;
+                return `<tr>
+                    <td class="p-4 font-bold text-gray-800">${escapeHtml(c.name)}</td>
+                    <td class="p-4 text-gray-600">${TYPE_LABEL[c.type] || c.type}</td>
+                    <td class="p-4 text-gray-600">${comoVa}</td>
+                    <td class="p-4">${estado}${c.over_cap_ack ? ' <span class="text-[10px] text-red-600 font-bold">(aceptada sobre presupuesto)</span>' : ''}</td>
+                    <td class="p-4">${btn}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function rgTypeChange() {
+            const t = document.getElementById('rg-c-type').value;
+            document.getElementById('rg-f-multi').classList.toggle('hidden', t !== 'multiplicador');
+            document.getElementById('rg-f-buyget').classList.toggle('hidden', t !== 'compra_x_lleva');
+            document.getElementById('rg-f-regalo').classList.toggle('hidden', t !== 'regalo');
+            const label = document.getElementById('rg-c-base-label');
+            const base = document.getElementById('rg-c-base');
+            if (!rgBaseTouched && rgData) {
+                if (t === 'multiplicador') { label.textContent = 'Ventas esperadas en el período (L.)'; base.value = Math.round((parseFloat(rgData.sales_last_7d) || 0) * 4); }
+                if (t === 'compra_x_lleva') { label.textContent = 'Canjes esperados'; base.value = 20; }
+                if (t === 'regalo') { label.textContent = 'Clientes que lo recibirían'; base.value = rgData.customers_count || 25; }
+            } else {
+                if (t === 'multiplicador') label.textContent = 'Ventas esperadas en el período (L.)';
+                if (t === 'compra_x_lleva') label.textContent = 'Canjes esperados';
+                if (t === 'regalo') label.textContent = 'Clientes que lo recibirían';
+            }
+            rgRecalcCost();
+        }
+
+        function rgRecalcCost() {
+            const panel = document.getElementById('rg-cost-panel');
+            const ackWrap = document.getElementById('rg-c-ack-wrap');
+            if (!panel || !rgData) return { cost: 0, over: false };
+            const t = document.getElementById('rg-c-type').value;
+            const base = Math.max(0, parseFloat(document.getElementById('rg-c-base').value) || 0);
+            const cogs = rgCogsRate();
+            const s = rgData.settings || {};
+            let face = 0, cost = 0, detalle = '';
+            if (t === 'multiplicador') {
+                const mult = parseFloat(document.getElementById('rg-m-mult').value) || 1;
+                face = base * (parseFloat(s.earn_rate) || 0) * Math.max(0, mult - 1);
+                cost = face * RG_REDEMPTION * cogs;
+                detalle = `Regalarías ≈ ${rgMoney(face)} extra sobre esas ventas.`;
+            } else if (t === 'compra_x_lleva') {
+                const get = rgItemById(document.getElementById('rg-b-get').value);
+                const getQty = parseInt(document.getElementById('rg-b-getqty').value) || 1;
+                const pct = (parseFloat(document.getElementById('rg-b-pct').value) || 0) / 100;
+                if (get) {
+                    const unitCost = (get.food_cost !== null && get.food_cost !== undefined) ? get.food_cost : (parseFloat(get.price) || 0) * 0.30;
+                    face = (parseFloat(get.price) || 0) * getQty * pct * base;
+                    cost = unitCost * getQty * pct * base;
+                    detalle = `Cada canje cuesta ≈ ${rgMoney(unitCost * getQty * pct)} al costo${get.food_cost == null ? ' (estimado: el artículo aún no tiene costo cargado, usamos el 30% del precio)' : ''}.`;
+                }
+            } else if (t === 'regalo') {
+                const amount = parseFloat(document.getElementById('rg-r-amount').value) || 0;
+                face = amount * base;
+                cost = face * RG_REDEMPTION * cogs;
+                detalle = `Regalarías ${rgMoney(face)} en total si todos lo reciben.`;
+            }
+            const remaining = (parseFloat(s.monthly_promo_cap) || 0) - (parseFloat(rgData.month_granted_face) || 0);
+            const over = cost > remaining;
+            panel.innerHTML = `<strong>Costo estimado ≈ ${rgMoney(cost)}</strong> (al costo, no al precio — ya cuenta que ~12% de los regalos nunca se usa). ${detalle} ` +
+                (over
+                    ? `<span class="text-red-700 font-bold">Se pasa por ${rgMoney(cost - remaining)} del presupuesto del mes.</span>`
+                    : `<span class="text-green-700 font-bold">Cabe en el presupuesto del mes (quedan ${rgMoney(remaining)}).</span>`);
+            ackWrap.classList.toggle('hidden', !over);
+            ackWrap.classList.toggle('flex', over);
+            return { cost, over };
+        }
+
+        function rgPreset(kind) {
+            const typeSel = document.getElementById('rg-c-type');
+            document.querySelectorAll('#rg-m-days input[type=checkbox]').forEach(cb => { cb.checked = false; });
+            if (kind === 'martes') {
+                typeSel.value = 'multiplicador';
+                document.getElementById('rg-c-name').value = 'Martes ×2';
+                document.getElementById('rg-m-mult').value = 2;
+                document.getElementById('rg-m-scope').value = 'all';
+                const tue = document.querySelector('#rg-m-days input[value="2"]');
+                if (tue) tue.checked = true;
+            } else if (kind === 'regalo') {
+                typeSel.value = 'regalo';
+                document.getElementById('rg-c-name').value = 'Regalo por compra';
+                document.getElementById('rg-r-trigger').value = 'total';
+                document.getElementById('rg-r-min').value = 200;
+                document.getElementById('rg-r-amount').value = 25;
+                document.getElementById('rg-r-cap').value = 1;
+            } else if (kind === 'compra') {
+                typeSel.value = 'compra_x_lleva';
+                document.getElementById('rg-c-name').value = 'Compra y llevá';
+                document.getElementById('rg-b-pct').value = 100;
+            }
+            rgTypeChange();
+        }
+
+        async function guardarConfigRegalos() {
+            const msg = document.getElementById('rg-settings-msg');
+            const ladder = [0, 1, 2].map(i => ({
+                min: parseFloat(document.getElementById('rg-ladder-min-' + i).value) || 0,
+                bonus: parseFloat(document.getElementById('rg-ladder-bonus-' + i).value) || 0
+            })).filter(t => t.min > 0 && t.bonus > 0);
+            const loyalty = {
+                earn_rate: (parseFloat(document.getElementById('rg-earn-pct').value) || 0) / 100,
+                launch_week: document.getElementById('rg-launch').checked,
+                launch_multiplier: parseFloat(document.getElementById('rg-launch-mult').value) || 2,
+                gift_expiry_days: parseInt(document.getElementById('rg-exp-days').value) || 60,
+                manual_grant_cap: parseFloat(document.getElementById('rg-manual-cap').value) || 0,
+                monthly_promo_cap: parseFloat(document.getElementById('rg-monthly-cap').value) || 0,
+                ladder,
+                streak_enabled: document.getElementById('rg-streak-on').checked,
+                streak_ladder: [0, 1, 2, 3, 4].map(i => parseFloat(document.getElementById('rg-streak-pct-' + i).value) || 0),
+                especial_push_time: document.getElementById('rg-e-push-time').value || '09:30'
+            };
+            try {
+                const res = await fetch('/api/admin?action=loyalty_settings_save', {
+                    method: 'POST', headers: getHeaders(), body: JSON.stringify({ loyalty })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+                document.getElementById('rg-exp-days-label').textContent = loyalty.gift_expiry_days;
+                msg.innerHTML = '<span class="text-green-700 font-bold">✅ Configuración guardada. Aplica a los regalos nuevos desde ahora; los ya dados no cambian.</span>';
+                loadRegalos();
+            } catch (e) {
+                msg.innerHTML = `<span class="text-red-600 font-bold">No se guardó: ${escapeHtml(e.message)}. Revisá tu conexión y probá de nuevo.</span>`;
+            }
+        }
+
+        async function guardarCampana() {
+            const msg = document.getElementById('rg-campaign-msg');
+            const type = document.getElementById('rg-c-type').value;
+            const name = document.getElementById('rg-c-name').value.trim();
+            if (!name) { msg.innerHTML = '<span class="text-red-600 font-bold">La oferta necesita un nombre.</span>'; return; }
+            const { over } = rgRecalcCost();
+            const ack = document.getElementById('rg-c-ack').checked;
+            if (over && !ack) { msg.innerHTML = '<span class="text-red-600 font-bold">Esta oferta se pasa del presupuesto del mes. Si igual la querés, marcá "Lo acepto a sabiendas" en el panel de costo.</span>'; return; }
+            let config = {};
+            if (type === 'multiplicador') {
+                config = {
+                    multiplier: parseFloat(document.getElementById('rg-m-mult').value) || 2,
+                    scope: document.getElementById('rg-m-scope').value,
+                    item_id: document.getElementById('rg-m-item').value || null,
+                    category: document.getElementById('rg-m-cat').value.trim() || null,
+                    days: [...document.querySelectorAll('#rg-m-days input[type=checkbox]:checked')].map(cb => parseInt(cb.value))
+                };
+            } else if (type === 'compra_x_lleva') {
+                config = {
+                    buy_item_id: document.getElementById('rg-b-buy').value,
+                    buy_qty: parseInt(document.getElementById('rg-b-buyqty').value) || 1,
+                    get_item_id: document.getElementById('rg-b-get').value,
+                    get_qty: parseInt(document.getElementById('rg-b-getqty').value) || 1,
+                    get_discount_pct: parseFloat(document.getElementById('rg-b-pct').value) || 0
+                };
+                if (!config.buy_item_id || !config.get_item_id) { msg.innerHTML = '<span class="text-red-600 font-bold">Elegí el artículo que se compra y el que se lleva.</span>'; return; }
+            } else if (type === 'regalo') {
+                config = {
+                    trigger: document.getElementById('rg-r-trigger').value,
+                    trigger_item_id: document.getElementById('rg-r-item').value || null,
+                    trigger_min_total: parseFloat(document.getElementById('rg-r-min').value) || 0,
+                    gift_amount: parseFloat(document.getElementById('rg-r-amount').value) || 0,
+                    per_customer_cap: parseInt(document.getElementById('rg-r-cap').value) || 1
+                };
+                if (!(config.gift_amount > 0)) { msg.innerHTML = '<span class="text-red-600 font-bold">El regalo necesita un monto.</span>'; return; }
+            }
+            try {
+                const res = await fetch('/api/admin?action=loyalty_campaign_save', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({
+                        type, name, config, active: false,
+                        starts_at: document.getElementById('rg-c-from').value || null,
+                        ends_at: document.getElementById('rg-c-to').value || null,
+                        over_cap_ack: ack
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+                msg.innerHTML = `<span class="text-green-700 font-bold">✅ Oferta "${escapeHtml(name)}" guardada y pausada. Activala desde la lista cuando quieras.</span>`;
+                const cres = await fetch('/api/admin?action=loyalty_campaigns', { headers: getHeaders() });
+                rgCampaigns = (await cres.json()).campaigns || [];
+                rgRenderCampaigns();
+            } catch (e) {
+                msg.innerHTML = `<span class="text-red-600 font-bold">No se guardó: ${escapeHtml(e.message)}</span>`;
+            }
+        }
+
+        async function toggleCampana(id, active) {
+            try {
+                const res = await fetch('/api/admin?action=loyalty_campaign_toggle', {
+                    method: 'POST', headers: getHeaders(), body: JSON.stringify({ id, active })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Error');
+                const c = rgCampaigns.find(x => x.id === id);
+                if (c) c.active = active;
+                rgRenderCampaigns();
+            } catch (e) {
+                alert('No se pudo cambiar el estado: ' + e.message);
+            }
+        }
+
+        async function correrBarrido() {
+            const msg = document.getElementById('rg-sweep-msg');
+            msg.textContent = 'Corriendo…';
+            try {
+                const res = await fetch('/api/store?action=loyalty_sweep', { method: 'POST', headers: getHeaders() });
+                const data = await res.json();
+                if (!data.ok) throw new Error(data.error || 'Error');
+                const sm = data.summary || {};
+                msg.textContent = `Barrido listo: ${sm.expired_lots || 0} regalos vencidos (${rgMoney(sm.expired_amount)}), ${sm.minted_mission_grants || 0} premios de misiones acreditados, ${sm.heads_up_sent || 0} avisos de WhatsApp enviados.`;
+            } catch (e) {
+                msg.textContent = 'No se pudo correr el barrido: ' + e.message;
+            }
+        }
+
+        // --- DIFUSIÓN DEL CAPITÁN ---
+        let rgLastPreview = null;
+
+        function rgTemplateState() {
+            const el = document.getElementById('rg-b-template-state');
+            if (!el || !rgData) return;
+            const s = rgData.settings || {};
+            if (s.broadcast_template_approved && s.broadcast_template_name) {
+                el.className = 'text-sm rounded-xl p-3 mb-4 bg-green-50 text-green-800';
+                el.textContent = `✅ Plantilla aprobada: "${s.broadcast_template_name}". La difusión llega a toda tu audiencia.`;
+            } else {
+                el.className = 'text-sm rounded-xl p-3 mb-4 bg-amber-50 text-amber-800';
+                el.textContent = '⏳ Tu plantilla de marketing todavía no figura como aprobada. Estado normal, no es un error: mientras tanto, la difusión solo sale como mensaje libre para quienes te escribieron en las últimas 24 horas. Cuando Meta la apruebe, cargá su nombre abajo, marcá "ya está aprobada" y guardá.';
+            }
+        }
+
+        async function guardarDifusion() {
+            try {
+                const res = await fetch('/api/admin?action=loyalty_settings_save', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({ loyalty: {
+                        broadcast_template_name: document.getElementById('rg-b-template-name').value.trim(),
+                        broadcast_template_approved: document.getElementById('rg-b-template-approved').checked,
+                        broadcast_template_cost: parseFloat(document.getElementById('rg-b-template-cost').value) || 0,
+                        broadcast_monthly_cap: parseInt(document.getElementById('rg-b-monthly-cap').value) || 4
+                    } })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+                if (rgData) rgData.settings = { ...(rgData.settings || {}), ...(data.loyalty || {}) };
+                rgTemplateState();
+                document.getElementById('rg-b-result').textContent = '✅ Datos de difusión guardados.';
+                rgLastPreview = null;
+                document.getElementById('rg-b-send').disabled = true;
+            } catch (e) {
+                document.getElementById('rg-b-result').textContent = 'No se guardó: ' + e.message;
+            }
+        }
+
+        async function rgBroadcastPreview() {
+            const panel = document.getElementById('rg-b-cost');
+            panel.textContent = 'Calculando…';
+            try {
+                const usesRaw = document.getElementById('rg-b-uses').value;
+                const res = await fetch('/api/admin?action=broadcast_preview', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({
+                        campaign_id: document.getElementById('rg-b-campaign').value || null,
+                        expected_uses: usesRaw === '' ? null : parseInt(usesRaw)
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Error');
+                const p = data.preview;
+                rgLastPreview = p;
+                document.getElementById('rg-b-counter').textContent =
+                    `Difusiones este mes: ${p.month_used} de ${p.month_cap}`;
+                let html = `<strong>${p.total} clientes</strong> lo recibirían: <strong>${p.window_count}</strong> en ventana de 24h (mensaje libre, sin costo)`;
+                if (p.template_state === 'approved') {
+                    html += ` y <strong>${p.template_count}</strong> por la plantilla "${escapeHtml(p.template_name)}" (${rgMoney(p.template_unit_cost)} c/u ≈ <strong>${rgMoney(p.template_cost)}</strong> que cobra Meta).`;
+                } else if (p.template_state === 'pending') {
+                    html += `. Otros <strong>${p.template_count}</strong> solo se alcanzan con la plantilla — <strong>todavía pendiente de aprobación</strong>, así que hoy no salen (o salen cuando la plantilla se apruebe).`;
+                } else {
+                    html += '.';
+                }
+                if (p.deal) {
+                    html += `<br>Oferta adjunta: regalarías ≈ <strong>${rgMoney(p.deal.face)}</strong> en valor, con un costo real estimado de <strong>${rgMoney(p.deal.cost)}</strong> (${escapeHtml(p.deal.basis)}).`;
+                }
+                html += `<br><strong>Costo total estimado de esta difusión: ${rgMoney(p.total_cost)}</strong>`;
+                if (p.month_used >= p.month_cap) {
+                    html += '<br><span class="text-red-700 font-bold">Ya llegaste al límite de difusiones de este mes.</span>';
+                }
+                panel.innerHTML = html;
+                document.getElementById('rg-b-send').disabled = p.month_used >= p.month_cap || p.total === 0;
+            } catch (e) {
+                panel.textContent = 'No se pudo calcular: ' + e.message;
+            }
+        }
+
+        async function rgBroadcastSend() {
+            const msg = document.getElementById('rg-b-message').value.trim();
+            const out = document.getElementById('rg-b-result');
+            if (!msg) { out.textContent = 'Escribí el mensaje primero.'; return; }
+            if (!rgLastPreview) { out.textContent = 'Calculá el costo antes de enviar.'; return; }
+            const p = rgLastPreview;
+            const scope = p.template_state === 'pending' ? 'window' : 'all';
+            const quienes = scope === 'window'
+                ? `solo a los ${p.window_count} clientes en ventana de 24h (la plantilla sigue pendiente)`
+                : `a ${p.total} clientes (${p.window_count} libres + ${p.template_count} por plantilla)`;
+            if (!confirm(`¿Enviar la difusión ${quienes}?\nCosto estimado: ${rgMoney(p.total_cost)}.\nTe quedan ${p.month_cap - p.month_used - 1} difusiones después de esta.`)) return;
+            out.textContent = 'Enviando…';
+            document.getElementById('rg-b-send').disabled = true;
+            try {
+                const usesRaw = document.getElementById('rg-b-uses').value;
+                const res = await fetch('/api/admin?action=broadcast_send', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({
+                        message: msg, scope,
+                        campaign_id: document.getElementById('rg-b-campaign').value || null,
+                        expected_uses: usesRaw === '' ? null : parseInt(usesRaw)
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo enviar');
+                out.textContent = '✅ ' + (data.message || 'Difusión enviada.');
+                rgLastPreview = null;
+            } catch (e) {
+                out.textContent = 'No se envió: ' + e.message;
+                document.getElementById('rg-b-send').disabled = false;
+            }
+        }
+
+        // --- ESPECIAL DEL DÍA ---
+        let rgEspeciales = [];
+
+        async function rgLoadEspecial() {
+            try {
+                const res = await fetch('/api/admin?action=especial_data', { headers: getHeaders() });
+                const data = await res.json();
+                if (!data.success) return;
+                rgEspeciales = data.specials || [];
+                rgEspeciales._today = data.today;
+                rgEspeciales._tomorrow = data.tomorrow;
+                rgEspecialFill();
+            } catch (e) { /* the card stays on its defaults */ }
+        }
+
+        function rgEspecialForSelectedDay() {
+            const off = document.getElementById('rg-e-date').value;
+            const key = off === '1' ? rgEspeciales._tomorrow : rgEspeciales._today;
+            return rgEspeciales.find(s => s.special_date === key) || null;
+        }
+
+        function rgEspecialKind() {
+            const kind = document.getElementById('rg-e-kind').value;
+            document.getElementById('rg-e-item-wrap').classList.toggle('hidden', kind !== 'item');
+            document.getElementById('rg-e-campaign-wrap').classList.toggle('hidden', kind !== 'deal');
+        }
+
+        function rgEspecialFill() {
+            const s = rgEspecialForSelectedDay();
+            const status = document.getElementById('rg-e-status');
+            const igWrap = document.getElementById('rg-e-ig-wrap');
+            if (!s) {
+                status.textContent = 'Este día no tiene especial cargado: el módulo queda en silencio.';
+                igWrap.classList.add('hidden');
+                return;
+            }
+            document.getElementById('rg-e-kind').value = s.campaign_id ? 'deal' : 'item';
+            rgEspecialKind();
+            if (s.item_id) document.getElementById('rg-e-item').value = s.item_id;
+            if (s.campaign_id) document.getElementById('rg-e-campaign').value = s.campaign_id;
+            document.getElementById('rg-e-cap').value = s.cap;
+            document.getElementById('rg-e-from').value = s.starts_time || '08:00';
+            document.getElementById('rg-e-to').value = s.ends_time || '18:00';
+            status.textContent = `Guardado: ${s.claims_count || 0} reclamos · ${s.redeemed_count || 0} canjes` +
+                (s.push_sent_at ? ' · aviso a VIPs ya enviado' : ' · aviso a VIPs pendiente (sale a la hora fijada)');
+            if (s.ig_caption) {
+                igWrap.classList.remove('hidden');
+                document.getElementById('rg-e-ig').value = s.ig_caption;
+            }
+        }
+
+        async function guardarEspecial() {
+            const status = document.getElementById('rg-e-status');
+            const kind = document.getElementById('rg-e-kind').value;
+            try {
+                const res = await fetch('/api/admin?action=especial_save', {
+                    method: 'POST', headers: getHeaders(),
+                    body: JSON.stringify({
+                        date_offset: parseInt(document.getElementById('rg-e-date').value) || 0,
+                        kind,
+                        item_id: document.getElementById('rg-e-item').value || null,
+                        campaign_id: document.getElementById('rg-e-campaign').value || null,
+                        cap: parseInt(document.getElementById('rg-e-cap').value) || 20,
+                        starts_time: document.getElementById('rg-e-from').value || '08:00',
+                        ends_time: document.getElementById('rg-e-to').value || '18:00'
+                    })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+                document.getElementById('rg-e-cost').innerHTML =
+                    `<strong>Exposición máxima: ${rgMoney(data.max_exposure)}</strong> — cupo de ${data.special.cap} × ${rgMoney(data.per_use_cost)} por canje (${escapeHtml(data.cost_basis || 'al costo')}). Si nadie lo reclama, cuesta cero.`;
+                status.textContent = '✅ ' + (data.message || 'Especial guardado.');
+                if (data.special && data.special.ig_caption) {
+                    document.getElementById('rg-e-ig-wrap').classList.remove('hidden');
+                    document.getElementById('rg-e-ig').value = data.special.ig_caption;
+                }
+                rgLoadEspecial();
+            } catch (e) {
+                status.textContent = 'No se guardó: ' + e.message;
             }
         }
 

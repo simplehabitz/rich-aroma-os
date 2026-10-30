@@ -54,6 +54,7 @@
 
 const crypto = require('crypto');
 const { supabase } = require('./lib/supabase');
+const ricoLoyalty = require('./lib/rico-loyalty');
 
 // ---------------------------------------------------------------------------
 // Small helpers (mirroring api/store.js's whatsapp_* patterns)
@@ -152,9 +153,56 @@ function clientIp(req) {
 // ---------------------------------------------------------------------------
 async function customerSnapshot(customerId) {
     const { data: cust } = await supabase.from('customers')
-        .select('id, name, phone, birthday_dm, rico_balance')
+        .select('id, name, phone, birthday_dm, rico_balance, rico_bonus_balance, streak_weeks, streak_last_week, streak_freeze_quarter')
         .eq('id', customerId).maybeSingle();
     if (!cust) return null;
+
+    // Racha del Capitán (2026-10-30): the customer's streak position,
+    // computed by the shared engine. Null when the streak is off or the
+    // customer has no streak yet — the page simply doesn't show the card.
+    let streak = null;
+    try {
+        const settings = await ricoLoyalty.getLoyaltySettings(supabase, 'rich-aroma');
+        const st = ricoLoyalty.streakStatus(cust, settings);
+        if (st.enabled && (st.weeks > 0 || st.countedThisWeek)) {
+            streak = {
+                weeks: st.weeks,
+                pct: st.pctNext,
+                counted_this_week: st.countedThisWeek,
+                ladder: settings.streak_ladder
+            };
+        }
+    } catch (e) { /* streak card is optional */ }
+
+    // Rico Cash two-bucket wallet (loyalty build, 2026-10-30): "Tu
+    // dinero" (own money, never expires) + "Regalo de la casa" (gift
+    // lots, soonest-expiry first) + the recent ledger as Historial.
+    // Built from balance_history via the shared engine; any failure
+    // leaves wallet null and the page falls back to the single balance.
+    let wallet = null;
+    try {
+        const lots = await ricoLoyalty.getLiveLots(supabase, customerId);
+        const { data: hist } = await supabase.from('balance_history')
+            .select('type, bucket, amount, source, expires_at, created_at, notes')
+            .eq('customer_id', customerId)
+            .order('created_at', { ascending: false }).limit(20);
+        wallet = {
+            dinero: parseFloat(cust.rico_balance) || 0,
+            regalo: Math.round(lots.reduce((s, l) => s + l.remaining, 0) * 100) / 100,
+            lots: lots.map(l => ({
+                source: l.source, remaining: l.remaining,
+                expires_at: l.expires_at, granted_at: l.granted_at
+            })),
+            historial: (hist || []).map(h => ({
+                type: h.type, bucket: h.bucket || 'paid',
+                amount: parseFloat(h.amount) || 0, source: h.source,
+                expires_at: h.expires_at, created_at: h.created_at,
+                notes: h.notes || null
+            }))
+        };
+    } catch (e) {
+        console.error('[Account] wallet build failed (single-balance fallback):', e && e.message);
+    }
 
     const [{ data: preorders }, { data: orders }] = await Promise.all([
         supabase.from('whatsapp_preorders').select('*')
@@ -171,10 +219,11 @@ async function customerSnapshot(customerId) {
             first_name: (cust.name || '').trim().split(/\s+/)[0] || '',
             birthday_dm: cust.birthday_dm || null
         },
-        // ONE balance — the existing customers.rico_balance column.
-        // The two-bucket split (bonus lots) is NOT built yet; this
-        // page must not invent it.
+        // rico_balance stays for older page code; `wallet` carries the
+        // two-bucket split (loyalty build, 2026-10-30).
         rico_balance: parseFloat(cust.rico_balance) || 0,
+        wallet,
+        streak,
         preorders: (preorders || []).map(p => ({
             id: p.id,
             packs_5: p.packs_5 || 0,

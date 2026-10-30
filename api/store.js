@@ -3,6 +3,7 @@ const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
+const ricoLoyalty = require('./lib/rico-loyalty');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
 // ---------------------------------------------------------------------------
@@ -541,13 +542,44 @@ module.exports = async (req, res) => {
                 if (customerId) updates.customer_id = customerId;
                 if (shiftId) updates.shift_id = shiftId;
 
+                const { data: prevOrder } = await supabase.from('orders')
+                    .select('status, rico_amount_paid').eq('id', targetId).maybeSingle();
                 const { data, error } = await supabase.from('orders').update(updates).eq('id', targetId).select().single();
                 if (error) throw error;
+                // LOYALTY SETTLE (2026-10-30): when THIS update is the
+                // payment event (a pending order settled at the till
+                // with a Rico tender) and no wallet debit exists yet,
+                // run the two-bucket spend against the stored order —
+                // gift money first (house-made only), then own money —
+                // BEFORE the readers below consume the split.
+                if (data && data.status === 'paid' && prevOrder && prevOrder.status !== 'paid' && data.customer_id) {
+                    try {
+                        const pm = paymentMethod || data.payment_method || '';
+                        const sm = secondaryPaymentMethod || data.secondary_payment_method || '';
+                        const ricoTender = ['rico_balance', 'rico_cash'].includes(pm) || ['rico_balance', 'rico_cash'].includes(sm);
+                        const alreadyDebited = (parseFloat(prevOrder.rico_amount_paid) || 0) > 0;
+                        if (ricoTender && !alreadyDebited) {
+                            const settled = await ricoLoyalty.settleWalletForOrder(supabase, data, {});
+                            if (settled.bonusUsed > 0 || settled.paidUsed > 0) {
+                                const { data: updOrder } = await supabase.from('orders').update({
+                                    rico_amount_paid: round2(settled.bonusUsed + settled.paidUsed),
+                                    rico_bonus_used: settled.bonusUsed,
+                                    items: settled.items
+                                }).eq('id', data.id).select().single();
+                                if (updOrder) { data.rico_amount_paid = updOrder.rico_amount_paid; data.rico_bonus_used = updOrder.rico_bonus_used; data.items = updOrder.items; }
+                            }
+                        }
+                    } catch (settleErr) { console.error('[Rico] settle on order_update failed (order unaffected):', settleErr.message); }
+                }
                 // MISIONES: an order that just became PAID here (counter
                 // sale, transfer approval) unlocks its missions. The
                 // helper is failure-silent — the order response below
                 // is unaffected either way.
                 if (data && data.status === 'paid') await unlockMissionsForOrder(data);
+                // LOYALTY (2026-10-30): an order that TRANSITIONS into
+                // 'paid' here earns its gift + drops campaign gifts
+                // (idempotent per order — see rico-loyalty).
+                if (data && data.status === 'paid' && (!prevOrder || prevOrder.status !== 'paid')) await ricoLoyalty.processPaidOrder(supabase, data);
                 // NOTIFICACIONES (bot-finalize): a WhatsApp-originated
                 // order that just turned ready/cancelled tells its
                 // customer through the bot (failure-silent helper).
@@ -747,6 +779,9 @@ module.exports = async (req, res) => {
                 // MISIONES: an order created already-PAID on this path
                 // unlocks its missions (failure-silent helper).
                 if (data && data.status === 'paid') await unlockMissionsForOrder(data);
+                // LOYALTY (2026-10-30): a born-paid order on this path
+                // also earns (idempotent — see rico-loyalty).
+                if (data && data.status === 'paid') await ricoLoyalty.processPaidOrder(supabase, data);
 
                 // --- 2.5 FIFO BATCH INVENTORY DEDUCTION (JSONB fallback) ---
                 if (items && Array.isArray(items)) {
@@ -1381,14 +1416,176 @@ module.exports = async (req, res) => {
             const { data: customer, error: fetchErr } = await supabase.from('customers').select('*').eq('id', id).single();
             if (fetchErr || !customer) return res.status(404).json({ error: "Customer not found" });
 
-            const bonus = customer.is_vip ? parseFloat(amount) * 0.10 : 0;
-            const reloadAmount = parseFloat(amount) + bonus;
+            const baseAmount = parseFloat(amount) || 0;
+            const vipBonus = customer.is_vip ? baseAmount * 0.10 : 0;
+            const reloadAmount = baseAmount + vipBonus;
 
             const newBalance = (parseFloat(customer.rico_balance) || 0) + reloadAmount;
             const { data, error } = await supabase.from('customers').update({ rico_balance: newBalance }).eq('id', id).select().single();
-            
+
             if (error) return res.status(500).json({ error: error.message });
-            return res.json({ success: true, newBalance, customer: sanitizeCustomer(data) });
+            // LOYALTY (2026-10-30): the top-up is ledgered now, and the
+            // recarga ladder mints its gift lot on top (L.100→+10 ·
+            // L.200→+25 · L.500→+75 — the ladder rides the amount the
+            // customer actually paid, not the VIP-inflated credit).
+            let ladderBonus = 0;
+            try {
+                await supabase.from('balance_history').insert({
+                    customer_id: id, type: 'load', bucket: 'paid', amount: reloadAmount,
+                    source: 'recarga', notes: vipBonus > 0 ? 'Recarga (incluye bono VIP)' : 'Recarga'
+                });
+                ladderBonus = await ricoLoyalty.grantRecargaBonus(supabase, { customerId: id, amount: baseAmount, restaurantId: finalResId });
+            } catch (loyErr) { console.error('[Rico] load_balance loyalty steps failed:', loyErr.message); }
+            const bonusBalance = await ricoLoyalty.getBonusBalance(supabase, id).catch(() => 0);
+            return res.json({ success: true, newBalance, ladderBonus, bonusBalance, customer: sanitizeCustomer(data) });
+        }
+
+        // POS RECARGA (loyalty build, 2026-10-30): the POS "Recargar
+        // Rico Cash" modal has always called customer_update_balance —
+        // the action did not exist, so register top-ups failed silently.
+        // Staff-gated; the amount lands in the customer's OWN money and
+        // the recarga ladder mints its gift on top, same as load_balance.
+        if (action === 'customer_update_balance' && req.method === 'POST') {
+            if (!(await requireStaff())) return;
+            const cid = req.body?.customerId || req.body?.customer_id || req.body?.id || req.query.id;
+            const amount = parseFloat(req.body?.amount);
+            if (!cid || !(amount > 0)) return res.status(400).json({ error: 'customerId y amount requeridos' });
+            const { data: cust } = await supabase.from('customers').select('*').eq('id', cid).maybeSingle();
+            if (!cust) return res.status(404).json({ error: 'Cliente no encontrado' });
+            const newBalance = round2((parseFloat(cust.rico_balance) || 0) + amount);
+            const { data: updated, error } = await supabase.from('customers').update({ rico_balance: newBalance }).eq('id', cid).select().single();
+            if (error) return res.status(500).json({ error: error.message });
+            let ladderBonus = 0;
+            try {
+                await supabase.from('balance_history').insert({
+                    customer_id: cid, type: 'load', bucket: 'paid', amount, source: 'recarga', notes: 'Recarga en caja'
+                });
+                ladderBonus = await ricoLoyalty.grantRecargaBonus(supabase, { customerId: cid, amount, restaurantId: finalResId });
+            } catch (loyErr) { console.error('[Rico] customer_update_balance loyalty steps failed:', loyErr.message); }
+            const bonusBalance = await ricoLoyalty.getBonusBalance(supabase, cid).catch(() => 0);
+            return res.json({ success: true, newBalance, ladderBonus, bonusBalance, customer: sanitizeCustomer(updated) });
+        }
+
+        // POS "DAR REGALO" (loyalty build, 2026-10-30): the staff gift
+        // from the POS customer card. The REASON is required — it is the
+        // audit trail. Above the settings cap, a MANAGER credential must
+        // arrive in managerPin (master PIN, or an active encargado/admin
+        // employee PIN); the cashier's own login is not enough.
+        if (action === 'pos_manual_grant' && req.method === 'POST') {
+            const actor = await requireStaff();
+            if (!actor) return;
+            const cid = req.body?.customerId || req.body?.customer_id;
+            const amount = round2(req.body?.amount);
+            const reason = String(req.body?.reason || '').trim();
+            if (!cid || !(amount > 0)) return res.status(400).json({ error: 'Elegí el cliente y el monto del regalo' });
+            if (!reason) return res.status(400).json({ error: 'Contanos el motivo del regalo (queda en el registro)' });
+            const settings = await ricoLoyalty.getLoyaltySettings(supabase, finalResId);
+            if (amount > (parseFloat(settings.manual_grant_cap) || 0)) {
+                const mp = String(req.body?.managerPin || '').trim();
+                let managerOk = !!mp && isMasterPin(mp);
+                if (!managerOk && mp) {
+                    const { data: emp } = await supabase.from('employees').select('id, role').eq('pin', mp).eq('active', true).maybeSingle();
+                    managerOk = !!emp && ['admin', 'manager', 'encargado'].includes(String(emp.role || '').toLowerCase().trim());
+                }
+                if (!managerOk) return res.status(403).json({ error: `Los regalos sobre L.${settings.manual_grant_cap} necesitan el PIN de un encargado`, code: 'MANAGER_PIN_REQUIRED', cap: settings.manual_grant_cap });
+            }
+            const { data: cust } = await supabase.from('customers').select('id, name').eq('id', cid).maybeSingle();
+            if (!cust) return res.status(404).json({ error: 'Cliente no encontrado' });
+            const lot = await ricoLoyalty.mintBonusLot(supabase, {
+                customerId: cid, amount, source: 'manual', settings,
+                notes: `Regalo del equipo: ${reason} (por ${actor.name || actor.id || 'personal'})`
+            });
+            return res.json({ success: true, lot_id: lot && lot.lot_id, expires_at: lot && lot.expires_at, message: `🎁 Regalo de L.${amount} acreditado a ${cust.name || 'el cliente'} — vence en ${settings.gift_expiry_days} días` });
+        }
+
+        // Loyalty config the POS is allowed to see (ladder, caps, expiry).
+        if (action === 'loyalty_config' && req.method === 'GET') {
+            if (!(await requireStaff())) return;
+            const settings = await ricoLoyalty.getLoyaltySettings(supabase, finalResId);
+            return res.json({ ok: true, earn_rate: settings.earn_rate, launch_week: settings.launch_week, launch_multiplier: settings.launch_multiplier, ladder: settings.ladder, gift_expiry_days: settings.gift_expiry_days, manual_grant_cap: settings.manual_grant_cap });
+        }
+
+        // THE DAILY SWEEP (loyalty build, 2026-10-30): expire gift lots
+        // (ledger row per lot), mint pending mission grants, and send
+        // the ~3-day expiry heads-ups. Triggered daily at 09:00
+        // America/Tegucigalpa by the Vercel cron in vercel.json
+        // (15:00 UTC) with the CRON_SECRET bearer; also runnable by the
+        // bot (shared secret) or staff (the Regalos tab's "Correr
+        // barrido ahora" button).
+        if (action === 'loyalty_sweep' && (req.method === 'POST' || req.method === 'GET')) {
+            const cronSecret = (process.env.CRON_SECRET || '').trim();
+            const cronOk = !!cronSecret && bearerCred() === cronSecret;
+            if (!botSecretOk() && !cronOk && !(await staffActor())) return res.status(401).json({ error: 'No autorizado' });
+            const summary = await ricoLoyalty.runSweep(supabase);
+            // Bonus attempt: the Especial VIP push, in case its hour has
+            // already passed today (its own cron fires at 09:30 TGU).
+            let especialPush = null;
+            try { especialPush = await ricoLoyalty.runEspecialPush(supabase, {}); } catch (e) { /* sweep result stands */ }
+            return res.json({ ok: true, summary, especial_push: especialPush });
+        }
+
+        // ESPECIAL VIP PUSH (2026-10-30): the daily trigger for the
+        // Especial del Día push to VIPs. Vercel cron at 09:30
+        // America/Tegucigalpa (15:30 UTC) with the CRON_SECRET bearer;
+        // the runner itself enforces the owner-set hour, the
+        // once-a-day rule and the no-special-no-push rule.
+        if (action === 'especial_push' && (req.method === 'POST' || req.method === 'GET')) {
+            const cronSecret = (process.env.CRON_SECRET || '').trim();
+            const cronOk = !!cronSecret && bearerCred() === cronSecret;
+            if (!botSecretOk() && !cronOk && !(await staffActor())) return res.status(401).json({ error: 'No autorizado' });
+            const summary = await ricoLoyalty.runEspecialPush(supabase, {});
+            return res.json({ ok: true, summary });
+        }
+
+        // WHATSAPP PRESENCE (2026-10-30): the bot stamps every inbound
+        // message here — wa_last_inbound_at is the broadcast opt-in
+        // evidence and the 24h-window clock. The words ALTO / STOP /
+        // BAJA opt the customer out of Difusión AND the Especial push,
+        // absolutely. Bot-secret gated, like every whatsapp_* action.
+        if (action === 'whatsapp_presence' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            const cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) return res.json({ ok: true, found: false });
+            const norm = String(req.body?.text || '').trim().toUpperCase()
+                .normalize('NFD').replace(/[̀-ͯ]/g, '');
+            const isOptOut = ['ALTO', 'STOP', 'BAJA'].includes(norm);
+            const updates = { wa_last_inbound_at: new Date().toISOString() };
+            let justOptedOut = false;
+            if (isOptOut && !cust.wa_opt_out) {
+                updates.wa_opt_out = true;
+                updates.especial_opt_out = true;
+                justOptedOut = true;
+            }
+            const { error } = await supabase.from('customers').update(updates).eq('id', cust.id);
+            if (error) throw error;
+            return res.json({ ok: true, found: true, opted_out: isOptOut || !!cust.wa_opt_out, just_opted_out: justOptedOut });
+        }
+
+        // ESPECIAL DEL DÍA — the pull door (2026-10-30): the bot calls
+        // this when a customer texts ESPECIAL. Get-or-create the account
+        // by phone (phone IS the identity), claim today's special for
+        // them server-side (cap enforced here), and answer with the
+        // reveal copy — composed once, in rico-loyalty.especialReveal.
+        if (action === 'whatsapp_special' && req.method === 'POST') {
+            if (!botSecretOk()) return res.status(401).json({ error: 'No autorizado' });
+            const phoneToStore = normalizePhone(req.body?.phone);
+            if (!phoneToStore) return res.status(400).json({ error: 'phone requerido' });
+            let cust = await findCustomerByPhone(phoneToStore);
+            if (!cust) {
+                const { data, error } = await supabase.from('customers').insert({
+                    id: 'cust_' + Date.now() + Math.floor(Math.random() * 1000),
+                    name: 'Cliente WhatsApp',
+                    phone: phoneToStore,
+                    points: 0,
+                    rico_balance: 0
+                }).select().single();
+                if (error) throw error;
+                cust = data;
+            }
+            const reveal = await ricoLoyalty.especialReveal(supabase, { customerId: cust.id });
+            return res.json({ ok: true, ...reveal });
         }
 
         if (action === 'purchase_membership' && req.method === 'POST') {
@@ -2714,6 +2911,12 @@ module.exports = async (req, res) => {
                     ins = await supabase.from('reward_grants').insert(grantRow(grantType));
                 }
                 if (ins.error) throw ins.error;
+                // LOYALTY (2026-10-30): mint the pending grant into a
+                // gift lot NOW so the reward is spendable when the
+                // customer hears about it (the daily sweep backstops
+                // any miss). Treats 'mission' and 'mission:<slug>'
+                // alike; never throws.
+                await ricoLoyalty.mintPendingMissionGrants(supabase, { customerId: sub.customer_id });
                 await supabase.from('mission_submissions')
                     .update({ status: 'approved', decided_at: nowIso, decided_by: decidedBy })
                     .eq('id', sub.id).eq('status', 'pending');
