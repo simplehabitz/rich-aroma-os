@@ -11,51 +11,66 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="/rico-logo.png">
-    <meta name="theme-color" content="#120C09">
+    <meta name="theme-color" content="#F8F1E2">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        gold: '#C9A66B',
-                        dark: '#120C09',
-                        charcoal: '#1E1610',
+                        gold: '#177E7C',
+                        dark: '#F8F1E2',
+                        charcoal: '#F1E5CC',
+                        white: '#241A11',
+                        ink: '#241A11',
+                        coffee: '#433022',
+                        paper: '#F8F1E2',
+                        paper2: '#F1E5CC',
+                        tan: '#E9AF6A',
+                        teal: '#4EA8A7',
                         success: '#10B981',
                         error: '#EF4444'
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Georgia', 'serif']
+                        display: ['Fraunces', 'Georgia', 'serif'],
+                        mono: ['IBM Plex Mono', 'monospace']
                     }
                 }
             }
         }
     </script>
     <style>
-        @font-face { font-family: 'Georgia'; src: local('Georgia'); }
-        body { background-color: #120C09; color: white; -webkit-tap-highlight-color: transparent; }
-        .font-display { font-family: 'Georgia', serif; }
-        .gold-gradient { background: linear-gradient(135deg, #C9A66B 0%, #F4E2C0 50%, #C9A66B 100%); }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        body { background-color: #F8F1E2; color: #241A11; -webkit-tap-highlight-color: transparent; }
+        .font-display { font-family: 'Fraunces', Georgia, serif; }
+        .gold-gradient { background: linear-gradient(135deg, #241A11 0%, #433022 100%); }
+        .glass { background: rgba(36, 26, 17, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(36, 26, 17, 0.08); }
         .drawer { transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
         .drawer.active { transform: translateY(0); }
-        .glass-dark { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(10px); }
+        .glass-dark { background: rgba(36,26,17,0.04); border: 1px solid rgba(36,26,17,0.09); backdrop-filter: blur(10px); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .item-card { transition: all 0.3s ease; }
         .item-card:active { transform: scale(0.95); opacity: 0.8; }
         
-        .btn-gold { background-color: #C9A66B !important; color: #120C09 !important; border-color: #C9A66B !important; opacity: 1 !important; }
+        .btn-gold { background-color: #177E7C !important; color: #F8F1E2 !important; border-color: #177E7C !important; opacity: 1 !important; }
         
         @keyframes bounce-in { 0% { transform: scale(0.5); opacity: 0; } 70% { transform: scale(1.05); opacity: 1; } 100% { transform: scale(1); } }
         .animate-bounce-in { animation: bounce-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        /* ===== V5 RESKIN: size toggle pills (emitted by order_script.js) ===== */
+        .ra-pills { display: flex; gap: 6px; margin-top: 10px; }
+        .ra-pill { flex: 1; border: 1px solid #433022; background: transparent; color: #241A11; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; padding: 8px 0; cursor: pointer; border-radius: 3px; }
+        .ra-pill.on { background: #241A11; color: #F8F1E2; }
+        .ra-pill.off { opacity: 0.38; text-decoration: line-through; cursor: not-allowed; }
     </style>
     <script>
         // AGGRESSIVE CACHE NUKE v3.3.6
-        const CURRENT_VERSION = '3.3.6';
+        const CURRENT_VERSION = '3.4.0';
         const lastReload = parseInt(localStorage.getItem('ra_last_reload') || '0');
         const now = Date.now();
         
@@ -83,7 +98,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw-v5.js?v=3.3.6');
+                navigator.serviceWorker.register('/sw-v5.js?v=3.4.0');
             });
         }
     </script>
@@ -105,14 +120,20 @@
         </div>
     </div>
 
+    <!-- V5 TOPBAR -->
+    <div class="bg-coffee text-dark px-6 py-2 flex justify-between gap-3">
+        <span class="text-[10px] font-bold uppercase tracking-[0.18em]">Reapertura — sábado 7 de noviembre</span>
+        <span class="text-[10px] font-bold uppercase tracking-[0.18em]">Quimistán · Santa Bárbara</span>
+    </div>
+
     <!-- HEADER -->
     <header class="sticky top-0 z-[100] bg-dark/95 backdrop-blur-md border-b border-white/5 px-6 py-4 flex justify-between items-center shadow-xl">
         <div class="flex items-center gap-3">
-            <img id="header-logo" src="/rico-logo.png" class="w-10 h-10 rounded-full border border-gold/20 object-cover" alt="RA">
+            <img id="header-logo" src="/assets/monkey-head.png" onerror="this.onerror=null;this.src='/rico-logo.png'" class="w-11 h-11 rounded-full border border-gold/30 object-cover" alt="RA">
             <div>
                 <div class="flex items-center gap-2">
-                    <h1 id="header-name" class="font-display text-lg text-gold font-bold tracking-tight uppercase leading-none">Rich Aroma</h1>
-                    <span id="header-version" class="text-[7px] bg-gold/10 text-gold/40 px-1.5 py-0.5 rounded-full border border-gold/10">v3.3.5</span>
+                    <h1 id="header-name" class="font-display text-[22px] text-ink font-semibold tracking-tight leading-none">Rich Aroma</h1>
+                    <span id="header-version" class="text-[7px] bg-gold/10 text-gold/40 px-1.5 py-0.5 rounded-full border border-gold/10">v3.4.0</span>
                 </div>
                 <div class="flex items-center gap-2 mt-1">
                     <p id="store-status-text" class="text-[9px] text-white/30 tracking-[0.2em] uppercase">Cargando...</p>
@@ -259,7 +280,7 @@
                 </div>
 
                 <!-- TIER PYRAMID / PATH -->
-                <div class="bg-gradient-to-br from-[#1A1410] to-[#120C09] p-8 rounded-[3rem] border border-gold/20 relative overflow-hidden">
+                <div class="bg-gradient-to-br from-[#F1E5CC] to-[#F8F1E2] p-8 rounded-[3rem] border border-gold/20 relative overflow-hidden">
                     <div id="tier-path-container" class="relative z-10 space-y-8">
                         <div class="flex justify-between items-center relative">
                             <div class="absolute left-6 right-6 top-1/2 h-0.5 bg-white/5 -z-10"></div>
@@ -463,6 +484,21 @@
         </div>
     </div>
 
+    <!-- V5 VERSE + HERO -->
+    <div class="px-6 pt-5 max-w-5xl mx-auto w-full">
+        <div class="flex items-baseline justify-between gap-4 flex-wrap border-b border-[#E4D3B0] pb-3">
+            <span class="font-display italic text-coffee text-base">«Gustad, y ved que es bueno Jehová»</span>
+            <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-gold">Salmos 34:8 — el verso de la casa</span>
+        </div>
+        <div class="pt-5 pb-1 flex items-end justify-between gap-5">
+            <div>
+                <h2 class="font-display text-3xl leading-tight text-ink">El café de la casa, <em class="italic font-normal">sin hacer fila.</em></h2>
+                <p class="text-sm text-[#6E5A46] mt-2 max-w-md">Pide desde aquí, paga como quieras y recoge en barra — hecho al momento, como en casa.</p>
+            </div>
+            <img src="/assets/hot_coffee_cup.jpg" alt="Café de la casa" class="hidden sm:block w-40 h-28 object-cover rounded-xl border border-[#E4D3B0]">
+        </div>
+    </div>
+
     <!-- STICKY CATEGORIES -->
     <nav id="sticky-cats" class="sticky top-[68px] z-50 bg-dark/80 backdrop-blur-sm border-b border-white/5 flex gap-2 overflow-x-auto p-4 hide-scrollbar"></nav>
 
@@ -517,13 +553,13 @@
                 <i class="fas fa-user-circle text-lg"></i>
             </div>
             <span class="text-[9px] font-bold uppercase tracking-[0.2em]">Mi Perfil</span>
-            <span class="absolute bottom-1 text-[5px] text-white/5 font-mono">v3.3.6</span>
+            <span class="absolute bottom-1 text-[5px] text-white/5 font-mono">v3.4.0</span>
         </button>
     </nav>
 
     <!-- RELOAD MODAL -->
     <div id="reload-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[2200] flex flex-col justify-end">
-        <div class="bg-[#120C09] w-full max-h-[90vh] rounded-t-[3rem] shadow-2xl flex flex-col overflow-hidden border-t border-gold/20 relative">
+        <div class="bg-[#F8F1E2] w-full max-h-[90vh] rounded-t-[3rem] shadow-2xl flex flex-col overflow-hidden border-t border-gold/20 relative">
             <div class="p-8 pb-4 border-b border-white/5 flex justify-between items-center">
                 <h2 class="text-2xl font-black text-white uppercase tracking-tight" id="modal-title">Recargar Billetera</h2>
                 <button onclick="window.closeReloadModal()" class="w-12 h-12 rounded-full bg-white/5 text-white/40 flex items-center justify-center transition-colors">
@@ -649,7 +685,7 @@
                 <div id="check-address-ui" class="hidden space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div>
                         <label class="text-[9px] font-black text-gold uppercase tracking-widest block mb-2">Barrio o Colonia (Quimistán)</label>
-                        <select id="check-barrio" class="w-full bg-[#1A1A1C] border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-gold">
+                        <select id="check-barrio" class="w-full bg-[#FFF9EA] border border-white/10 p-4 rounded-2xl text-xs font-bold text-white outline-none focus:border-gold">
                             <option value="Barrio El Centro">Barrio El Centro</option>
                             <option value="Barrio San José">Barrio San José</option>
                             <option value="Barrio Buenos Aires">Barrio Buenos Aires</option>
@@ -700,7 +736,7 @@
                 <!-- Cash change calculation -->
                 <div id="check-cash-ui" class="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-2">
                     <label class="text-[9px] font-black text-gold uppercase tracking-widest block">¿Con cuánto billete pagarás? (Para llevar cambio)</label>
-                    <select id="check-cash-change" class="w-full bg-[#1A1A1C] border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-gold">
+                    <select id="check-cash-change" class="w-full bg-[#FFF9EA] border border-white/10 p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-gold">
                         <option value="Exacto">Pago exacto (No necesito cambio)</option>
                         <option value="L. 100">Billete de L. 100</option>
                         <option value="L. 200">Billete de L. 200</option>
@@ -763,6 +799,7 @@
         <!-- Header Section (Compact) -->
         <div class="mt-4 mb-6 flex flex-col items-center shrink-0">
             <div id="track-icon" class="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center text-2xl mb-3 animate-bounce-in"><i class="fas fa-check"></i></div>
+            <img id="track-captain" src="/assets/captain-rico.png" alt="Capitán Rico saludando" class="h-40 w-auto mx-auto mb-2">
             <h2 class="text-2xl font-display font-black text-white mb-1 italic tracking-tight uppercase leading-none">¡ORDEN RECIBIDA!</h2>
             <p id="track-msg" class="text-white/40 text-[11px] max-w-[240px] leading-snug">Tu pedido ha sido enviado. Prepárate para el mejor sabor.</p>
         </div>
@@ -846,6 +883,6 @@
         <audio id="chime-ready" src="https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3" preload="auto"></audio>
         <audio id="chime-shipped" src="https://assets.mixkit.co/active_storage/sfx/1003/1003-preview.mp3" preload="auto"></audio>
 
-        <script src="/order_script.js?v=3.3.6"></script>
+        <script src="/order_script.js?v=3.4.0"></script>
         </body>
         </html>

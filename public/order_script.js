@@ -2,15 +2,23 @@
             theme: {
                 extend: {
                     colors: {
-                        gold: '#C9A66B',
-                        dark: '#120C09',
-                        charcoal: '#1E1610',
+                        gold: '#177E7C',
+                        dark: '#F8F1E2',
+                        charcoal: '#F1E5CC',
+                        white: '#241A11',
+                        ink: '#241A11',
+                        coffee: '#433022',
+                        paper: '#F8F1E2',
+                        paper2: '#F1E5CC',
+                        tan: '#E9AF6A',
+                        teal: '#4EA8A7',
                         success: '#10B981',
                         error: '#EF4444'
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
-                        display: ['Georgia', 'serif']
+                        display: ['Fraunces', 'Georgia', 'serif'],
+                        mono: ['IBM Plex Mono', 'monospace']
                     }
                 }
             }
@@ -291,11 +299,143 @@
             return url;
         }
 
+        /* RA-SIZE-GROUPING-BEGIN — pure helpers (harness-tested, no DOM) */
+        function sizeMatchOf(id) { return /-(\d+)oz$/i.exec(String(id || '')); }
+        function sizeOzOf(id) { const m = sizeMatchOf(id); return m ? parseInt(m[1], 10) : null; }
+        function familyKeyOf(id) { const m = sizeMatchOf(id); return m ? String(id).slice(0, String(id).length - m[0].length) : String(id || ''); }
+        function displayNameFor(item) { return String((item && item.name) || '').replace(/\s*\d+\s*oz\.?\s*$/i, '').trim(); }
+        function isAvail(item) { return !!item && item.available !== false; }
+        function groupFamilies(items) {
+            const byKey = new Map(); const order = [];
+            (items || []).forEach(it => { const k = familyKeyOf(it.id); if (!byKey.has(k)) { byKey.set(k, []); order.push(k); } byKey.get(k).push(it); });
+            return order.map(k => { const sibs = byKey.get(k).slice().sort((a, b) => (sizeOzOf(a.id) || 0) - (sizeOzOf(b.id) || 0)); return { key: k, items: sibs, grouped: sibs.length > 1 }; });
+        }
+        function defaultSelectionId(fam) { const pool = fam.items.filter(isAvail); const use = pool.length ? pool : fam.items; return use[use.length - 1].id; }
+        function pillState(item, selectedId) { if (!isAvail(item)) return 'off'; return item.id === selectedId ? 'on' : ''; }
+        function familySoldOut(fam) { return !fam.items.some(isAvail); }
+        /* RA-SIZE-GROUPING-END */
+
+        const sizeSelection = {};
+        const familyRegistry = {};
+
+        // Price preview (staff / VIP / public) — the same math the cards have always used.
+        function computePriceHtml(item, isBooking) {
+            const tags = Array.isArray(currentCustomer?.tags) ? currentCustomer.tags : [];
+            const hasFiftyPower = tags.includes('Employee') || tags.includes('BlackCard');
+            const isVipUser = currentCustomer?.is_vip || tags.includes('VIP') || tags.includes('Diamond') || tags.includes('GoldCard');
+            const isExclusion = item.id.includes('dubai_chocolate') || (item.category || '').toLowerCase().includes('retail');
+            let displayPrice = parseFloat(item.price) || 0;
+            let priceHtml = `<span class="text-ink font-mono font-semibold text-[15px]">L ${displayPrice.toFixed(0)}</span>`;
+            if (hasFiftyPower && !isExclusion && !isBooking) {
+                const discounted = displayPrice * 0.5;
+                priceHtml = `
+                    <div class="flex flex-col">
+                        <span class="text-ink/30 text-[9px] font-bold line-through tracking-tighter italic leading-none mb-1">Público: L ${displayPrice.toFixed(0)}</span>
+                        <span class="text-gold font-mono font-black text-lg leading-none">L ${discounted.toFixed(0)}</span>
+                        <span class="text-[7px] text-gold/60 font-black uppercase tracking-widest mt-1">Precio Staff (50% OFF)</span>
+                    </div>`;
+            } else if (isVipUser && !isExclusion && !isBooking) {
+                const discounted = displayPrice * 0.9;
+                priceHtml = `
+                    <div class="flex flex-col">
+                        <span class="text-ink/30 text-[9px] font-bold line-through tracking-tighter italic leading-none mb-1">Público: L ${displayPrice.toFixed(0)}</span>
+                        <span class="text-gold font-mono font-black text-base leading-none">L ${discounted.toFixed(0)}</span>
+                        <span class="text-[7px] text-gold/60 font-black uppercase tracking-widest mt-1">Precio VIP (10% OFF)</span>
+                    </div>`;
+            }
+            return priceHtml;
+        }
+
+        function cardImgHtml(item, btnLabel) {
+            const imgUrl = optimizeImg(item.image_url);
+            const chip = `<div class="absolute bottom-3 right-3 px-3 h-10 rounded-md bg-dark border border-ink text-ink flex items-center justify-center gap-2 shadow"><span class="text-[9px] font-black uppercase tracking-widest">${btnLabel}</span><i class="fas fa-plus text-xs"></i></div>`;
+            if (imgUrl) {
+                return `<div class="w-full aspect-square bg-charcoal overflow-hidden relative">
+                    <img src="${imgUrl}" class="w-full h-full object-cover" loading="lazy" alt="">
+                    ${chip}
+                </div>`;
+            }
+            return `<div class="w-full aspect-square bg-paper2 overflow-hidden relative flex items-center justify-center">
+                <span class="font-display text-6xl text-gold">${(item.name || '?').charAt(0)}</span>
+                ${chip}
+            </div>`;
+        }
+
+        function singleCardHtml(item, category) {
+            const isCombo = category === 'Combos';
+            const isBooking = item.id.startsWith('sports_court') || item.id.startsWith('event_');
+            const cardClass = isCombo ? "item-card bg-[#FFF9EA] border border-gold overflow-hidden flex flex-col group cursor-pointer active:scale-[0.97] transition-all shadow-sm" : "item-card bg-[#FFF9EA] border border-[#E4D3B0] overflow-hidden flex flex-col group cursor-pointer active:scale-[0.97] transition-all shadow-sm";
+            const clickAction = isBooking ? `window.openBooking('${item.id}')` : `window.openModifier('${item.id}')`;
+            const btnLabel = isBooking ? 'Reservar' : 'Agregar';
+            const priceHtml = computePriceHtml(item, isBooking);
+            return `<div class="${cardClass}" onclick="${clickAction}">
+                ${cardImgHtml(item, btnLabel)}
+                <div class="p-4 flex-1 flex flex-col justify-between gap-2">
+                    <h3 class="font-display font-medium text-[17px] leading-tight text-ink">${item.name}</h3>
+                    ${priceHtml}
+                </div>
+            </div>`;
+        }
+
+        function groupedCardHtml(fam, category) {
+            if (!sizeSelection[fam.key] || !fam.items.some(i => i.id === sizeSelection[fam.key])) {
+                sizeSelection[fam.key] = defaultSelectionId(fam);
+            }
+            const selId = sizeSelection[fam.key];
+            const sel = fam.items.find(i => i.id === selId);
+            const soldOut = familySoldOut(fam);
+            const imgItem = sel.image_url ? sel : (fam.items.find(i => i.image_url) || sel);
+            const priceHtml = computePriceHtml(sel, false);
+            const pills = fam.items.map(it => {
+                const st = pillState(it, selId);
+                const dis = isAvail(it) ? '' : 'disabled';
+                const click = isAvail(it) ? `onclick="event.stopPropagation(); window.raSelectSize('${fam.key}','${it.id}')"` : '';
+                return `<button type="button" class="ra-pill ${st}" data-ra-pill="${it.id}" ${dis} ${click}>${sizeOzOf(it.id)} oz</button>`;
+            }).join('');
+            return `<div class="item-card relative bg-[#FFF9EA] border border-[#E4D3B0] overflow-hidden flex flex-col group cursor-pointer active:scale-[0.97] transition-all shadow-sm" data-ra-family="${fam.key}" ${soldOut ? '' : `onclick="window.openFamilyItem('${fam.key}')"`}>
+                ${soldOut ? `<div class="absolute top-3 left-3 z-10 px-3 py-1.5 bg-ink text-dark text-[9px] font-black uppercase tracking-widest">Agotado</div>` : ''}
+                <div data-ra-imgwrap="${fam.key}">${cardImgHtml(imgItem, 'Agregar')}</div>
+                <div class="p-4 flex-1 flex flex-col justify-between gap-2">
+                    <div>
+                        <h3 class="font-display font-medium text-[17px] leading-tight text-ink">${displayNameFor(sel)}</h3>
+                        <div class="ra-pills">${pills}</div>
+                    </div>
+                    <div data-ra-price="${fam.key}">${priceHtml}</div>
+                </div>
+            </div>`;
+        }
+
+        window.openFamilyItem = (key) => {
+            const fam = familyRegistry[key]; if (!fam) return;
+            const id = sizeSelection[key] || defaultSelectionId(fam);
+            const item = fam.items.find(i => i.id === id);
+            if (!item || !isAvail(item)) return;
+            window.openModifier(id);
+        };
+
+        window.raSelectSize = (key, itemId) => {
+            const fam = familyRegistry[key]; if (!fam) return;
+            const item = fam.items.find(i => i.id === itemId);
+            if (!item || !isAvail(item)) return;
+            sizeSelection[key] = itemId;
+            const card = document.querySelector(`[data-ra-family="${key}"]`);
+            if (!card) return;
+            const priceEl = card.querySelector('[data-ra-price]');
+            if (priceEl) priceEl.innerHTML = computePriceHtml(item, false);
+            const wrap = card.querySelector('[data-ra-imgwrap]');
+            if (wrap) { const imgItem = item.image_url ? item : (fam.items.find(i => i.image_url) || item); wrap.innerHTML = cardImgHtml(imgItem, 'Agregar'); }
+            card.querySelectorAll('.ra-pill').forEach(p => {
+                const pit = fam.items.find(i => i.id === p.getAttribute('data-ra-pill'));
+                if (pit) p.className = 'ra-pill ' + pillState(pit, itemId);
+            });
+        };
+
         function renderMenu() {
             try {
                 const container = document.getElementById('menu-container');
                 if (!container) return;
                 const categories = {};
+                Object.keys(familyRegistry).forEach(k => delete familyRegistry[k]);
                 
                 // --- MEMBER DASHBOARD BANNER (NEW) ---
                 let dashboardHtml = '';
@@ -335,7 +475,7 @@
                                             <span class="text-gold">${streak}/6</span>
                                         </div>
                                         <div class="w-full h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                            <div class="h-full bg-gold shadow-[0_0_10px_rgba(201,166,107,0.5)]" style="width: ${(streak/6)*100}%"></div>
+                                            <div class="h-full bg-gold shadow-[0_0_10px_rgba(23,126,124,0.5)]" style="width: ${(streak/6)*100}%"></div>
                                         </div>
                                     </div>
                                     <button onclick="window.openProfile()" class="w-10 h-10 rounded-2xl bg-gold text-dark flex items-center justify-center shadow-lg"><i class="fas fa-gift text-sm"></i></button>
@@ -405,90 +545,16 @@
 
                     const sectionId = 'section-' + category.replace(/\s+/g, '');
                     html += `<div id="${sectionId}" class="menu-section mb-12 scroll-mt-32">
-                        <h2 class="text-gold text-sm font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-3">
-                            <span class="h-px w-8 bg-gold/20"></span>
+                        <h2 class="font-display text-[22px] font-medium text-ink mb-6 flex items-center gap-3">
+                            <span class="h-px w-8 bg-[#E4D3B0]"></span>
                             ${category}
-                            <span class="flex-1 h-px bg-gold/20"></span>
+                            <span class="flex-1 h-px bg-[#E4D3B0]"></span>
                         </h2>
                         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
                     
-                    items.forEach(item => {
-                        const isCombo = category === 'Combos';
-                        const isBooking = item.id.startsWith('sports_court') || item.id.startsWith('event_');
-                        const cardClass = isCombo ? "item-card rounded-[2rem] bg-white/5 border border-gold/30 overflow-hidden flex flex-col group active:scale-95 transition-all shadow-xl" : "item-card rounded-[2rem] bg-white/5 border border-white/5 overflow-hidden flex flex-col group active:scale-95 transition-all";
-                        const clickAction = isBooking ? `window.openBooking('${item.id}')` : `window.openModifier('${item.id}')`;
-                        const btnLabel = isBooking ? 'Reservar' : 'Agregar';
-                        
-                        // --- STATUS ENGINE: Price Preview ---
-                        const tags = Array.isArray(currentCustomer?.tags) ? currentCustomer.tags : [];
-                        const hasFiftyPower = tags.includes('Employee') || tags.includes('BlackCard');
-                        const isVipUser = currentCustomer?.is_vip || tags.includes('VIP') || tags.includes('Diamond') || tags.includes('GoldCard');
-                        const isExclusion = item.id.includes('dubai_chocolate') || (item.category || '').toLowerCase().includes('retail');
-                        
-                        let displayPrice = parseFloat(item.price) || 0;
-                        let priceHtml = `<span class="text-gold font-mono font-black text-base">L ${displayPrice.toFixed(0)}</span>`;
-                        
-                        if (hasFiftyPower && !isExclusion && !isBooking) {
-                            const discounted = displayPrice * 0.5;
-                            priceHtml = `
-                                <div class="flex flex-col">
-                                    <span class="text-white/20 text-[9px] font-bold line-through tracking-tighter italic leading-none mb-1">Público: L ${displayPrice.toFixed(0)}</span>
-                                    <span class="text-cyan-400 font-mono font-black text-lg leading-none">L ${discounted.toFixed(0)}</span>
-                                    <span class="text-[7px] text-cyan-400/50 font-black uppercase tracking-widest mt-1">Precio Staff (50% OFF)</span>
-                                </div>
-                            `;
-                        } else if (isVipUser && !isExclusion && !isBooking) {
-                            const discounted = displayPrice * 0.9;
-                            priceHtml = `
-                                <div class="flex flex-col">
-                                    <span class="text-white/20 text-[9px] font-bold line-through tracking-tighter italic leading-none mb-1">Público: L ${displayPrice.toFixed(0)}</span>
-                                    <span class="text-gold font-mono font-black text-base leading-none">L ${discounted.toFixed(0)}</span>
-                                    <span class="text-[7px] text-gold/60 font-black uppercase tracking-widest mt-1">Precio VIP (10% OFF)</span>
-                                </div>
-                            `;
-                        }
-
-                        const imgUrl = optimizeImg(item.image_url);
-                        let imgHtml = "";
-                        
-                        if (imgUrl) {
-                            imgHtml = `
-                                <div class="w-full h-40 bg-charcoal overflow-hidden relative">
-                                    <img src="${imgUrl}" class="w-full h-full object-cover" loading="lazy">
-                                    <div class="absolute inset-0 bg-gradient-to-t from-dark/80 to-transparent"></div>
-                                    <div class="absolute bottom-3 right-3 w-max px-3 h-10 rounded-2xl bg-gold text-dark flex items-center justify-center gap-2 shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform"><span class="text-[9px] font-black uppercase tracking-widest">${btnLabel}</span><i class="fas fa-plus text-xs"></i></div>
-                                </div>`;
-                        } else {
-                            // --- QE BRANDED PLACEHOLDER ---
-                            imgHtml = `
-                                <div class="w-full h-40 bg-gradient-to-br from-charcoal to-dark relative flex items-center justify-center overflow-hidden">
-                                    <!-- Background Pattern -->
-                                    <div class="absolute inset-0 opacity-5" style="background-image: radial-gradient(circle at 2px 2px, #C9A66B 1px, transparent 0); background-size: 16px 16px;"></div>
-                                    
-                                    <!-- QE LOGO -->
-                                    <div class="relative group-hover:scale-110 transition-transform duration-500">
-                                        <div class="w-16 h-16 bg-gold/10 rounded-2xl flex items-center justify-center border border-gold/20 backdrop-blur-sm">
-                                            <span class="text-gold font-black text-2xl tracking-tighter">QE</span>
-                                        </div>
-                                        <div class="absolute -bottom-1 -right-1 w-6 h-6 bg-gold rounded-lg flex items-center justify-center text-[10px] text-dark font-black shadow-lg">
-                                            <i class="fas fa-plus"></i>
-                                        </div>
-                                    </div>
-                                    
-                                    <div class="absolute bottom-3 right-3 w-max px-3 h-8 rounded-xl bg-gold/20 text-gold border border-gold/30 flex items-center justify-center gap-2 backdrop-blur-md">
-                                        <span class="text-[8px] font-black uppercase tracking-widest">${btnLabel}</span>
-                                    </div>
-                                </div>`;
-                        }
-                        
-                        html += `
-                            <div class="${cardClass}" onclick="${clickAction}">
-                                ${imgHtml}
-                                <div class="p-5 flex-1 flex flex-col justify-between">
-                                    <h3 class="font-black text-sm leading-tight mb-2 text-white/90">${item.name}</h3>
-                                    ${priceHtml}
-                                </div>
-                            </div>`;
+                    groupFamilies(items).forEach(fam => {
+                        if (fam.grouped) { familyRegistry[fam.key] = fam; html += groupedCardHtml(fam, category); }
+                        else { html += singleCardHtml(fam.items[0], category); }
                     });
                     html += `</div></div>`;
                 });
@@ -691,7 +757,11 @@
         window.openCheckout = () => {
             const container = document.getElementById('check-items');
             initTimeSlots();
-            if(cart.length === 0) { container.innerHTML = `<div class="text-white/20 text-center py-12 italic">Tu bolsa está vacía</div>`; }
+            if(cart.length === 0) { container.innerHTML = `<div class="text-center py-12">
+                        <img src="/assets/monkey-head.png" onerror="this.style.display='none'" class="w-[72px] h-[72px] rounded-full mx-auto mb-4 object-cover" alt="El mono de Rich Aroma">
+                        <p class="font-display text-lg text-ink">Tu bolsa está vacía</p>
+                        <p class="text-sm text-[#6E5A46] mt-1">El mono se quedó mirando la barra vacía. Vuelve al menú y arma tu antojo.</p>
+                    </div>`; }
             else {
                 container.innerHTML = cart.map((item, index) => `
                     <div class="flex justify-between items-start bg-white/5 border border-white/5 p-6 rounded-[2rem]">
@@ -1091,7 +1161,7 @@
                                 text: activeOrder.id,
                                 width: 120,
                                 height: 120,
-                                colorDark: "#120C09",
+                                colorDark: "#241A11",
                                 colorLight: "#ffffff",
                                 correctLevel: QRCode.CorrectLevel.H
                             });
@@ -1459,7 +1529,7 @@
             
             if (window.QRCode) {
                 document.getElementById('prof-qr').innerHTML = "";
-                new QRCode(document.getElementById('prof-qr'), { text: currentCustomer.phone, width: 160, height: 160, colorDark: "#120C09", colorLight: "#ffffff" });
+                new QRCode(document.getElementById('prof-qr'), { text: currentCustomer.phone, width: 160, height: 160, colorDark: "#241A11", colorLight: "#ffffff" });
             }
         };
 
