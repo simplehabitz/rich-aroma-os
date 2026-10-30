@@ -82,6 +82,29 @@ module.exports = async function handler(req, res) {
         let _actorPromise = null;
         const actor = () => { if (!_actorPromise) _actorPromise = resolveActor(); return _actorPromise; };
         const actorUser = await actor();
+        // COMPAT (stack fix 2, 2026-10-30): three actions added by later
+        // packages — option_deltas / option_deltas_save (menu self-serve)
+        // and inventory_drift (inventory) — still gate on the legacy
+        // handler-scope boolean the pre-roles file computed at its top:
+        // isAdmin := verifyAdmin(authHeader) (an admin credential, or an
+        // employee whose role is 'admin'). Restored verbatim beside the
+        // actor resolver so those gates behave exactly as they did
+        // pre-roles; every other gate in this file uses requireCap /
+        // requireOwner above.
+        const isAdmin = await verifyAdmin(authHeader);
+        // STACK FIX 3 (owner decision, 2026-10-30): the same three
+        // legacy gates ALSO open for the canonical Encargado — a staff
+        // PIN whose stored role api/lib/roles.js maps to 'encargado'
+        // ('encargado', 'manager', 'admin', 'encargada', 'supervisor').
+        // verifyAdmin alone only knew the legacy 'admin' string, so a
+        // PIN stored in the new vocabulary read 403 on those actions.
+        // The actor side adds ONLY the encargado role: owner credentials
+        // are unchanged (legacy isAdmin already covers them), and the
+        // settings-PIN door resolves through actor() to role 'owner',
+        // not 'encargado' — it gains nothing here and still reads 403
+        // on these three actions, exactly as after FIX2. No other gate
+        // in this file changes.
+        const isAdminOrEncargado = isAdmin || (actorUser && actorUser.role === 'encargado');
         const denyRole = (cap) => res.status(403).json({ error: roles.denyMessage(cap), code: 'ROLE_DENIED', cap });
         const requireCap = async (cap) => {
             const a = await actor();
@@ -851,7 +874,7 @@ module.exports = async function handler(req, res) {
         // and per-item rows for an option — the editor shows and costs
         // that same sum, so what the owner reads is what the kitchen gets.
         if (action === 'option_deltas' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!isAdminOrEncargado) return res.status(403).json({ error: "Unauthorized" });
             const optionId = id || req.query.option_id || req.query.id;
             if (!optionId) return res.status(400).json({ error: "Missing option ID" });
             const { data: opt } = await supabase.from('modifier_options').select('id, group_id, name, price_adjustment').eq('id', optionId).maybeSingle();
@@ -891,7 +914,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'option_deltas_save' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!isAdminOrEncargado) return res.status(403).json({ error: "Unauthorized" });
             const b = req.body || {};
             const optionId = b.option_id;
             const scopeItem = (b.item_id === undefined || b.item_id === null || b.item_id === '') ? null : String(b.item_id);
@@ -1240,7 +1263,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'inventory_drift' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!isAdminOrEncargado) return res.status(403).json({ error: "Unauthorized" });
             const since = new Date(Date.now() - 30 * 86400000).toISOString();
             const [{ data: drift }, { data: batches }] = await Promise.all([
                 supabase.from('inventory_drift_flags').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
