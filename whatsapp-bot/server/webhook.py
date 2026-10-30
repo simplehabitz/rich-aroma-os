@@ -560,6 +560,35 @@ def broadcast_send():
                     mimetype="application/json")
 
 
+@app.post("/owner-notify")
+def owner_notify():
+    """
+    OS -> bot OWNER notifications (inventory core, 2026-10-30).
+
+    Called by api/lib/inventory-engine.js for the §7j drift report
+    (an item crossed 35% COGS on a re-cost), §7i staff alerts and
+    §7k.2 sin-factura override reports; authenticated with the
+    shared WHATSAPP_SIGNUP_SECRET (Bearer, constant-time,
+    fail-closed — see server/owner_notify.py). Delivers to the
+    OWNER_WHATSAPP numbers; the OS keeps the durable records
+    (drift flags / Bitácora), this route only carries the message.
+    """
+    try:
+        import owner_notify as owner_notify_mod
+    except ImportError:
+        from server import owner_notify as owner_notify_mod
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    code, body = owner_notify_mod.process(
+        payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
+
+
 @app.get("/health")
 def health():
     return {"ok": True, "vault": HAS_VAULT}

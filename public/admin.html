@@ -151,6 +151,7 @@
                 <button onclick="switchTab('employees')" id="tab-employees" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Employees</button>
                 <button onclick="switchTab('menu')" id="tab-menu" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Menu & Modifiers</button>
                 <button onclick="switchTab('inventory')" id="tab-inventory" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Inventory</button>
+                <button onclick="switchTab('produccion')" id="tab-produccion" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Producción</button>
                 <button onclick="switchTab('promocodes')" id="tab-promocodes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Códigos Promo</button>
                 <button onclick="switchTab('clientes')" id="tab-clientes" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Clientes</button>
                 <button onclick="switchTab('misiones')" id="tab-misiones" class="font-bold text-gray-500 hover:text-gray-800 pb-2 px-2">Misiones</button>
@@ -807,9 +808,20 @@
             </div>
             <!-- TAB: INVENTORY -->
             <div id="section-inventory" class="hidden">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Raw Ingredients & Inventory</h2>
-                <button onclick="openNewInventoryModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700">+ Add Ingredient</button>            </div>
+            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                <h2 class="text-xl font-bold">Insumos e Inventario</h2>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="openRecibir()" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-green-700">📥 Recibir compra</button>
+                    <button onclick="openConteo()" class="bg-amber-500 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-amber-600">🧮 Conteo semanal</button>
+                    <button onclick="toggleBitacora()" class="bg-gray-700 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-gray-800">🧾 Bitácora</button>
+                    <button onclick="openNewInventoryModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-blue-700">+ Add Ingredient</button>
+                </div>
+            </div>
+            <div id="drift-panel" class="hidden bg-red-50 border border-red-200 rounded-2xl p-4 mb-4"></div>
+            <div id="bitacora-panel" class="hidden bg-white rounded-2xl shadow-lg p-4 mb-4">
+                <h3 class="font-bold mb-2">Bitácora — quién hizo qué</h3>
+                <div id="bitacora-list" class="space-y-1 text-sm max-h-96 overflow-y-auto"></div>
+            </div>
 
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-8">
                 <table class="w-full text-left border-collapse">
@@ -828,6 +840,22 @@
                     </tbody>
                 </table>
             </div>
+            </div>
+
+            <!-- TAB: PRODUCCIÓN (inventory core, 2026-10-30) -->
+            <div id="section-produccion" class="hidden">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                    <h2 class="text-xl font-bold">Producción</h2>
+                    <button onclick="openAlerta()" class="bg-red-600 text-white px-4 py-2 rounded-lg font-bold shadow hover:bg-red-700">🚨 Avisar al dueño</button>
+                </div>
+                <div id="prod-alert-banner" class="hidden bg-red-100 border border-red-300 text-red-800 rounded-2xl p-3 mb-4 font-bold"></div>
+                <div id="prod-tidy" class="hidden bg-sky-50 border border-sky-200 rounded-2xl p-4 mb-4 flex items-center justify-between">
+                    <div><span class="font-bold">🧹 Tidy Check</span> <span class="text-sm text-gray-600">Revisá el frente, la terraza y los baños.</span></div>
+                    <button onclick="tidyListo()" class="bg-sky-600 text-white px-5 py-2 rounded-lg font-bold">Listo ✓</button>
+                </div>
+                <div id="prod-proposals" class="space-y-2 mb-4"></div>
+                <div id="prod-flags" class="space-y-2 mb-4"></div>
+                <div id="produccionGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
             </div>
 
             <!-- TAB: MARKETING & QUESTS -->
@@ -1138,6 +1166,184 @@
             <div class="flex gap-3 mt-8">
                 <button onclick="document.getElementById('add-inventory-modal').classList.add('hidden')" class="flex-1 py-3 font-bold text-gray-500">Cancel</button>
                 <button id="save-inv-btn" onclick="saveInventory()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Save Ingredient</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRESENTACIONES MODAL (inventory core §7k.3) -->
+    <div id="presentaciones-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-1">Presentaciones</h3>
+            <p class="text-sm text-gray-500 mb-4" id="pres-insumo-label"></p>
+            <input type="hidden" id="pres-insumo-id"><input type="hidden" id="pres-insumo-unit">
+            <div id="pres-list" class="space-y-2 mb-4"></div>
+            <div class="border-t pt-4 space-y-3">
+                <p class="font-bold text-sm">Agregar / editar presentación</p>
+                <input type="hidden" id="pres-id">
+                <input type="text" id="pres-desc" placeholder="Descripción — Ej: Caja 12 × 946 ml" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="pres-marca" placeholder="Marca — Ej: Sula" class="border rounded-lg p-3 outline-none focus:border-blue-500">
+                    <input type="text" id="pres-proveedor" placeholder="Proveedor — Ej: PriceSmart" class="border rounded-lg p-3 outline-none focus:border-blue-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Unidades por paquete</label>
+                    <input type="number" id="pres-unidades" value="1" min="1" step="any" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500"></div>
+                    <div><label class="block text-xs font-bold text-gray-500 uppercase mb-1">Contenido por unidad</label>
+                    <input type="number" id="pres-contenido" step="any" placeholder="Ej: 946" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="text" id="pres-barcode" placeholder="Código de barras (se llena al escanear)" class="border rounded-lg p-3 outline-none focus:border-blue-500">
+                    <input type="text" id="pres-alias" placeholder="Nombre en la factura — Ej: LECHE SULA 946 X12" class="border rounded-lg p-3 outline-none focus:border-blue-500">
+                </div>
+                <input type="text" id="pres-foto" placeholder="Foto del paquete (URL, opcional)" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('presentaciones-modal')" class="flex-1 py-3 font-bold text-gray-500">Cerrar</button>
+                <button onclick="savePresentacion()" class="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold">Guardar presentación</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RECIBIR MODAL (inventory core §7k) -->
+    <div id="recibir-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-1">📥 Recibir compra</h3>
+            <p class="text-sm text-gray-500 mb-4">Escaneá o tocá cada producto conforme lo agarrás. La factura cierra la compra.</p>
+            <div class="space-y-3 mb-4">
+                <input type="text" id="rec-proveedor" placeholder="Proveedor — Ej: PriceSmart SPS" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+                <div class="flex items-center gap-3">
+                    <input type="checkbox" id="rec-con-factura" checked onchange="recToggleFactura()" class="w-5 h-5">
+                    <label for="rec-con-factura" class="font-bold text-gray-700">¿Con factura?</label>
+                </div>
+                <div id="rec-factura-box">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Foto de la factura (obligatoria para confirmar)</label>
+                    <input type="file" id="rec-factura-file" accept="image/*" capture="environment" onchange="recFacturaFoto(this)" class="w-full border rounded-lg p-2">
+                    <img id="rec-factura-preview" class="hidden mt-2 rounded-lg max-h-40">
+                </div>
+                <div id="rec-override-box" class="hidden bg-amber-50 border border-amber-300 rounded-xl p-3">
+                    <p class="font-bold text-amber-800 text-sm mb-2">Sin factura: la cierra el encargado con su toque y el motivo.</p>
+                    <input type="text" id="rec-override-reason" placeholder="Motivo — Ej: compra en el mercado" class="w-full border rounded-lg p-3 outline-none focus:border-amber-500">
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" id="rec-barcode" placeholder="Código de barras del paquete" class="flex-1 border rounded-lg p-3 outline-none focus:border-blue-500">
+                    <button onclick="recBuscarBarcode()" class="bg-gray-800 text-white px-4 rounded-lg font-bold">Buscar</button>
+                </div>
+            </div>
+            <div id="rec-cards" class="space-y-3"></div>
+            <button onclick="recAddCard()" class="w-full bg-blue-50 text-blue-700 border-2 border-blue-200 border-dashed py-3 rounded-xl font-bold hover:bg-blue-100 my-3">+ Agregar tarjeta (producto)</button>
+            <div id="rec-preview" class="hidden bg-gray-50 border rounded-xl p-3 text-sm"></div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeModal('recibir-modal')" class="flex-1 py-3 font-bold text-gray-500">Cancelar</button>
+                <button onclick="recRevisar()" class="flex-1 py-3 bg-gray-700 text-white rounded-xl font-bold">Revisar</button>
+                <button id="rec-confirm-btn" onclick="recConfirmar()" class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold opacity-50" disabled>Confirmar recepción</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUCIR MODAL (inventory core §7g/§7i) -->
+    <div id="producir-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-1">Producir <span id="prod-name"></span></h3>
+            <input type="hidden" id="prod-slug">
+            <p class="text-sm text-gray-500 mb-3">Receta base rinde <span id="prod-yield"></span>.</p>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Cuántas tandas?</label>
+            <div class="flex gap-2 mb-4" id="prod-batches">
+                <button data-b="1" onclick="prodSetBatches(1)" class="prod-batch-btn flex-1 py-2 rounded-lg font-bold bg-blue-600 text-white">×1</button>
+                <button data-b="2" onclick="prodSetBatches(2)" class="prod-batch-btn flex-1 py-2 rounded-lg font-bold bg-gray-100">×2</button>
+                <button data-b="3" onclick="prodSetBatches(3)" class="prod-batch-btn flex-1 py-2 rounded-lg font-bold bg-gray-100">×3</button>
+                <button data-b="4" onclick="prodSetBatches(4)" class="prod-batch-btn flex-1 py-2 rounded-lg font-bold bg-gray-100">×4</button>
+            </div>
+            <div id="prod-lines" class="text-sm bg-gray-50 rounded-xl p-3 mb-4"></div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Cuántas salieron? (el rendimiento real manda)</label>
+            <input type="number" id="prod-actual" step="any" class="w-full border rounded-lg p-3 mb-3 outline-none focus:border-blue-500">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Dónde quedan?</label>
+            <select id="prod-state" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+                <option value="refrigerado">Refrigerado</option>
+                <option value="congelado">Congelado</option>
+                <option value="ambiente">Ambiente</option>
+                <option value="linea">En línea</option>
+            </select>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('producir-modal')" class="flex-1 py-3 font-bold text-gray-500">Cancelar</button>
+                <button onclick="prodConfirmar()" class="flex-1 py-3 bg-green-600 text-white rounded-xl font-bold">Producir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MOVER MODAL -->
+    <div id="mover-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-bold mb-3">Mover <span id="mov-name"></span></h3>
+            <input type="hidden" id="mov-id">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Cuántas pasás?</label>
+            <input type="number" id="mov-qty" step="any" class="w-full border rounded-lg p-3 mb-2 outline-none focus:border-blue-500">
+            <div class="flex gap-2 mb-3">
+                <button onclick="movChip(5)" class="flex-1 bg-gray-100 rounded-lg py-2 font-bold">5</button>
+                <button onclick="movChip(10)" class="flex-1 bg-gray-100 rounded-lg py-2 font-bold">10</button>
+                <button onclick="movChip(0)" class="flex-1 bg-gray-100 rounded-lg py-2 font-bold">Todo</button>
+            </div>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿A dónde?</label>
+            <select id="mov-state" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+                <option value="refrigerado">Refrigerado</option>
+                <option value="congelado">Congelado</option>
+                <option value="ambiente">Ambiente</option>
+                <option value="linea">En línea</option>
+            </select>
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('mover-modal')" class="flex-1 py-3 font-bold text-gray-500">Cancelar</button>
+                <button onclick="movConfirmar()" class="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">Mover</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MERMA MODAL -->
+    <div id="merma-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-bold mb-3">Merma de <span id="mer-name"></span></h3>
+            <input type="hidden" id="mer-id">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Cantidad</label>
+            <input type="number" id="mer-qty" step="any" class="w-full border rounded-lg p-3 mb-3 outline-none focus:border-blue-500">
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Por qué?</label>
+            <input type="text" id="mer-note" placeholder="Ej: venció / se cayó / se quemó" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500">
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('merma-modal')" class="flex-1 py-3 font-bold text-gray-500">Cancelar</button>
+                <button onclick="merConfirmar()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold">Registrar merma</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTEO MODAL -->
+    <div id="conteo-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-2xl w-full shadow-2xl max-h-[92vh] overflow-y-auto">
+            <h3 class="text-xl font-bold mb-1">🧮 Conteo semanal</h3>
+            <p class="text-sm text-gray-500 mb-3">Caminá la tienda en orden y contá lo físico. El sistema ajusta la diferencia solo — la merma se vuelve un número visible.</p>
+            <label class="flex items-center gap-2 mb-3 font-bold text-gray-700"><input type="checkbox" id="conteo-pull-expired" class="w-5 h-5" checked> Retirar lo vencido que aparezca</label>
+            <div id="conteo-list" class="space-y-2"></div>
+            <div id="conteo-result" class="hidden bg-gray-50 border rounded-xl p-3 text-sm mt-3"></div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="closeModal('conteo-modal')" class="flex-1 py-3 font-bold text-gray-500">Cerrar</button>
+                <button onclick="conteoGuardar()" class="flex-1 py-3 bg-amber-500 text-white rounded-xl font-bold">Guardar conteo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ALERTA MODAL -->
+    <div id="alerta-modal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-3">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl">
+            <h3 class="text-xl font-bold mb-3">🚨 Avisar al dueño</h3>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">¿Qué pasa?</label>
+            <select id="alerta-kind" class="w-full border rounded-lg p-3 mb-3 outline-none focus:border-blue-500">
+                <option value="insumo_bajo">📉 Insumo bajo</option>
+                <option value="se_rompio">🔧 Algo se rompió</option>
+                <option value="ayuda">🙋 Necesito ayuda</option>
+            </select>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Insumo (si aplica)</label>
+            <select id="alerta-insumo" class="w-full border rounded-lg p-3 mb-3 outline-none focus:border-blue-500"><option value="">—</option></select>
+            <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nota (opcional)</label>
+            <input type="text" id="alerta-note" class="w-full border rounded-lg p-3 outline-none focus:border-blue-500" placeholder="Una línea, si hace falta">
+            <div class="flex gap-3 mt-6">
+                <button onclick="closeModal('alerta-modal')" class="flex-1 py-3 font-bold text-gray-500">Cancelar</button>
+                <button onclick="alertaEnviar()" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold">Enviar aviso</button>
             </div>
         </div>
     </div>
@@ -1696,7 +1902,7 @@
             logDebug(`Switching to tab: ${tabId}`);
             try {
 
-                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones', 'regalos', 'inventory'];
+                const sections = ['overview', 'employees', 'menu', 'promocodes', 'clientes', 'misiones', 'regalos', 'inventory', 'produccion'];
                 if (!sections.includes(tabId)) tabId = 'overview';
                 sections.forEach(id => {
                     const el = document.getElementById(`section-${id}`);
@@ -1720,7 +1926,8 @@
                 if(tabId === 'clientes') loadClientes();
                 if(tabId === 'misiones') loadMisiones();
                 if(tabId === 'regalos') loadRegalos();
-                if(tabId === 'inventory') loadInventory();
+                if(tabId === 'inventory') { loadInventory(); loadDriftPanel(); }
+                if(tabId === 'produccion') loadProduccion();
             } catch (err) {
                 logDebug("Error in switchTab: " + err.message);
             }
@@ -3059,6 +3266,8 @@
                             </select>
                         </td>
                         <td class="p-4 text-right flex justify-end gap-2">
+                            <button onclick="openRecibir('${item.id}')" class="text-green-600 hover:text-green-800 text-xs font-bold">📥 Recibir</button>
+                            <button onclick="openPresentaciones('${item.id}', '${escapeHtml(item.name)}', '${escapeHtml(item.unit)}')" class="text-purple-600 hover:text-purple-800 text-xs font-bold">Presentaciones</button>
                             <button onclick="openEditInventoryModal('${item.id}', '${escapeHtml(item.name)}', ${item.current_stock}, ${item.min_stock}, '${item.unit}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold">Edit</button>
                             <button onclick="deleteInventoryItem('${item.id}')" class="text-red-400 hover:text-red-600 text-xs font-bold"><i class="fas fa-trash"></i></button>
                         </td>
@@ -3160,6 +3369,489 @@
             document.getElementById('inv-min-stock').value = min;
             document.getElementById('inv-unit').value = unit;
             document.getElementById('add-inventory-modal').classList.remove('hidden');
+        }
+
+        // ============================================================
+        // INVENTORY CORE (2026-10-30): Presentaciones · Recibir ·
+        // Producción · Conteo · Bitácora. El motor vive en el
+        // servidor (api/lib/inventory-engine.js); acá solo se toca.
+        // ============================================================
+        function openModalInv(id) {
+            const el = document.getElementById(id);
+            el.style.display = '';
+            el.classList.remove('hidden');
+        }
+        let invCatalogCache = [];
+        let presCache = {};
+        let prodStateCache = null;
+        const invApi = async (action, opts = {}) => {
+            const res = await fetch('/api/admin?action=' + action, {
+                method: opts.method || 'GET',
+                headers: getHeaders(),
+                body: opts.body ? JSON.stringify(opts.body) : undefined
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.message || data.error || ('HTTP ' + res.status));
+            return data;
+        };
+        const invMoney = (n) => { const v = parseFloat(n) || 0; return 'L.' + v.toLocaleString('es-HN', { minimumFractionDigits: (v % 1 ? 2 : 0) }); };
+        async function invLoadCatalog() {
+            const res = await fetch('/api/admin?action=inventory', { headers: getHeaders() });
+            invCatalogCache = await res.json();
+            if (!Array.isArray(invCatalogCache)) invCatalogCache = [];
+            return invCatalogCache;
+        }
+        function invById(id) { return invCatalogCache.find(i => i.id === id) || null; }
+
+        // ---------- Presentaciones ----------
+        async function openPresentaciones(insumoId, insumoName, insumoUnit) {
+            document.getElementById('pres-insumo-id').value = insumoId;
+            document.getElementById('pres-insumo-unit').value = insumoUnit || '';
+            document.getElementById('pres-insumo-label').innerText = insumoName + ' — las formas en que se compra (marca, paquete, proveedor). Las recetas solo conocen el insumo.';
+            document.getElementById('pres-id').value = '';
+            openModalInv('presentaciones-modal');
+            await renderPresList(insumoId);
+        }
+        async function renderPresList(insumoId) {
+            const list = document.getElementById('pres-list');
+            list.innerHTML = '<p class="text-sm text-gray-400">Cargando…</p>';
+            try {
+                const rows = await invApi('inventory_presentaciones&insumo=' + encodeURIComponent(insumoId));
+                presCache[insumoId] = rows;
+                if (!rows.length) {
+                    list.innerHTML = '<p class="text-sm text-gray-500">Este insumo todavía no tiene presentaciones. Agregá la primera abajo: es el paquete tal como se compra (Ej: Caja 12 × 946 ml).</p>';
+                    return;
+                }
+                list.innerHTML = rows.map(p => `
+                    <div class="border rounded-xl p-3 flex justify-between items-start gap-2">
+                        <div class="text-sm">
+                            <div class="font-bold">${escapeHtml(p.descripcion)}${p.is_draft ? ' <span class="text-amber-600">(borrador)</span>' : ''}</div>
+                            <div class="text-gray-500">${escapeHtml(p.marca || '')}${p.proveedor ? ' · ' + escapeHtml(p.proveedor) : ''} · trae ${parseFloat(p.contenido_total)} ${escapeHtml(document.getElementById('pres-insumo-unit').value)}${p.last_price ? ' · último precio ' + invMoney(p.last_price) : ''}${p.barcode ? ' · código ' + escapeHtml(p.barcode) : ''}</div>
+                        </div>
+                        <div class="flex gap-2 shrink-0">
+                            <button onclick="editPresentacion('${p.id}')" class="text-blue-600 text-xs font-bold">Editar</button>
+                            <button onclick="deletePresentacion('${p.id}')" class="text-red-400 text-xs font-bold">Quitar</button>
+                        </div>
+                    </div>`).join('');
+            } catch (e) { list.innerHTML = '<p class="text-sm text-red-500">' + escapeHtml(e.message) + '</p>'; }
+        }
+        function editPresentacion(presId) {
+            const insumoId = document.getElementById('pres-insumo-id').value;
+            const p = (presCache[insumoId] || []).find(x => x.id === presId);
+            if (!p) return;
+            document.getElementById('pres-id').value = p.id;
+            document.getElementById('pres-desc').value = p.descripcion || '';
+            document.getElementById('pres-marca').value = p.marca || '';
+            document.getElementById('pres-proveedor').value = p.proveedor || '';
+            document.getElementById('pres-unidades').value = p.unidades_por_paquete || 1;
+            document.getElementById('pres-contenido').value = p.contenido_por_unidad || '';
+            document.getElementById('pres-barcode').value = p.barcode || '';
+            document.getElementById('pres-alias').value = p.factura_alias || '';
+            document.getElementById('pres-foto').value = p.photo_url || '';
+        }
+        async function savePresentacion() {
+            const insumoId = document.getElementById('pres-insumo-id').value;
+            const body = {
+                id: document.getElementById('pres-id').value || undefined,
+                inventory_item_id: insumoId,
+                descripcion: document.getElementById('pres-desc').value.trim(),
+                marca: document.getElementById('pres-marca').value.trim(),
+                proveedor: document.getElementById('pres-proveedor').value.trim(),
+                unidades_por_paquete: parseFloat(document.getElementById('pres-unidades').value) || 1,
+                contenido_por_unidad: parseFloat(document.getElementById('pres-contenido').value) || 0,
+                barcode: document.getElementById('pres-barcode').value.trim(),
+                factura_alias: document.getElementById('pres-alias').value.trim(),
+                photo_url: document.getElementById('pres-foto').value.trim()
+            };
+            if (!body.descripcion || !(body.contenido_por_unidad > 0)) { alert('Completá la descripción y cuánto trae cada unidad del paquete.'); return; }
+            try {
+                await invApi('presentacion_save', { method: 'POST', body });
+                document.getElementById('pres-id').value = '';
+                document.getElementById('pres-desc').value = '';
+                await renderPresList(insumoId);
+                alert('✅ Presentación guardada: ' + body.descripcion);
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+        async function deletePresentacion(presId) {
+            if (!confirm('¿Quitar esta presentación? El insumo y su historial quedan; solo se retira esta forma de compra.')) return;
+            try {
+                await invApi('presentacion_delete', { method: 'POST', body: { id: presId } });
+                await renderPresList(document.getElementById('pres-insumo-id').value);
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+
+        // ---------- Recibir (§7k) ----------
+        let recFacturaDataUrl = '';
+        let recCardSeq = 0;
+        async function openRecibir(preInsumoId) {
+            recFacturaDataUrl = '';
+            document.getElementById('rec-cards').innerHTML = '';
+            document.getElementById('rec-preview').classList.add('hidden');
+            document.getElementById('rec-factura-preview').classList.add('hidden');
+            document.getElementById('rec-con-factura').checked = true;
+            recToggleFactura();
+            recConfirmDisable(true);
+            openModalInv('recibir-modal');
+            if (!invCatalogCache.length) await invLoadCatalog();
+            recAddCard(preInsumoId || '');
+        }
+        function recConfirmDisable(dis) {
+            const btn = document.getElementById('rec-confirm-btn');
+            btn.disabled = dis;
+            btn.classList.toggle('opacity-50', dis);
+        }
+        function recToggleFactura() {
+            const con = document.getElementById('rec-con-factura').checked;
+            document.getElementById('rec-factura-box').classList.toggle('hidden', !con);
+            document.getElementById('rec-override-box').classList.toggle('hidden', con);
+        }
+        function recFacturaFoto(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, 1000 / Math.max(img.width, img.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(img.width * scale); canvas.height = Math.round(img.height * scale);
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                recFacturaDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+                const prev = document.getElementById('rec-factura-preview');
+                prev.src = recFacturaDataUrl; prev.classList.remove('hidden');
+                URL.revokeObjectURL(img.src);
+            };
+            img.src = URL.createObjectURL(file);
+        }
+        function recInsumoOptions(selId) {
+            return invCatalogCache.map(i => `<option value="${i.id}" ${i.id === selId ? 'selected' : ''}>${escapeHtml(i.name)} (${escapeHtml(i.unit)})</option>`).join('');
+        }
+        function recAddCard(insumoId, presId) {
+            recCardSeq++;
+            const n = recCardSeq;
+            const div = document.createElement('div');
+            div.className = 'border-2 rounded-2xl p-3 space-y-2 rec-card';
+            div.id = 'rec-card-' + n;
+            div.innerHTML = `
+                <div class="flex gap-2">
+                    <select class="rec-insumo flex-1 border rounded-lg p-2" onchange="recCardInsumo(${n})">${recInsumoOptions(insumoId || '')}</select>
+                    <button onclick="document.getElementById('rec-card-${n}').remove()" class="text-red-400 font-bold px-2">✕</button>
+                </div>
+                <select class="rec-pres w-full border rounded-lg p-2"></select>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="text-xs font-bold text-gray-500">PAQUETES<input type="number" class="rec-packs w-full border rounded-lg p-2 mt-1" value="1" min="0" step="any"></label>
+                    <label class="text-xs font-bold text-gray-500">PRECIO POR PAQUETE (L.)<input type="number" class="rec-precio w-full border rounded-lg p-2 mt-1" step="any" placeholder="Ej: 464.95"></label>
+                    <label class="text-xs font-bold text-gray-500">VENCE (si aplica)<input type="date" class="rec-vence w-full border rounded-lg p-2 mt-1"></label>
+                    <label class="text-xs font-bold text-gray-500">SEGÚN FACTURA (paquetes, opcional)<input type="number" class="rec-papel w-full border rounded-lg p-2 mt-1" step="any" placeholder="Lo que dice el papel"></label>
+                </div>`;
+            document.getElementById('rec-cards').appendChild(div);
+            if (insumoId) { div.querySelector('.rec-insumo').value = insumoId; }
+            recCardInsumo(n, presId);
+            recConfirmDisable(true);
+        }
+        async function recCardInsumo(n, wantedPresId) {
+            const card = document.getElementById('rec-card-' + n);
+            if (!card) return;
+            const insumoId = card.querySelector('.rec-insumo').value;
+            const sel = card.querySelector('.rec-pres');
+            sel.innerHTML = '<option value="">Cargando presentaciones…</option>';
+            try {
+                let rows = presCache[insumoId];
+                if (!rows) { rows = await invApi('inventory_presentaciones&insumo=' + encodeURIComponent(insumoId)); presCache[insumoId] = rows; }
+                if (!rows.length) {
+                    sel.innerHTML = '<option value="">Sin presentaciones — agregala en Inventario → Presentaciones</option>';
+                    return;
+                }
+                sel.innerHTML = rows.map(p => `<option value="${p.id}" ${p.id === wantedPresId ? 'selected' : ''}>${escapeHtml(p.descripcion)} — trae ${parseFloat(p.contenido_total)} · último ${p.last_price ? invMoney(p.last_price) : '—'}</option>`).join('');
+                if (wantedPresId) sel.value = wantedPresId;
+                const chosen = rows.find(p => p.id === sel.value) || rows[0];
+                if (chosen && chosen.last_price) card.querySelector('.rec-precio').value = chosen.last_price;
+            } catch (e) { sel.innerHTML = '<option value="">' + escapeHtml(e.message) + '</option>'; }
+        }
+        async function recBuscarBarcode() {
+            const code = document.getElementById('rec-barcode').value.trim();
+            if (!code) return;
+            try {
+                const r = await invApi('inventory_barcode&code=' + encodeURIComponent(code));
+                if (r.found) { recAddCard(r.presentacion.inventory_item_id, r.presentacion.id); document.getElementById('rec-barcode').value = ''; }
+                else alert('Ese código todavía no está ligado a ninguna presentación. Agregá la tarjeta a mano: la primera vez se aprende el código en Presentaciones.');
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+        function recBuildPayload() {
+            const cards = [...document.querySelectorAll('.rec-card')];
+            const lines = cards.map(card => ({
+                inventoryItemId: card.querySelector('.rec-insumo').value,
+                presentacionId: card.querySelector('.rec-pres').value || null,
+                packs: parseFloat(card.querySelector('.rec-packs').value) || 0,
+                pricePerPack: parseFloat(card.querySelector('.rec-precio').value) || 0,
+                expiresAt: card.querySelector('.rec-vence').value || null,
+                papelQty: card.querySelector('.rec-papel').value === '' ? null : parseFloat(card.querySelector('.rec-papel').value)
+            }));
+            const conFactura = document.getElementById('rec-con-factura').checked;
+            return {
+                supplier: document.getElementById('rec-proveedor').value.trim(),
+                conFactura,
+                facturaPhotoUrl: conFactura ? recFacturaDataUrl : null,
+                override_reason: document.getElementById('rec-override-reason').value.trim(),
+                confirm_override: !conFactura,
+                lines
+            };
+        }
+        async function recRevisar() {
+            const box = document.getElementById('rec-preview');
+            box.classList.remove('hidden');
+            box.innerHTML = 'Revisando…';
+            try {
+                const r = await invApi('inventory_intake_preview', { method: 'POST', body: recBuildPayload() });
+                const p = r.preview;
+                let html = '<p class="font-bold mb-1">Resumen — total ' + invMoney(p.total) + '</p>';
+                html += p.lines.map(l => `<p>• ${escapeHtml(l.insumoName)}: entran ${parseFloat(l.qtyIn)} ${escapeHtml(l.unit)} — costo por ${escapeHtml(l.unit)}: ${invMoney(l.unitCost)}</p>`).join('');
+                const bad = (p.crosscheck || []).filter(c => !c.ok);
+                if (bad.length) {
+                    html += '<p class="font-bold text-red-600 mt-2">⚠ Papel contra físico — revisá antes de confirmar:</p>' +
+                        bad.map(c => `<p class="text-red-600">• ${escapeHtml(c.insumo)}: la factura dice ${c.papel} paquetes, contaste ${c.fisico}.</p>`).join('');
+                } else if ((p.crosscheck || []).length) {
+                    html += '<p class="text-green-700 font-bold mt-2">✓ El papel y lo físico coinciden.</p>';
+                }
+                box.innerHTML = html;
+                recConfirmDisable(false);
+            } catch (e) {
+                box.innerHTML = '<p class="text-red-600 font-bold">' + escapeHtml(e.message) + '</p>';
+                recConfirmDisable(true);
+            }
+        }
+        async function recConfirmar() {
+            try {
+                const r = await invApi('inventory_intake', { method: 'POST', body: recBuildPayload() });
+                let msg = '✅ ' + r.summary + ' · Total ' + invMoney(r.total);
+                if (r.drift && r.drift.length) msg += '\n⚠ Ojo: ' + r.drift.map(d => d.item_name + ' subió a ' + d.new_cogs_pct + '% (sugerido ' + invMoney(d.suggested_price) + ')').join(' · ') + '. El dueño ya recibió el aviso.';
+                alert(msg);
+                closeModal('recibir-modal');
+                if (typeof loadInventory === 'function') loadInventory();
+                loadDriftPanel();
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+
+        // ---------- Drift + Bitácora ----------
+        async function loadDriftPanel() {
+            const panel = document.getElementById('drift-panel');
+            if (!panel) return;
+            try {
+                const r = await invApi('inventory_drift');
+                let html = '';
+                if (r.drift && r.drift.length) {
+                    html += '<p class="font-bold text-red-700 mb-1">🔴 Productos sobre 35% de costo — el sistema no cambia precios; el dueño decide:</p>' +
+                        r.drift.map(d => `<p class="text-sm">• ${escapeHtml(d.item_name || '')}: ${d.old_cogs_pct != null ? d.old_cogs_pct + '% → ' : ''}<b>${d.new_cogs_pct}%</b> · sugerido <b>${invMoney(d.suggested_price)}</b></p>`).join('');
+                }
+                if (r.sin_factura && r.sin_factura.compras > 0) {
+                    html += `<p class="text-sm mt-1">🧾 Últimos 30 días: ${r.sin_factura.sin_factura} de ${r.sin_factura.compras} compras sin factura (${r.sin_factura.pct_monto}% del monto).</p>`;
+                }
+                panel.innerHTML = html;
+                panel.classList.toggle('hidden', !html);
+            } catch (e) { panel.classList.add('hidden'); }
+        }
+        let bitacoraOpen = false;
+        async function toggleBitacora() {
+            const panel = document.getElementById('bitacora-panel');
+            bitacoraOpen = !bitacoraOpen;
+            panel.classList.toggle('hidden', !bitacoraOpen);
+            if (!bitacoraOpen) return;
+            const list = document.getElementById('bitacora-list');
+            list.innerHTML = 'Cargando…';
+            try {
+                if (!invCatalogCache.length) await invLoadCatalog();
+                const r = await invApi('inventory_movements');
+                const nameOf = (iid) => { const it = invById(iid); return it ? it.name : (iid || ''); };
+                const rows = [];
+                (r.movements || []).forEach(m => rows.push({ ts: m.created_at, html: `<b>${escapeHtml(nameOf(m.inventory_item_id))}</b> ${parseFloat(m.delta) > 0 ? '+' : ''}${parseFloat(m.delta)} · ${escapeHtml(m.reason)}${m.note ? ' · ' + escapeHtml(m.note) : ''} — <span class="text-gray-500">${escapeHtml(m.by_name || 'sistema')}</span>` }));
+                (r.events || []).forEach(e => rows.push({ ts: e.created_at, html: `${e.kind === 'tidy' ? '🧹 Tidy Check' : '🚨 Alerta'}${e.note ? ' · ' + escapeHtml(e.note) : ''} — <span class="text-gray-500">${escapeHtml(e.by_name || '')}</span>` }));
+                rows.sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+                list.innerHTML = rows.slice(0, 120).map(x => `<p>${new Date(x.ts).toLocaleString('es-HN')} · ${x.html}</p>`).join('') || '<p class="text-gray-400">Todavía no hay movimientos.</p>';
+            } catch (e) { list.innerHTML = '<p class="text-red-500">' + escapeHtml(e.message) + '</p>'; }
+        }
+
+        // ---------- Producción ----------
+        function prodLightEmoji(l) { return l === 'rojo' ? '🔴' : (l === 'amarillo' ? '🟡' : '🟢'); }
+        async function loadProduccion() {
+            const grid = document.getElementById('produccionGrid');
+            grid.innerHTML = '<p class="text-gray-400">Cargando…</p>';
+            try {
+                const s = await invApi('produccion_state');
+                prodStateCache = s;
+                document.getElementById('prod-alert-banner').classList.toggle('hidden', !(s.pending_alerts > 0));
+                if (s.pending_alerts > 0) document.getElementById('prod-alert-banner').innerText = `🚨 ${s.pending_alerts} alerta(s) del equipo no llegaron al WhatsApp del dueño — quedaron registradas acá.`;
+                document.getElementById('prod-tidy').classList.toggle('hidden', !s.tidy.due);
+                document.getElementById('prod-proposals').innerHTML = (s.proposals || []).map(p => `
+                    <div class="bg-amber-50 border border-amber-300 rounded-2xl p-3 text-sm">
+                        🤔 <b>¿Se produjo y no se anotó?</b> Se vendió más ${escapeHtml(p.name)} del que había (faltan ${parseFloat(p.overdraft)} ${escapeHtml(p.unit)}). Si se cocinó más, confirmalo con el botón Producir de su tarjeta — nada se anota solo.
+                    </div>`).join('');
+                document.getElementById('prod-flags').innerHTML = (s.flags || []).map(f => `
+                    <div class="bg-red-600 text-white rounded-2xl p-3 flex justify-between items-center">
+                        <span>🚩 <b>${f.flag === 'hacer_ahora' ? 'HACER AHORA' : 'BAJO'}</b> · ${escapeHtml(f.prep_slug)} — ${escapeHtml(f.by_name || '')} <span class="opacity-75">${new Date(f.created_at).toLocaleString('es-HN')}</span></span>
+                        <button onclick="clearFlag('${f.id}')" class="bg-white text-red-700 px-3 py-1 rounded-lg font-bold text-sm">Quitar</button>
+                    </div>`).join('');
+                grid.innerHTML = (s.cards || []).map(c => `
+                    <div class="bg-white rounded-2xl shadow p-4 ${c.flags && c.flags.length ? 'ring-4 ring-red-400' : ''}">
+                        <div class="flex justify-between items-start">
+                            <p class="font-bold">${prodLightEmoji(c.light)} ${escapeHtml(c.name)}</p>
+                            <span class="text-xs font-bold text-gray-400">${c.type === 'prep' ? 'PREPARADO' : 'INSUMO'}</span>
+                        </div>
+                        <p class="text-2xl font-black">${parseFloat(c.stock)} <span class="text-sm font-bold text-gray-500">${escapeHtml(c.unit)}</span>${c.par ? ` <span class="text-sm text-gray-400">/ par ${parseFloat(c.par)}</span>` : ''}</p>
+                        <p class="text-xs text-gray-500">${Object.entries(c.states || {}).map(([k, v]) => `${k}: ${parseFloat(v)}`).join(' · ') || '—'}</p>
+                        ${c.type === 'prep' ? `<div class="flex gap-2 mt-3 flex-wrap">
+                            <button onclick="openProducir('${c.slug}')" class="bg-green-600 text-white px-3 py-2 rounded-lg font-bold text-sm">+ Producir</button>
+                            <button onclick="openMover('${c.id}', '${escapeHtml(c.name)}')" class="bg-blue-100 text-blue-800 px-3 py-2 rounded-lg font-bold text-sm">Mover</button>
+                            <button onclick="openMerma('${c.id}', '${escapeHtml(c.name)}')" class="bg-red-100 text-red-700 px-3 py-2 rounded-lg font-bold text-sm">Merma</button>
+                            <button onclick="flagPrep('${c.slug}', 'bajo')" class="bg-amber-100 text-amber-800 px-3 py-2 rounded-lg font-bold text-sm">🚩 Bajo</button>
+                            <button onclick="flagPrep('${c.slug}', 'hacer_ahora')" class="bg-red-100 text-red-800 px-3 py-2 rounded-lg font-bold text-sm">🚩 Hacer ahora</button>
+                        </div>` : `<div class="flex gap-2 mt-3">
+                            <button onclick="openRecibir('${c.id}')" class="bg-green-600 text-white px-3 py-2 rounded-lg font-bold text-sm">📥 Recibir</button>
+                            <button onclick="openMerma('${c.id}', '${escapeHtml(c.name)}')" class="bg-red-100 text-red-700 px-3 py-2 rounded-lg font-bold text-sm">Merma</button>
+                        </div>`}
+                    </div>`).join('') || '<p class="text-gray-400">Sin tarjetas todavía.</p>';
+            } catch (e) { grid.innerHTML = '<p class="text-red-500">' + escapeHtml(e.message) + '</p>'; }
+        }
+        async function flagPrep(slug, flag) {
+            try { await invApi('inventory_flag', { method: 'POST', body: { prep_slug: slug, flag } }); loadProduccion(); }
+            catch (e) { alert('❌ ' + e.message); }
+        }
+        async function clearFlag(flagId) {
+            try { await invApi('inventory_flag_clear', { method: 'POST', body: { flag_id: flagId } }); loadProduccion(); }
+            catch (e) { alert('❌ ' + e.message); }
+        }
+        async function tidyListo() {
+            try { await invApi('inventory_tidy', { method: 'POST', body: {} }); loadProduccion(); }
+            catch (e) { alert('❌ ' + e.message); }
+        }
+        // Producir
+        let prodCard = null; let prodBatches = 1;
+        function openProducir(slug) {
+            prodCard = (prodStateCache.cards || []).find(c => c.slug === slug);
+            if (!prodCard) return;
+            prodBatches = 1;
+            document.getElementById('prod-name').innerText = prodCard.name;
+            document.getElementById('prod-slug').value = slug;
+            document.getElementById('prod-yield').innerText = `${parseFloat(prodCard.yield_qty)} ${escapeHtml(prodCard.yield_unit || prodCard.unit)}`;
+            document.getElementById('prod-actual').value = prodCard.yield_qty;
+            prodSetBatches(1);
+            openModalInv('producir-modal');
+        }
+        function prodSetBatches(n) {
+            prodBatches = n;
+            document.querySelectorAll('.prod-batch-btn').forEach(b => {
+                const on = parseInt(b.dataset.b) === n;
+                b.className = 'prod-batch-btn flex-1 py-2 rounded-lg font-bold ' + (on ? 'bg-blue-600 text-white' : 'bg-gray-100');
+            });
+            if (prodCard) {
+                document.getElementById('prod-lines').innerHTML = (prodCard.lines || []).map(l =>
+                    `<p>• ${escapeHtml(l.name)}: <b>${Math.round(parseFloat(l.qty) * n * 100) / 100} ${escapeHtml(l.unit)}</b> <span class="text-gray-400">(hay ${l.stock !== null ? parseFloat(l.stock) : '—'})</span></p>`).join('') || '<p class="text-gray-400">Sin insumos en la receta.</p>';
+                document.getElementById('prod-actual').value = Math.round(parseFloat(prodCard.yield_qty) * n * 100) / 100;
+            }
+        }
+        async function prodConfirmar() {
+            try {
+                const r = await invApi('inventory_produce', { method: 'POST', body: {
+                    prepSlug: document.getElementById('prod-slug').value,
+                    batches: prodBatches,
+                    actualYieldQty: parseFloat(document.getElementById('prod-actual').value) || 0,
+                    state: document.getElementById('prod-state').value
+                }});
+                let msg = '✅ ' + r.summary;
+                if (r.drift && r.drift.length) msg += '\n⚠ ' + r.drift.map(d => d.item_name + ' subió a ' + d.new_cogs_pct + '%').join(' · ');
+                alert(msg);
+                closeModal('producir-modal');
+                loadProduccion();
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+        // Mover
+        let movStockTotal = 0;
+        function openMover(id, name) {
+            const card = (prodStateCache.cards || []).find(c => c.id === id);
+            movStockTotal = card ? parseFloat(card.stock) : 0;
+            document.getElementById('mov-id').value = id;
+            document.getElementById('mov-name').innerText = name;
+            document.getElementById('mov-qty').value = '';
+            openModalInv('mover-modal');
+        }
+        function movChip(n) { document.getElementById('mov-qty').value = n === 0 ? movStockTotal : n; }
+        async function movConfirmar() {
+            try {
+                const r = await invApi('inventory_move', { method: 'POST', body: {
+                    inventoryItemId: document.getElementById('mov-id').value,
+                    qty: parseFloat(document.getElementById('mov-qty').value) || 0,
+                    toState: document.getElementById('mov-state').value
+                }});
+                alert('✅ ' + r.summary);
+                closeModal('mover-modal');
+                loadProduccion();
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+        // Merma
+        function openMerma(id, name) {
+            document.getElementById('mer-id').value = id;
+            document.getElementById('mer-name').innerText = name;
+            document.getElementById('mer-qty').value = '';
+            document.getElementById('mer-note').value = '';
+            openModalInv('merma-modal');
+        }
+        async function merConfirmar() {
+            try {
+                const r = await invApi('inventory_waste', { method: 'POST', body: {
+                    inventoryItemId: document.getElementById('mer-id').value,
+                    qty: parseFloat(document.getElementById('mer-qty').value) || 0,
+                    note: document.getElementById('mer-note').value.trim()
+                }});
+                alert('✅ ' + r.summary);
+                closeModal('merma-modal');
+                loadProduccion();
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+        // Alerta
+        async function openAlerta() {
+            if (!invCatalogCache.length) await invLoadCatalog();
+            document.getElementById('alerta-insumo').innerHTML = '<option value="">—</option>' + invCatalogCache.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('');
+            openModalInv('alerta-modal');
+        }
+        async function alertaEnviar() {
+            const sel = document.getElementById('alerta-insumo');
+            try {
+                const r = await invApi('inventory_alert', { method: 'POST', body: {
+                    alert_kind: document.getElementById('alerta-kind').value,
+                    inventory_item_id: sel.value || null,
+                    item_name: sel.value ? sel.options[sel.selectedIndex].text : null,
+                    note: document.getElementById('alerta-note').value.trim()
+                }});
+                alert(r.delivered ? '✅ Aviso enviado al dueño por WhatsApp.' : '⚠ El aviso quedó registrado en Producción (el WhatsApp no salió — revisá la conexión del bot).');
+                closeModal('alerta-modal');
+            } catch (e) { alert('❌ ' + e.message); }
+        }
+
+        // ---------- Conteo semanal ----------
+        async function openConteo() {
+            document.getElementById('conteo-result').classList.add('hidden');
+            openModalInv('conteo-modal');
+            const list = document.getElementById('conteo-list');
+            list.innerHTML = 'Cargando…';
+            await invLoadCatalog();
+            list.innerHTML = invCatalogCache.map(i => `
+                <div class="flex items-center gap-3 border rounded-xl p-2">
+                    <div class="flex-1"><p class="font-bold text-sm">${escapeHtml(i.name)}</p><p class="text-xs text-gray-400">En sistema: ${parseFloat(i.current_stock)} ${escapeHtml(i.unit)}</p></div>
+                    <input type="number" step="any" class="conteo-input w-28 border rounded-lg p-2" data-id="${i.id}" placeholder="Conté…">
+                </div>`).join('');
+        }
+        async function conteoGuardar() {
+            const counts = [...document.querySelectorAll('.conteo-input')]
+                .filter(inp => inp.value !== '')
+                .map(inp => ({ inventoryItemId: inp.dataset.id, countedQty: parseFloat(inp.value) || 0, pullExpired: document.getElementById('conteo-pull-expired').checked }));
+            if (!counts.length) { alert('Contá al menos un insumo.'); return; }
+            try {
+                const r = await invApi('inventory_count', { method: 'POST', body: { counts } });
+                const box = document.getElementById('conteo-result');
+                box.classList.remove('hidden');
+                const diffs = (r.report || []).filter(x => Math.abs(x.delta) > 0 || x.wastedExpired > 0);
+                box.innerHTML = '<p class="font-bold mb-1">✅ ' + escapeHtml(r.summary) + '</p>' + (diffs.length
+                    ? diffs.map(x => `<p>• ${escapeHtml(x.name)}: había ${x.book}, contaste ${x.counted} (diferencia ${x.delta > 0 ? '+' : ''}${x.delta} ${escapeHtml(x.unit)} ≈ ${invMoney(x.value)})${x.wastedExpired ? ' · vencido retirado: ' + x.wastedExpired : ''}</p>`).join('')
+                    : '<p>Sin diferencias. 🎉</p>');
+                if (typeof loadInventory === 'function') loadInventory();
+            } catch (e) { alert('❌ ' + e.message); }
         }
 
         let globalModGroups = [];

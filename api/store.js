@@ -4,6 +4,7 @@ const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const ricoLoyalty = require('./lib/rico-loyalty');
+const inventoryEngine = require('./lib/inventory-engine');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
 // ---------------------------------------------------------------------------
@@ -580,6 +581,11 @@ module.exports = async (req, res) => {
                 // 'paid' here earns its gift + drops campaign gifts
                 // (idempotent per order — see rico-loyalty).
                 if (data && data.status === 'paid' && (!prevOrder || prevOrder.status !== 'paid')) await ricoLoyalty.processPaidOrder(supabase, data);
+                // INVENTARIO (2026-10-30): this transition into 'paid'
+                // is the sale event — deduct one level deep. The
+                // engine is idempotent per order and failure-silent;
+                // orders born paid deduct in order-service instead.
+                if (data && data.status === 'paid' && (!prevOrder || prevOrder.status !== 'paid')) await inventoryEngine.deductForOrder(supabase, data);
                 // NOTIFICACIONES (bot-finalize): a WhatsApp-originated
                 // order that just turned ready/cancelled tells its
                 // customer through the bot (failure-silent helper).
@@ -782,6 +788,9 @@ module.exports = async (req, res) => {
                 // LOYALTY (2026-10-30): a born-paid order on this path
                 // also earns (idempotent — see rico-loyalty).
                 if (data && data.status === 'paid') await ricoLoyalty.processPaidOrder(supabase, data);
+                // INVENTARIO (2026-10-30): a born-paid order on this
+                // path deducts here too (engine-gated + idempotent).
+                if (data && data.status === 'paid') await inventoryEngine.deductForOrder(supabase, data);
 
                 // --- 2.5 FIFO BATCH INVENTORY DEDUCTION (JSONB fallback) ---
                 if (items && Array.isArray(items)) {

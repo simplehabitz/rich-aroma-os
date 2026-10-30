@@ -3,7 +3,7 @@ const { awardPoints, syncMembershipState, getHondurasDate } = require('./loyalty
 const ricoLoyalty = require('./rico-loyalty');
 const { unlockMissionsForOrder } = require('./mission-unlock');
 const { applyVipBenefits, applyBootcampBenefits, calculateSurgeDiscounts } = require('./pricing');
-const { deductInventoryForOrder } = require('./inventory-service');
+const inventoryEngine = require('./inventory-engine');
 const { notifyOrder } = require('./email-service');
 const { isMasterPin, isAdminToken } = require('./auth');
 
@@ -852,9 +852,17 @@ async function createOrder(orderRequest, supabase = defaultSupabase, authContext
                 }
             }
 
-            // Inventory (Rich Aroma Only)
+            // Inventory (2026-10-30, inventory core): deduct ONE
+            // LEVEL at PAID — a born-paid order deducts here; an order
+            // that turns paid later deducts on the store.js
+            // order_update transition instead. The engine gates on
+            // the order's status and id, so no path can double-deduct
+            // and an unpaid order never deducts. (Replaces the legacy
+            // inventory-service call, which fired at creation for
+            // pending orders too and read the retired modifier_id-
+            // keyed delta table.)
             if (targetResId === 'rich-aroma') {
-                await deductInventoryForOrder(dbOrder.items, supabase);
+                await inventoryEngine.deductForOrder(supabase, data);
             }
             // Email Notification (Every order triggers an email)
             await notifyOrder(data);

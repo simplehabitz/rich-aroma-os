@@ -3,6 +3,7 @@ const { supabase } = require('./lib/supabase');
 const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 const ricoLoyalty = require('./lib/rico-loyalty');
+const inventoryEngine = require('./lib/inventory-engine');
 
 module.exports = async function handler(req, res) {
     try {
@@ -954,6 +955,354 @@ module.exports = async function handler(req, res) {
                 ? `${opt.name} en ${ambito} ahora ${parts.join(' y ')}.`
                 : `${opt.name} en ${ambito} ya no cambia la receta.`;
             return res.json({ success: true, summary, costs: costRows });
+        }
+
+        // --- INVENTORY OPS (2026-10-30, inventory core) ----------------
+        // Receiving (§7k), Producción (§7g/§7i), the count walk (§7c)
+        // and the Bitácora (§7h) — the engine lives in
+        // api/lib/inventory-engine.js; these actions are its front
+        // door. Actors per ROLES-AND-VIEWS: Encargado + Barista/
+        // Cocinero receive, produce, move and count (attributed);
+        // the Cajero's only inventory right is reporting a shortage
+        // (inventory_alert). Financial readouts (drift) stay on the
+        // isAdmin gate like the margin chip; the piece-6 role build
+        // tightens them to Owner. The role strings in `employees`
+        // predate the four-role naming ('admin' = Encargado here), so
+        // the sets accept both vocabularies.
+        const invActor = async () => {
+            const cred = (authHeader || '').replace(/^Bearer\s+/i, '').trim();
+            if (!cred) return null;
+            if (isAdminCredential(cred)) return { id: 'master', name: 'Admin', role: 'owner' };
+            try {
+                const { data } = await supabase.from('employees')
+                    .select('id, name, role').eq('pin', cred).eq('active', true).maybeSingle();
+                if (data) return { id: data.id, name: data.name, role: String(data.role || '').toLowerCase().trim() };
+            } catch (e) { /* fall through */ }
+            return null;
+        };
+        const OPS_ROLES = ['admin', 'encargado', 'barista', 'cocinero', 'cook', 'chef', 'barra', 'cocina', 'barista/cocinero'];
+        const canOps = (a) => !!a && (a.role === 'owner' || OPS_ROLES.includes(a.role));
+        const canCatalog = (a) => !!a && (a.role === 'owner' || a.role === 'admin' || a.role === 'encargado');
+        const invFail = (res, e) => {
+            if (e && e.code) return res.status(422).json({ error: e.code, message: e.message });
+            return res.status(500).json({ error: (e && e.message) || 'Error' });
+        };
+
+        if (action === 'inventory_presentaciones' && req.method === 'GET') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            let q = supabase.from('presentaciones').select('*').eq('active', true).order('descripcion');
+            if (req.query.insumo) q = q.eq('inventory_item_id', req.query.insumo);
+            const { data, error } = await q;
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json(data || []);
+        }
+
+        if (action === 'inventory_barcode' && req.method === 'GET') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            const code = String(req.query.code || '').trim();
+            if (!code) return res.status(400).json({ error: "Missing barcode" });
+            const { data } = await supabase.from('presentaciones').select('*')
+                .eq('barcode', code).eq('active', true).maybeSingle();
+            if (!data) return res.json({ found: false });
+            const { data: insumo } = await supabase.from('inventory')
+                .select('id, name, unit').eq('id', data.inventory_item_id).maybeSingle();
+            return res.json({ found: true, presentacion: data, insumo });
+        }
+
+        if (action === 'presentacion_save' && req.method === 'POST') {
+            const actor = await invActor();
+            const b = req.body || {};
+            const isDraftCreate = !b.id && b.is_draft === true;
+            if (!canCatalog(actor) && !(isDraftCreate && canOps(actor))) {
+                return res.status(403).json({ error: "Unauthorized" });
+            }
+            if (!b.inventory_item_id || !String(b.descripcion || '').trim()) {
+                return res.status(400).json({ error: "Falta el insumo o la descripción de la presentación" });
+            }
+            const unidades = parseFloat(b.unidades_por_paquete) || 1;
+            const porUnidad = parseFloat(b.contenido_por_unidad) || 0;
+            const total = b.contenido_total !== undefined && b.contenido_total !== null && b.contenido_total !== ''
+                ? parseFloat(b.contenido_total) : unidades * porUnidad;
+            if (!(total > 0)) return res.status(400).json({ error: "La presentación debe decir cuánto trae en total" });
+            const row = {
+                inventory_item_id: String(b.inventory_item_id),
+                descripcion: String(b.descripcion).trim(),
+                marca: b.marca ? String(b.marca) : null,
+                proveedor: b.proveedor ? String(b.proveedor) : null,
+                unidades_por_paquete: unidades,
+                contenido_por_unidad: porUnidad || total,
+                contenido_total: total,
+                barcode: b.barcode ? String(b.barcode).trim() : null,
+                factura_alias: b.factura_alias ? String(b.factura_alias) : null,
+                photo_url: b.photo_url ? String(b.photo_url) : null,
+                is_draft: !!b.is_draft
+            };
+            if (b.id) {
+                const { data, error } = await supabase.from('presentaciones')
+                    .update(row).eq('id', String(b.id)).select().single();
+                if (error) return res.status(500).json({ error: error.message });
+                return res.json({ success: true, data });
+            }
+            row.id = 'pres-' + slugifyInv(row.descripcion + ' ' + row.inventory_item_id) + '-' + Math.random().toString(36).slice(2, 6);
+            row.restaurant_id = currentResId;
+            const { data, error } = await supabase.from('presentaciones').insert(row).select().single();
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true, data });
+        }
+
+        if (action === 'presentacion_delete' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canCatalog(actor)) return res.status(403).json({ error: "Unauthorized" });
+            const presId = (req.body && req.body.id) || id;
+            if (!presId) return res.status(400).json({ error: "Missing presentación id" });
+            const { error } = await supabase.from('presentaciones')
+                .update({ active: false }).eq('id', String(presId));
+            if (error) return res.status(500).json({ error: error.message });
+            return res.json({ success: true });
+        }
+
+        if (action === 'produccion_state' && req.method === 'GET') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            const [{ data: inv }, { data: recipes }, { data: rLines }, { data: flags }, { data: lots }, { data: events }] = await Promise.all([
+                supabase.from('inventory').select('id, name, slug, unit, category, kind, current_stock, min_stock, shelf_life_fresh_days, shelf_life_frozen_days'),
+                supabase.from('prep_recipes').select('*'),
+                supabase.from('prep_recipe_lines').select('*'),
+                supabase.from('prep_flags').select('*').eq('status', 'open').order('created_at'),
+                supabase.from('stock_lots').select('inventory_item_id, state, qty_left, expires_at').gt('qty_left', 0),
+                supabase.from('inv_events').select('*').order('created_at', { ascending: false }).limit(30)
+            ]);
+            const invBySlug = {}; const invById = {};
+            (inv || []).forEach(r => { if (r.slug) invBySlug[r.slug] = r; invById[r.id] = r; });
+            const statesByItem = {};
+            (lots || []).forEach(l => {
+                const m = (statesByItem[l.inventory_item_id] = statesByItem[l.inventory_item_id] || {});
+                m[l.state] = Math.round(((m[l.state] || 0) + parseFloat(l.qty_left || 0)) * 10000) / 10000;
+            });
+            const linesByPrep = {};
+            (rLines || []).forEach(l => { (linesByPrep[l.prep_slug] = linesByPrep[l.prep_slug] || []).push(l); });
+            const flagsByPrep = {};
+            (flags || []).forEach(f => { (flagsByPrep[f.prep_slug] = flagsByPrep[f.prep_slug] || []).push(f); });
+            const light = (stock, par) => {
+                if (!par || par <= 0) return stock <= 0 ? 'rojo' : 'verde';
+                if (stock <= 0 || stock <= par * 0.25) return 'rojo';
+                if (stock < par) return 'amarillo';
+                return 'verde';
+            };
+            const cards = [];
+            (recipes || []).forEach(r => {
+                const row = invBySlug[r.prep_slug];
+                if (!row) return;
+                cards.push({
+                    type: 'prep', id: row.id, slug: r.prep_slug, name: row.name, unit: row.unit,
+                    stock: parseFloat(row.current_stock || 0), par: parseFloat(row.min_stock || 0),
+                    light: light(parseFloat(row.current_stock || 0), parseFloat(row.min_stock || 0)),
+                    states: statesByItem[row.id] || {},
+                    yield_qty: parseFloat(r.yield_qty || 0), yield_unit: r.yield_unit || row.unit,
+                    flags: flagsByPrep[r.prep_slug] || [],
+                    lines: (linesByPrep[r.prep_slug] || []).map(l => ({
+                        name: invBySlug[l.ingredient_slug] ? invBySlug[l.ingredient_slug].name : l.ingredient_slug,
+                        qty: parseFloat(l.quantity || 0), unit: l.unit,
+                        stock: invBySlug[l.ingredient_slug] ? parseFloat(invBySlug[l.ingredient_slug].current_stock || 0) : null
+                    }))
+                });
+            });
+            (inv || []).filter(r => (r.kind || '') !== 'prep' && parseFloat(r.min_stock || 0) > 0).forEach(r => {
+                cards.push({
+                    type: 'raw', id: r.id, slug: r.slug, name: r.name, unit: r.unit,
+                    stock: parseFloat(r.current_stock || 0), par: parseFloat(r.min_stock || 0),
+                    light: light(parseFloat(r.current_stock || 0), parseFloat(r.min_stock || 0)),
+                    states: statesByItem[r.id] || {}, flags: []
+                });
+            });
+            const rank = { rojo: 0, amarillo: 1, verde: 2 };
+            cards.sort((a, b) => ((b.flags.length > 0) - (a.flags.length > 0)) || (rank[a.light] - rank[b.light]) || a.name.localeCompare(b.name));
+            // §7h inferred batches: a prep sold past its cooked stock
+            // implies a batch nobody tapped. PROPOSED, never posted —
+            // the cook confirms with the normal Producir flow.
+            const proposals = cards.filter(c => c.type === 'prep' && c.stock < 0)
+                .map(c => ({ prep_slug: c.slug, name: c.name, unit: c.unit, overdraft: Math.abs(c.stock) }));
+            const tidyEvents = (events || []).filter(e => e.kind === 'tidy');
+            const lastTidy = tidyEvents.length ? tidyEvents[0].created_at : null;
+            let tidyDue = false;
+            try {
+                const hourFmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Tegucigalpa', hour: 'numeric', hour12: false });
+                const hour = parseInt(hourFmt.format(new Date()), 10);
+                const open = hour >= 7 && hour < 19;
+                tidyDue = open && (!lastTidy || (Date.now() - new Date(lastTidy).getTime()) > 55 * 60000);
+            } catch (e) { tidyDue = false; }
+            const pendingAlerts = (events || []).filter(e => e.kind === 'alert' && e.delivered === false).length;
+            return res.json({
+                cards, flags: flags || [], proposals,
+                tidy: { last: lastTidy, due: tidyDue },
+                pending_alerts: pendingAlerts
+            });
+        }
+
+        if (action === 'inventory_movements' && req.method === 'GET') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            const [{ data: movements }, { data: events }] = await Promise.all([
+                supabase.from('stock_movements').select('*').order('created_at', { ascending: false }).limit(120),
+                supabase.from('inv_events').select('*').order('created_at', { ascending: false }).limit(60)
+            ]);
+            return res.json({ movements: movements || [], events: events || [] });
+        }
+
+        if (action === 'inventory_drift' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const since = new Date(Date.now() - 30 * 86400000).toISOString();
+            const [{ data: drift }, { data: batches }] = await Promise.all([
+                supabase.from('inventory_drift_flags').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(50),
+                supabase.from('intake_batches').select('con_factura, total').gte('created_at', since)
+            ]);
+            const all = batches || [];
+            const sin = all.filter(b => !b.con_factura);
+            const totAll = all.reduce((s, b) => s + parseFloat(b.total || 0), 0);
+            const totSin = sin.reduce((s, b) => s + parseFloat(b.total || 0), 0);
+            return res.json({
+                drift: drift || [],
+                sin_factura: {
+                    compras: all.length, sin_factura: sin.length,
+                    pct_monto: totAll > 0 ? Math.round(totSin / totAll * 1000) / 10 : 0
+                }
+            });
+        }
+
+        if (action === 'inventory_intake_preview' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const preview = await inventoryEngine.previewIntake(supabase, req.body || {});
+                return res.json({ success: true, preview });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_factura_read' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            // STUB HONESTO (§7k): la lectura automática de la foto con
+            // IA todavía no está conectada — este endpoint NO inventa
+            // líneas. La foto se guarda como constancia con la
+            // recepción y las tarjetas se cargan a mano (o escaneando
+            // cada producto); cuando el lector se conecte acá, sus
+            // líneas entrarán por el mismo papelQty del cross-check.
+            return res.json({
+                success: true, supported: false, lines: [],
+                message: 'La lectura automática de la factura todavía no está activa. Cargá las tarjetas a mano: la foto igual queda guardada como constancia.'
+            });
+        }
+
+        if (action === 'inventory_intake' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            const b = req.body || {};
+            try {
+                const input = { ...b, restaurantId: currentResId, actor };
+                if (!b.conFactura) {
+                    // §7k.2: el toque es DEL encargado, en su sesión,
+                    // con motivo — nadie cierra sin factura por otro.
+                    if (!canCatalog(actor) || b.confirm_override !== true) {
+                        return res.status(403).json({
+                            error: 'SIN_FACTURA_SIN_OVERRIDE',
+                            message: 'Compra sin factura: la cierra el encargado con su toque y el motivo (ej: compra en el mercado).'
+                        });
+                    }
+                    input.override = { by: actor.id, byName: actor.name, reason: b.override_reason };
+                }
+                const result = await inventoryEngine.postIntake(supabase, input);
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_produce' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const result = await inventoryEngine.produceBatch(supabase, { ...(req.body || {}), restaurantId: currentResId, actor });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_move' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const result = await inventoryEngine.moveStock(supabase, { ...(req.body || {}), restaurantId: currentResId, actor });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_waste' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const result = await inventoryEngine.wasteStock(supabase, { ...(req.body || {}), restaurantId: currentResId, actor });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_count' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const result = await inventoryEngine.countWalk(supabase, { ...(req.body || {}), restaurantId: currentResId, actor });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_flag' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const b = req.body || {};
+                const result = await inventoryEngine.setPrepFlag(supabase, {
+                    restaurantId: currentResId, actor,
+                    prepSlug: b.prep_slug, flag: b.flag, note: b.note
+                });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_flag_clear' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!canOps(actor)) return res.status(403).json({ error: "Unauthorized" });
+            try {
+                const result = await inventoryEngine.clearPrepFlag(supabase, {
+                    actor, flagId: (req.body || {}).flag_id
+                });
+                return res.json({ success: true, ...result });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_tidy' && req.method === 'POST') {
+            const actor = await invActor();
+            if (!actor) return res.status(401).json({ error: "No autorizado" });
+            try {
+                const event = await inventoryEngine.logEvent(supabase, {
+                    restaurantId: currentResId, kind: 'tidy', actor,
+                    note: (req.body || {}).note || 'Tidy Check: frente, terraza y baños'
+                });
+                return res.json({ success: true, event });
+            } catch (e) { return invFail(res, e); }
+        }
+
+        if (action === 'inventory_alert' && req.method === 'POST') {
+            // §7i + ROLES: reportar un faltante es el único derecho de
+            // inventario del Cajero — cualquier personal activo avisa.
+            const actor = await invActor();
+            if (!actor) return res.status(401).json({ error: "No autorizado" });
+            try {
+                const b = req.body || {};
+                const result = await inventoryEngine.staffAlert(supabase, {
+                    restaurantId: currentResId, actor,
+                    alertKind: b.alert_kind, note: b.note,
+                    inventoryItemId: b.inventory_item_id, itemName: b.item_name
+                });
+                return res.json({ success: true, delivered: result.delivered });
+            } catch (e) { return invFail(res, e); }
         }
 
         // --- IMAGE UPLOAD ---
