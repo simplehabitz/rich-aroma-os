@@ -27,6 +27,25 @@ clock_records through the snapshot's `clock` section (clock-in build,
 When the OS answers clock: null (migration not run yet), the door
 keeps the honest not-live line — never an invented roster.
 
+Door fix (2026-10-30): the first matcher claimed any owner message
+containing a keyword SUBSTRING — "rico" fired on the mascot's own
+name ("Capitán Rico"), "late" hid inside "chocolate", "hoy" turned
+plain orders into the full snapshot, and the owner could not order
+a Flight from his own phone. Matching is now word-boundary and
+question-aware, the mascot's name is stripped before matching, and
+an order-shaped message ALWAYS falls through: the door answers
+data questions, it doesn't eat orders.
+
+MODO CLIENTE / MODO DUEÑO (2026-10-30): the owner can text
+"modo cliente" ("customer mode") to switch his own number to
+customer mode — the door then claims NOTHING, not even data
+questions, and he orders/tests exactly like a real customer —
+and "modo dueño" ("owner mode", "modo dueno") to switch back.
+Default is owner mode; the flag lives in an in-memory dict like
+the bot's other per-phone state, so a restart forgets it toward
+owner mode, the safe direction. Outbound owner traffic (close
+reports, the missed-report flush) is never gated by the mode.
+
 Env:
     OWNER_WHATSAPP   e.g. "19097068510" (or several, comma-separated)
 """
@@ -68,6 +87,22 @@ def is_owner(phone: str) -> bool:
 # ------------------------------------------------------------------
 # Intent routing (deterministic keywords, EN + ES — the owner writes
 # both). First match wins; order matters: specific beats general.
+#
+# The 2026-10-30 fix adds three guards so the door answers data
+# questions without eating the owner's own orders:
+#   1. The mascot's name is stripped before matching — "Capitán
+#      Rico" is how you GREET the bot, never a Rico Cash question.
+#   2. An order-shaped message (order verb present, no question
+#      shape, no "quiero saber" preface) ALWAYS falls through,
+#      whatever keywords it carries: "quiero un latte hoy",
+#      "quiero un flight", "quiero un frappé de chocolate".
+#   3. Keywords match on word boundaries — "late" no longer hides
+#      inside "chocolate" — and bare "rico" only claims a message
+#      in a money context ("rico cash", "circula") or inside a
+#      real question ("¿cuánto rico hay?").
+# A legit door question is either question-shaped (¿…?, cuánto,
+# quién, who, how many…) or a bare keyword ask with no order verb
+# in it ("stock bajo", "preventa?", "ventas de hoy").
 # ------------------------------------------------------------------
 
 _ES_MARKERS = ("¿", "á", "é", "í", "ó", "ú", "ñ")
@@ -80,31 +115,63 @@ def _lang(text: str, intents: set) -> str:
     return "en"
 
 
+_MASCOT_RE = re.compile(r"capit[aá]n\s+rico", re.IGNORECASE)
+
+_INTERROGATIVE_RE = re.compile(
+    r"(¿|\?|\bcu[aá]nt\w*|\bqui[eé]n\w*|\bwho\b|"
+    r"\bhow\s+(many|much)\b|\bwhat\b)", re.IGNORECASE)
+
+_ORDER_VERB_RE = re.compile(
+    r"\b(quiero|quisiera|ordenar|pedir|dame|poneme|m[aá]ndame|"
+    r"i\s+want|i'd\s+like|can\s+i\s+(get|have)|let\s+me\s+get)\b",
+    re.IGNORECASE)
+
+_ASKING_RE = re.compile(r"\b(saber|preguntar\w*)\b", re.IGNORECASE)
+
+
+def _order_shaped(low: str) -> bool:
+    """A buying message, not a data question: an order verb is
+    present, the message is not question-shaped, and it is not a
+    'quiero saber…' preface to a question."""
+    return bool(_ORDER_VERB_RE.search(low)) \
+        and not _INTERROGATIVE_RE.search(low) \
+        and not _ASKING_RE.search(low)
+
+
+def _has(low: str, *words: str) -> bool:
+    """Word-boundary keyword test (the text is already padded)."""
+    return any(re.search(r"\b" + re.escape(w) + r"\b", low)
+               for w in words)
+
+
 def _intent(text: str) -> str:
-    low = " " + (text or "").lower().strip() + " "
-    if any(k in low for k in ("clock", "clocked", "tarde", "late",
-                              "atraso", "retraso", "entró", "entro ",
-                              "llegó", "llego ", "adentro",
-                              "personal", "equipo", "staff", "empleado")):
+    low = " " + _MASCOT_RE.sub(
+        " ", (text or "").lower()).strip() + " "
+    if _has(low, "clock", "clocked", "tarde", "late", "atraso",
+            "retraso", "entró", "entro", "llegó", "llego", "adentro",
+            "personal", "equipo", "staff", "empleado", "empleados"):
         return "clock"
-    if any(k in low for k in ("stock", "inventario", "bajo", "low ",
-                              "falta", "quedan", "left")):
+    if _has(low, "stock", "inventario", "bajo", "falta", "quedan",
+            "left", "low"):
         return "stock"
-    if any(k in low for k in ("preventa", "flight", "apartad")):
+    if _has(low, "preventa", "flight") or "apartad" in low:
         return "preventa"
-    if any(k in low for k in ("rico",)):
+    if "rico cash" in low or "circula" in low or "circulando" in low \
+            or (_has(low, "rico")
+                and _INTERROGATIVE_RE.search(low)):
         return "rico"
-    if any(k in low for k in ("pedido", "order", "cocina", "kitchen",
-                              "activos", "active", "preparando")):
+    if _has(low, "pedido", "pedidos", "order", "orders", "cocina",
+            "kitchen", "activos", "active", "preparando"):
         return "orders"
-    if any(k in low for k in ("ayuda", "help", "qué puedo", "que puedo",
-                              "what can")):
+    if _has(low, "ayuda", "help") or "qué puedo" in low \
+            or "que puedo" in low or "what can" in low:
         return "help"
-    if any(k in low for k in ("venta", "sales", "sold", "vend",
-                              "cómo vamos", "como vamos", "cómo va",
-                              "como va", "hoy", "today", "resumen",
-                              "summary", "todo", "everything", "qué pasa",
-                              "que pasa", "status", "estado")):
+    if _has(low, "venta", "ventas", "sales", "sold", "hoy", "today",
+            "resumen", "summary", "todo", "everything", "status",
+            "estado") or "cómo vamos" in low or "como vamos" in low \
+            or "cómo va" in low or "como va" in low \
+            or "qué pasa" in low or "que pasa" in low \
+            or re.search(r"\bvend\w*\b", low):
         return "snapshot"
     return "unknown"
 
@@ -125,12 +192,77 @@ def _falls_through(text: str) -> bool:
         return True
     if re.fullmatch(r"\d{1,3}", low):
         return True
+    if _order_shaped(low):
+        return True
     if len(low) <= 12 and _intent(text) == "unknown":
         return True
     if any(low.startswith(o) or (" " + o) in low for o in _ORDER_OPENERS) \
             and _intent(text) == "unknown":
         return True
     return False
+
+
+# ------------------------------------------------------------------
+# MODO CLIENTE / MODO DUEÑO (2026-10-30) — see the module docstring.
+# The commands are whole-message matches (after trim/punctuation),
+# recognized in BOTH modes, and reachable only from owner numbers:
+# reply_for_owner's is_owner gate runs before any of this, so a
+# customer texting "modo cliente" just gets the customer flow.
+# ------------------------------------------------------------------
+
+_OWNER_MODES = {}  # owner digits -> "customer"; missing = owner mode
+
+_MODE_COMMANDS = {
+    "modo cliente": ("customer", "es"),
+    "customer mode": ("customer", "en"),
+    "modo dueño": ("owner", "es"),
+    "modo dueno": ("owner", "es"),
+    "owner mode": ("owner", "en"),
+}
+
+_MODE_REPLY = {
+    ("customer", "es"): (
+        "✅ Modo cliente activado. Ahora te atiendo como a cualquier "
+        "cliente: pedí, mirá el menú, probá todo. La puerta quedó "
+        "apagada hasta que escribas «modo dueño»."),
+    ("customer", "en"): (
+        "✅ Customer mode is on. I'll treat you like any customer "
+        "now — order, browse the menu, test away. The door stays "
+        "off until you text \"owner mode\"."),
+    ("owner", "es"): (
+        "✅ Modo dueño activado. La puerta está abierta: preguntame "
+        "«¿cómo vamos hoy?», ventas, stock, preventa, el reloj o "
+        "Rico Cash. «modo cliente» cuando quieras comprar como "
+        "cliente."),
+    ("owner", "en"): (
+        "✅ Owner mode is on. The door is open: ask me \"how are we "
+        "doing today?\", sales, stock, preorders, the clock or "
+        "Rico Cash. \"customer mode\" when you want to shop like a "
+        "customer."),
+}
+
+
+def _mode_command(text: str):
+    """(mode, lang) when the WHOLE message is a mode command."""
+    norm = re.sub(r"\s+", " ", (text or "").strip().lower())
+    return _MODE_COMMANDS.get(norm.strip(" .!¡¿?"))
+
+
+def _customer_mode(phone: str) -> bool:
+    try:
+        return _OWNER_MODES.get(_digits(phone)) == "customer"
+    except Exception:
+        return False  # unknown state fails toward owner mode
+
+
+def _set_mode(phone: str, mode: str) -> None:
+    try:
+        if mode == "customer":
+            _OWNER_MODES[_digits(phone)] = "customer"
+        else:
+            _OWNER_MODES.pop(_digits(phone), None)
+    except Exception:
+        pass  # a storage hiccup must never break the door
 
 
 # ------------------------------------------------------------------
@@ -316,6 +448,8 @@ _HELP = {
            "• «¿preventa?» — apartados de hoy\n"
            "• «¿quién está adentro?» / «¿quién llegó tarde?» — el reloj\n"
            "• «¿cuánto Rico Cash circula?»\n"
+           "• «modo cliente» — apagá la puerta y comprá como un cliente más\n"
+           "• «modo dueño» — volvé a modo dueño\n"
            "Y si querés pedir algo como cliente, pedí normal — te atiendo igual."),
     "en": ("You can ask me:\n• \"how are we doing today?\" — the day summary\n"
            "• \"sales?\" — sales and payment mix\n"
@@ -323,6 +457,8 @@ _HELP = {
            "• \"low stock?\" — inventory below minimum\n"
            "• \"preorders?\" — today's holds and paid preorders\n"
            "• \"how much Rico Cash is out there?\"\n"
+           "• \"customer mode\" — turn the door off and shop like any customer\n"
+           "• \"owner mode\" — back to owner mode\n"
            "And if you want to order like a customer, just order — "
            "I'll take it the same way."),
 }
@@ -336,6 +472,13 @@ _ERR = {
 def reply_for_owner(phone: str, text: str):
     """(text, lang) when the door claims the message, else None."""
     if not is_owner(phone):
+        return None
+    cmd = _mode_command(text)
+    if cmd is not None:
+        mode, lang = cmd
+        _set_mode(phone, mode)
+        return _MODE_REPLY[(mode, lang)], lang
+    if _customer_mode(phone):
         return None
     if _falls_through(text):
         return None
