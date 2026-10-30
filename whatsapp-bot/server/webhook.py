@@ -332,6 +332,23 @@ def handle_order_message(from_number: str, text: str, phone_number_id: str,
         except ImportError:
             from server.owner_door import is_owner, reply_for_owner
         if is_owner(from_number):
+            # MISSED-REPORT FLUSH (2026-10-30): this inbound message
+            # just reopened the owner's 24h window — deliver any
+            # end-of-shift report Meta refused at close BEFORE
+            # answering, so the close report arrives first. A flush
+            # failure never swallows the owner's actual question.
+            try:
+                try:
+                    import owner_report as owner_report_mod
+                except ImportError:
+                    from server import owner_report as owner_report_mod
+                owner_report_mod.flush_pending_for(
+                    from_number,
+                    lambda to, text_: send_whatsapp_text(
+                        SHOP_PHONE_NUMBER_ID, to, text_))
+            except Exception as flush_err:
+                print(f"[OwnerReport] flush on owner message failed: "
+                      f"{flush_err}", flush=True)
             owner_reply = reply_for_owner(from_number, text)
             if owner_reply is not None:
                 text_out, lang = owner_reply
@@ -584,6 +601,36 @@ def owner_notify():
         return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
 
     code, body = owner_notify_mod.process(
+        payload, request.headers.get("Authorization", ""), _send)
+    return Response(json.dumps(body), status=code,
+                    mimetype="application/json")
+
+
+@app.post("/owner-report")
+def owner_report():
+    """
+    OS -> bot end-of-shift report for the owner (2026-10-30).
+
+    Called by the store.js close-shift action AFTER the close has
+    committed, carrying the shift's own totals; authenticated with
+    the shared WHATSAPP_SIGNUP_SECRET (Bearer, constant-time,
+    fail-closed — see server/owner_report.py). The bot formats ONE
+    message and sends it to every OWNER_WHATSAPP number. A send
+    Meta refuses (24h window) is queued and retried on the owner's
+    next inbound message — never silently dropped; the OS logs the
+    miss in owner_reports either way.
+    """
+    try:
+        import owner_report as owner_report_mod
+    except ImportError:
+        from server import owner_report as owner_report_mod
+
+    payload = request.get_json(force=True, silent=True) or {}
+
+    def _send(to: str, text: str):
+        return send_whatsapp_text(SHOP_PHONE_NUMBER_ID, to, text)
+
+    code, body = owner_report_mod.process(
         payload, request.headers.get("Authorization", ""), _send)
     return Response(json.dumps(body), status=code,
                     mimetype="application/json")

@@ -5,6 +5,7 @@ const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib
 const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const ricoLoyalty = require('./lib/rico-loyalty');
 const inventoryEngine = require('./lib/inventory-engine');
+const clockUtils = require('./lib/clock-utils');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
 // ---------------------------------------------------------------------------
@@ -441,6 +442,160 @@ module.exports = async (req, res) => {
             return true;
         } catch (e) {
             console.error('[Notify] bot notify failed (order unaffected):', e && e.message);
+            return false;
+        }
+    }
+
+    // --- CLOCK-IN + END-OF-SHIFT OWNER REPORT (2026-10-30) ------------
+    // The clock IS the POS PIN login, and only on registered shop
+    // devices (final design, 2026-10-26): a device registers once with
+    // the restaurant's settings PIN and keeps a random token in its own
+    // localStorage; the OS stores only the token's SHA-256. Clock
+    // actions resolve the employee from the staff credential itself —
+    // never from a body field — and stamp SERVER time. Late is measured
+    // against the day start in restaurants.settings.clock_day_start
+    // ("07:00" default). The end-of-shift report reuses the door's
+    // push pattern: close-shift computes the totals, then POSTs ONE
+    // payload to the bot's /owner-report route (derived from
+    // BOT_NOTIFY_URL like account.js derives /account-link). Every
+    // attempt is logged in owner_reports and every failure is LOUD in
+    // the function logs — a report is never silently dropped, and a
+    // dead bot NEVER blocks a close (same doctrine as
+    // notifyBotOrderStatus above).
+    async function getClockSettings() {
+        const { data: rest } = await supabase.from('restaurants')
+            .select('settings').eq('id', finalResId).maybeSingle();
+        return (rest && rest.settings) || {};
+    }
+
+    async function deviceFromToken(token) {
+        const raw = String(token || '').trim();
+        if (!raw) return null;
+        const { data: dev } = await supabase.from('staff_devices')
+            .select('id, name, restaurant_id')
+            .eq('token_hash', clockUtils.hashDeviceToken(raw))
+            .eq('active', true).maybeSingle();
+        if (!dev) return null;
+        // Best-effort presence stamp; never blocks the caller.
+        try {
+            await supabase.from('staff_devices')
+                .update({ last_seen_at: new Date().toISOString() }).eq('id', dev.id);
+        } catch (e) { /* presence only */ }
+        return dev;
+    }
+
+    async function openClockRecord(employeeId) {
+        const { data: rec } = await supabase.from('clock_records')
+            .select('*').eq('restaurant_id', finalResId)
+            .eq('employee_id', employeeId).is('clocked_out_at', null)
+            .order('clocked_in_at', { ascending: false }).limit(1).maybeSingle();
+        return rec || null;
+    }
+
+    // The snapshot-shaped clock section for a window of clock-ins.
+    // on_shift = records still open (any day — a forgotten clock-out
+    // must stay visible, not vanish at midnight); late_today and
+    // worked_today = records whose clock-in falls inside the window.
+    async function buildClockSection(winStartIso, winEndIso) {
+        const { data: recs, error: recErr } = await supabase.from('clock_records')
+            .select('employee_id, employee_name, clocked_in_at, clocked_out_at, late_minutes')
+            .eq('restaurant_id', finalResId)
+            .or(`clocked_out_at.is.null,clocked_in_at.gte.${winStartIso}`)
+            .order('clocked_in_at', { ascending: true });
+        // A missing table (migration not run) must surface as clock:
+        // null in the snapshot — the bot answers its honest not-live
+        // line — never as a plausible-looking empty day.
+        if (recErr) throw recErr;
+        const onShift = [], lateToday = [], workedToday = [];
+        (recs || []).forEach(r => {
+            const inT = clockUtils.tguParts(r.clocked_in_at);
+            const entry = {
+                name: r.employee_name,
+                since: r.clocked_in_at,
+                since_label: inT.label,
+                late_minutes: parseInt(r.late_minutes) || 0,
+            };
+            if (!r.clocked_out_at) onShift.push(entry);
+            const inWindow = r.clocked_in_at >= winStartIso && r.clocked_in_at < winEndIso;
+            if (inWindow) {
+                if ((parseInt(r.late_minutes) || 0) > 0) {
+                    lateToday.push({ name: r.employee_name, minutes_late: parseInt(r.late_minutes) || 0, since_label: inT.label });
+                }
+                workedToday.push({
+                    ...entry,
+                    out: r.clocked_out_at || null,
+                    out_label: r.clocked_out_at ? clockUtils.tguParts(r.clocked_out_at).label : null,
+                });
+            }
+        });
+        return { on_shift: onShift, late_today: lateToday, worked_today: workedToday };
+    }
+
+    // Staff lines for one cash shift's window (close report): everyone
+    // whose clock session overlaps [openedAt, closedAt].
+    async function clockStaffForShift(openedAt, closedAt) {
+        const { data: recs } = await supabase.from('clock_records')
+            .select('employee_name, clocked_in_at, clocked_out_at, late_minutes')
+            .eq('restaurant_id', finalResId)
+            .lt('clocked_in_at', closedAt)
+            .or(`clocked_out_at.is.null,clocked_out_at.gt.${openedAt}`)
+            .order('clocked_in_at', { ascending: true });
+        return (recs || []).map(r => ({
+            name: r.employee_name,
+            in_label: clockUtils.tguParts(r.clocked_in_at).label,
+            out_label: r.clocked_out_at ? clockUtils.tguParts(r.clocked_out_at).label : null,
+            late_minutes: parseInt(r.late_minutes) || 0,
+        }));
+    }
+
+    async function logOwnerReport(shiftId, status, detail) {
+        try {
+            await supabase.from('owner_reports').insert({
+                id: `rep_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                restaurant_id: finalResId,
+                shift_id: (shiftId === undefined || shiftId === null) ? null : shiftId,
+                kind: 'shift_report',
+                status,
+                detail: detail || null,
+                attempts: 1,
+                created_at: new Date().toISOString(),
+                sent_at: status === 'sent' ? new Date().toISOString() : null,
+            });
+        } catch (e) {
+            console.error('[OwnerReport] could not write owner_reports row:', e && e.message);
+        }
+    }
+
+    // POST the close report to the bot. Returns true only when the bot
+    // accepted delivery to every owner number. NEVER throws: close-
+    // shift has already committed by the time this runs.
+    async function notifyBotOwnerReport(payload) {
+        const shiftId = payload && payload.shift_id;
+        try {
+            const url = clockUtils.ownerReportUrl();
+            const secret = (process.env.WHATSAPP_SIGNUP_SECRET || '').trim();
+            if (!url || !secret) {
+                console.error(`[OwnerReport] SKIPPED shift ${shiftId}: ${!url ? 'BOT_NOTIFY_URL unset or not an /order-notify URL' : 'WHATSAPP_SIGNUP_SECRET not configured'} in this deployment's env — the close report was NOT sent`);
+                await logOwnerReport(shiftId, 'skipped', !url ? 'BOT_NOTIFY_URL not configured' : 'WHATSAPP_SIGNUP_SECRET not configured');
+                return false;
+            }
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret },
+                body: JSON.stringify(payload),
+            });
+            if (!resp || !resp.ok) {
+                let detail = '';
+                try { detail = (await resp.text()).slice(0, 300); } catch (e) { /* body gone */ }
+                console.error(`[OwnerReport] FAILED shift ${shiftId}: bot endpoint answered HTTP ${resp ? resp.status : 'no-response'} ${detail} — the bot queues a retry for the owner's next message and the miss shows on the next snapshot`);
+                await logOwnerReport(shiftId, 'failed', `HTTP ${resp ? resp.status : 'no-response'} ${detail}`.trim());
+                return false;
+            }
+            await logOwnerReport(shiftId, 'sent', null);
+            return true;
+        } catch (e) {
+            console.error(`[OwnerReport] FAILED shift ${shiftId} (close unaffected):`, e && e.message);
+            await logOwnerReport(shiftId, 'failed', String(e && e.message || e));
             return false;
         }
     }
@@ -1188,7 +1343,7 @@ module.exports = async (req, res) => {
 
                 // 1. Fetch data for the final report
                 const { data: allOrders, error: ordersErr } = await supabase.from('orders')
-                    .select('total, payment_method, secondary_payment_method, rico_amount_paid, shift_id, created_at')
+                    .select('total, payment_method, secondary_payment_method, rico_amount_paid, shift_id, created_at, items')
                     .eq('restaurant_id', 'rich-aroma')
                     .gte('created_at', shift.opened_at)
                     .not('status', 'eq', 'cancelled');
@@ -1243,17 +1398,67 @@ module.exports = async (req, res) => {
                 
                 if (closeErr) throw closeErr;
 
-                return res.json({ 
-                    success: true, 
-                    shift: updated, 
-                    report: { 
-                        opening_amount: opening, 
-                        sales, 
-                        transactions: petty, 
+                // 2. END-OF-SHIFT OWNER REPORT (2026-10-30): the close
+                // has COMMITTED — now push ONE report to the owner's
+                // WhatsApp via the bot. Built from this close's own
+                // numbers (not a re-query of the day). Any failure is
+                // logged + recorded in owner_reports and NEVER fails
+                // the close the cashier already finished.
+                let ownerReportSent = false;
+                try {
+                    const itemCount = {};
+                    (shiftOrders || []).forEach(o => {
+                        (Array.isArray(o.items) ? o.items : []).forEach(it => {
+                            const nm = it && (it.name || it.item_name);
+                            if (nm) itemCount[nm] = (itemCount[nm] || 0) + (parseFloat(it.quantity || it.qty) || 1);
+                        });
+                    });
+                    const reportTopItems = Object.entries(itemCount)
+                        .sort((a, b) => b[1] - a[1]).slice(0, 5)
+                        .map(([name, qty]) => ({ name, qty }));
+                    const { data: invRows } = await supabase.from('inventory')
+                        .select('name, current_stock, min_stock, unit');
+                    const reportLowStock = (invRows || [])
+                        .filter(r => (parseFloat(r.min_stock) || 0) > 0 && (parseFloat(r.current_stock) || 0) <= (parseFloat(r.min_stock) || 0))
+                        .map(r => ({ name: r.name, current_stock: parseFloat(r.current_stock) || 0, min_stock: parseFloat(r.min_stock) || 0, unit: r.unit || '' }))
+                        .slice(0, 15);
+                    const { data: custRows } = await supabase.from('customers').select('rico_balance');
+                    const reportRico = (custRows || []).reduce((s, c) => s + (parseFloat(c.rico_balance) || 0), 0);
+                    const closedAtIso = (updated && updated.closed_at) || new Date().toISOString();
+                    const reportStaff = await clockStaffForShift(shift.opened_at, closedAtIso);
+                    const reportPayload = clockUtils.buildShiftReportPayload({
+                        shiftId,
+                        openedAt: shift.opened_at,
+                        closedAt: closedAtIso,
+                        sales,
+                        orders: (shiftOrders || []).length,
+                        openingAmount: opening,
+                        expectedAmount: expected,
+                        declaredCash: declared,
+                        discrepancy: diff,
+                        topItems: reportTopItems,
+                        lowStock: reportLowStock,
+                        ricoOutstanding: reportRico,
+                        staff: reportStaff,
+                    });
+                    ownerReportSent = await notifyBotOwnerReport(reportPayload);
+                } catch (reportErr) {
+                    console.error('[OwnerReport] report build failed (close unaffected):', reportErr && reportErr.message);
+                    await logOwnerReport(shiftId, 'failed', `build: ${reportErr && reportErr.message}`);
+                }
+
+                return res.json({
+                    success: true,
+                    shift: updated,
+                    owner_report: { sent: ownerReportSent },
+                    report: {
+                        opening_amount: opening,
+                        sales,
+                        transactions: petty,
                         declared: { cash: declared, card: declaredCard, transfer: declaredTransfer },
                         expected_amount: expected,
                         discrepancy: diff
-                    } 
+                    }
                 });
             } catch (err) {
                 console.error("[Close Shift Error]", err);
@@ -1275,6 +1480,137 @@ module.exports = async (req, res) => {
             const { data, error } = await supabase.from('cash_shifts').insert({ opening_amount: parseFloat(openingAmount) || 0, employee_id: employeeId || 'master', restaurant_id: finalResId, status: 'open', opened_at: new Date().toISOString() }).select().single();
             if (error) throw error;
             return res.json({ success: true, ...data });
+        }
+
+        // --- CLOCK-IN: device registration + punches (2026-10-30) ---
+        // Registration is gated by the restaurant's SETTINGS PIN (the
+        // owner registers each shop device once, from the POS login
+        // screen) and throttled like verify-pin. The raw device token
+        // is returned exactly once; the OS keeps only its SHA-256.
+        if (action === 'device-register' && req.method === 'POST') {
+            const { settingsPin, deviceName } = req.body || {};
+            if (!settingsPin) return res.status(400).json({ error: 'Falta el PIN de configuración' });
+            if (pinThrottleCheck(req, settingsPin)) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
+            const settings = await getClockSettings();
+            if (!settings.pin || String(settings.pin) !== String(settingsPin)) {
+                pinThrottleFail(req, settingsPin);
+                return res.status(401).json({ error: 'PIN de configuración incorrecto' });
+            }
+            pinThrottleSuccess(req, settingsPin);
+            const token = crypto.randomBytes(32).toString('hex');
+            const device = {
+                id: `dev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                restaurant_id: finalResId,
+                name: String(deviceName || 'Dispositivo de tienda').slice(0, 60),
+                token_hash: clockUtils.hashDeviceToken(token),
+                created_by: 'settings-pin',
+                active: true,
+            };
+            const { error: devErr } = await supabase.from('staff_devices').insert(device);
+            if (devErr) { console.error('[Clock] device-register failed:', devErr.message); return res.status(500).json({ error: devErr.message }); }
+            console.log(`[Clock] device registered: ${device.id} (${device.name})`);
+            return res.json({ ok: true, device: { id: device.id, name: device.name }, deviceToken: token });
+        }
+
+        if (action === 'device-unregister' && req.method === 'POST') {
+            const { settingsPin, deviceToken } = req.body || {};
+            if (!settingsPin || !deviceToken) return res.status(400).json({ error: 'Faltan datos' });
+            if (pinThrottleCheck(req, settingsPin)) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
+            const settings = await getClockSettings();
+            if (!settings.pin || String(settings.pin) !== String(settingsPin)) {
+                pinThrottleFail(req, settingsPin);
+                return res.status(401).json({ error: 'PIN de configuración incorrecto' });
+            }
+            pinThrottleSuccess(req, settingsPin);
+            const { error: unErr } = await supabase.from('staff_devices')
+                .update({ active: false })
+                .eq('token_hash', clockUtils.hashDeviceToken(deviceToken));
+            if (unErr) return res.status(500).json({ error: unErr.message });
+            console.log('[Clock] device unregistered');
+            return res.json({ ok: true });
+        }
+
+        // Clock state for the POS after login: is THIS device a
+        // registered shop device, and does the signed-in employee
+        // (from the credential, never the body) have an open record?
+        // Unregistered devices get registered:false and NO clock data —
+        // the POS renders no clock controls for them at all.
+        if (action === 'clock-status' && req.method === 'POST') {
+            const actor = await requireStaff(); if (!actor) return;
+            const device = await deviceFromToken(req.body && req.body.deviceToken);
+            const settings = await getClockSettings();
+            const dayStart = String(settings.clock_day_start || '07:00');
+            if (!device) return res.json({ ok: true, registered: false, open: null, day_start: dayStart });
+            const open = await openClockRecord(actor.id);
+            return res.json({
+                ok: true, registered: true,
+                device: { id: device.id, name: device.name },
+                employee: { id: actor.id, name: actor.name },
+                open: open ? { id: open.id, clocked_in_at: open.clocked_in_at, since_label: clockUtils.tguParts(open.clocked_in_at).label, late_minutes: open.late_minutes } : null,
+                day_start: dayStart,
+            });
+        }
+
+        if (action === 'clock-in' && req.method === 'POST') {
+            const actor = await requireStaff(); if (!actor) return;
+            const device = await deviceFromToken(req.body && req.body.deviceToken);
+            if (!device) {
+                console.error(`[Clock] clock-in REFUSED for ${actor.id}: device not registered`);
+                return res.status(403).json({ error: 'Este dispositivo no está registrado como equipo de la tienda' });
+            }
+            const existing = await openClockRecord(actor.id);
+            if (existing) return res.json({ ok: true, already_open: true, record: existing });
+            const settings = await getClockSettings();
+            const nowIso = new Date().toISOString();
+            const { data: openShift } = await supabase.from('cash_shifts')
+                .select('id').eq('status', 'open').eq('restaurant_id', finalResId)
+                .order('opened_at', { ascending: false }).limit(1).maybeSingle();
+            const record = {
+                id: `clk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+                restaurant_id: finalResId,
+                employee_id: actor.id,
+                employee_name: actor.name,
+                device_id: device.id,
+                shift_id: openShift ? openShift.id : null,
+                clocked_in_at: nowIso,
+                late_minutes: clockUtils.lateMinutes(nowIso, settings),
+            };
+            const { data: inserted, error: clkErr } = await supabase.from('clock_records').insert(record).select().single();
+            if (clkErr) {
+                // The partial unique index raced us — someone (or some
+                // tap) already opened this employee's record.
+                const again = await openClockRecord(actor.id);
+                if (again) return res.json({ ok: true, already_open: true, record: again });
+                console.error('[Clock] clock-in failed:', clkErr.message);
+                return res.status(500).json({ error: clkErr.message });
+            }
+            console.log(`[Clock] ${actor.name} clocked IN at ${nowIso} (late ${record.late_minutes} min, device ${device.name})`);
+            return res.json({ ok: true, record: inserted });
+        }
+
+        if (action === 'clock-out' && req.method === 'POST') {
+            const actor = await requireStaff(); if (!actor) return;
+            const device = await deviceFromToken(req.body && req.body.deviceToken);
+            if (!device) {
+                console.error(`[Clock] clock-out REFUSED for ${actor.id}: device not registered`);
+                return res.status(403).json({ error: 'Este dispositivo no está registrado como equipo de la tienda' });
+            }
+            const open = await openClockRecord(actor.id);
+            if (!open) return res.json({ ok: true, record: null });
+            const nowIso = new Date().toISOString();
+            const updates = { clocked_out_at: nowIso };
+            if (!open.shift_id) {
+                const { data: anyShift } = await supabase.from('cash_shifts')
+                    .select('id').eq('restaurant_id', finalResId)
+                    .gte('opened_at', open.clocked_in_at)
+                    .order('opened_at', { ascending: false }).limit(1).maybeSingle();
+                if (anyShift) updates.shift_id = anyShift.id;
+            }
+            const { data: closed, error: outErr } = await supabase.from('clock_records')
+                .update(updates).eq('id', open.id).select().single();
+            if (outErr) { console.error('[Clock] clock-out failed:', outErr.message); return res.status(500).json({ error: outErr.message }); }
+            console.log(`[Clock] ${actor.name} clocked OUT at ${nowIso} (record ${open.id})`);
+            return res.json({ ok: true, record: closed });
         }
 
         if (action === 'verify-pin') {
@@ -2554,6 +2890,38 @@ module.exports = async (req, res) => {
                 const { data: custs } = await supabase.from('customers').select('rico_balance');
                 const ricoOutstanding = (custs || []).reduce((s, c) => s + (parseFloat(c.rico_balance) || 0), 0);
 
+                // CLOCK (2026-10-30): real records, server-stamped.
+                // If the clock tables are absent (migration not run
+                // yet) this degrades to the honest null the bot
+                // already knows how to answer — never a fake zero.
+                let clockSection = null;
+                try {
+                    clockSection = await buildClockSection(dayStart, dayEnd);
+                } catch (clockErr) {
+                    console.error('[OwnerSnapshot] clock section unavailable:', clockErr && clockErr.message);
+                }
+                // Missed end-of-shift reports (last 7 days): a report
+                // that failed or was skipped must surface on the next
+                // snapshot header — never dropped silently.
+                let missedReports = [];
+                try {
+                    const sinceIso = new Date(nowMs - 7 * 24 * 3600 * 1000).toISOString();
+                    const { data: reps } = await supabase.from('owner_reports')
+                        .select('shift_id, status, detail, created_at')
+                        .eq('restaurant_id', 'rich-aroma')
+                        .neq('status', 'sent')
+                        .gte('created_at', sinceIso)
+                        .order('created_at', { ascending: false }).limit(3);
+                    missedReports = (reps || []).map(r => ({
+                        shift_id: r.shift_id, status: r.status,
+                        detail: r.detail || '', at: r.created_at,
+                        at_label: clockUtils.tguParts(r.created_at).label,
+                        day: clockUtils.tguParts(r.created_at).date,
+                    }));
+                } catch (repErr) {
+                    console.error('[OwnerSnapshot] owner_reports read unavailable:', repErr && repErr.message);
+                }
+
                 return res.json({ ok: true, snapshot: {
                     day: `${yy}-${mm}-${dd}`,
                     sales_today: { orders: orders.length, total: Math.round(salesTotal * 100) / 100, by_method: byMethod },
@@ -2562,7 +2930,8 @@ module.exports = async (req, res) => {
                     low_stock: lowStock,
                     preventa_today: { intents: pvIntents, paid: pvPaid, packs: pvPacks, bottles: pvBottles, holds_active: pvHolds },
                     rico_outstanding: Math.round(ricoOutstanding * 100) / 100,
-                    clock: null
+                    clock: clockSection,
+                    missed_reports: missedReports
                 } });
             } catch (err) {
                 console.error('[OwnerSnapshot]', err);

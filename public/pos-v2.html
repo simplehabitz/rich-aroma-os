@@ -38,6 +38,13 @@
                 window.currentEmployee = data.employee;
                 try { localStorage.setItem('ra_staff_pin', pin); } catch(e) {}
                 if (typeof window.restoreShift === 'function') await window.restoreShift();
+                // CLOCK-IN (2026-10-30): the PIN login IS the clock —
+                // on a registered shop device with no open record this
+                // prompts "¿Marcar entrada?". Unregistered devices and
+                // any clock failure leave the POS exactly as it was.
+                if (typeof window.clockAfterLogin === 'function') {
+                    try { await window.clockAfterLogin(); } catch (e) { console.error('[Clock]', e); }
+                }
 
             } catch (e) {
                 console.error("Login Error:", e);
@@ -303,6 +310,30 @@
                 <input type="password" id="login-pin" maxlength="4" onkeyup="if(event.key==='Enter') window.handleLogin()" class="text-center text-5xl tracking-[0.5em] w-full border-b-4 border-gray-100 rounded-none p-4 mb-8 focus:border-gold outline-none font-black text-gold" placeholder="****">
                 
                 <button onclick="window.handleLogin()" class="w-full bg-gray-900 text-white py-5 rounded-2xl font-black text-xl shadow-xl hover:bg-black active:scale-95 transition-all uppercase tracking-widest">Entrar</button>
+
+                <!-- DEVICE REGISTRATION (clock-in, 2026-10-30): the owner
+                     registers this device ONCE with the settings PIN;
+                     the device then offers clock-in/out at PIN login.
+                     Rendered by window.renderDeviceRegArea(). -->
+                <div id="device-reg-area" class="mt-6 text-left">
+                    <div id="device-reg-off" class="hidden">
+                        <button type="button" onclick="document.getElementById('device-reg-form').classList.toggle('hidden')" class="w-full text-xs font-bold text-gray-400 underline underline-offset-2">Registrar este dispositivo como equipo de la tienda</button>
+                        <div id="device-reg-form" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                            <p class="text-xs text-gray-500 mb-3">Solo el dueño: registra este teléfono/tablet para que el personal pueda marcar entrada y salida acá. Se hace una sola vez.</p>
+                            <input type="text" id="device-reg-name" placeholder="Nombre — ej: Tablet de caja" class="w-full border-2 border-gray-200 rounded-xl p-3 mb-2 text-sm outline-none focus:border-gold">
+                            <input type="password" id="device-reg-pin" placeholder="PIN de configuración" class="w-full border-2 border-gray-200 rounded-xl p-3 mb-3 text-sm outline-none focus:border-gold">
+                            <button type="button" onclick="window.submitDeviceRegister()" class="w-full bg-gray-800 text-white py-3 rounded-xl font-bold text-sm">Registrar dispositivo</button>
+                        </div>
+                    </div>
+                    <div id="device-reg-on" class="hidden">
+                        <p class="text-xs font-bold text-green-600 text-center">📟 Dispositivo de tienda: <span id="device-reg-name-label"></span></p>
+                        <button type="button" onclick="document.getElementById('device-unreg-form').classList.toggle('hidden')" class="w-full text-[11px] text-gray-400 underline underline-offset-2 mt-1">Quitar registro de este dispositivo</button>
+                        <div id="device-unreg-form" class="hidden mt-3 bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                            <input type="password" id="device-unreg-pin" placeholder="PIN de configuración" class="w-full border-2 border-gray-200 rounded-xl p-3 mb-3 text-sm outline-none focus:border-gold">
+                            <button type="button" onclick="window.submitDeviceUnregister()" class="w-full bg-red-100 text-red-700 py-3 rounded-xl font-bold text-sm">Quitar registro</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div id="open-shift-stage" class="hidden">
@@ -319,6 +350,20 @@
                 
                 <button onclick="window.confirmStartShift()" class="w-full bg-green-600 text-white py-5 rounded-2xl font-black text-xl shadow-xl hover:bg-green-700 active:scale-95 transition-all uppercase tracking-widest">Abrir Registro</button>
             </div>
+        </div>
+    </div>
+
+    <!-- CLOCK-IN PROMPT (2026-10-30): shown right after a PIN login on a
+         registered shop device when the employee has no open record. -->
+    <div id="clock-prompt-modal" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[10000] backdrop-blur-sm">
+        <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-8 text-center">
+            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                <i class="fas fa-clock"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Hola, <span id="clock-prompt-name">equipo</span></h2>
+            <p class="text-gray-500 mb-6 text-sm">No tenés entrada marcada en este dispositivo.<br>¿Marcar entrada ahora? <span class="text-gray-400">(hora del servidor)</span></p>
+            <button onclick="window.clockConfirmIn()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-blue-700 active:scale-95 transition-all mb-2">Sí, marcar entrada</button>
+            <button onclick="window.clockSkipIn()" class="w-full bg-gray-200 text-gray-800 py-3 rounded-xl font-bold hover:bg-gray-300">Ahora no</button>
         </div>
     </div>
 
@@ -660,6 +705,13 @@
             </div>
 
             <div class="flex gap-3 items-center">
+                <!-- CLOCK CHIP (2026-10-30): rendered only on registered
+                     devices with an open clock record. "Marcar salida"
+                     is the session-menu home for clock-out. -->
+                <div id="clock-chip" class="hidden items-center gap-2 bg-blue-50 p-1.5 rounded-full border border-blue-200">
+                    <span id="clock-chip-text" class="text-xs font-bold text-blue-800 px-2"></span>
+                    <button onclick="window.clockOutFlow()" class="bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-full hover:bg-blue-800">Marcar salida</button>
+                </div>
                 <div id="sync-indicator" class="hidden bg-orange-500 text-white px-3 py-1.5 rounded-lg font-mono text-[10px] animate-pulse">
                     SYNC PENDING (<span id="sync-count">0</span>)
                 </div>
@@ -4777,5 +4829,154 @@ function openTenderModal() {
         </div>
     </div>
     <script src="/quimi-nav.js"></script>
+<script>
+    // --- CLOCK-IN (2026-10-30) ---------------------------------------
+    // The PIN login IS the clock, and only on registered shop devices.
+    // Registration: the owner enters the settings PIN once on this
+    // device (login screen, "Registrar este dispositivo"); the OS
+    // returns a random device token kept in localStorage — the OS
+    // stores only its hash. Unregistered devices render NO clock
+    // controls and make NO clock calls beyond the one status check
+    // after a login when a token exists. Every timestamp is stamped
+    // by the server; this script only carries the token + the taps.
+    (function () {
+        const TOK_KEY = 'ra_device_token';
+        const NAME_KEY = 'ra_device_name';
+        const tok = () => { try { return localStorage.getItem(TOK_KEY) || ''; } catch (e) { return ''; } };
+        const setTok = (t, n) => { try { localStorage.setItem(TOK_KEY, t); localStorage.setItem(NAME_KEY, n || ''); } catch (e) {} };
+        const clearTok = () => { try { localStorage.removeItem(TOK_KEY); localStorage.removeItem(NAME_KEY); } catch (e) {} };
+        const fmtTime = (iso) => {
+            try {
+                return new Date(iso).toLocaleTimeString('en-US', { timeZone: 'America/Tegucigalpa', hour: 'numeric', minute: '2-digit' });
+            } catch (e) { return ''; }
+        };
+        async function post(action, body) {
+            const res = await fetch('/api/store?action=' + action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('ra_staff_pin') || '') },
+                body: JSON.stringify(body || {})
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+            return data;
+        }
+
+        // --- Device registration area (login screen) ---
+        window.renderDeviceRegArea = function () {
+            const off = document.getElementById('device-reg-off');
+            const on = document.getElementById('device-reg-on');
+            if (!off || !on) return;
+            if (tok()) {
+                off.classList.add('hidden');
+                on.classList.remove('hidden');
+                const lbl = document.getElementById('device-reg-name-label');
+                if (lbl) lbl.innerText = (function () { try { return localStorage.getItem(NAME_KEY) || 'registrado'; } catch (e) { return 'registrado'; } })();
+            } else {
+                on.classList.add('hidden');
+                off.classList.remove('hidden');
+            }
+        };
+
+        window.submitDeviceRegister = async function () {
+            const name = (document.getElementById('device-reg-name') || {}).value || '';
+            const pin = (document.getElementById('device-reg-pin') || {}).value || '';
+            if (!pin) return alert('Ingrese el PIN de configuración');
+            try {
+                const data = await post('device-register', { settingsPin: pin, deviceName: name });
+                if (!data.deviceToken) throw new Error('El servidor no devolvió token');
+                setTok(data.deviceToken, (data.device && data.device.name) || name);
+                window.renderDeviceRegArea();
+                alert('✅ Dispositivo registrado. Desde ahora, al entrar con PIN se ofrece marcar entrada.');
+            } catch (e) { alert('Error: ' + e.message); }
+        };
+
+        window.submitDeviceUnregister = async function () {
+            const pin = (document.getElementById('device-unreg-pin') || {}).value || '';
+            if (!pin) return alert('Ingrese el PIN de configuración');
+            try {
+                await post('device-unregister', { settingsPin: pin, deviceToken: tok() });
+                clearTok();
+                hideClockChip();
+                window.renderDeviceRegArea();
+                alert('Registro quitado. Este dispositivo ya no marca entradas.');
+            } catch (e) { alert('Error: ' + e.message); }
+        };
+
+        // --- Clock chip (header / session area) ---
+        function showClockChip(name, sinceLabel, lateMinutes) {
+            const chip = document.getElementById('clock-chip');
+            const txt = document.getElementById('clock-chip-text');
+            if (!chip || !txt) return;
+            txt.innerText = '🟢 ' + name + ' · entró ' + sinceLabel + (lateMinutes > 0 ? ' (tarde ' + lateMinutes + ' min)' : '');
+            chip.classList.remove('hidden');
+            chip.classList.add('flex');
+        }
+        function hideClockChip() {
+            const chip = document.getElementById('clock-chip');
+            if (!chip) return;
+            chip.classList.add('hidden');
+            chip.classList.remove('flex');
+        }
+
+        // --- Login hook: prompt or chip ---
+        window.clockAfterLogin = async function () {
+            window.renderDeviceRegArea();
+            if (!tok() || !window.currentEmployee) return;
+            let st;
+            try { st = await post('clock-status', { deviceToken: tok() }); } catch (e) { console.error('[Clock] status failed', e); return; }
+            if (!st.registered) return; // token unknown/revoked server-side
+            if (st.open) {
+                showClockChip(st.employee.name, st.open.since_label, st.open.late_minutes);
+                return;
+            }
+            const nm = document.getElementById('clock-prompt-name');
+            if (nm) nm.innerText = st.employee.name;
+            const modal = document.getElementById('clock-prompt-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.clockSkipIn = function () {
+            const modal = document.getElementById('clock-prompt-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        window.clockConfirmIn = async function () {
+            window.clockSkipIn();
+            try {
+                const data = await post('clock-in', { deviceToken: tok() });
+                const rec = data.record;
+                if (rec) {
+                    showClockChip(window.currentEmployee.name, fmtTime(rec.clocked_in_at), rec.late_minutes || 0);
+                    alert(rec.late_minutes > 0
+                        ? `Entrada marcada: ${fmtTime(rec.clocked_in_at)} (tarde ${rec.late_minutes} min).`
+                        : `✅ Entrada marcada: ${fmtTime(rec.clocked_in_at)}. ¡Buen turno!`);
+                }
+            } catch (e) { alert('No se pudo marcar entrada: ' + e.message); }
+        };
+
+        window.clockOutFlow = async function () {
+            let ok = true;
+            if (typeof showUIModal === 'function') {
+                ok = await showUIModal({
+                    title: 'Marcar salida',
+                    message: '¿Marcar tu salida ahora? La hora la pone el servidor.',
+                    confirmText: 'Sí, marcar salida',
+                    cancelText: 'Cancelar'
+                });
+            } else {
+                ok = confirm('¿Marcar salida ahora?');
+            }
+            if (!ok) return;
+            try {
+                const data = await post('clock-out', { deviceToken: tok() });
+                hideClockChip();
+                if (data.record) alert(`✅ Salida marcada: ${fmtTime(data.record.clocked_out_at)}. ¡Gracias por hoy!`);
+                else alert('No había entrada abierta para marcar salida.');
+            } catch (e) { alert('No se pudo marcar salida: ' + e.message); }
+        };
+
+        document.addEventListener('DOMContentLoaded', window.renderDeviceRegArea);
+    })();
+</script>
 </body>
 </html>
