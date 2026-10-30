@@ -4,6 +4,7 @@ const { isMasterPin, isAdminCredential } = require('./lib/auth');
 const { pinThrottleCheck, pinThrottleFail, pinThrottleSuccess } = require('./lib/rate-limit');
 const ricoLoyalty = require('./lib/rico-loyalty');
 const inventoryEngine = require('./lib/inventory-engine');
+const roles = require('./lib/roles');
 
 module.exports = async function handler(req, res) {
     try {
@@ -47,18 +48,86 @@ module.exports = async function handler(req, res) {
         };
 
         const authHeader = req.headers.authorization;
-        const isAdmin = await verifyAdmin(authHeader);
+
+        // --- ROLES (roles build, 2026-10-30): who is calling, and what
+        // their role may do. The resolver turns the credential into a
+        // canonical actor ONCE per request: an owner credential (master
+        // PIN / admin token / the restaurant's settings PIN — the
+        // partner-os door) is the Owner; an employee PIN takes its caps
+        // from employees.role via api/lib/roles.js. Every gate below
+        // asks requireCap(); hiding a button is never the gate.
+        // (verifyAdmin above is left defined for compatibility; every
+        // gate below resolves the actor and asks requireCap/requireOwner.)
+        const resolveActor = async () => {
+            if (!authHeader) return null;
+            const pin = authHeader.replace(/^Bearer\s+/i, '').trim();
+            if (!pin) return null;
+            if (isAdminCredential(pin)) return { id: 'owner', name: 'Dueño', role: 'owner', caps: roles.ALL_CAPS.slice() };
+            try {
+                const { data } = await supabase.from('employees').select('id, name, role, restaurant_id').eq('pin', pin).eq('active', true).single();
+                if (data) {
+                    const r = roles.roleFor(data.role);
+                    return { id: data.id, name: data.name, role: r ? r.role : null, caps: r ? r.caps : [], restaurant_id: data.restaurant_id };
+                }
+            } catch (e) { /* fall through to the settings-PIN door */ }
+            try {
+                const resId = await getRestaurantId(authHeader);
+                const { data: rest } = await supabase.from('restaurants').select('settings').eq('id', resId).maybeSingle();
+                if (rest && rest.settings && rest.settings.pin && String(rest.settings.pin) === pin) {
+                    return { id: 'owner', name: 'Dueño', role: 'owner', caps: roles.ALL_CAPS.slice() };
+                }
+            } catch (e) { /* no settings door for this credential */ }
+            return null;
+        };
+        let _actorPromise = null;
+        const actor = () => { if (!_actorPromise) _actorPromise = resolveActor(); return _actorPromise; };
+        const actorUser = await actor();
+        const denyRole = (cap) => res.status(403).json({ error: roles.denyMessage(cap), code: 'ROLE_DENIED', cap });
+        const requireCap = async (cap) => {
+            const a = await actor();
+            if (!a) { res.status(401).json({ error: roles.NO_CREDENTIAL_MESSAGE }); return null; }
+            if (!roles.hasCap(a, cap)) { denyRole(cap); return null; }
+            return a;
+        };
+        const requireOwner = async () => {
+            const a = await actor();
+            if (!a) { res.status(401).json({ error: roles.NO_CREDENTIAL_MESSAGE }); return null; }
+            if (a.role !== 'owner') { res.status(403).json({ error: 'Eso lo hace solo el dueño.', code: 'ROLE_DENIED', cap: 'owner' }); return null; }
+            return a;
+        };
+        // Price guard (ROLES-AND-VIEWS rehearsal rule): a non-owner may
+        // save menu structure freely, but the moment a price VALUE would
+        // change, the server itself says no. Unchanged prices ride along
+        // in full-form saves and pass; a create may only be born at 0
+        // (the owner prices it in his price pass).
+        const priceBlocked = async (itemId, newPrice) => {
+            if (!actorUser || actorUser.role === 'owner') return false;
+            const np = parseFloat(newPrice);
+            if (isNaN(np)) return false;
+            if (itemId) {
+                try {
+                    const { data } = await supabase.from('menu_items').select('price').eq('id', itemId).maybeSingle();
+                    const cur = data ? (parseFloat(data.price) || 0) : 0;
+                    if (Math.abs(np - cur) < 0.005) return false;
+                } catch (e) { /* unreadable current price: fail closed */ }
+            } else if (Math.abs(np) < 0.005) return false;
+            denyRole('precios');
+            return true;
+        };
 
         // --- AUTH: STAFF LOGIN ---
         if (action === 'staff_login' && req.method === 'POST') {
             const { pin } = req.body;
             // SEC-FIX 4 (F12): throttle PIN guessing; never echo the PIN back.
             if (pinThrottleCheck(req, pin)) return res.status(429).json({ error: "Demasiados intentos. Espera unos minutos." });
-            if (isMasterPin(pin)) { pinThrottleSuccess(req, pin); return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin' } }); }
+            if (isMasterPin(pin)) { pinThrottleSuccess(req, pin); return res.json({ success: true, employee: { id: 'master_admin', name: 'Oscar (Admin)', role: 'admin', cap_role: 'owner', role_label: roles.ROLE_LABELS.owner } }); }
             const { data, error } = await supabase.from('employees').select('*').eq('pin', pin).eq('active', true).single();
             if (error || !data) { pinThrottleFail(req, pin); return res.status(401).json({ error: "Invalid PIN" }); }
             pinThrottleSuccess(req, pin);
             const { pin: _staffPin, ...safeEmployee } = data;
+            const capRole = roles.roleFor(data.role);
+            safeEmployee.cap_role = capRole ? capRole.role : null;
+            safeEmployee.role_label = capRole ? roles.ROLE_LABELS[capRole.role] : '';
             return res.json({ success: true, employee: safeEmployee });
         }
 
@@ -67,7 +136,7 @@ module.exports = async function handler(req, res) {
         if (action === 'menu_v2') return require('./lib/handler-v2-menu')(req, res);
 
         if (action === 'run_simulation') {
-            if (!isAdmin) return res.status(401).json({ error: "Unauthorized" });
+            if (!(await requireOwner())) return;
             const { type } = req.body || {};
             const { exec } = require('child_process');
             let scriptPath = '';
@@ -108,7 +177,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_group_create' || action === 'modifier_group_create') {
             if (req.method === 'POST') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const { name, required, max_selections } = req.body || {};
                 const { data, error } = await supabase.from('modifier_groups').insert({
                     name,
@@ -123,8 +192,9 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_option_create' || action === 'modifier_option_create') {
             if (req.method === 'POST') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const { group_id, name, price_adjustment, is_default } = req.body || {};
+                if (await priceBlocked(null, price_adjustment)) return;
                 const { data, error } = await supabase.from('modifier_options').insert({
                     group_id,
                     name,
@@ -138,7 +208,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_group_delete' || action === 'modifier_group_delete') {
             if (req.method === 'DELETE') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const groupId = id || req.query.id;
                 if (!groupId) return res.status(400).json({ error: "Missing group ID" });
                 
@@ -152,7 +222,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'modifiers_option_delete' || action === 'modifier_option_delete') {
             if (req.method === 'DELETE') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const optionId = id || req.query.id;
                 if (!optionId) return res.status(400).json({ error: "Missing option ID" });
                 const { error } = await supabase.from('modifier_options').delete().eq('id', optionId);
@@ -172,7 +242,7 @@ module.exports = async function handler(req, res) {
 
         if (action === 'menu_modifiers_update' || action === 'menu_item_modifiers_update') {
             if (req.method === 'POST') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const itemId = id || req.query.id;
                 const { group_ids } = req.body || {};
                 
@@ -248,6 +318,14 @@ module.exports = async function handler(req, res) {
                         } catch(costErr) {
                             console.warn("[admin.js] margin cost attach failed:", costErr.message);
                         }
+                        // ROLES: food_cost / suggested / cost_partial are
+                        // Owner financials. The read stays public (it
+                        // mirrors the public menu), but the cost keys are
+                        // stripped for anyone who is not the Owner —
+                        // an Encargado's payload never carries them.
+                        if (!actorUser || actorUser.role !== 'owner') {
+                            (rItems.data || []).forEach(it => { delete it.food_cost; delete it.suggested; delete it.cost_partial; });
+                        }
                         return res.json({ items: rItems.data || [], modGroups: rModGroups.data || [], modOptions: rModOptions.data || [] });
                     }
                 } catch(sbErr) {
@@ -279,7 +357,7 @@ module.exports = async function handler(req, res) {
             // { recipe_steps: [...] }; until now no PATCH branch existed,
             // so step saves fell through to the 404 at the bottom.
             if (req.method === 'PATCH') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const itemId = id || req.query.id || (req.body && req.body.id);
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
                 const b = req.body || {};
@@ -296,6 +374,7 @@ module.exports = async function handler(req, res) {
                     if (!Array.isArray(b.recipe_steps)) return res.status(400).json({ error: "recipe_steps must be an array" });
                     updates.recipe_steps = b.recipe_steps.map(s => String(s).trim()).filter(s => s !== '');
                 }
+                if (updates.price !== undefined && await priceBlocked(itemId, updates.price)) return;
                 if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update" });
 
                 const { error } = await supabase.from('menu_items').update(updates).eq('id', itemId);
@@ -322,8 +401,9 @@ module.exports = async function handler(req, res) {
             // each gate below sits above both writes. (Reads above stay
             // public: they mirror the public menu.)
             if (req.method === 'POST') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const { name, description, price, category, image_url, is_bundle, is_house_made, restaurant_id, available } = req.body || {};
+                if (await priceBlocked(null, price)) return;
                 const newItem = {
                     id: 'item_' + Date.now(),
                     name: name || 'New Item',
@@ -357,7 +437,7 @@ module.exports = async function handler(req, res) {
             }
             
             if (req.method === 'PUT') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const itemId = req.query.id || req.body.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
                 const { name, description, price, category, image_url, is_bundle, is_house_made, available, recipe_steps } = req.body || {};
@@ -373,6 +453,7 @@ module.exports = async function handler(req, res) {
                 if (available !== undefined) updates.available = !!available;
                 if (Array.isArray(recipe_steps)) updates.recipe_steps = recipe_steps.map(s => String(s).trim()).filter(s => s !== '');
                 
+                if (updates.price !== undefined && await priceBlocked(itemId, updates.price)) return;
                 try {
                     await supabase.from('menu_items').update(updates).eq('id', itemId);
                 } catch(e) {}
@@ -394,7 +475,7 @@ module.exports = async function handler(req, res) {
             }
             
             if (req.method === 'DELETE') {
-                if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+                if (!(await requireCap('menu'))) return;
                 const itemId = req.query.id;
                 if (!itemId) return res.status(400).json({ error: "Missing product ID" });
                 try {
@@ -417,7 +498,7 @@ module.exports = async function handler(req, res) {
             // SEC-FIX 4 (F7): one gate at the top covers both branches below
             // (DELETE and update) and both stores (Supabase + the local
             // data/menu.json fs.writeFileSync writes).
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('menu'))) return;
             const fs = require('fs');
             const path = require('path');
             const menuJsonPath = path.join(__dirname, '..', 'data', 'menu.json');
@@ -448,6 +529,7 @@ module.exports = async function handler(req, res) {
                 if (is_house_made !== undefined) updates.is_house_made = !!is_house_made;
             if (available !== undefined) updates.available = !!available;
             
+            if (updates.price !== undefined && await priceBlocked(itemId, updates.price)) return;
             try { await supabase.from('menu_items').update(updates).eq('id', itemId); } catch(e) {}
 
             if (fs.existsSync(menuJsonPath)) {
@@ -586,20 +668,26 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'inventory' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('inventario'))) return;
             const { data, error } = await supabase.from('inventory').select('*').order('name');
             if (error) return res.status(500).json({ error: error.message });
             return res.json(data || []);
         }
 
         if (action === 'inventory_update' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('inventario'))) return;
             const b = req.body || {};
             const name = b.name !== undefined ? String(b.name).trim() : undefined;
             let invId = b.id ? String(b.id) : '';
             if (!invId && name) invId = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
             if (!invId) return res.status(400).json({ error: "Missing ingredient id/name" });
 
+            if (b.cost_per_unit !== undefined && actorUser && actorUser.role !== 'owner') {
+                let curCost = null;
+                try { const { data: cur } = await supabase.from('inventory').select('cost_per_unit').eq('id', invId).maybeSingle(); if (cur) curCost = cur.cost_per_unit; } catch (e) {}
+                const newCost = parseFloat(b.cost_per_unit);
+                if (curCost === null || Math.abs(newCost - (parseFloat(curCost) || 0)) >= 0.00005) { denyRole('finanzas'); return; }
+            }
             const row = { id: invId };
             if (name !== undefined) row.name = name;
             if (b.unit !== undefined) row.unit = String(b.unit);
@@ -624,7 +712,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'inventory_delete' && req.method === 'DELETE') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('inventario'))) return;
             const invId = id || req.query.id;
             if (!invId) return res.status(400).json({ error: "Missing ingredient ID" });
             try { await supabase.from('menu_item_ingredients').delete().eq('inventory_item_id', invId); } catch (e) {}
@@ -634,7 +722,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'menu_item_ingredients' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('menu'))) return;
             const itemId = id || req.query.id;
             if (!itemId) return res.status(400).json({ error: "Missing menu item ID" });
             let q = supabase.from('menu_item_ingredients').select('*').eq('menu_item_id', itemId);
@@ -669,7 +757,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'menu_item_ingredient_add' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('menu'))) return;
             const b = req.body || {};
             const menuItemId = b.menu_item_id;
             const invId = b.inventory_item_id || b.inventory_id;
@@ -735,7 +823,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'menu_item_ingredient_delete' && req.method === 'DELETE') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('menu'))) return;
             const rowId = id || req.query.id;
             if (!rowId) return res.status(400).json({ error: "Missing ingredient link ID" });
             // Read the line first: if it was "agregable", its Extras option
@@ -1307,7 +1395,7 @@ module.exports = async function handler(req, res) {
 
         // --- IMAGE UPLOAD ---
         if (action === 'upload_image' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('menu'))) return;
             const { imageBase64, fileName } = req.body;
             if (!imageBase64) return res.status(400).json({ error: "Missing image data" });
 
@@ -1338,6 +1426,7 @@ module.exports = async function handler(req, res) {
 
         // --- 4.1 Merchant Ledger & Payouts ---
         if (action === 'admin_merchant_balances' && req.method === 'GET') {
+            if (!(await requireCap('finanzas'))) return;
             try {
                 const { data: restaurants } = await supabase.from('restaurants').select('id, name, status').neq('id', 'rich-aroma');
                 const { data: ledger } = await supabase.from('quimieats_ledger').select('*');
@@ -1362,7 +1451,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'admin_create_ledger_entry' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const { restaurantId, amount, type, description } = req.body;
             if (!restaurantId || amount === undefined || !type) {
                 return res.status(400).json({ error: "Missing parameters" });
@@ -1400,7 +1489,7 @@ module.exports = async function handler(req, res) {
 
         // --- COMMISSION TOPUPS (ADMIN REVIEW & APPROVAL) ---
         if (action === 'get_pending_topups' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             try {
                 const { data: topups, error } = await supabase.from('commission_topups')
                     .select('*')
@@ -1435,7 +1524,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'approve_commission_topup' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const { topupId, restaurantId, amount, bankName, referenceNumber } = req.body || {};
             if (!topupId || !restaurantId || !amount) {
                 return res.status(400).json({ error: "Missing parameters" });
@@ -1477,7 +1566,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'reject_commission_topup' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const { topupId, reason } = req.body || {};
             if (!topupId) return res.status(400).json({ error: "topupId is required" });
 
@@ -1499,7 +1588,7 @@ module.exports = async function handler(req, res) {
 
         // --- CUSTOMER & USER SUPPORT MANAGEMENT ---
         if (action === 'list_customers' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('clientes'))) return;
             const query = (req.query.q || '').trim();
             try {
                 let dbQuery = supabase.from('customers').select('*').order('created_at', { ascending: false }).limit(50);
@@ -1515,7 +1604,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'update_customer' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('clientes'))) return;
             const { id, name, phone, pin, rico_balance } = req.body || {};
 
             try {
@@ -1539,7 +1628,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'create_customer' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('clientes'))) return;
             const { name, phone, pin, initial_balance } = req.body || {};
             if (!phone) return res.status(400).json({ error: "Teléfono es requerido" });
 
@@ -1674,7 +1763,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'quick_add_restaurant' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('banco'))) return;
             const { name, phone, logo_url, category } = req.body;
             const { data, error } = await supabase.from('quimieats_leads').insert({
                 restaurant_name: name,
@@ -1689,7 +1778,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'update_restaurant_details' || action === 'update_restaurant_logo') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('banco'))) return;
             let { id: resId, lead_id, name, logoUrl, logo_url, phone, category } = req.body;
             
             const finalLogo = logoUrl || logo_url;
@@ -1713,7 +1802,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'bulk_delete_restaurants' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('banco'))) return;
             const { ids } = req.body || {};
             if (!ids || !Array.isArray(ids)) {
                 return res.status(400).json({ error: "ids must be an array" });
@@ -1787,7 +1876,7 @@ module.exports = async function handler(req, res) {
 
         // --- GLOBAL ORDERS OVERSIGHT ---
         if (action === 'global_orders' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const { data, error } = await supabase.from('orders')
                 .select('*, customers(name, phone)')
                 .order('created_at', { ascending: false })
@@ -1797,7 +1886,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'stats' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+            if (!(await requireCap('reportes'))) return;
             const { data: orders } = await supabase.from('orders').select('total');
             const totalOrders = orders?.length || 0;
             const totalSales = (orders || []).reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
@@ -1816,7 +1905,7 @@ module.exports = async function handler(req, res) {
         // (per-item food cost — the same computation as the margin chip
         // — plus recent sales and the month's granted face so far).
         if (action === 'loyalty_data' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.query.restaurantId || 'rich-aroma';
             try {
                 const settings = await ricoLoyalty.getLoyaltySettings(supabase, resId);
@@ -1859,7 +1948,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'loyalty_settings_save' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.body?.restaurantId || 'rich-aroma';
             const incoming = (req.body && req.body.loyalty) || {};
             try {
@@ -1904,7 +1993,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'loyalty_campaigns' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.query.restaurantId || 'rich-aroma';
             try {
                 const { data: campaigns, error } = await supabase.from('loyalty_campaigns')
@@ -1924,7 +2013,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'loyalty_campaign_save' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const b = req.body || {};
             const TYPES = ['multiplicador', 'compra_x_lleva', 'regalo'];
             if (!TYPES.includes(b.type)) return res.status(400).json({ error: 'Tipo de oferta no válido' });
@@ -1953,7 +2042,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'loyalty_campaign_toggle' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const { id: campId, active, over_cap_ack } = req.body || {};
             if (!campId) return res.status(400).json({ error: 'id requerido' });
             try {
@@ -2013,7 +2102,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'broadcast_preview' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.body?.restaurantId || 'rich-aroma';
             try {
                 const ctx = await broadcastContext(resId, req.body?.campaign_id || null);
@@ -2029,7 +2118,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'broadcast_send' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.body?.restaurantId || 'rich-aroma';
             const message = String(req.body?.message || '').trim();
             if (!message) return res.status(400).json({ error: 'Escribí el mensaje de la difusión.' });
@@ -2096,7 +2185,7 @@ module.exports = async function handler(req, res) {
 
         // --- ESPECIAL DEL DÍA (2026-10-30) ---
         if (action === 'especial_data' && req.method === 'GET') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.query.restaurantId || 'rich-aroma';
             try {
                 const settings = await ricoLoyalty.getLoyaltySettings(supabase, resId);
@@ -2121,7 +2210,7 @@ module.exports = async function handler(req, res) {
         }
 
         if (action === 'especial_save' && req.method === 'POST') {
-            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            if (!(await requireCap('finanzas'))) return;
             const resId = req.body?.restaurantId || 'rich-aroma';
             try {
                 const dateKey = req.body?.date
@@ -2178,11 +2267,12 @@ module.exports = async function handler(req, res) {
         // --- EMPLOYEES ---
         if (action === 'employees') {
             if (req.method === 'GET') {
+                if (!(await requireCap('pines'))) return;
                 const { data } = await supabase.from('employees').select('*').order('name');
                 return res.json({ employees: data || [] });
             }
             if (req.method === 'POST') {
-                if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+                if (!(await requireCap('pines'))) return;
                 const emp = {
                     id: req.body.id || 'emp_' + Date.now() + Math.random().toString(36).substr(2, 5),
                     name: req.body.name,
@@ -2196,7 +2286,7 @@ module.exports = async function handler(req, res) {
                 return res.json(data);
             }
             if (req.method === 'DELETE') {
-                if (!isAdmin) return res.status(403).json({ error: "Admin access required" });
+                if (!(await requireCap('pines'))) return;
                 const targetId = id || req.query.id;
                 if (!targetId) return res.status(400).json({ error: "ID required" });
                 const { error } = await supabase.from('employees').delete().eq('id', targetId);

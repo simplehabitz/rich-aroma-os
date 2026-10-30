@@ -75,6 +75,17 @@
             </div>
             </div>
             </div>
+    <!-- ROLES: cajero/barista no entran a /admin — su mundo es /os -->
+    <div id="role-block" class="hidden max-w-xl mx-auto mt-24 text-center p-8 bg-white rounded-3xl shadow-xl" style="display:none">
+        <div class="text-5xl mb-4">🔒</div>
+        <h2 class="text-2xl font-black mb-2">Este panel es del dueño y el encargado</h2>
+        <p class="text-gray-500 font-bold mb-6">Tu rol entra desde el panel principal: ahí están tus herramientas (POS, cocina, producción).</p>
+        <div class="flex gap-3 justify-center">
+            <button onclick="window.location.href='/os'" class="bg-blue-600 text-white px-6 py-3 rounded-full font-black uppercase text-xs tracking-widest">Ir al panel principal</button>
+            <button onclick="logout()" class="bg-gray-200 text-gray-600 px-6 py-3 rounded-full font-black uppercase text-xs tracking-widest">Salir</button>
+        </div>
+    </div>
+
     <div id="admin-content" class="hidden max-w-4xl mx-auto">
         <!-- MODALS (Inside content to ensure they show when dashboard is active) -->
         <div id="add-emp-modal" class="hidden" style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 99999; backdrop-filter: blur(8px);">
@@ -131,6 +142,7 @@
         <h1 class="text-3xl font-bold mb-6 flex items-center gap-2">
             <i class="fas fa-user-shield text-blue-600"></i> Admin Dashboard
             <span class="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full border border-blue-200">v3.0.1-ts1779946800</span>
+            <span id="staff-role-badge" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 font-bold"></span>
             <div class="ml-auto flex gap-2">
                 <button onclick="startGuide()" class="bg-amber-100 text-amber-700 text-xs px-4 py-2 rounded-full font-black uppercase tracking-widest hover:bg-amber-200 transition border border-amber-200">
                     <i class="fas fa-book-open mr-2"></i> System Guide
@@ -1727,13 +1739,16 @@
                 
                 applyRbac();
 
-                if (staffUser && (staffUser.role === 'admin' || staffUser.is_admin)) {
-                    logDebug("Admin detected, switching to overview");
-                    switchTab('overview');
-                } else {
-                    logDebug("Staff detected, switching to menu");
-                    switchTab('menu');
+                const capRole = staffUser ? staffUser._capRole : null;
+                if (capRole !== 'owner' && capRole !== 'encargado') {
+                    logDebug("Role without /admin access: " + capRole);
+                    if (content) { content.classList.add('hidden'); content.style.display = 'none'; }
+                    const block = document.getElementById('role-block');
+                    if (block) { block.classList.remove('hidden'); block.style.display = 'block'; }
+                    return;
                 }
+                logDebug("Dashboard role: " + capRole);
+                switchTab('overview');
                 fetchStoreStatus();
             } catch (err) {
                 logDebug("Dashboard UI Crash: " + err.message);
@@ -1748,18 +1763,57 @@
             document.getElementById('admin-content').classList.remove('hidden');
         };
 
+        // ROLES (roles build, 2026-10-30): la vista sigue al rol, pero la
+        // puerta de verdad es el servidor — esto solo esconde lo que el
+        // rol no usa. El mapeo espejo al de api/lib/roles.js.
+        const ROLE_LABELS_CLIENT = { owner: '👑 Dueño', encargado: '🛠 Encargado', cajero: '💵 Cajero', barista: '☕ Barista / Cocina' };
+        const TAB_ROLES = {
+            overview: ['owner', 'encargado'],
+            employees: ['owner'],
+            menu: ['owner', 'encargado'],
+            inventory: ['owner', 'encargado'],
+            promocodes: ['owner', 'encargado'],
+            clientes: ['owner', 'encargado'],
+            misiones: ['owner', 'encargado'],
+            regalos: ['owner']
+        };
+        function canonicalRoleClient(emp) {
+            if (!emp) return null;
+            if (emp.cap_role) return emp.cap_role;
+            if (emp.id === 'master_admin' || emp.id === 'master') return 'owner';
+            const r = String(emp.role || '').toLowerCase().trim();
+            if (['owner', 'master', 'dueno', 'dueño'].includes(r)) return 'owner';
+            if (['admin', 'manager', 'encargado'].includes(r)) return 'encargado';
+            if (['barista_cashier', 'cashier', 'cajero', 'caja'].includes(r)) return 'cajero';
+            if (['barista', 'cook', 'cocinero', 'cocina', 'barista_cook'].includes(r)) return 'barista';
+            return null;
+        }
+        function isOwnerClient() { return !!staffUser && canonicalRoleClient(staffUser) === 'owner'; }
+
         function applyRbac() {
             if (!staffUser) return;
-            const isAdmin = staffUser.role === 'admin';
-            logDebug("Applying RBAC. IsAdmin: " + isAdmin);
+            const capRole = canonicalRoleClient(staffUser);
+            staffUser._capRole = capRole;
+            logDebug("Applying RBAC. Role: " + capRole);
 
-            const tabOverview = document.getElementById('tab-overview');
-            const tabEmployees = document.getElementById('tab-employees');
-            if (tabOverview) tabOverview.classList.toggle('hidden', !isAdmin);
-            if (tabEmployees) tabEmployees.classList.toggle('hidden', !isAdmin);
+            const badge = document.getElementById('staff-role-badge');
+            if (badge) badge.textContent = (staffUser.name || '') + (capRole ? ' · ' + ROLE_LABELS_CLIENT[capRole] : '');
+
+            Object.keys(TAB_ROLES).forEach(tab => {
+                const el = document.getElementById('tab-' + tab);
+                if (el) el.classList.toggle('hidden', !(capRole && TAB_ROLES[tab].includes(capRole)));
+            });
 
             const rocketBtn = document.querySelector('.fa-rocket')?.parentElement;
-            if (rocketBtn) rocketBtn.classList.toggle('hidden', !isAdmin);
+            if (rocketBtn) rocketBtn.classList.toggle('hidden', capRole !== 'owner');
+
+            // Precios: para el encargado el campo se ve pero no se toca —
+            // y si el valor cambiara, el servidor lo rechaza igual.
+            const priceLocked = capRole !== 'owner';
+            ['edit-item-price', 'new-menu-price', 'edit-option-price', 'new-option-price'].forEach(idf => {
+                const inp = document.getElementById(idf);
+                if (inp) { inp.disabled = priceLocked; inp.title = priceLocked ? 'Los precios los cambia solo el dueño' : ''; }
+            });
         }
 
         // Initialize on load
@@ -1797,8 +1851,13 @@
                     const targetResId = params.get('restaurantId');
                     
                     if (targetTab) {
-                        logDebug(`Deep Link: Switching to ${targetTab}`);
-                        switchTab(targetTab);
+                        const dlRole = staffUser ? staffUser._capRole : null;
+                        if (TAB_ROLES[targetTab] && dlRole && TAB_ROLES[targetTab].includes(dlRole)) {
+                            logDebug(`Deep Link: Switching to ${targetTab}`);
+                            switchTab(targetTab);
+                        } else {
+                            logDebug(`Deep Link tab not allowed for role: ${targetTab}`);
+                        }
                     }
                     if (targetResId && targetTab === 'menu') {
                         const selector = document.getElementById('menu-restaurant-selector');
@@ -4339,7 +4398,8 @@
                     } else {
                         marginHtml = '<span class="text-[10px] text-gray-400">cost L ' + fc.toFixed(2) + (item.cost_partial ? ' \u26a0 floor' : '') + '</span>';
                     }
-                    const sugHtml = (item.suggested === null || item.suggested === undefined) ? '' : '<br><span class="text-[10px] text-gray-500">sugerido L ' + parseFloat(item.suggested).toFixed(0) + '</span>';
+                    if (!isOwnerClient()) marginHtml = '';
+                    const sugHtml = (!isOwnerClient() || item.suggested === null || item.suggested === undefined) ? '' : '<br><span class="text-[10px] text-gray-500">sugerido L ' + parseFloat(item.suggested).toFixed(0) + '</span>';
 
                     row.innerHTML = `
                         <td class="p-4">

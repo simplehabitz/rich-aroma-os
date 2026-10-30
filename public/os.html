@@ -144,8 +144,19 @@
             const grid = document.getElementById('menu-grid');
             const title = document.getElementById('menu-title');
 
-            const role = (emp.role || '').toLowerCase();
-            const isAdmin = role === 'admin' || role === 'manager';
+            const role = (emp.role || '').toLowerCase().trim();
+            // ROLES (roles build, 2026-10-30): canonical roles, mirror of
+            // api/lib/roles.js. The launcher only decides what to SHOW —
+            // the API enforces. Owner = the master/owner credential;
+            // encargado = admin/manager; barista_cashier runs POS + KDS.
+            const isOwner = emp.id === 'master_admin' || emp.id === 'master' || role === 'owner';
+            const isEncargado = !isOwner && (role === 'admin' || role === 'manager' || role === 'encargado');
+            const isAdmin = isOwner || isEncargado;
+            const roleLabel = isOwner ? '👑 Dueño' : isEncargado ? '🛠 Encargado'
+                : (role === 'barista_cashier' || role === 'cashier' || role === 'cajero' || role === 'caja') ? '💵 Cajero'
+                : '☕ Barista / Cocina';
+            const canPOS = isAdmin || role === 'barista_cashier' || role === 'cashier' || role === 'cajero' || role === 'caja';
+            const canKDS = isAdmin || canPOS && role === 'barista_cashier' || role === 'barista' || role === 'cook' || role === 'cocinero' || role === 'cocina' || role === 'barista_cook';
             const isMobile = window.innerWidth < 1024;
             const isPartner = !!(emp.restaurant_id && emp.restaurant_id !== 'rich-aroma');
             const rid = emp.restaurant_id || 'rich-aroma';
@@ -168,7 +179,7 @@
 
             loadSec.classList.add('hidden');
             masterMenu.classList.remove('hidden');
-            title.innerText = isAdmin ? "Panel de Control" : "Menú de Personal";
+            title.innerText = (emp.name ? emp.name + ' · ' : '') + roleLabel;
 
             let html = '';
 
@@ -180,25 +191,27 @@
                 } else {
                     html += tile('/owner', 'fa-chart-line', 'gold', 'Owner Dashboard', 'Ventas y Métricas');
                     html += tile('/admin', 'fa-cog', 'gold', 'Administración', 'Empleados, Menú, Inventario y Marketing');
-                    html += tile('/partner-os', 'fa-gear', 'gold', 'Configuración del Negocio', 'Banco, Horarios y Métodos de Pago');
-                    html += tile('/quimieats-admin', 'fa-globe', 'gold', 'QuimiEats Plataforma', 'Socios, Comisiones y Marketplace');
+                    if (isOwner) {
+                        html += tile('/partner-os', 'fa-gear', 'gold', 'Configuración del Negocio', 'Banco, Horarios y Métodos de Pago');
+                        html += tile('/quimieats-admin', 'fa-globe', 'gold', 'QuimiEats Plataforma', 'Socios, Comisiones y Marketplace');
+                    }
                 }
             }
 
             // ===== OPERACIÓN =====
             html += section('Operación');
-            if (isAdmin || role.includes('caja') || role.includes('cashier') || !isMobile) {
+            if (canPOS) {
                 const posPath = isPartner ? `/pos-v2.html?restaurantId=${rid}` : '/pos-v2.html';
                 html += tile(posPath, 'fa-cash-register', 'blue-400', 'Punto de Venta (POS)', 'Caja y Registro');
             }
-            if (isAdmin || role.includes('barista') || role.includes('cook') || role.includes('cocina')) {
+            if (canKDS) {
                 const hubPath = isPartner ? `/kitchen.html?restaurantId=${rid}` : '/kitchen.html';
                 html += tile(hubPath, 'fa-fire-alt', 'orange-400', 'Cocina (KDS)', 'Pedidos en Preparación');
             }
             if (!isPartner && (isAdmin || role.includes('driver') || role.includes('repartidor'))) {
                 html += tile('/driver-portal', 'fa-motorcycle', 'green-400', 'Driver Portal', 'Entregas a Domicilio');
             }
-            if (!isPartner && isAdmin) {
+            if (!isPartner && isOwner) {
                 html += tile('/cali/admin', 'fa-box', 'purple-400', 'Cali Admin', 'Botellas: Pedidos, Producción y Rutas');
                 html += tile('/cali/pos', 'fa-mobile', 'purple-400', 'Cali POS', 'Venta Móvil de Botellas');
                 html += tile('/timeclock.html', 'fa-clock', 'teal-400', 'Reloj de Personal', 'Entradas y Salidas');

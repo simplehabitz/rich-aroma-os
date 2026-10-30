@@ -6,6 +6,7 @@ const { awardPoints, syncMembershipState } = require('./lib/loyalty');
 const ricoLoyalty = require('./lib/rico-loyalty');
 const inventoryEngine = require('./lib/inventory-engine');
 const clockUtils = require('./lib/clock-utils');
+const roles = require('./lib/roles');
 const { describeMenuItemPhoto } = require('./lib/ai-service');
 
 // ---------------------------------------------------------------------------
@@ -122,6 +123,33 @@ module.exports = async (req, res) => {
         const actor = await staffActor();
         if (!actor) { res.status(401).json({ error: 'Se requiere credencial de personal' }); return null; }
         return actor;
+    }
+
+    // --- ROLES (roles build, 2026-10-30): capability gates for STAFF
+    // actions. staffActor() above keeps its legacy shape (it calls the
+    // master/settings PINs 'admin'); staffActorFull() resolves the
+    // CANONICAL role for gating: owner credentials (master PIN, the
+    // restaurant's settings PIN) are the Owner, an employee PIN takes
+    // its caps from employees.role via api/lib/roles.js. Bot-secret and
+    // customer flows never pass through here — roles govern staff only.
+    async function staffActorFull() {
+        const cred = bearerCred();
+        if (!cred) return null;
+        if (isMasterPin(cred)) return { id: 'master', name: 'Dueño', role: 'owner', caps: roles.ALL_CAPS.slice() };
+        const { data: emp } = await supabase.from('employees').select('id, name, role').eq('pin', cred).eq('active', true).maybeSingle();
+        if (emp) { const r = roles.roleFor(emp.role); return { id: emp.id, name: emp.name, role: r ? r.role : null, caps: r ? r.caps : [] }; }
+        const targets = [finalResId, req.body?.restaurantId, req.body?.restaurant_id].filter(Boolean);
+        for (const t of [...new Set(targets)]) {
+            const { data: rest } = await supabase.from('restaurants').select('settings').eq('id', t).maybeSingle();
+            if (rest && rest.settings && rest.settings.pin && String(rest.settings.pin) === cred) return { id: 'master', name: 'Dueño', role: 'owner', caps: roles.ALL_CAPS.slice() };
+        }
+        return null;
+    }
+    async function requireRoleCap(cap) {
+        const a = await staffActorFull();
+        if (!a) { res.status(401).json({ error: 'Se requiere credencial de personal' }); return null; }
+        if (!roles.hasCap(a, cap)) { res.status(403).json({ error: roles.denyMessage(cap), code: 'ROLE_DENIED', cap }); return null; }
+        return a;
     }
     async function customerPinMatches(customerId, pin) {
         if (!customerId || !pin) return false;
@@ -1111,7 +1139,7 @@ module.exports = async (req, res) => {
         // (SEC-FIX 1): the KDS sends its staff PIN as Bearer (staffHeaders).
         if (action === 'toggle_item_ready') {
             if (req.method === 'PATCH') {
-                if (!(await requireStaff())) return;
+                if (!(await requireRoleCap('produccion'))) return;
                 const { orderId, itemIdx, status } = req.body || {};
                 if (!orderId) return res.status(400).json({ error: "Order ID required" });
                 if (!Number.isInteger(itemIdx)) return res.status(400).json({ error: "Item index required" });
@@ -1144,7 +1172,7 @@ module.exports = async (req, res) => {
         // legacy modifier_ingredients table (seed v3 not yet applied) each
         // degrade to an empty layer instead of failing the whole read.
         if (action === 'kds_recipe_data') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('produccion'))) return;
             const ids = [...new Set(String(req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean))].slice(0, 50);
             if (!ids.length) return res.status(400).json({ error: "ids requeridos" });
             try {
@@ -1827,7 +1855,7 @@ module.exports = async (req, res) => {
         // arrive in managerPin (master PIN, or an active encargado/admin
         // employee PIN); the cashier's own login is not enough.
         if (action === 'pos_manual_grant' && req.method === 'POST') {
-            const actor = await requireStaff();
+            const actor = await requireRoleCap('pos');
             if (!actor) return;
             const cid = req.body?.customerId || req.body?.customer_id;
             const amount = round2(req.body?.amount);
@@ -1840,7 +1868,7 @@ module.exports = async (req, res) => {
                 let managerOk = !!mp && isMasterPin(mp);
                 if (!managerOk && mp) {
                     const { data: emp } = await supabase.from('employees').select('id, role').eq('pin', mp).eq('active', true).maybeSingle();
-                    managerOk = !!emp && ['admin', 'manager', 'encargado'].includes(String(emp.role || '').toLowerCase().trim());
+                    managerOk = !!emp && roles.isManagerRole(emp.role);
                 }
                 if (!managerOk) return res.status(403).json({ error: `Los regalos sobre L.${settings.manual_grant_cap} necesitan el PIN de un encargado`, code: 'MANAGER_PIN_REQUIRED', cap: settings.manual_grant_cap });
             }
@@ -1870,7 +1898,7 @@ module.exports = async (req, res) => {
         if (action === 'loyalty_sweep' && (req.method === 'POST' || req.method === 'GET')) {
             const cronSecret = (process.env.CRON_SECRET || '').trim();
             const cronOk = !!cronSecret && bearerCred() === cronSecret;
-            if (!botSecretOk() && !cronOk && !(await staffActor())) return res.status(401).json({ error: 'No autorizado' });
+            if (!botSecretOk() && !cronOk && !(await requireRoleCap('finanzas'))) return;
             const summary = await ricoLoyalty.runSweep(supabase);
             // Bonus attempt: the Especial VIP push, in case its hour has
             // already passed today (its own cron fires at 09:30 TGU).
@@ -1887,7 +1915,7 @@ module.exports = async (req, res) => {
         if (action === 'especial_push' && (req.method === 'POST' || req.method === 'GET')) {
             const cronSecret = (process.env.CRON_SECRET || '').trim();
             const cronOk = !!cronSecret && bearerCred() === cronSecret;
-            if (!botSecretOk() && !cronOk && !(await staffActor())) return res.status(401).json({ error: 'No autorizado' });
+            if (!botSecretOk() && !cronOk && !(await requireRoleCap('finanzas'))) return;
             const summary = await ricoLoyalty.runEspecialPush(supabase, {});
             return res.json({ ok: true, summary });
         }
@@ -2965,7 +2993,7 @@ module.exports = async (req, res) => {
         // customer_list, NEVER by the bot secret: WHATSAPP_SIGNUP_SECRET
         // is server-to-server only and must not unlock admin reads.
         if (action === 'admin_signups') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('clientes'))) return;
             const { data: custs, error } = await supabase.from('customers')
                 .select('*')
                 .order('created_at', { ascending: false })
@@ -3041,7 +3069,7 @@ module.exports = async (req, res) => {
         // can't re-confirm or resurrect a cancelled preorder.
         // Re-confirming an already-paid preorder is a no-op success.
         if (action === 'admin_preventa_confirm' && req.method === 'POST') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('preventa'))) return;
             const preorderId = req.body?.preorder_id || req.body?.preorderId || id || req.query.id;
             if (!preorderId) return res.status(400).json({ error: 'preorder_id requerido' });
             const { data: pre, error: fErr } = await supabase.from('whatsapp_preorders')
@@ -3074,7 +3102,7 @@ module.exports = async (req, res) => {
         // month-2 build; this is the codes registry the capture
         // stands on.
         if (action === 'admin_creator_codes' && req.method === 'POST') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('finanzas'))) return;
             const b = req.body || {};
             const op = String(b.op || 'list');
             if (op === 'list') {
@@ -3131,7 +3159,7 @@ module.exports = async (req, res) => {
         // mint — exactly the welcome-gift pattern; rico_balance is
         // never touched here. Deciding is idempotent.
         if (action === 'admin_missions_list') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('misiones'))) return;
             const { data: ms, error } = await supabase.from('missions')
                 .select('*').order('created_at', { ascending: false });
             if (error) throw error;
@@ -3203,7 +3231,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'admin_mission_create' && req.method === 'POST') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('misiones'))) return;
             const b = req.body || {};
             const slug = String(b.slug || b.id || '').trim().toLowerCase()
                 .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -3239,7 +3267,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'admin_mission_toggle' && req.method === 'POST') {
-            if (!(await requireStaff())) return;
+            if (!(await requireRoleCap('misiones'))) return;
             const mid = req.body?.id || req.body?.mission_id || id || req.query.id;
             if (!mid) return res.status(400).json({ error: 'id requerido' });
             const { data: m } = await supabase.from('missions').select('*').eq('id', mid).maybeSingle();
@@ -3252,7 +3280,7 @@ module.exports = async (req, res) => {
         }
 
         if (action === 'admin_mission_decide' && req.method === 'POST') {
-            const actor = await requireStaff();
+            const actor = await requireRoleCap('misiones');
             if (!actor) return;
             const subId = req.body?.submission_id || req.body?.submissionId;
             const decision = req.body?.decision;
