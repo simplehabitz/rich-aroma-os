@@ -483,6 +483,107 @@ module.exports = async function handler(req, res) {
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
+        // --- MENU SELF-SERVE (2026-10-30): line flags + Extras sync ------
+        // flag vocabulary on menu_item_ingredients. In /admin the owner
+        // reads "Fijo / Se puede quitar / Se puede agregar"; the stored
+        // values stay short: fijo | removible | agregable.
+        const FLAG_VALUES = ['fijo', 'removible', 'agregable'];
+        const normFlag = (v) => FLAG_VALUES.includes(String(v || '').toLowerCase()) ? String(v).toLowerCase() : 'fijo';
+
+        // uuid5 identical to the seed generators (gen_espresso_seed.py's
+        // namespace), so an id minted here and an id minted by a seed agree.
+        const FLAG_UUID_NS = '7a4c1d2e-0000-5000-8000-0000000000e5';
+        const uuid5 = (name) => {
+            const crypto = require('crypto');
+            const nsBytes = Buffer.from(FLAG_UUID_NS.replace(/-/g, ''), 'hex');
+            const hash = crypto.createHash('sha1').update(nsBytes).update(String(name), 'utf8').digest();
+            const b = Buffer.from(hash.subarray(0, 16));
+            b[6] = (b[6] & 0x0f) | 0x50;
+            b[8] = (b[8] & 0x3f) | 0x80;
+            const h = b.toString('hex');
+            return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+        };
+        const flagExtraOptionId = (menuItemId, invSlug) => uuid5('option:flag-extra:' + menuItemId + ':' + invSlug);
+        const flagExtraDeltaId = (menuItemId, invSlug, qty) =>
+            'mi-flag-extra-' + menuItemId + '-' + invSlug + ((parseFloat(qty) || 0) < 0 ? '-neg' : '-pos');
+
+        // An "agregable" line is also sold as an option in the item's
+        // Extras group; this keeps that option and its delta row (seed
+        // modifier_ingredients shape) in sync with the line. The engine
+        // SUMS an option's global (item_id NULL) and per-item delta rows,
+        // so: a generated option (no global rows) carries the full line
+        // quantity on its item row; a SHARED seeded option (same kitchen
+        // name, e.g. Huevo) keeps its price untouched — it prices every
+        // item at once — and the item row carries only the difference
+        // between the line quantity and the global rows' sum.
+        async function syncFlagExtra({ restaurantId, menuItemId, invId, flag, extraPrice, quantity, unit }) {
+            try {
+                const { data: inv } = await supabase.from('inventory').select('id, name, slug, unit').eq('id', invId).maybeSingle();
+                if (!inv) return null;
+                const invSlug = inv.slug || inv.id;
+                const invUnit = unit || inv.unit || '';
+                const genId = flagExtraOptionId(menuItemId, invSlug);
+                if (flag !== 'agregable') {
+                    // Un-flagged (or line deleted): remove what the flag
+                    // created. A generated option dies whole — its delta
+                    // rows cascade. A shared option only loses the two
+                    // possible flag delta rows for this item.
+                    const { data: gen } = await supabase.from('modifier_options').select('id').eq('id', genId).maybeSingle();
+                    if (gen) await supabase.from('modifier_options').delete().eq('id', genId);
+                    await supabase.from('modifier_ingredients').delete().eq('id', flagExtraDeltaId(menuItemId, invSlug, 1));
+                    await supabase.from('modifier_ingredients').delete().eq('id', flagExtraDeltaId(menuItemId, invSlug, -1));
+                    return { action: 'removed' };
+                }
+                const { data: groups } = await supabase.from('modifier_groups').select('id, name').eq('restaurant_id', restaurantId);
+                let extras = (groups || []).find(g => String(g.name || '').trim().toLowerCase() === 'extras');
+                if (!extras) {
+                    const { data: g, error: gErr } = await supabase.from('modifier_groups')
+                        .insert({ name: 'Extras', required: false, max_selections: 3, restaurant_id: restaurantId }).select().single();
+                    if (gErr || !g) return null;
+                    extras = g;
+                }
+                const { data: link } = await supabase.from('item_modifier_groups').select('item_id')
+                    .eq('item_id', menuItemId).eq('group_id', extras.id).maybeSingle();
+                if (!link) {
+                    await supabase.from('item_modifier_groups').insert({ item_id: menuItemId, group_id: extras.id, display_order: 90 });
+                }
+                const lineQty = Math.abs(parseFloat(quantity) || 0);
+                const { data: sameName } = await supabase.from('modifier_options').select('id, price_adjustment')
+                    .eq('group_id', extras.id).eq('name', inv.name).maybeSingle();
+                if (sameName && sameName.id !== genId) {
+                    // Shared seeded option: hang a compensating item row on
+                    // it so global + item sum to exactly the line quantity.
+                    const { data: globals } = await supabase.from('modifier_ingredients')
+                        .select('quantity').eq('modifier_option_id', sameName.id).is('item_id', null).eq('inventory_item_id', invSlug).eq('unit', invUnit);
+                    const globalSum = (globals || []).reduce((s, r) => s + (parseFloat(r.quantity) || 0), 0);
+                    const diff = Math.round((lineQty - globalSum) * 10000) / 10000;
+                    await supabase.from('modifier_ingredients').delete().eq('id', flagExtraDeltaId(menuItemId, invSlug, 1));
+                    await supabase.from('modifier_ingredients').delete().eq('id', flagExtraDeltaId(menuItemId, invSlug, -1));
+                    if (diff !== 0) {
+                        await supabase.from('modifier_ingredients').insert({
+                            id: flagExtraDeltaId(menuItemId, invSlug, diff), modifier_option_id: sameName.id,
+                            item_id: menuItemId, inventory_item_id: invSlug, quantity: diff, unit: invUnit
+                        });
+                    }
+                    return { action: 'upserted', option_id: sameName.id, name: inv.name, price_adjustment: parseFloat(sameName.price_adjustment) || 0, shared: true };
+                }
+                const price = (extraPrice === null || extraPrice === undefined || isNaN(extraPrice)) ? 0 : extraPrice;
+                await supabase.from('modifier_options').upsert({
+                    id: genId, group_id: extras.id, name: inv.name,
+                    price_adjustment: price, is_default: false, allow_qty: false, default_qty: null
+                }, { onConflict: 'id' });
+                await supabase.from('modifier_ingredients').delete().eq('id', flagExtraDeltaId(menuItemId, invSlug, -1));
+                await supabase.from('modifier_ingredients').upsert({
+                    id: flagExtraDeltaId(menuItemId, invSlug, 1), modifier_option_id: genId,
+                    item_id: menuItemId, inventory_item_id: invSlug, quantity: lineQty, unit: invUnit
+                }, { onConflict: 'id' });
+                return { action: 'upserted', option_id: genId, name: inv.name, price_adjustment: price, shared: false };
+            } catch (e) {
+                console.warn('[flags] syncFlagExtra failed:', e.message);
+                return { action: 'error', error: e.message };
+            }
+        }
+
         if (action === 'inventory' && req.method === 'GET') {
             if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
             const { data, error } = await supabase.from('inventory').select('*').order('name');
@@ -558,6 +659,8 @@ module.exports = async function handler(req, res) {
                     qty: qty,
                     unit: r.unit || inv.unit || '',
                     step_no: (r.step_no === undefined || r.step_no === null) ? null : parseInt(r.step_no),
+                    flag: normFlag(r.flag),
+                    extra_price: (r.extra_price === undefined || r.extra_price === null) ? null : parseFloat(r.extra_price),
                     inventory: { id: invId, name: inv.name || invId, slug: inv.slug || invId, unit: inv.unit || r.unit || '' }
                 };
             });
@@ -583,6 +686,15 @@ module.exports = async function handler(req, res) {
                 const sn = parseInt(b.step_no);
                 if (Number.isInteger(sn) && sn >= 1) stepNo = sn;
             }
+            // Self-serve flags (2026-10-30): only written when the caller
+            // sends them, so older saves keep behaving exactly as before.
+            const flagTouched = b.flag !== undefined;
+            const flag = normFlag(b.flag);
+            let extraPrice = null;
+            if (b.extra_price !== undefined && b.extra_price !== null && b.extra_price !== '') {
+                const ep = parseFloat(b.extra_price);
+                if (!isNaN(ep)) extraPrice = ep;
+            }
             const row = {
                 menu_item_id: menuItemId,
                 inventory_item_id: invId,
@@ -590,26 +702,258 @@ module.exports = async function handler(req, res) {
                 unit
             };
             if (stepNo !== null) row.step_no = stepNo;
+            if (flagTouched) {
+                row.flag = flag;
+                if (b.extra_price !== undefined) row.extra_price = extraPrice;
+            }
+            let attempt = { ...row };
             let { data, error } = await supabase.from('menu_item_ingredients')
-                .upsert(row, { onConflict: 'menu_item_id,inventory_item_id' }).select().single();
-            if (error && stepNo !== null) {
+                .upsert(attempt, { onConflict: 'menu_item_id,inventory_item_id' }).select().single();
+            if (error && (attempt.flag !== undefined || attempt.extra_price !== undefined)) {
+                // Pre-migration DB (no flag/extra_price columns yet): keep
+                // the line, drop the new fields rather than failing the save.
+                const { flag: _f, extra_price: _p, ...noFlag } = attempt;
+                attempt = noFlag;
+                ({ data, error } = await supabase.from('menu_item_ingredients')
+                    .upsert(attempt, { onConflict: 'menu_item_id,inventory_item_id' }).select().single());
+            }
+            if (error && attempt.step_no !== undefined) {
                 // Pre-migration DB (no step_no column yet): keep the link,
                 // drop the step tie rather than failing the save.
-                const { step_no: _drop, ...rowNoStep } = row;
+                const { step_no: _drop, ...rowNoStep } = attempt;
+                attempt = rowNoStep;
                 ({ data, error } = await supabase.from('menu_item_ingredients')
-                    .upsert(rowNoStep, { onConflict: 'menu_item_id,inventory_item_id' }).select().single());
+                    .upsert(attempt, { onConflict: 'menu_item_id,inventory_item_id' }).select().single());
             }
             if (error) return res.status(500).json({ error: error.message });
-            return res.json({ success: true, data });
+            let extra = null;
+            if (flagTouched) {
+                extra = await syncFlagExtra({ restaurantId: currentResId, menuItemId, invId, flag, extraPrice, quantity: row.quantity, unit });
+            }
+            return res.json({ success: true, data, extra });
         }
 
         if (action === 'menu_item_ingredient_delete' && req.method === 'DELETE') {
             if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
             const rowId = id || req.query.id;
             if (!rowId) return res.status(400).json({ error: "Missing ingredient link ID" });
+            // Read the line first: if it was "agregable", its Extras option
+            // (or its row on a shared option) must go with it.
+            const { data: lineRow } = await supabase.from('menu_item_ingredients')
+                .select('menu_item_id, inventory_item_id, unit').eq('id', rowId).maybeSingle();
             const { error } = await supabase.from('menu_item_ingredients').delete().eq('id', rowId);
             if (error) return res.status(500).json({ error: error.message });
+            if (lineRow && lineRow.menu_item_id && lineRow.inventory_item_id) {
+                await syncFlagExtra({
+                    restaurantId: currentResId, menuItemId: lineRow.menu_item_id,
+                    invId: lineRow.inventory_item_id, flag: 'fijo', extraPrice: null,
+                    quantity: 0, unit: lineRow.unit || ''
+                });
+            }
             return res.json({ success: true });
+        }
+
+        // --- OPTION DELTAS ("Qué cambia en la receta") -------------------
+        // The editor behind SELF-SERVE-GAPS wall #2: an option's rows in
+        // modifier_ingredients, written from /admin instead of SQL seeds.
+        // Row shape is the seed's: id 'mi-<opción>-<producto|all>-<insumo>-
+        // pos|neg', inventory_item_id = the catalog SLUG, signed quantity,
+        // the insumo's own unit. The KDS engine SUMS global (item_id NULL)
+        // and per-item rows for an option — the editor shows and costs
+        // that same sum, so what the owner reads is what the kitchen gets.
+        if (action === 'option_deltas' && req.method === 'GET') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const optionId = id || req.query.option_id || req.query.id;
+            if (!optionId) return res.status(400).json({ error: "Missing option ID" });
+            const { data: opt } = await supabase.from('modifier_options').select('id, group_id, name, price_adjustment').eq('id', optionId).maybeSingle();
+            if (!opt) return res.status(404).json({ error: "Option not found" });
+            const [{ data: grp }, { data: links }, { data: deltas }, { data: invAll }] = await Promise.all([
+                supabase.from('modifier_groups').select('id, name').eq('id', opt.group_id).maybeSingle(),
+                supabase.from('item_modifier_groups').select('item_id').eq('group_id', opt.group_id),
+                supabase.from('modifier_ingredients').select('id, item_id, inventory_item_id, quantity, unit').eq('modifier_option_id', optionId),
+                supabase.from('inventory').select('id, name, slug, unit')
+            ]);
+            const itemIds = [...new Set((links || []).map(l => l.item_id).filter(Boolean))];
+            let items = [];
+            if (itemIds.length) {
+                const { data: mi } = await supabase.from('menu_items').select('id, name, price').in('id', itemIds).order('name');
+                items = mi || [];
+            }
+            const invByKey = {};
+            (invAll || []).forEach(v => { if (v.id) invByKey[v.id] = v; if (v.slug) invByKey[v.slug] = v; });
+            const outDeltas = (deltas || []).map(d => {
+                const inv = invByKey[d.inventory_item_id] || {};
+                return {
+                    id: d.id,
+                    item_id: d.item_id || null,
+                    inventory_item_id: d.inventory_item_id,
+                    inv_name: inv.name || d.inventory_item_id,
+                    inv_id: inv.id || null,
+                    quantity: parseFloat(d.quantity) || 0,
+                    unit: d.unit || inv.unit || ''
+                };
+            });
+            return res.json({
+                success: true,
+                option: { id: opt.id, name: opt.name, group_id: opt.group_id, group_name: grp?.name || '', price_adjustment: parseFloat(opt.price_adjustment) || 0 },
+                items,
+                deltas: outDeltas
+            });
+        }
+
+        if (action === 'option_deltas_save' && req.method === 'POST') {
+            if (!isAdmin) return res.status(403).json({ error: "Unauthorized" });
+            const b = req.body || {};
+            const optionId = b.option_id;
+            const scopeItem = (b.item_id === undefined || b.item_id === null || b.item_id === '') ? null : String(b.item_id);
+            const acceptHigh = b.accept_high_cogs === true;
+            if (!optionId) return res.status(400).json({ error: "Missing option_id" });
+            const { data: opt } = await supabase.from('modifier_options').select('id, group_id, name').eq('id', optionId).maybeSingle();
+            if (!opt) return res.status(404).json({ error: "Option not found" });
+
+            // Catalog: resolve each requested insumo by id or slug; rows
+            // are always STORED by slug, in the insumo's own unit.
+            const { data: invAll } = await supabase.from('inventory').select('id, name, slug, unit, cost_per_unit');
+            const invByKey = {};
+            (invAll || []).forEach(v => { if (v.id) invByKey[v.id] = v; if (v.slug) invByKey[v.slug] = v; });
+            const want = [];
+            const seenInv = new Set();
+            for (const r of (Array.isArray(b.rows) ? b.rows : [])) {
+                const inv = invByKey[r.inventory_item_id] || invByKey[r.inv_slug];
+                const qty = parseFloat(r.quantity);
+                if (!inv || isNaN(qty) || qty === 0) continue;
+                const slug = inv.slug || inv.id;
+                if (seenInv.has(slug)) continue;
+                seenInv.add(slug);
+                want.push({ inv, slug, quantity: qty, unit: inv.unit || r.unit || '' });
+            }
+
+            // Carrying items + their base recipes (for the guardrails).
+            const { data: links } = await supabase.from('item_modifier_groups').select('item_id').eq('group_id', opt.group_id);
+            const itemIds = [...new Set((links || []).map(l => l.item_id).filter(Boolean))];
+            const { data: menuRows } = itemIds.length
+                ? await supabase.from('menu_items').select('id, name, price').in('id', itemIds)
+                : { data: [] };
+            const itemById = {};
+            (menuRows || []).forEach(m => { itemById[m.id] = m; });
+            const affectedIds = scopeItem ? [scopeItem] : itemIds;
+            let baseByItem = {};
+            if (affectedIds.length) {
+                const { data: lines } = await supabase.from('menu_item_ingredients')
+                    .select('menu_item_id, inventory_item_id, quantity, unit').in('menu_item_id', affectedIds);
+                (lines || []).forEach(l => { (baseByItem[l.menu_item_id] = baseByItem[l.menu_item_id] || []).push(l); });
+            }
+            // Existing rows of THIS option outside the edited scope stay;
+            // the effective per-item effect is global + item (engine sum).
+            const { data: existRows } = await supabase.from('modifier_ingredients')
+                .select('id, item_id, inventory_item_id, quantity, unit').eq('modifier_option_id', optionId);
+            const otherScope = (existRows || []).filter(d => (d.item_id || null) !== scopeItem);
+            const effectiveFor = (itemId) => {
+                const eff = {};
+                otherScope.filter(d => d.item_id === null || d.item_id === itemId)
+                    .forEach(d => { eff[d.inventory_item_id] = (eff[d.inventory_item_id] || 0) + (parseFloat(d.quantity) || 0); });
+                if (scopeItem === null || scopeItem === itemId) {
+                    want.forEach(w => { eff[w.slug] = (eff[w.slug] || 0) + w.quantity; });
+                }
+                return eff;
+            };
+
+            // Guardrail 1 (brief): a "quita" may not exceed what the
+            // recipe carries. Blocked with the plain reason, never warned.
+            for (const itemId of affectedIds) {
+                const eff = effectiveFor(itemId);
+                const base = baseByItem[itemId] || [];
+                for (const slug of Object.keys(eff)) {
+                    if (eff[slug] >= 0) continue;
+                    const inv = invByKey[slug];
+                    const line = inv ? base.find(l => l.inventory_item_id === inv.id) : null;
+                    if (!line) continue; // nothing to remove from — no-op there
+                    if (Math.abs(eff[slug]) > (parseFloat(line.quantity) || 0)) {
+                        return res.json({
+                            success: false, blocked: true,
+                            reason: `La receta de ${itemById[itemId]?.name || itemId} solo lleva ${line.quantity} ${line.unit || ''} de ${inv.name}. No se puede quitar ${Math.abs(eff[slug])}. Quitá menos, o hacé el cambio solo para ese producto.`
+                        });
+                    }
+                }
+            }
+            if (scopeItem === null) {
+                for (const w of want) {
+                    if (w.quantity >= 0) continue;
+                    const anyLine = affectedIds.some(itemId => (baseByItem[itemId] || []).some(l => l.inventory_item_id === w.inv.id));
+                    if (affectedIds.length && !anyLine) {
+                        return res.json({
+                            success: false, blocked: true,
+                            reason: `Ningún producto con la opción ${opt.name} lleva ${w.inv.name} en su receta. No hay nada que quitar.`
+                        });
+                    }
+                }
+            }
+
+            // Guardrail 2 (brief): the new costo/COGS per affected item,
+            // margin-chip math (one level: lines x cost_per_unit, deltas
+            // summed the way the kitchen sums them). Past 35% needs the
+            // owner's explicit "lo acepto a sabiendas" — never auto-saved.
+            const costOf = (inv) => (inv && inv.cost_per_unit !== null && inv.cost_per_unit !== undefined) ? parseFloat(inv.cost_per_unit) : null;
+            const costRows = affectedIds.map(itemId => {
+                let sum = 0, partial = false;
+                (baseByItem[itemId] || []).forEach(l => {
+                    const c = costOf(invByKey[l.inventory_item_id]);
+                    if (c === null) partial = true; else sum += (parseFloat(l.quantity) || 0) * c;
+                });
+                const eff = effectiveFor(itemId);
+                Object.keys(eff).forEach(slug => {
+                    const c = costOf(invByKey[slug]);
+                    if (c === null) partial = true; else sum += eff[slug] * c;
+                });
+                const costo = Math.round(sum * 100) / 100;
+                const price = parseFloat(itemById[itemId]?.price) || 0;
+                return {
+                    item_id: itemId,
+                    name: itemById[itemId]?.name || itemId,
+                    costo,
+                    cogs_pct: price > 0 ? Math.round((costo / price) * 1000) / 10 : null,
+                    sugerido: Math.round((sum / 0.30) / 5) * 5,
+                    partial
+                };
+            });
+            const over = costRows.filter(c => c.cogs_pct !== null && c.cogs_pct > 35);
+            if (over.length && !acceptHigh) {
+                return res.json({ success: false, needs_accept: true, costs: costRows, over });
+            }
+
+            // Write: replace this scope's rows, seed-format ids. If a
+            // computed id is already taken by ANOTHER option's row (two
+            // options sharing a name), suffix the option's short id so
+            // the write stays deterministic instead of clobbering it.
+            {
+                let del = supabase.from('modifier_ingredients').delete().eq('modifier_option_id', optionId);
+                del = scopeItem === null ? del.is('item_id', null) : del.eq('item_id', scopeItem);
+                const { error: delErr } = await del;
+                if (delErr) return res.status(500).json({ error: delErr.message });
+            }
+            const optSlug = slugifyInv(opt.name) || 'opcion';
+            const scopeTag = scopeItem || 'all';
+            for (const w of want) {
+                let rowId = `mi-${optSlug}-${scopeTag}-${w.slug}-${w.quantity < 0 ? 'neg' : 'pos'}`;
+                const { data: clash } = await supabase.from('modifier_ingredients').select('modifier_option_id').eq('id', rowId).maybeSingle();
+                if (clash && clash.modifier_option_id !== optionId) rowId = rowId + '-' + String(optionId).slice(0, 8);
+                const { error: insErr } = await supabase.from('modifier_ingredients').insert({
+                    id: rowId, modifier_option_id: optionId, item_id: scopeItem,
+                    inventory_item_id: w.slug, quantity: w.quantity, unit: w.unit
+                });
+                if (insErr) return res.status(500).json({ error: insErr.message });
+            }
+
+            const quita = want.filter(w => w.quantity < 0).map(w => `${w.inv.name} ${Math.abs(w.quantity)} ${w.unit}`);
+            const pone = want.filter(w => w.quantity > 0).map(w => `${w.inv.name} ${w.quantity} ${w.unit}`);
+            const ambito = scopeItem ? (itemById[scopeItem]?.name || scopeItem) : 'todos los productos con esta opción';
+            const parts = [];
+            if (quita.length) parts.push('quita ' + quita.join(', '));
+            if (pone.length) parts.push('pone ' + pone.join(', '));
+            const summary = parts.length
+                ? `${opt.name} en ${ambito} ahora ${parts.join(' y ')}.`
+                : `${opt.name} en ${ambito} ya no cambia la receta.`;
+            return res.json({ success: true, summary, costs: costRows });
         }
 
         // --- IMAGE UPLOAD ---

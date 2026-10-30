@@ -1168,6 +1168,7 @@
     let currentQuantity = 1;
     let currentMods = {};
     let currentModQty = {}; // MOD-STANDARD: per-option qty for countable options (e.g. Splenda sobres)
+    let currentSin = []; // SELF-SERVE FLAGS: slugs of this item's removible recipe lines the cashier tapped "Sin…"
     let currentItem = null;
 
     let liveOrders = [];
@@ -1347,6 +1348,7 @@
                     category: i.category || 'Otros',
                     available: i.available !== false,
                     base_recipe: i.base_recipe || null,
+                    removables: Array.isArray(i.removables) ? i.removables : [],
                     image: i.image_url || i.image || null
                 }));
                 modGroups = data.modGroups || [];
@@ -2339,6 +2341,7 @@
         currentQuantity = 1;
         currentMods = {};
         currentModQty = {};
+        currentSin = [];
         
         // Pre-select defaults
         const relevantGroupIds = itemModGroups
@@ -2406,7 +2409,36 @@
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join('') + sinSectionHtml();
+    }
+
+    // SELF-SERVE FLAGS: the "Sin…" list is generated from the item's
+    // recipe lines the owner marked "Se puede quitar" — never typed.
+    // Fijo lines get no button, by construction.
+    function sinSectionHtml() {
+        const removables = (currentItem && Array.isArray(currentItem.removables)) ? currentItem.removables : [];
+        if (!removables.length) return '';
+        return `
+            <div class="bg-red-50/60 p-5 rounded-3xl border border-red-100 mt-4">
+                <h3 class="font-black text-red-300 uppercase text-[10px] tracking-[0.2em] mb-4">Se puede quitar — tocá lo que va SIN</h3>
+                <div class="grid grid-cols-2 gap-3">
+                    ${removables.map(r => {
+                        const isSel = currentSin.includes(r.slug);
+                        return `
+                        <button onclick="toggleSin('${r.slug}')"
+                            class="p-4 border-2 rounded-2xl text-xs font-black transition-all flex flex-col items-start gap-1 shadow-sm ${isSel ? 'border-red-500 bg-red-500 text-white shadow-red-500/20' : 'border-white bg-white text-gray-600 hover:border-red-200'}">
+                            <span class="leading-tight">Sin ${escHtml(r.name)}</span>
+                        </button>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function toggleSin(slug) {
+        if (currentSin.includes(slug)) currentSin = currentSin.filter(s => s !== slug);
+        else currentSin.push(slug);
+        renderModifiers(currentItem.id);
     }
 
     function toggleMod(groupId, optId, max, itemId) {
@@ -2498,6 +2530,13 @@
                     priceWithMods += (parseFloat(opt.price_adjustment) || 0) * (qty || 1);
                 }
             });
+        });
+        // SELF-SERVE FLAGS: tapped removals ride as zero-price mods whose
+        // name the KDS prints loud ("Sin …" renders red/bold there). The
+        // server repricing only prices mods matched to real options, so
+        // these can never change the ticket price.
+        (currentItem.removables || []).filter(r => currentSin.includes(r.slug)).forEach(r => {
+            mods.push({ id: 'sin-' + r.slug, group_id: null, group: '', name: 'Sin ' + r.name, price_adjustment: 0, sin: true });
         });
         const note = document.getElementById('mod-note')?.value || "";
         const item = {

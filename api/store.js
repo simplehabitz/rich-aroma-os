@@ -998,17 +998,26 @@ module.exports = async (req, res) => {
                 const stepsByItem = {};
                 menuRows.forEach(m => { stepsByItem[m.id] = Array.isArray(m.recipe_steps) ? m.recipe_steps : []; });
 
-                // Base lines (step_no may not exist pre-migration)
+                // Base lines (step_no and flag may not exist pre-migration;
+                // each missing column degrades to its safe default — the
+                // flag rides along so the build card can tell a structural
+                // line from one the customer may remove. The SIN itself
+                // still arrives on the ticket's mods from the POS.)
                 let lineRows = [];
                 {
                     const r = await supabase.from('menu_item_ingredients')
-                        .select('menu_item_id, inventory_item_id, quantity, unit, step_no')
+                        .select('menu_item_id, inventory_item_id, quantity, unit, step_no, flag')
                         .in('menu_item_id', ids);
                     if (r.error) {
                         const r2 = await supabase.from('menu_item_ingredients')
-                            .select('menu_item_id, inventory_item_id, quantity, unit')
+                            .select('menu_item_id, inventory_item_id, quantity, unit, step_no')
                             .in('menu_item_id', ids);
-                        lineRows = (r2.data || []).map(x => ({ ...x, step_no: null }));
+                        if (r2.error) {
+                            const r3 = await supabase.from('menu_item_ingredients')
+                                .select('menu_item_id, inventory_item_id, quantity, unit')
+                                .in('menu_item_id', ids);
+                            lineRows = (r3.data || []).map(x => ({ ...x, step_no: null, flag: 'fijo' }));
+                        } else lineRows = (r2.data || []).map(x => ({ ...x, flag: 'fijo' }));
                     } else lineRows = r.data || [];
                 }
 
@@ -1070,7 +1079,8 @@ module.exports = async (req, res) => {
                             name: (inv && inv.name) || titleizeSlug(x.inventory_item_id),
                             unit: x.unit || (inv && inv.unit) || '',
                             qty: parseFloat(x.quantity) || 0,
-                            step_no: (x.step_no === undefined || x.step_no === null) ? null : parseInt(x.step_no)
+                            step_no: (x.step_no === undefined || x.step_no === null) ? null : parseInt(x.step_no),
+                            flag: ['fijo', 'removible', 'agregable'].includes(x.flag) ? x.flag : 'fijo'
                         };
                     });
                     const myOptIds = new Set((optionsByItem[itemId] || []).map(o => o.id));
@@ -3342,6 +3352,35 @@ module.exports = async (req, res) => {
                     expires_in_hours: expiresInHours
                 };
             });
+
+            // Self-serve flags (2026-10-30): each item's REMOVIBLE recipe
+            // lines ride along so the POS builds its "Sin…" list from the
+            // recipe itself instead of free-text notes. Pre-migration DB
+            // (no flag column) or any failure -> empty lists; the menu
+            // load never breaks. The storefront reads `categories` below
+            // (untouched) — removals stay a cashier-layer concern.
+            try {
+                const itemIdsAll = filteredItems.map(i => i.id);
+                if (itemIdsAll.length) {
+                    const { data: remLines, error: remErr } = await supabase.from('menu_item_ingredients')
+                        .select('menu_item_id, inventory_item_id')
+                        .in('menu_item_id', itemIdsAll).eq('flag', 'removible');
+                    const remByItem = {};
+                    if (!remErr && remLines && remLines.length) {
+                        const { data: invAll } = await supabase.from('inventory').select('id, name, slug');
+                        const invByKey = {};
+                        (invAll || []).forEach(v => { if (v.id) invByKey[v.id] = v; if (v.slug) invByKey[v.slug] = v; });
+                        remLines.forEach(l => {
+                            const inv = invByKey[l.inventory_item_id] || {};
+                            (remByItem[l.menu_item_id] = remByItem[l.menu_item_id] || []).push({
+                                slug: inv.slug || l.inventory_item_id,
+                                name: inv.name || l.inventory_item_id
+                            });
+                        });
+                    }
+                    filteredItems.forEach(it => { it.removables = remByItem[it.id] || []; });
+                }
+            } catch (e) { /* removables are an enhancement; never break the menu */ }
 
             // Gather items expiring in under 12 hours with active stock to push as Gacha rewards
             const expiringPrizes = filteredItems.filter(i => !i.is_unlimited && i.expires_in_hours !== undefined && i.expires_in_hours <= 12 && i.stock_quantity > 0).map(i => ({
