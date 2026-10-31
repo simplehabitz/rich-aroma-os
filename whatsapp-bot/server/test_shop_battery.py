@@ -344,11 +344,14 @@ def s_menu():
     check("MENU1", isinstance(raw, WaReply) and raw.kind == "list",
           f"menu ask returned {type(raw).__name__}")
     if isinstance(raw, WaReply):
-        # bot-ux-fix: ONE menu message — the storefront link
-        # lives ONLY in the text fallback (MENU6), never the body.
+        # menu-link-pass (owner ruling 2026-10-31, supersedes the
+        # bot-ux-fix placement): the menu reply LEADS with the
+        # storefront link — exactly once in the (still short) body,
+        # and once in the text fallback (MENU6). Section views
+        # still carry no link (SEC4).
         check("MENU2", raw.body.count("\n") <= 2
-              and "richaromacoffee.com/order" not in raw.body,
-              f"body not short / link leaked into body: {raw.body[:160]}")
+              and raw.body.count("richaromacoffee.com/order") == 1,
+              f"body not short / link missing or duplicated: {raw.body[:160]}")
         check("MENU3", raw.button_text == "Ver el menú",
               str(raw.button_text))
         rows = raw.sections[0]["rows"] if raw.sections else []
@@ -429,7 +432,7 @@ def s_menu():
     raw = rig.last_raw
     check("MENU11", isinstance(raw, WaReply)
           and raw.body.startswith("¡Hola de nuevo, Carlos!")
-          and "richaromacoffee.com/order" not in raw.body,
+          and raw.body.count("richaromacoffee.com/order") == 1,
           f"first-message menu: {type(raw).__name__}")
     check("MENU12", "Carlos" in r and "1. Bebidas calientes" in r,
           r[:200])

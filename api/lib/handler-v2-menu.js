@@ -1,4 +1,71 @@
 const { supabase } = require('./supabase');
+const ricoLoyalty = require('./rico-loyalty');
+
+// --- ESPECIAL DEL DÍA, public display (menu-link-pass, 2026-10-31) ---
+// The lightest public read of the existing especial system: today's
+// special ONLY while it is set, active, inside its hours and under
+// its cap — the same state rico-loyalty.getSpecialState computes for
+// the WhatsApp reveal. The headline is composed from the same data
+// especialReveal reads (item name / campaign config), in the same
+// customer words. Display ONLY: claiming stays on the built paths
+// (WhatsApp ESPECIAL pull / server-side apply at order time). Any
+// failure returns null — the menu renders exactly as before.
+function fmtEspecialTime(hhmm) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+    if (!m) return String(hhmm || '');
+    let h = parseInt(m[1], 10);
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${m[2]} ${suffix}`;
+}
+
+async function buildPublicEspecial(special) {
+    let headline = '';
+    if (special.item_id) {
+        const { data: item } = await supabase.from('menu_items')
+            .select('name').eq('id', special.item_id).maybeSingle();
+        headline = `Hoy tu ${item && item.name ? item.name : 'artículo especial'} va GRATIS (uno) con tu pedido 🎁`;
+    } else if (special.campaign_id) {
+        const { data: c } = await supabase.from('loyalty_campaigns')
+            .select('*').eq('id', special.campaign_id).maybeSingle();
+        const cfg = (c && c.config) || {};
+        if (c && c.type === 'multiplicador') {
+            headline = `Hoy el regalo por tu compra se multiplica ×${cfg.multiplier || 2} 🎁`;
+        } else if (c && c.type === 'regalo') {
+            const amt = parseFloat(cfg.gift_amount) || 0;
+            headline = `Hoy, con tu compra, te regalamos L.${Number.isInteger(amt) ? amt : amt.toFixed(2)} de Rico Cash 🎁`;
+        } else if (c && c.type === 'compra_x_lleva') {
+            const names = {};
+            for (const key of ['buy_item_id', 'get_item_id']) {
+                const { data: it } = await supabase.from('menu_items')
+                    .select('name').eq('id', cfg[key]).maybeSingle();
+                names[key] = it && it.name ? it.name : 'tu favorito';
+            }
+            const pct = parseFloat(cfg.get_discount_pct != null ? cfg.get_discount_pct : 100);
+            headline = `Hoy comprás ${names.buy_item_id} y te llevás ${names.get_item_id} ${pct >= 100 ? 'GRATIS' : 'con descuento'} 🎁`;
+        }
+        if (!headline) headline = c && c.name ? `Hoy: ${c.name} 🎁` : 'Hoy hay un especial del día 🎁';
+    }
+    if (!headline) headline = 'Hoy hay un especial del día 🎁';
+    return {
+        headline,
+        terms: `Solo hoy · ${fmtEspecialTime(special.starts_time)} a ${fmtEspecialTime(special.ends_time)} · hasta agotar`,
+        hint: 'Pedí normal y se aplica solo — o escribí ESPECIAL por WhatsApp y te lo guardamos.',
+        starts_time: special.starts_time,
+        ends_time: special.ends_time
+    };
+}
+
+async function publicEspecial(restaurantId) {
+    try {
+        const st = await ricoLoyalty.getSpecialState(supabase, { restaurantId });
+        if (!st || !st.special || st.phase !== 'active' || st.exhausted) return null;
+        return await buildPublicEspecial(st.special);
+    } catch (e) {
+        console.error('[V2-Menu] especial lookup failed (menu unaffected):', e && e.message);
+        return null;
+    }
+}
 
 module.exports = async (req, res) => {
     // 1. Set Headers Immediately
@@ -162,12 +229,17 @@ module.exports = async (req, res) => {
             category: i.category
         }));
 
+        // Especial del Día (display only): null unless one is set,
+        // active and inside its hours today. See publicEspecial().
+        const especial = await publicEspecial(finalResId);
+
         return res.json({ 
             items: finalItems, categories, expiringPrizes, modGroups: filteredGroups, 
             modOptions: rModOptions.data || [], itemModGroups: allItemMods, 
             bundleSlots, taxRate: 0,
             acceptedPayments: settings.accepted_payments || {},
-            bankDetails: settings.bank_details || {}
+            bankDetails: settings.bank_details || {},
+            especial
         });
 
     } catch (e) {

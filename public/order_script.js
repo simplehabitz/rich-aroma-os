@@ -28,6 +28,7 @@
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let cart = [];
+        let especialToday = null;
         let currentCustomer = null;
         let globalRestaurantName = "Rich Aroma";
         let menuItems = [];
@@ -255,6 +256,8 @@
                     modGroups = data.modGroups || [];
                     modOptions = data.modOptions || [];
                     itemModGroups = data.itemModGroups || [];
+                    especialToday = data.especial || null;
+                    renderEspecial();
                     initStickyCats();
                     renderMenu();
                 }
@@ -317,6 +320,61 @@
 
         const sizeSelection = {};
         const familyRegistry = {};
+
+        /* RA-WA-ORDER-BEGIN — "Pedir por WhatsApp" (menu-link-pass,
+           2026-10-31). Pure builders (harness-tested, no DOM): the
+           checkout's WhatsApp button carries the CURRENT cart into
+           the shop's WhatsApp as one pre-typed message. The text
+           speaks the bot parser's language — exact menu names, one
+           line per cart line, chosen modifier names plainly noted —
+           and a human can read it too. The bot reads it back and
+           confirms in chat; nothing is ordered until it does. */
+        const WA_ORDER_NUMBER = '50499054412';
+        function waOrderLineText(line) {
+            const segs = (line.mods || []).map(m => (m && m.name) ? String(m.name) : '').filter(Boolean);
+            if (line.note) segs.push(String(line.note));
+            return `• ${line.qty || 1}× ${line.name}` + (segs.length ? ` · ${segs.join(' · ')}` : '');
+        }
+        function buildWhatsAppOrderText(lines) {
+            const list = lines || [];
+            const total = list.reduce((s, l) => s + (parseFloat(l.finalPrice) || parseFloat(l.price) || 0), 0);
+            const body = list.map(waOrderLineText).join('\n');
+            return `Hola Capitán ☕ Quiero pedir:\n${body}\nTotal: L.${total.toFixed(2)}`;
+        }
+        function buildWhatsAppOrderUrl(lines) {
+            return `https://wa.me/${WA_ORDER_NUMBER}?text=${encodeURIComponent(buildWhatsAppOrderText(lines))}`;
+        }
+        /* RA-WA-ORDER-END */
+
+        window.orderViaWhatsApp = () => {
+            if (!cart.length) return;
+            window.open(buildWhatsAppOrderUrl(cart), '_blank');
+        };
+
+        /* RA-ESPECIAL-BEGIN — Especial del Día card (menu-link-pass,
+           2026-10-31). Pure renderer (harness-tested, no DOM): the
+           payload's especial field arrives ONLY when a special is
+           set, active and inside its hours today (api side); with
+           no field this returns '' and the page renders exactly as
+           before — the module is silent. Display only: the card
+           points the customer to order normally or ask por
+           WhatsApp, where claiming lives. */
+        function especialCardHtml(esp) {
+            if (!esp || !esp.headline) return '';
+            return `<div class="bg-[#FFF3D6] border border-gold rounded-[2rem] p-6 mb-8 shadow-sm">
+                    <p class="text-[10px] font-black text-gold uppercase tracking-[0.3em] mb-1">🎁 Especial del Día</p>
+                    <h4 class="font-display text-xl leading-tight text-ink">${esp.headline}</h4>
+                    ${esp.terms ? `<p class="text-sm text-[#6E5A46] mt-2">${esp.terms}</p>` : ''}
+                    ${esp.hint ? `<p class="text-xs text-[#6E5A46] mt-1">${esp.hint}</p>` : ''}
+                </div>`;
+        }
+        /* RA-ESPECIAL-END */
+
+        function renderEspecial() {
+            const slot = document.getElementById('especial-slot');
+            if (!slot) return;
+            slot.innerHTML = especialCardHtml(especialToday);
+        }
 
         // Price preview (staff / VIP / public) — the same math the cards have always used.
         function computePriceHtml(item, isBooking) {
@@ -757,6 +815,8 @@
         window.openCheckout = () => {
             const container = document.getElementById('check-items');
             initTimeSlots();
+            const waBtn = document.getElementById('wa-order-btn');
+            if (waBtn) waBtn.classList.toggle('hidden', cart.length === 0);
             if(cart.length === 0) { container.innerHTML = `<div class="text-center py-12">
                         <img src="/assets/monkey-head.png" onerror="this.style.display='none'" class="w-[72px] h-[72px] rounded-full mx-auto mb-4 object-cover" alt="El mono de Rich Aroma">
                         <p class="font-display text-lg text-ink">Tu bolsa está vacía</p>

@@ -28,6 +28,15 @@ the fallback IS the menu for clients that can't render the list,
 so the link lives there. The interactive body and the section
 views carry no link: in chat, the chat is the store.
 
+MENU LINK LEADS (menu-link-pass, owner ruling 2026-10-31 —
+SUPERSEDES the bot-ux-fix placement above): browsing belongs on
+the photo page, not in chat — a menu ask now LEADS with the
+storefront link in BOTH renderings (the interactive body and the
+text fallback), exactly once in each. The section LIST stays
+fully working as the in-chat alternative; section views still
+carry no link. Customers can order on the page or here, their
+pick — the reply says so up front.
+
 FLAVOR QUESTION (bot-ux-fix, 2026-10-26): a bare family ask
 ("un latte de 12") names no single item — the flavor families are
 honestly ambiguous (11 latte flavors, no plain latte) — so instead
@@ -808,28 +817,36 @@ def menu_reply(lang: str = "es", convo=None) -> Optional[WaReply]:
     sections = [{"title": "Menú" if lang != "en" else "Menu",
                  "rows": rows}]
     if lang == "en":
-        body = ("Sure! ☕ Here's the *Rich Aroma* menu.\n"
-                "Tap *See the menu* and pick a section — or just "
-                "tell me what you'd like.")
+        body = ("Sure! ☕ Want to see everything with photos and "
+                f"prices? Here's the full menu 👉 {STORE_URL}\n"
+                "You can order right there or here on WhatsApp — "
+                "your pick. And if you already know what you want, "
+                "just tell me here 👇\n"
+                "Or tap *See the menu* and pick a section.")
         numbered = ["*Rich Aroma — Menu* ☕",
+                    "🌐 Full menu with photos and prices: "
+                    f"{STORE_URL}",
                     "Reply with the number of the section you "
                     "want to see:"]
         numbered += [f"{n}. {_section_title(s, lang)}"
                      for n, (s, _) in enumerate(present, 1)]
-        numbered.append(f"🌐 With photos: {STORE_URL}")
         numbered.append("Or just tell me what you'd like, e.g. "
                         "'a 12oz caramel latte'.")
         button = "See the menu"
     else:
-        body = ("¡Claro! ☕ Este es el menú de *Rich Aroma*.\n"
-                "Tocá *Ver el menú* y elegí una sección — o pedime "
-                "directo lo que querás.")
+        body = ("¡Claro! ☕ ¿Querés ver todo con fotos y precios? "
+                f"Aquí está el menú completo 👉 {STORE_URL}\n"
+                "Podés pedir ahí mismo o por WhatsApp, como "
+                "prefirás. Y si ya sabés lo que querés, pedímelo "
+                "aquí nomás 👇\n"
+                "O tocá *Ver el menú* y elegí una sección.")
         numbered = ["*Rich Aroma — Menú* ☕",
+                    "🌐 Menú completo, con fotos y precios: "
+                    f"{STORE_URL}",
                     "Respondé con el número de la sección que "
                     "querés ver:"]
         numbered += [f"{n}. {_section_title(s, lang)}"
                      for n, (s, _) in enumerate(present, 1)]
-        numbered.append(f"🌐 Con fotos: {STORE_URL}")
         numbered.append("O pedime directo lo que querás, ej: "
                         "'un latte de caramelo 12oz'.")
         button = "Ver el menú"
